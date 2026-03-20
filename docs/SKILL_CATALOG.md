@@ -12,7 +12,7 @@
 | 📚 [Education Skills](#-education-skills) | 5 | Apprentissage |
 | ✍️ [Writing Skills](#-writing-skills) | 5 | Rédaction |
 | 🎯 [Career Skills](#-career-skills) | 5 | Carrière |
-| **Total** | **59** | |
+| **Total** | **85** | |
 
 ---
 
@@ -114,3 +114,54 @@
 | salary-negotiation | "négocier mon salaire", "augmentation" | Argumentaire + scénarios + script |
 | linkedin-optimizer | "profil LinkedIn", "headline" | Audit + headline + résumé optimisés |
 | career-transition-planner | "changer de métier", "reconversion" | Gap analysis + plan 5 phases |
+
+## 🎯 Prompt Skills
+
+| Skill | Déclencheurs typiques | Livrable |
+|-------|----------------------|----------|
+| prompt-optimizer | "améliore mon prompt", "prompt engineering" | Analyse 7 critères + version optimisée |
+| mega-prompt-builder | "crée un prompt pour", "mega prompt" | Mega-prompt structuré avec blocs |
+| system-prompt-architect | "system prompt", "chatbot", "agent IA" | System prompt robuste + tests |
+| prompt-debugger | "mon prompt hallucine", "format non respecté" | Diagnostic + prompt corrigé |
+| prompt-translator | "adapter pour Claude", "convertir de GPT" | Prompt adapté + notes migration |
+| chain-of-thought-designer | "raisonnement étape par étape", "tâche complexe" | Prompt CoT + cas de test |
+
+## ✈️ Travel Skills
+
+| Skill | Déclencheurs typiques | Livrable |
+|-------|----------------------|----------|
+| trip-planner | "planifier un voyage", "itinéraire" | Planning jour par jour + budget |
+| packing-checklist | "valise", "quoi emmener" | Checklist personnalisée |
+| visa-checker | "ai-je besoin d'un visa" | Conditions + checklist documents |
+| travel-budget | "budget voyage", "combien ça coûte" | Estimation détaillée par poste |
+| local-phrase-book | "phrases utiles en", "vocabulaire voyage" | Mini guide linguistique |
+
+## 🤝 Social Skills
+
+| Skill | Déclencheurs typiques | Livrable |
+|-------|----------------------|----------|
+| difficult-conversation-prep | "conversation difficile", "comment dire à" | Scripts + scénarios de réaction |
+| conflict-resolver | "conflit", "dispute", "désaccord" | Analyse 2 perspectives + options |
+| networking-script | "networking", "elevator pitch" | Scripts multi-contextes + suivi |
+| feedback-giver | "donner un feedback", "critique constructive" | Formulations SBI + anticipation |
+| boundary-setter | "poser des limites", "dire non" | Formulations + gestion réactions |
+
+## 👶 Parenting Skills
+
+| Skill | Déclencheurs typiques | Livrable |
+|-------|----------------------|----------|
+| child-milestone-tracker | "développement de mon enfant", "étapes bébé" | Suivi par domaine + activités |
+| homework-helper | "devoirs", "mon enfant ne comprend pas" | Explication + méthode guidée |
+| screen-time-planner | "temps d'écran", "tablette" | Plan personnalisé + règles |
+| bedtime-routine-builder | "routine du coucher", "ne veut pas dormir" | Routine 4-6 étapes + gestion |
+| parent-self-care | "épuisé en tant que parent" | Micro-actions + réorganisation |
+
+## ⚖️ Legal Skills
+
+| Skill | Déclencheurs typiques | Livrable |
+|-------|----------------------|----------|
+| contract-reader | "lire ce contrat", "clause", "CGV" | Analyse simplifiée + vigilances |
+| tenant-rights-guide | "droits du locataire", "mon propriétaire" | Droits + actions + modèle courrier |
+| complaint-letter-writer | "lettre de réclamation", "mise en demeure" | Lettre formelle prête à envoyer |
+| small-claims-prep | "petit litige", "remboursement refusé" | Dossier preuves + arguments |
+| gdpr-checklist | "RGPD", "données personnelles", "cookies" | Checklist conformité + actions |
