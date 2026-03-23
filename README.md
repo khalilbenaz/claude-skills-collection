@@ -1,11 +1,11 @@
 # 🧠 Claude Skills Collection
 
-La plus grande collection open-source de skills pour Claude — **201 skills** couvrant **14 domaines** du développement, de la sécurité, des agents IA, du design, et de la vie quotidienne.
+La plus grande collection open-source de skills pour Claude — **234 skills** couvrant **18 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
 
 > Un skill transforme Claude en assistant spécialisé avec un workflow structuré étape par étape.
 
-[![Skills](https://img.shields.io/badge/skills-201-blue)]()
-[![Categories](https://img.shields.io/badge/catégories-14-green)]()
+[![Skills](https://img.shields.io/badge/skills-234-blue)]()
+[![Categories](https://img.shields.io/badge/catégories-18-green)]()
 [![License](https://img.shields.io/badge/license-MIT-yellow)]()
 [![Language](https://img.shields.io/badge/langue-Français-red)]()
 
@@ -15,15 +15,19 @@ La plus grande collection open-source de skills pour Claude — **201 skills** c
 
 | Catégorie | Skills | Description |
 |-----------|--------|-------------|
-| 🤖 [Agent Skills](./agent-skills) | 45 | Agents IA : frameworks, sous-agents, hiérarchies, délégation, communication, pipelines, déploiement, sécurité |
-| 💻 [Dev Skills](./dev-skills) | 77 | Développement complet : sécurité, architecture, DevOps, frontend, mobile, IA, langages, data, testing, UX/UI, blockchain, game dev |
+| 🤖 [Agent Skills](./agent-skills) | 46 | Agents IA : frameworks, sous-agents, hiérarchies, délégation, communication, pipelines, déploiement, sécurité, **orchestrateur intelligent** |
+| 💻 [Dev Skills](./dev-skills) | 92 | Développement complet : sécurité, architecture, DevOps, frontend, mobile, IA, langages, data, testing, UX/UI, blockchain, game dev, **.NET, gRPC, Prisma, RabbitMQ, OAuth2** |
+| 🔧 [DevOps Skills](./devops-skills) | 4 | **NOUVEAU** — Terraform, Helm, Prometheus/Grafana, Azure Cloud |
+| 📊 [Data Skills](./data-skills) | 3 | **NOUVEAU** — SQL avancé, modélisation dimensionnelle, qualité des données |
+| 🔒 [Security Skills](./security-skills) | 3 | **NOUVEAU** — Threat modeling, API hardening, audit de dépendances |
+| 🌐 [API Gateway Skills](./api-gateway-skills) | 3 | **NOUVEAU** — YARP, Kong, Ocelot |
 | 🏥 [Health Skills](./health-skills) | 16 | Suivi santé, analyses, consultations, douleurs, allergies |
 | 🧠 [Psy Skills](./psy-skills) | 12 | Santé mentale, émotions, thérapie, crise, burnout |
 | 🎯 [Prompt Skills](./prompt-skills) | 6 | Optimisation, création et debug de prompts IA |
-| ⚡ [Productivity Skills](./productivity-skills) | 5 | Planning, réunions, décisions, habitudes, projets |
-| 💰 [Finance Skills](./finance-skills) | 5 | Budget, dépenses, épargne, investissement, impôts |
+| ⚡ [Productivity Skills](./productivity-skills) | 6 | Planning, réunions, décisions, habitudes, projets, **post-mortem d'incident** |
+| 💰 [Finance Skills](./finance-skills) | 6 | Budget, dépenses, épargne, investissement, impôts, **conformité fintech** |
 | 📚 [Education Skills](./education-skills) | 5 | Révisions, flashcards, examens, apprentissage |
-| ✍️ [Writing Skills](./writing-skills) | 5 | Blog, emails, copywriting, relecture, contenu |
+| ✍️ [Writing Skills](./writing-skills) | 6 | Blog, emails, copywriting, relecture, contenu, **changelog** |
 | 🎯 [Career Skills](./career-skills) | 5 | CV, entretiens, salaire, LinkedIn, reconversion |
 | ✈️ [Travel Skills](./travel-skills) | 5 | Itinéraire, bagages, visa, budget voyage, langues |
 | 🤝 [Social Skills](./social-skills) | 5 | Conversations difficiles, conflits, networking, limites |
@@ -32,7 +36,12 @@ La plus grande collection open-source de skills pour Claude — **201 skills** c
 
 ---
 
-## 🤖 Agent Skills — 45 Skills en 9 sous-catégories
+## 🤖 Agent Skills — 46 Skills en 10 sous-catégories
+
+### 🧭 Orchestration & Routing (1)
+| Skill | Déclencheur |
+|-------|-------------|
+| [skill-router](./agent-skills/skill-router) | _"quel skill utiliser", "aide-moi à choisir", "orchestrateur", "dispatch", "route"_ |
 
 ### 🔧 Frameworks (5)
 | Skill | Déclencheur |
@@ -117,7 +126,7 @@ La plus grande collection open-source de skills pour Claude — **201 skills** c
 
 ---
 
-## 💻 Dev Skills — 77 Skills en 14 sous-catégories
+## 💻 Dev Skills — 92 Skills en 17 sous-catégories
 
 ### 🔒 Sécurité (5)
 | Skill | Déclencheur |
@@ -256,9 +265,84 @@ La plus grande collection open-source de skills pour Claude — **201 skills** c
 | [tech-lead-advisor](./dev-skills/tech-lead-advisor) | _"tech lead", "mentoring", "décision technique"_ |
 | [developer-onboarding-builder](./dev-skills/developer-onboarding-builder) | _"onboarding", "nouveau développeur", "getting started"_ |
 
+### 🔷 .NET & Backend avancé (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [dotnet-aspire-guide](./dev-skills/dotnet-aspire-guide) | _".NET Aspire", "Aspire", "AppHost", "orchestration cloud-native"_ |
+| [grpc-service-designer](./dev-skills/grpc-service-designer) | _"gRPC", "protobuf", "fichier .proto", "streaming gRPC"_ |
+| [hangfire-job-scheduler](./dev-skills/hangfire-job-scheduler) | _"Hangfire", "background job", "tâche de fond .NET", "cron job C#"_ |
+| [health-check-monitor](./dev-skills/health-check-monitor) | _"health check", "liveness probe", "readiness probe", "endpoint santé"_ |
+| [oauth2-oidc-advisor](./dev-skills/oauth2-oidc-advisor) | _"OAuth2", "OIDC", "JWT", "refresh token", "Keycloak"_ |
+
+### 📨 Messaging & Patterns distribués (3)
+| Skill | Déclencheur |
+|-------|-------------|
+| [rabbitmq-patterns-guide](./dev-skills/rabbitmq-patterns-guide) | _"RabbitMQ", "MassTransit", "exchange", "dead letter"_ |
+| [outbox-pattern-guide](./dev-skills/outbox-pattern-guide) | _"outbox pattern", "saga", "transaction distribuée", "dual write"_ |
+| [feature-flags-manager](./dev-skills/feature-flags-manager) | _"LaunchDarkly", "OpenFeature", "feature toggle", "déploiement progressif"_ |
+
+### 📝 API & Contrats (2)
+| Skill | Déclencheur |
+|-------|-------------|
+| [openapi-contract-first](./dev-skills/openapi-contract-first) | _"OpenAPI", "Swagger", "contract first", "spécification API"_ |
+| [azure-devops-pipeline-advisor](./dev-skills/azure-devops-pipeline-advisor) | _"azure devops", "pipeline YAML", "azure pipeline", "CI/CD azure"_ |
+
+### 🌐 Navigateur & ORM (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [playwright-browser-automation](./dev-skills/playwright-browser-automation) | _"Playwright", "automatise le navigateur", "teste le formulaire"_ |
+| [chrome-devtools-debugger](./dev-skills/chrome-devtools-debugger) | _"devtools", "debug navigateur", "inspecter la page"_ |
+| [prisma-expert](./dev-skills/prisma-expert) | _"Prisma", "schema prisma", "migration prisma"_ |
+| [sqlite-guide](./dev-skills/sqlite-guide) | _"SQLite", "requête SQL", "schéma SQLite"_ |
+| [feature-flag-system](./dev-skills/feature-flag-system) | _"feature flag", "A/B test", "canary deployment"_ |
+
+---
+
+## 🔧 DevOps Skills — 4 Skills
+
+| Skill | Déclencheur |
+|-------|-------------|
+| [terraform-guide](./devops-skills/terraform-guide) | _"Terraform", "HCL", "tfstate", "terraform plan"_ |
+| [helm-chart-builder](./devops-skills/helm-chart-builder) | _"Helm", "chart helm", "values.yaml", "helm install"_ |
+| [prometheus-grafana-setup](./devops-skills/prometheus-grafana-setup) | _"Prometheus", "Grafana", "PromQL", "alerting", "dashboard"_ |
+| [azure-cloud-advisor](./devops-skills/azure-cloud-advisor) | _"Azure", "App Service", "Container Apps", "Azure Functions"_ |
+
+---
+
+## 📊 Data Skills — 3 Skills
+
+| Skill | Déclencheur |
+|-------|-------------|
+| [sql-advanced-analytics](./data-skills/sql-advanced-analytics) | _"window function", "CTE récursive", "PARTITION BY", "ROW_NUMBER"_ |
+| [dimensional-modeling](./data-skills/dimensional-modeling) | _"schéma en étoile", "star schema", "table de faits", "SCD", "data warehouse"_ |
+| [data-quality-checker](./data-skills/data-quality-checker) | _"qualité données", "doublons", "validation données", "anomalie"_ |
+
+---
+
+## 🔒 Security Skills — 3 Skills
+
+| Skill | Déclencheur |
+|-------|-------------|
+| [threat-modeling](./security-skills/threat-modeling) | _"threat modeling", "STRIDE", "surface d'attaque", "analyse de menaces"_ |
+| [api-security-hardener](./security-skills/api-security-hardener) | _"sécurité API", "rate limiting", "OWASP API", "headers sécurité"_ |
+| [dependency-audit](./security-skills/dependency-audit) | _"audit dépendances", "CVE", "npm audit", "supply chain security"_ |
+
+---
+
+## 🌐 API Gateway Skills — 3 Skills
+
+| Skill | Déclencheur |
+|-------|-------------|
+| [yarp-gateway-designer](./api-gateway-skills/yarp-gateway-designer) | _"YARP", "reverse proxy .NET", "API gateway .NET"_ |
+| [kong-api-gateway](./api-gateway-skills/kong-api-gateway) | _"Kong", "Kong Gateway", "Kong plugin"_ |
+| [ocelot-gateway-guide](./api-gateway-skills/ocelot-gateway-guide) | _"Ocelot", "ocelot.json", "API gateway Ocelot"_ |
+
 ---
 
 ## ⭐ Top Skills
+
+### 🧭 Orchestrateur
+- **[skill-router](./agent-skills/skill-router)** — _"Quel skill utiliser ?"_ → routeur intelligent qui analyse ta demande et te dirige vers le bon skill
 
 ### 🤖 Agents IA
 - **[crewai-expert](./agent-skills/crewai-expert)** — _"Créer un crew d'agents"_ → système multi-agents complet avec outils et mémoire
@@ -270,8 +354,9 @@ La plus grande collection open-source de skills pour Claude — **201 skills** c
 ### 💻 Développement
 - **[security-auditor](./dev-skills/security-auditor)** — _"Audit sécurité"_ → analyse complète 8 axes
 - **[microservices-designer](./dev-skills/microservices-designer)** — _"Découper en microservices"_ → DDD + bounded contexts
-- **[ai-agent-builder](./dev-skills/ai-agent-builder)** — _"Construire un agent IA"_ → architecture complète
-- **[docker-composer](./dev-skills/docker-composer)** — _"Dockeriser mon app"_ → Dockerfile optimisé + compose
+- **[grpc-service-designer](./dev-skills/grpc-service-designer)** — _"API gRPC"_ → contrats Protobuf, streaming, implémentation C#
+- **[outbox-pattern-guide](./dev-skills/outbox-pattern-guide)** — _"Transaction distribuée"_ → Outbox + Saga avec MassTransit
+- **[dotnet-aspire-guide](./dev-skills/dotnet-aspire-guide)** — _".NET Aspire"_ → orchestration cloud-native avec dashboard
 
 ### 🎯 Prompt Engineering
 - **[prompt-optimizer](./prompt-skills/prompt-optimizer)** — _"Améliore mon prompt"_ → analyse 7 critères + version optimisée
@@ -302,7 +387,7 @@ zip ../../crewai-expert.skill SKILL.md
 | Document | Contenu |
 |----------|---------|
 | [🚀 Getting Started](./docs/GETTING_STARTED.md) | Installation, utilisation, FAQ |
-| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 201 skills avec déclencheurs et livrables |
+| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 234 skills avec déclencheurs et livrables |
 | [🛠️ Creating Skills](./docs/CREATING_SKILLS.md) | Guide + template pour créer son propre skill |
 | [🧭 Design Principles](./docs/DESIGN_PRINCIPLES.md) | 8 principes de conception |
 | [🤝 Contributing](./docs/CONTRIBUTING.md) | Comment contribuer |
@@ -344,6 +429,6 @@ MIT — Libre d'utilisation, modification et redistribution.
 ---
 
 <p align="center">
-  <strong>201 skills • 14 catégories • 100% open-source</strong><br>
+  <strong>234 skills • 18 catégories • 100% open-source</strong><br>
   Fait avec 🤖💻🔒🧠🎨 par <a href="https://github.com/khalilbenaz">@khalilbenaz</a>
 </p>
