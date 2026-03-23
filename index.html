@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Skills Collection — 234 Skills Open-Source</title>
+    <meta name="description" content="La plus grande collection open-source de skills pour Claude. 234 skills couvrant 18 domaines : dev, agents IA, DevOps, sécurité, data et vie quotidienne.">
+    <meta property="og:title" content="Claude Skills Collection">
+    <meta property="og:description" content="234 skills open-source pour transformer Claude en assistant spécialisé.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://khalilbenaz.github.io/claude-skills-collection">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-card-hover: #1a1a2e;
+            --border: #1e1e30;
+            --border-hover: #2d2d4a;
+            --text: #e4e4ed;
+            --text-muted: #8888a0;
+            --text-dim: #555570;
+            --accent: #7c5cfc;
+            --accent-light: #9b7fff;
+            --accent-glow: rgba(124, 92, 252, 0.15);
+            --accent-glow-strong: rgba(124, 92, 252, 0.3);
+            --green: #34d399;
+            --blue: #60a5fa;
+            --orange: #fb923c;
+            --pink: #f472b6;
+            --cyan: #22d3ee;
+            --red: #f87171;
+            --yellow: #fbbf24;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Grain texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* ===== NAV ===== */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--text);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-brand span { color: var(--accent-light); }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover { color: var(--text); }
+
+        .nav-cta {
+            background: var(--accent);
+            color: white;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-cta:hover {
+            background: var(--accent-light);
+            box-shadow: 0 0 20px var(--accent-glow-strong);
+        }
+
+        /* ===== HERO ===== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 6rem 2rem 4rem;
+            position: relative;
+        }
+
+        .hero-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--accent-glow-strong) 0%, transparent 70%);
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            animation: pulse 6s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.8; transform: translateX(-50%) scale(1.1); }
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1rem;
+            border: 1px solid var(--border-hover);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            background: var(--accent-glow);
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        h1 {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 900;
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 .gradient {
+            background: linear-gradient(135deg, var(--accent-light), var(--cyan), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            font-size: clamp(1rem, 2vw, 1.3rem);
+            color: var(--text-muted);
+            max-width: 640px;
+            margin-bottom: 2.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .btn {
+            padding: 0.85rem 2rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.25s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-light);
+            box-shadow: 0 0 30px var(--accent-glow-strong);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border-hover);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            background: var(--accent-glow);
+        }
+
+        /* ===== STATS ===== */
+        .stats {
+            display: flex;
+            gap: 0;
+            justify-content: center;
+            margin-top: 4rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 0 2.5rem;
+            border-right: 1px solid var(--border);
+        }
+
+        .stat:last-child { border-right: none; }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, var(--text), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* ===== SECTIONS ===== */
+        section {
+            padding: 6rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--accent-light);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        h2 {
+            font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+        }
+
+        .section-desc {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin-bottom: 3rem;
+        }
+
+        /* ===== CATEGORIES GRID ===== */
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .cat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+            cursor: default;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--card-accent, var(--accent));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .cat-card:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+            transform: translateY(-3px);
+        }
+
+        .cat-card:hover::before { opacity: 1; }
+
+        .cat-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+
+        .cat-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: var(--accent-glow);
+        }
+
+        .cat-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-light);
+            background: var(--accent-glow);
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .cat-name {
+            font-weight: 700;
+            font-size: 1.05rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .cat-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .cat-new {
+            display: inline-block;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            background: linear-gradient(135deg, var(--green), var(--cyan));
+            color: var(--bg);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 700;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+
+        /* ===== ORCHESTRATOR ===== */
+        .orchestrator {
+            background: linear-gradient(135deg, var(--accent-glow), rgba(34, 211, 238, 0.05));
+            border: 1px solid var(--border-hover);
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 4rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .orchestrator::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--accent-glow-strong) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .orch-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .orch-content { position: relative; z-index: 1; }
+
+        .orch-content h3 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .orch-content p {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .orch-flow {
+            position: relative;
+            z-index: 1;
+        }
+
+        .flow-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .flow-box:hover {
+            border-color: var(--accent);
+            transform: translateX(8px);
+        }
+
+        .flow-emoji { font-size: 1.2rem; flex-shrink: 0; }
+
+        .flow-arrow {
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 1.2rem;
+            margin: 0.25rem 0;
+        }
+
+        .flow-result {
+            background: linear-gradient(135deg, rgba(124, 92, 252, 0.2), rgba(34, 211, 238, 0.1));
+            border-color: var(--accent);
+        }
+
+        /* ===== SKILLS SHOWCASE ===== */
+        .showcase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1rem;
+        }
+
+        .skill-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            transition: all 0.25s;
+        }
+
+        .skill-card:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+        }
+
+        .skill-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .skill-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.25rem;
+        }
+
+        .skill-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .skill-trigger {
+            font-size: 0.7rem;
+            color: var(--accent-light);
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 0.4rem;
+        }
+
+        /* ===== HOW IT WORKS ===== */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .step {
+            text-align: center;
+            padding: 2rem 1.5rem;
+        }
+
+        .step-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+        }
+
+        .step h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+        }
+
+        .step p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .code-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block .comment { color: var(--text-dim); }
+        .code-block .cmd { color: var(--green); }
+        .code-block .flag { color: var(--orange); }
+        .code-block .path { color: var(--cyan); }
+
+        /* ===== USE CASES ===== */
+        .usecases {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .usecase {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.75rem;
+            transition: all 0.3s;
+        }
+
+        .usecase:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-3px);
+        }
+
+        .usecase-title {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .usecase-steps {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .usecase-steps li {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .usecase-steps code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            background: var(--accent-glow);
+            color: var(--accent-light);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .usecase-steps .arrow {
+            color: var(--text-dim);
+            font-size: 0.7rem;
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .footer-stats {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .footer-stats strong {
+            color: var(--accent-light);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover { color: var(--accent-light); }
+
+        .footer-copy {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            nav { padding: 0.75rem 1rem; }
+            .nav-links { display: none; }
+            .stats { flex-direction: column; gap: 1.5rem; }
+            .stat { border-right: none; border-bottom: 1px solid var(--border); padding: 1rem 0; }
+            .stat:last-child { border-bottom: none; }
+            .orch-grid { grid-template-columns: 1fr; }
+            .steps { grid-template-columns: 1fr; gap: 1rem; }
+            .showcase-grid { grid-template-columns: 1fr; }
+            .usecases { grid-template-columns: 1fr; }
+            .orchestrator { padding: 2rem 1.5rem; }
+            section { padding: 4rem 1.25rem; }
+        }
+
+        /* ===== ANIMATIONS ===== */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease-out;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <a href="#" class="nav-brand">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2Z"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 12l8-4"/></svg>
+        Claude <span>Skills</span>
+    </a>
+    <ul class="nav-links">
+        <li><a href="#categories">Categories</a></li>
+        <li><a href="#orchestrator">Orchestrateur</a></li>
+        <li><a href="#showcase">Skills</a></li>
+        <li><a href="#usecases">Use Cases</a></li>
+        <li><a href="#install">Installation</a></li>
+    </ul>
+    <a href="https://github.com/khalilbenaz/claude-skills-collection" class="nav-cta" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: -2px;"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/></svg>
+        GitHub
+    </a>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+    <div class="hero-glow"></div>
+    <div class="badge">
+        <span class="badge-dot"></span>
+        Open-source &middot; MIT License &middot; 100% Francais
+    </div>
+    <h1>
+        <span class="gradient">234 Skills</span><br>
+        pour transformer Claude<br>
+        en expert.
+    </h1>
+    <p class="hero-sub">
+        La plus grande collection open-source de skills pour Claude.
+        18 domaines : dev, agents IA, DevOps, securite, data, fintech, et vie quotidienne.
+    </p>
+    <div class="hero-actions">
+        <a href="https://github.com/khalilbenaz/claude-skills-collection" class="btn btn-primary" target="_blank">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/></svg>
+            Voir sur GitHub
+        </a>
+        <a href="#install" class="btn btn-secondary">Installation rapide</a>
+    </div>
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-number" data-target="234">0</div>
+            <div class="stat-label">Skills</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number" data-target="18">0</div>
+            <div class="stat-label">Categories</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number" data-target="92">0</div>
+            <div class="stat-label">Dev Skills</div>
+        </div>
+        <div class="stat">
+            <div class="stat-number" data-target="46">0</div>
+            <div class="stat-label">Agent Skills</div>
+        </div>
+    </div>
+</header>
+
+<!-- CATEGORIES -->
+<section id="categories">
+    <div class="section-label fade-in">Categories</div>
+    <h2 class="fade-in">18 domaines. Un skill pour tout.</h2>
+    <p class="section-desc fade-in">Du code au bien-etre, chaque skill transforme Claude en assistant specialise avec un workflow structure.</p>
+
+    <div class="categories-grid">
+        <div class="cat-card fade-in" style="--card-accent: var(--accent);">
+            <div class="cat-header">
+                <div class="cat-icon">&#129302;</div>
+                <span class="cat-count">46</span>
+            </div>
+            <div class="cat-name">Agent Skills</div>
+            <div class="cat-desc">Frameworks, sous-agents, orchestration, memoire, securite, deploiement</div>
+        </div>
+        <div class="cat-card fade-in" style="--card-accent: var(--blue);">
+            <div class="cat-header">
+                <div class="cat-icon">&#128187;</div>
+                <span class="cat-count">92</span>
+            </div>
+            <div class="cat-name">Dev Skills</div>
+            <div class="cat-desc">Architecture, API, testing, .NET, gRPC, Prisma, RabbitMQ, OAuth2, Aspire</div>
+        </div>
+        <div class="cat-card fade-in" style="--card-accent: var(--orange);">
+            <div class="cat-header">
+                <div class="cat-icon">&#128295;</div>
+                <span class="cat-count">4</span>
+            </div>
+            <div class="cat-name">DevOps Skills <span class="cat-new">nouveau</span></div>
+            <div class="cat-desc">Terraform, Helm, Prometheus/Grafana, Azure Cloud</div>
+        </div>
+        <div class="cat-card fade-in" style="--card-accent: var(--cyan);">
+            <div class="cat-header">
+                <div class="cat-icon">&#128202;</div>
+                <span class="cat-count">3</span>
+            </div>
+            <div class="cat-name">Data Skills <span class="cat-new">nouveau</span></div>
+            <div class="cat-desc">SQL avance, modelisation dimensionnelle, qualite des donnees</div>
+        </div>
+        <div class="cat-card fade-in" style="--card-accent: var(--red);">
+            <div class="cat-header">
+                <div class="cat-icon">&#128274;</div>
+                <span class="cat-count">3</span>
+            </div>
+            <div class="cat-name">Security Skills <span class="cat-new">nouveau</span></div>
+            <div class="cat-desc">Threat modeling, API hardening, audit de dependances</div>
+        </div>
+        <div class="cat-card fade-in" style="--card-accent: var(--green);">
+            <div class="cat-header">
+                <div class="cat-icon">&#127760;</div>
+                <span class="cat-count">3</span>
+            </div>
+            <div class="cat-name">API Gateway Skills <span class="cat-new">nouveau</span></div>
+            <div class="cat-desc">YARP, Kong, Ocelot pour la gestion des gateways</div>
+        </div>
+        <div class="cat-card fade-in" style="--card-accent: var(--pink);">
+            <div class="cat-header">
+                <div class="cat-icon">&#127919;</div>
+                <span class="cat-count">6</span>
+            </div>
+            <div class="cat-name">Prompt Skills</div>
+            <div class="cat-desc">Optimisation, creation, debug de prompts IA</div>
+        </div>
+        <div class="cat-card fade-in" style="--card-accent: var(--yellow);">
+            <div class="cat-header">
+                <div class="cat-icon">&#128176;</div>
+                <span class="cat-count">6</span>
+            </div>
+            <div class="cat-name">Finance Skills</div>
+            <div class="cat-desc">Budget, epargne, impots, conformite fintech PCI-DSS/KYC</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">&#9889;</div>
+                <span class="cat-count">6</span>
+            </div>
+            <div class="cat-name">Productivity Skills</div>
+            <div class="cat-desc">Planning, reunions, decisions, post-mortem d'incident</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">&#127973;</div>
+                <span class="cat-count">16</span>
+            </div>
+            <div class="cat-name">Health Skills</div>
+            <div class="cat-desc">Suivi sante, symptomes, medicaments, consultations</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">&#129504;</div>
+                <span class="cat-count">12</span>
+            </div>
+            <div class="cat-name">Psy Skills</div>
+            <div class="cat-desc">Sante mentale, TCC, anxiete, burnout, therapie</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">&#9997;&#65039;</div>
+                <span class="cat-count">6</span>
+            </div>
+            <div class="cat-name">Writing Skills</div>
+            <div class="cat-desc">Blog, emails, copywriting, changelog, relecture</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">&#128218;</div>
+                <span class="cat-count">5</span>
+            </div>
+            <div class="cat-name">Education Skills</div>
+            <div class="cat-desc">Revisions, flashcards, examens, roadmaps</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">&#127919;</div>
+                <span class="cat-count">5</span>
+            </div>
+            <div class="cat-name">Career Skills</div>
+            <div class="cat-desc">CV, entretiens, salaire, LinkedIn, reconversion</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">&#9878;&#65039;</div>
+                <span class="cat-count">5</span>
+            </div>
+            <div class="cat-name">Legal Skills</div>
+            <div class="cat-desc">Contrats, droits locataire, RGPD, reclamations</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">&#9992;&#65039;</div>
+                <span class="cat-count">5</span>
+            </div>
+            <div class="cat-name">Travel Skills</div>
+            <div class="cat-desc">Itineraires, bagages, visas, budget voyage</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">&#129309;</div>
+                <span class="cat-count">5</span>
+            </div>
+            <div class="cat-name">Social Skills</div>
+            <div class="cat-desc">Conversations difficiles, conflits, networking</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">&#128118;</div>
+                <span class="cat-count">5</span>
+            </div>
+            <div class="cat-name">Parenting Skills</div>
+            <div class="cat-desc">Developpement enfant, devoirs, ecrans, coucher</div>
+        </div>
+    </div>
+</section>
+
+<!-- ORCHESTRATOR -->
+<section id="orchestrator">
+    <div class="orchestrator fade-in">
+        <div class="orch-grid">
+            <div class="orch-content">
+                <div class="section-label">Nouveaute</div>
+                <h3>Skill Router<br>L'orchestrateur intelligent</h3>
+                <p>
+                    Tu ne sais pas quel skill utiliser ? Le <strong>skill-router</strong> analyse ta demande
+                    et te dirige automatiquement vers le ou les skills les plus pertinents parmi les 234 du catalogue.
+                </p>
+                <p>
+                    Il detecte les mots-cles techniques, les types de fichiers mentionnes, et propose des
+                    <strong>sequences multi-skills</strong> pour les demandes complexes.
+                </p>
+                <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router" class="btn btn-primary" target="_blank" style="margin-top: 0.5rem;">
+                    Voir le skill-router
+                </a>
+            </div>
+            <div class="orch-flow">
+                <div class="flow-box">
+                    <span class="flow-emoji">&#128172;</span>
+                    <span>"Je veux securiser mon API de paiement .NET"</span>
+                </div>
+                <div class="flow-arrow">&darr;</div>
+                <div class="flow-box">
+                    <span class="flow-emoji">&#129504;</span>
+                    <span>Skill Router analyse : securite + API + .NET + paiement</span>
+                </div>
+                <div class="flow-arrow">&darr;</div>
+                <div class="flow-box flow-result">
+                    <span class="flow-emoji">&#127919;</span>
+                    <div>
+                        <div style="font-weight: 600; font-size: 0.85rem;">Sequence recommandee :</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
+                            1. <code style="color: var(--cyan);">api-security-hardener</code> &rarr;
+                            2. <code style="color: var(--cyan);">oauth2-oidc-advisor</code> &rarr;
+                            3. <code style="color: var(--cyan);">fintech-compliance-checker</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SHOWCASE -->
+<section id="showcase">
+    <div class="section-label fade-in">Skills populaires</div>
+    <h2 class="fade-in">Des skills pour chaque defi.</h2>
+    <p class="section-desc fade-in">Quelques exemples parmi les 234 skills disponibles.</p>
+
+    <div class="showcase-grid">
+        <div class="skill-card fade-in">
+            <div class="skill-icon" style="background: rgba(124, 92, 252, 0.15);">&#129302;</div>
+            <div>
+                <div class="skill-name">crewai-expert</div>
+                <div class="skill-desc">Systeme multi-agents complet avec outils, memoire et delegation</div>
+                <div class="skill-trigger">"CrewAI" "equipe d'agents"</div>
+            </div>
+        </div>
+        <div class="skill-card fade-in">
+            <div class="skill-icon" style="background: rgba(96, 165, 250, 0.15);">&#128187;</div>
+            <div>
+                <div class="skill-name">grpc-service-designer</div>
+                <div class="skill-desc">Conception de services gRPC, contrats Protobuf, streaming</div>
+                <div class="skill-trigger">"gRPC" "protobuf" ".proto"</div>
+            </div>
+        </div>
+        <div class="skill-card fade-in">
+            <div class="skill-icon" style="background: rgba(251, 146, 60, 0.15);">&#128230;</div>
+            <div>
+                <div class="skill-name">outbox-pattern-guide</div>
+                <div class="skill-desc">Pattern Outbox & Saga pour la coherence transactionnelle en microservices</div>
+                <div class="skill-trigger">"outbox" "saga" "dual write"</div>
+            </div>
+        </div>
+        <div class="skill-card fade-in">
+            <div class="skill-icon" style="background: rgba(248, 113, 113, 0.15);">&#128274;</div>
+            <div>
+                <div class="skill-name">threat-modeling</div>
+                <div class="skill-desc">Modelisation des menaces STRIDE, surfaces d'attaque, mitigations</div>
+                <div class="skill-trigger">"threat modeling" "STRIDE"</div>
+            </div>
+        </div>
+        <div class="skill-card fade-in">
+            <div class="skill-icon" style="background: rgba(52, 211, 153, 0.15);">&#9881;&#65039;</div>
+            <div>
+                <div class="skill-name">terraform-guide</div>
+                <div class="skill-desc">Infrastructure as Code — modules, state, workspaces Terraform</div>
+                <div class="skill-trigger">"terraform" "HCL" "tfstate"</div>
+            </div>
+        </div>
+        <div class="skill-card fade-in">
+            <div class="skill-icon" style="background: rgba(34, 211, 238, 0.15);">&#128202;</div>
+            <div>
+                <div class="skill-name">sql-advanced-analytics</div>
+                <div class="skill-desc">Window functions, CTEs recursives, pivots et optimisation</div>
+                <div class="skill-trigger">"window function" "PARTITION BY"</div>
+            </div>
+        </div>
+        <div class="skill-card fade-in">
+            <div class="skill-icon" style="background: rgba(244, 114, 182, 0.15);">&#128137;</div>
+            <div>
+                <div class="skill-name">fintech-compliance-checker</div>
+                <div class="skill-desc">Conformite PCI-DSS, KYC/AML, PSD2 pour apps de paiement</div>
+                <div class="skill-trigger">"PCI-DSS" "KYC" "conformite"</div>
+            </div>
+        </div>
+        <div class="skill-card fade-in">
+            <div class="skill-icon" style="background: rgba(251, 191, 36, 0.15);">&#128196;</div>
+            <div>
+                <div class="skill-name">incident-postmortem-guide</div>
+                <div class="skill-desc">Post-mortems blameless : timeline, 5 Whys, actions correctives</div>
+                <div class="skill-trigger">"post-mortem" "RCA" "incident"</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- USE CASES -->
+<section id="usecases">
+    <div class="section-label fade-in">Cas d'usage</div>
+    <h2 class="fade-in">Des sequences de skills<br>pour les vrais projets.</h2>
+    <p class="section-desc fade-in">Le skill-router compose automatiquement des sequences multi-skills adaptees.</p>
+
+    <div class="usecases">
+        <div class="usecase fade-in">
+            <div class="usecase-title">&#128640; Deployer un microservice en prod</div>
+            <ul class="usecase-steps">
+                <li><code>docker-composer</code> <span class="arrow">&rarr;</span> Conteneurisation</li>
+                <li><code>helm-chart-builder</code> <span class="arrow">&rarr;</span> Chart Kubernetes</li>
+                <li><code>azure-devops-pipeline-advisor</code> <span class="arrow">&rarr;</span> CI/CD</li>
+                <li><code>health-check-monitor</code> <span class="arrow">&rarr;</span> Probes K8s</li>
+                <li><code>prometheus-grafana-setup</code> <span class="arrow">&rarr;</span> Monitoring</li>
+            </ul>
+        </div>
+        <div class="usecase fade-in">
+            <div class="usecase-title">&#128274; Securiser une API de paiement</div>
+            <ul class="usecase-steps">
+                <li><code>api-security-hardener</code> <span class="arrow">&rarr;</span> Hardening OWASP</li>
+                <li><code>oauth2-oidc-advisor</code> <span class="arrow">&rarr;</span> Auth JWT/OIDC</li>
+                <li><code>rate-limiter-designer</code> <span class="arrow">&rarr;</span> Rate limiting</li>
+                <li><code>dependency-audit</code> <span class="arrow">&rarr;</span> Audit CVE</li>
+                <li><code>fintech-compliance-checker</code> <span class="arrow">&rarr;</span> PCI-DSS</li>
+            </ul>
+        </div>
+        <div class="usecase fade-in">
+            <div class="usecase-title">&#129302; Construire un systeme multi-agents</div>
+            <ul class="usecase-steps">
+                <li><code>agent-task-decomposer</code> <span class="arrow">&rarr;</span> Decomposition</li>
+                <li><code>multi-agent-orchestrator</code> <span class="arrow">&rarr;</span> Architecture</li>
+                <li><code>agent-memory-designer</code> <span class="arrow">&rarr;</span> Memoire</li>
+                <li><code>mcp-server-builder</code> <span class="arrow">&rarr;</span> Tools MCP</li>
+                <li><code>agent-testing-framework</code> <span class="arrow">&rarr;</span> Tests</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="install">
+    <div class="section-label fade-in">Installation</div>
+    <h2 class="fade-in">Pret en 30 secondes.</h2>
+    <p class="section-desc fade-in">Clone, package, importe. C'est tout.</p>
+
+    <div class="steps">
+        <div class="step fade-in">
+            <div class="step-number">01</div>
+            <h3>Cloner</h3>
+            <p>Clone le repo sur ta machine pour acceder aux 234 skills.</p>
+        </div>
+        <div class="step fade-in">
+            <div class="step-number">02</div>
+            <h3>Packager</h3>
+            <p>Zip le SKILL.md du skill voulu en fichier .skill.</p>
+        </div>
+        <div class="step fade-in">
+            <div class="step-number">03</div>
+            <h3>Importer</h3>
+            <p>Importe le .skill dans Claude via Parametres &rarr; Skills.</p>
+        </div>
+    </div>
+
+    <div class="code-block fade-in">
+        <span class="comment"># Cloner la collection</span><br>
+        <span class="cmd">git clone</span> <span class="path">https://github.com/khalilbenaz/claude-skills-collection.git</span><br><br>
+        <span class="comment"># Packager un skill (exemple : gRPC)</span><br>
+        <span class="cmd">cd</span> <span class="path">claude-skills-collection/dev-skills/grpc-service-designer</span><br>
+        <span class="cmd">zip</span> <span class="flag">../../grpc-service-designer.skill</span> SKILL.md<br><br>
+        <span class="comment"># Importer dans Claude.ai &rarr; Parametres &rarr; Skills</span>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-stats">
+        <strong>234</strong> skills &middot; <strong>18</strong> categories &middot; <strong>100%</strong> open-source &middot; <strong>MIT</strong> license
+    </div>
+    <div class="footer-links">
+        <a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a>
+        <a href="https://github.com/khalilbenaz/claude-skills-collection/blob/main/docs/GETTING_STARTED.md" target="_blank">Getting Started</a>
+        <a href="https://github.com/khalilbenaz/claude-skills-collection/blob/main/docs/CREATING_SKILLS.md" target="_blank">Creer un Skill</a>
+        <a href="https://github.com/khalilbenaz/claude-skills-collection/blob/main/docs/CONTRIBUTING.md" target="_blank">Contribuer</a>
+    </div>
+    <div class="footer-copy">
+        Fait par <a href="https://github.com/khalilbenaz" target="_blank" style="color: var(--accent-light); text-decoration: none;">@khalilbenaz</a>
+    </div>
+</footer>
+
+<script>
+// Counter animation
+function animateCounters() {
+    document.querySelectorAll('[data-target]').forEach(el => {
+        const target = +el.dataset.target;
+        const duration = 1500;
+        const start = performance.now();
+
+        function update(now) {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(target * eased);
+            if (progress < 1) requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
+    });
+}
+
+// Intersection Observer for fade-in
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+        }
+    });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// Start counter when hero is visible
+const heroObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+        animateCounters();
+        heroObserver.disconnect();
+    }
+}, { threshold: 0.3 });
+
+heroObserver.observe(document.querySelector('.stats'));
+</script>
+
+</body>
+</html>
