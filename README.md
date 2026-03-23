@@ -1,11 +1,11 @@
 # 🧠 Claude Skills Collection
 
-La plus grande collection open-source de skills pour Claude — **85 skills** couvrant **13 domaines** de la vie quotidienne et professionnelle.
+La plus grande collection open-source de skills pour Claude — **181 skills** couvrant **14 domaines** du développement, de la sécurité, des agents IA, du design, et de la vie quotidienne.
 
 > Un skill transforme Claude en assistant spécialisé avec un workflow structuré étape par étape.
 
-[![Skills](https://img.shields.io/badge/skills-85-blue)]()
-[![Categories](https://img.shields.io/badge/catégories-13-green)]()
+[![Skills](https://img.shields.io/badge/skills-181-blue)]()
+[![Categories](https://img.shields.io/badge/catégories-14-green)]()
 [![License](https://img.shields.io/badge/license-MIT-yellow)]()
 [![Language](https://img.shields.io/badge/langue-Français-red)]()
 
@@ -15,10 +15,11 @@ La plus grande collection open-source de skills pour Claude — **85 skills** co
 
 | Catégorie | Skills | Description |
 |-----------|--------|-------------|
+| 🤖 [Agent Skills](./agent-skills) | 25 | Agents IA : frameworks (CrewAI, AutoGen, LangGraph, MCP), patterns, déploiement, sécurité, use cases |
+| 💻 [Dev Skills](./dev-skills) | 77 | Développement complet : sécurité, architecture, DevOps, frontend, mobile, IA, langages, data, testing, UX/UI, blockchain, game dev |
 | 🏥 [Health Skills](./health-skills) | 16 | Suivi santé, analyses, consultations, douleurs, allergies |
 | 🧠 [Psy Skills](./psy-skills) | 12 | Santé mentale, émotions, thérapie, crise, burnout |
 | 🎯 [Prompt Skills](./prompt-skills) | 6 | Optimisation, création et debug de prompts IA |
-| 💻 [Dev Skills](./dev-skills) | 6 | Code review, debug, API, Git, SQL, regex |
 | ⚡ [Productivity Skills](./productivity-skills) | 5 | Planning, réunions, décisions, habitudes, projets |
 | 💰 [Finance Skills](./finance-skills) | 5 | Budget, dépenses, épargne, investissement, impôts |
 | 📚 [Education Skills](./education-skills) | 5 | Révisions, flashcards, examens, apprentissage |
@@ -31,28 +32,215 @@ La plus grande collection open-source de skills pour Claude — **85 skills** co
 
 ---
 
-## ⭐ Top Skills par domaine
+## 🤖 Agent Skills — 25 Skills en 5 sous-catégories
+
+### 🔧 Frameworks (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [crewai-expert](./agent-skills/crewai-expert) | _"CrewAI", "crew", "équipe d'agents"_ |
+| [autogen-guide](./agent-skills/autogen-guide) | _"AutoGen", "GroupChat", "ConversableAgent"_ |
+| [langgraph-designer](./agent-skills/langgraph-designer) | _"LangGraph", "state machine agent", "conditional edges"_ |
+| [semantic-kernel-guide](./agent-skills/semantic-kernel-guide) | _"Semantic Kernel", "agent .NET", "C# agent"_ |
+| [openai-assistants-builder](./agent-skills/openai-assistants-builder) | _"OpenAI Assistants", "file search", "code interpreter"_ |
+
+### 🧩 Patterns (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [multi-agent-orchestrator](./agent-skills/multi-agent-orchestrator) | _"multi-agent", "orchestration", "supervisor", "swarm"_ |
+| [agent-memory-designer](./agent-skills/agent-memory-designer) | _"mémoire agent", "long-term memory", "vector memory"_ |
+| [tool-calling-architect](./agent-skills/tool-calling-architect) | _"tool calling", "function calling", "MCP tool"_ |
+| [agent-evaluation-framework](./agent-skills/agent-evaluation-framework) | _"évaluer agent", "benchmark", "agent metrics"_ |
+| [human-in-the-loop-designer](./agent-skills/human-in-the-loop-designer) | _"human in the loop", "approbation humaine", "HITL"_ |
+
+### 🏗️ Infrastructure (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [mcp-server-builder](./agent-skills/mcp-server-builder) | _"MCP", "Model Context Protocol", "serveur MCP"_ |
+| [agent-deployment-guide](./agent-skills/agent-deployment-guide) | _"déployer agent", "agent en production", "agent API"_ |
+| [agent-monitoring-setup](./agent-skills/agent-monitoring-setup) | _"monitoring agent", "LangSmith", "traces agent"_ |
+| [agent-cost-optimizer](./agent-skills/agent-cost-optimizer) | _"coût agent", "réduire les coûts IA", "token optimization"_ |
+| [agent-security-hardener](./agent-skills/agent-security-hardener) | _"sécurité agent", "prompt injection", "guardrails"_ |
+
+### 🎯 Use Cases (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [coding-agent-builder](./agent-skills/coding-agent-builder) | _"coding agent", "agent développeur", "Devin", "SWE-agent"_ |
+| [research-agent-designer](./agent-skills/research-agent-designer) | _"research agent", "deep research", "agent qui cherche"_ |
+| [data-analyst-agent](./agent-skills/data-analyst-agent) | _"data analyst agent", "agent pandas", "agent SQL"_ |
+| [customer-support-agent](./agent-skills/customer-support-agent) | _"agent support", "chatbot support", "helpdesk agent"_ |
+| [sales-agent-builder](./agent-skills/sales-agent-builder) | _"sales agent", "agent commercial", "SDR agent"_ |
+
+### 🚀 Avancé (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [agent-testing-framework](./agent-skills/agent-testing-framework) | _"tester agent", "agent testing", "agent CI/CD"_ |
+| [agent-prompt-tuner](./agent-skills/agent-prompt-tuner) | _"optimiser prompt agent", "prompt tuning", "calibrer agent"_ |
+| [agent-context-manager](./agent-skills/agent-context-manager) | _"context window", "token limit", "context overflow"_ |
+| [voice-agent-builder](./agent-skills/voice-agent-builder) | _"voice agent", "agent vocal", "Vapi", "LiveKit"_ |
+| [agent-marketplace-creator](./agent-skills/agent-marketplace-creator) | _"marketplace agent", "agent store", "agent registry"_ |
+
+---
+
+## 💻 Dev Skills — 77 Skills en 14 sous-catégories
+
+### 🔒 Sécurité (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [security-auditor](./dev-skills/security-auditor) | _"audit sécurité", "vérifier la sécurité"_ |
+| [owasp-checker](./dev-skills/owasp-checker) | _"OWASP", "top 10", "failles web"_ |
+| [secrets-scanner](./dev-skills/secrets-scanner) | _"secrets", "clé API exposée", "credential leak"_ |
+| [pentest-assistant](./dev-skills/pentest-assistant) | _"pentest", "test d'intrusion", "red team"_ |
+| [vulnerability-analyzer](./dev-skills/vulnerability-analyzer) | _"vulnérabilité", "CVE", "CVSS"_ |
+
+### 🏗️ Architecture (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [microservices-designer](./dev-skills/microservices-designer) | _"microservices", "bounded context", "décomposition"_ |
+| [design-patterns-advisor](./dev-skills/design-patterns-advisor) | _"design pattern", "SOLID", "factory", "strategy"_ |
+| [system-design-helper](./dev-skills/system-design-helper) | _"system design", "architecture système", "scalability"_ |
+| [clean-architecture-guide](./dev-skills/clean-architecture-guide) | _"clean architecture", "hexagonale", "ports and adapters"_ |
+| [event-driven-architect](./dev-skills/event-driven-architect) | _"event driven", "RabbitMQ", "Kafka", "CQRS"_ |
+
+### 🚀 DevOps & CI/CD (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [docker-composer](./dev-skills/docker-composer) | _"Docker", "Dockerfile", "docker-compose"_ |
+| [cicd-pipeline-builder](./dev-skills/cicd-pipeline-builder) | _"CI/CD", "pipeline", "GitHub Actions", "Azure DevOps"_ |
+| [kubernetes-helper](./dev-skills/kubernetes-helper) | _"Kubernetes", "K8s", "kubectl", "helm"_ |
+| [infrastructure-as-code](./dev-skills/infrastructure-as-code) | _"Terraform", "IaC", "Bicep", "Pulumi"_ |
+| [monitoring-setup](./dev-skills/monitoring-setup) | _"monitoring", "Prometheus", "Grafana", "alerting"_ |
+
+### 🔌 Backend & API (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [rest-api-designer](./dev-skills/rest-api-designer) | _"API REST", "endpoints", "pagination", "versioning"_ |
+| [graphql-builder](./dev-skills/graphql-builder) | _"GraphQL", "schema", "resolver", "Apollo"_ |
+| [message-queue-architect](./dev-skills/message-queue-architect) | _"message queue", "RabbitMQ", "Kafka", "pub/sub"_ |
+| [caching-strategy](./dev-skills/caching-strategy) | _"cache", "Redis", "cache invalidation"_ |
+| [rate-limiter-designer](./dev-skills/rate-limiter-designer) | _"rate limit", "throttling", "429"_ |
+
+### 🧪 Testing (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [unit-test-generator](./dev-skills/unit-test-generator) | _"test unitaire", "Jest", "xUnit", "pytest"_ |
+| [integration-test-builder](./dev-skills/integration-test-builder) | _"test d'intégration", "Testcontainers", "E2E"_ |
+| [load-test-planner](./dev-skills/load-test-planner) | _"test de charge", "k6", "JMeter", "stress test"_ |
+| [test-coverage-analyzer](./dev-skills/test-coverage-analyzer) | _"couverture", "coverage", "mutation testing"_ |
+| [tdd-coach](./dev-skills/tdd-coach) | _"TDD", "red green refactor", "BDD"_ |
+
+### ⚡ Performance & Cloud (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [performance-profiler](./dev-skills/performance-profiler) | _"performance", "lent", "memory leak", "profiling"_ |
+| [cloud-cost-optimizer](./dev-skills/cloud-cost-optimizer) | _"coût cloud", "facture Azure", "FinOps"_ |
+| [scalability-planner](./dev-skills/scalability-planner) | _"scalabilité", "scaling", "montée en charge"_ |
+| [database-migration-helper](./dev-skills/database-migration-helper) | _"migration", "EF migrations", "zero downtime"_ |
+| [log-analyzer](./dev-skills/log-analyzer) | _"logs", "ELK", "debug production"_ |
+
+### 🎨 Frontend & Web (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [react-component-builder](./dev-skills/react-component-builder) | _"composant React", "Vue", "Angular", "Svelte"_ |
+| [css-layout-solver](./dev-skills/css-layout-solver) | _"CSS", "Flexbox", "Grid", "centrer", "layout"_ |
+| [accessibility-checker](./dev-skills/accessibility-checker) | _"accessibilité", "a11y", "WCAG", "ARIA"_ |
+| [responsive-design-helper](./dev-skills/responsive-design-helper) | _"responsive", "mobile first", "media queries"_ |
+| [web-performance-optimizer](./dev-skills/web-performance-optimizer) | _"Core Web Vitals", "LCP", "Lighthouse"_ |
+
+### 🎨 UX/UI Design (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [ux-research-guide](./dev-skills/ux-research-guide) | _"UX research", "persona", "test utilisateur"_ |
+| [ui-design-system-builder](./dev-skills/ui-design-system-builder) | _"design system", "design tokens", "Figma"_ |
+| [wireframe-advisor](./dev-skills/wireframe-advisor) | _"wireframe", "maquette", "mockup", "prototype"_ |
+| [user-flow-designer](./dev-skills/user-flow-designer) | _"user flow", "parcours utilisateur", "onboarding"_ |
+| [design-critique](./dev-skills/design-critique) | _"critique mon design", "UI review", "feedback"_ |
+
+### 📱 Mobile (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [mobile-app-architect](./dev-skills/mobile-app-architect) | _"architecture mobile", "native vs cross-platform"_ |
+| [flutter-helper](./dev-skills/flutter-helper) | _"Flutter", "Dart", "BLoC", "Riverpod"_ |
+| [react-native-guide](./dev-skills/react-native-guide) | _"React Native", "Expo", "Hermes"_ |
+| [ios-swift-advisor](./dev-skills/ios-swift-advisor) | _"iOS", "Swift", "SwiftUI", "Xcode"_ |
+| [android-kotlin-advisor](./dev-skills/android-kotlin-advisor) | _"Android", "Kotlin", "Jetpack Compose"_ |
+
+### 🤖 IA & Agents (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [ai-agent-builder](./dev-skills/ai-agent-builder) | _"agent IA", "autonomous agent", "CrewAI", "ReAct"_ |
+| [prompt-engineering-pro](./dev-skills/prompt-engineering-pro) | _"prompt engineering", "chain of thought", "few-shot"_ |
+| [llm-integration-guide](./dev-skills/llm-integration-guide) | _"API OpenAI", "Claude API", "Ollama", "LLM local"_ |
+| [rag-pipeline-designer](./dev-skills/rag-pipeline-designer) | _"RAG", "vector database", "ChromaDB", "Pinecone"_ |
+| [ai-workflow-orchestrator](./dev-skills/ai-workflow-orchestrator) | _"LangChain", "LangGraph", "pipeline IA"_ |
+
+### 🔤 Langages Spécifiques (6)
+| Skill | Déclencheur |
+|-------|-------------|
+| [python-best-practices](./dev-skills/python-best-practices) | _"Python", "PEP 8", "FastAPI", "Django", "asyncio"_ |
+| [typescript-mastery](./dev-skills/typescript-mastery) | _"TypeScript", "generics", "utility types", "strict"_ |
+| [rust-guide](./dev-skills/rust-guide) | _"Rust", "ownership", "borrow checker", "lifetime"_ |
+| [go-concurrency-guide](./dev-skills/go-concurrency-guide) | _"Go", "goroutine", "channel", "concurrency"_ |
+| [java-spring-advisor](./dev-skills/java-spring-advisor) | _"Java", "Spring Boot", "JPA", "Hibernate"_ |
+| [dotnet-csharp-advisor](./dev-skills/dotnet-csharp-advisor) | _".NET", "C#", "ASP.NET", "EF Core", "LINQ"_ |
+
+### 📊 Data & ML (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [data-pipeline-builder](./dev-skills/data-pipeline-builder) | _"data pipeline", "Airflow", "dbt", "Spark"_ |
+| [ml-model-deployer](./dev-skills/ml-model-deployer) | _"MLOps", "model serving", "MLflow"_ |
+| [feature-engineering-guide](./dev-skills/feature-engineering-guide) | _"feature engineering", "feature store", "encoding"_ |
+| [data-validation-helper](./dev-skills/data-validation-helper) | _"data quality", "Great Expectations", "validation"_ |
+| [etl-designer](./dev-skills/etl-designer) | _"ETL", "ELT", "data integration", "SSIS"_ |
+
+### ⛓️ Blockchain & Game Dev (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [smart-contract-auditor](./dev-skills/smart-contract-auditor) | _"smart contract", "Solidity", "audit blockchain"_ |
+| [web3-dapp-builder](./dev-skills/web3-dapp-builder) | _"dApp", "Web3", "ethers.js", "wagmi"_ |
+| [unity-game-helper](./dev-skills/unity-game-helper) | _"Unity", "game development", "C# Unity"_ |
+| [game-design-patterns](./dev-skills/game-design-patterns) | _"game pattern", "ECS", "game loop", "state machine"_ |
+| [pixel-art-advisor](./dev-skills/pixel-art-advisor) | _"pixel art", "sprite", "tileset", "Aseprite"_ |
+
+### 🛠️ Outils & Fondamentaux (6)
+| Skill | Déclencheur |
+|-------|-------------|
+| [api-doc-generator](./dev-skills/api-doc-generator) | _"documenter mon API", "swagger", "OpenAPI"_ |
+| [bug-debugger](./dev-skills/bug-debugger) | _"j'ai un bug", "ça ne marche pas", "erreur"_ |
+| [code-reviewer](./dev-skills/code-reviewer) | _"revois mon code", "code review"_ |
+| [database-query-optimizer](./dev-skills/database-query-optimizer) | _"requête lente", "optimiser SQL", "EXPLAIN"_ |
+| [git-workflow-helper](./dev-skills/git-workflow-helper) | _"git merge conflict", "branching strategy"_ |
+| [regex-builder](./dev-skills/regex-builder) | _"regex", "expression régulière", "pattern matching"_ |
+
+### 📝 Soft Skills Dev (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [technical-writing-guide](./dev-skills/technical-writing-guide) | _"documentation technique", "ADR", "RFC", "README"_ |
+| [code-documentation-pro](./dev-skills/code-documentation-pro) | _"documenter mon code", "docstring", "JSDoc"_ |
+| [project-estimation-helper](./dev-skills/project-estimation-helper) | _"estimation", "combien de temps", "story points"_ |
+| [tech-lead-advisor](./dev-skills/tech-lead-advisor) | _"tech lead", "mentoring", "décision technique"_ |
+| [developer-onboarding-builder](./dev-skills/developer-onboarding-builder) | _"onboarding", "nouveau développeur", "getting started"_ |
+
+---
+
+## ⭐ Top Skills
+
+### 🤖 Agents IA
+- **[crewai-expert](./agent-skills/crewai-expert)** — _"Créer un crew d'agents"_ → système multi-agents complet avec outils et mémoire
+- **[langgraph-designer](./agent-skills/langgraph-designer)** — _"Agent workflow stateful"_ → graphes d'agents avec branchements et persistence
+- **[mcp-server-builder](./agent-skills/mcp-server-builder)** — _"Connecter Claude à mon API"_ → serveur MCP avec tools, resources et prompts
+- **[coding-agent-builder](./agent-skills/coding-agent-builder)** — _"Agent qui code"_ → coding agent autonome type Devin/SWE-agent
+- **[agent-security-hardener](./agent-skills/agent-security-hardener)** — _"Sécuriser mon agent"_ → protection contre injection, abus et fuites
+
+### 💻 Développement
+- **[security-auditor](./dev-skills/security-auditor)** — _"Audit sécurité"_ → analyse complète 8 axes
+- **[microservices-designer](./dev-skills/microservices-designer)** — _"Découper en microservices"_ → DDD + bounded contexts
+- **[ai-agent-builder](./dev-skills/ai-agent-builder)** — _"Construire un agent IA"_ → architecture complète
+- **[docker-composer](./dev-skills/docker-composer)** — _"Dockeriser mon app"_ → Dockerfile optimisé + compose
 
 ### 🎯 Prompt Engineering
 - **[prompt-optimizer](./prompt-skills/prompt-optimizer)** — _"Améliore mon prompt"_ → analyse 7 critères + version optimisée
 - **[mega-prompt-builder](./prompt-skills/mega-prompt-builder)** — _"Crée un prompt pour X"_ → mega-prompt structuré complet
 - **[system-prompt-architect](./prompt-skills/system-prompt-architect)** — _"System prompt pour mon chatbot"_ → prompt système robuste
-- **[prompt-debugger](./prompt-skills/prompt-debugger)** — _"Mon prompt hallucine"_ → diagnostic + correction
-
-### 🏥 Santé
-- **[symptom-tracker](./health-skills/symptom-tracker)** — _"J'ai mal au ventre depuis 3 jours"_ → journal complet
-- **[red-flag-checker](./health-skills/red-flag-checker)** — _"C'est grave ?"_ → classification urgence 3 niveaux
-- **[lab-explainer](./health-skills/lab-explainer)** — _"Mon bilan sanguin"_ → explication simple
-
-### 🧠 Santé mentale
-- **[emotional-checkin](./psy-skills/emotional-checkin)** — _"Je me sens mal"_ → point émotionnel structuré
-- **[burnout-assessment](./psy-skills/burnout-assessment)** — _"Je suis épuisé"_ → bilan 3 dimensions
-- **[crisis-escalation](./psy-skills/crisis-escalation)** — _"Pensées noires"_ → orientation aide immédiate
-
-### 💻 Dev & Carrière
-- **[code-reviewer](./dev-skills/code-reviewer)** — _"Review ce code"_ → analyse 5 axes + code corrigé
-- **[cv-builder](./career-skills/cv-builder)** — _"Mon CV"_ → CV optimisé poste par poste
-- **[interview-prep](./career-skills/interview-prep)** — _"Entretien demain"_ → préparation STAR complète
 
 ---
 
@@ -63,8 +251,8 @@ La plus grande collection open-source de skills pour Claude — **85 skills** co
 git clone https://github.com/khalilbenaz/claude-skills-collection.git
 
 # Packager un skill
-cd claude-skills-collection/prompt-skills/prompt-optimizer
-zip ../../prompt-optimizer.skill SKILL.md
+cd claude-skills-collection/agent-skills/crewai-expert
+zip ../../crewai-expert.skill SKILL.md
 
 # → Importer le fichier .skill dans Claude.ai (Paramètres → Skills)
 ```
@@ -78,7 +266,7 @@ zip ../../prompt-optimizer.skill SKILL.md
 | Document | Contenu |
 |----------|---------|
 | [🚀 Getting Started](./docs/GETTING_STARTED.md) | Installation, utilisation, FAQ |
-| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 85 skills avec déclencheurs et livrables |
+| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 181 skills avec déclencheurs et livrables |
 | [🛠️ Creating Skills](./docs/CREATING_SKILLS.md) | Guide + template pour créer son propre skill |
 | [🧭 Design Principles](./docs/DESIGN_PRINCIPLES.md) | 8 principes de conception |
 | [🤝 Contributing](./docs/CONTRIBUTING.md) | Comment contribuer |
@@ -88,11 +276,12 @@ zip ../../prompt-optimizer.skill SKILL.md
 ## 🧭 Principes
 
 - **Structurer, pas diagnostiquer** — organise l'information sans conclure
-- **Toujours un livrable** — tableau, document, plan, checklist
+- **Toujours un livrable** — tableau, document, plan, checklist, code
 - **Ton mesuré** — ni alarmiste ni minimisant
 - **Sécurité intégrée** — escalade vers aide humaine si crise
 - **Sans jugement** — bienveillant et respectueux
 - **Autonomie** — l'utilisateur reste décideur
+- **Code concret** — exemples fonctionnels, pas de théorie vague
 
 ---
 
@@ -113,11 +302,12 @@ MIT — Libre d'utilisation, modification et redistribution.
 - **Santé** : Ne remplace pas un avis médical.
 - **Finance** : Ne constitue pas un conseil financier.
 - **Juridique** : Ne constitue pas un conseil juridique.
+- **Sécurité** : Les outils de pentest sont à utiliser dans un cadre légal et autorisé.
 - **Urgence** : En cas de danger, contactez les urgences locales.
 
 ---
 
 <p align="center">
-  <strong>85 skills • 13 catégories • 100% open-source</strong><br>
-  Fait avec 🩺💻🧠 par <a href="https://github.com/khalilbenaz">@khalilbenaz</a>
+  <strong>181 skills • 14 catégories • 100% open-source</strong><br>
+  Fait avec 🤖💻🔒🧠🎨 par <a href="https://github.com/khalilbenaz">@khalilbenaz</a>
 </p>
