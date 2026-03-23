@@ -1,10 +1,10 @@
 # 🧠 Claude Skills Collection
 
-La plus grande collection open-source de skills pour Claude — **234 skills** couvrant **18 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
+La plus grande collection open-source de skills pour Claude — **235 skills** couvrant **18 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
 
 > Un skill transforme Claude en assistant spécialisé avec un workflow structuré étape par étape.
 
-[![Skills](https://img.shields.io/badge/skills-234-blue)]()
+[![Skills](https://img.shields.io/badge/skills-235-blue)]()
 [![Categories](https://img.shields.io/badge/catégories-18-green)]()
 [![License](https://img.shields.io/badge/license-MIT-yellow)]()
 [![Language](https://img.shields.io/badge/langue-Français-red)]()
@@ -16,7 +16,7 @@ La plus grande collection open-source de skills pour Claude — **234 skills** c
 | Catégorie | Skills | Description |
 |-----------|--------|-------------|
 | 🤖 [Agent Skills](./agent-skills) | 46 | Agents IA : frameworks, sous-agents, hiérarchies, délégation, communication, pipelines, déploiement, sécurité, **orchestrateur intelligent** |
-| 💻 [Dev Skills](./dev-skills) | 92 | Développement complet : sécurité, architecture, DevOps, frontend, mobile, IA, langages, data, testing, UX/UI, blockchain, game dev, **.NET, gRPC, Prisma, RabbitMQ, OAuth2** |
+| 💻 [Dev Skills](./dev-skills) | 93 | Développement complet : sécurité, architecture, DevOps, frontend, mobile, IA, langages, data, testing, UX/UI, blockchain, game dev, **.NET, gRPC, Prisma, RabbitMQ, OAuth2** |
 | 🔧 [DevOps Skills](./devops-skills) | 4 | **NOUVEAU** — Terraform, Helm, Prometheus/Grafana, Azure Cloud |
 | 📊 [Data Skills](./data-skills) | 3 | **NOUVEAU** — SQL avancé, modélisation dimensionnelle, qualité des données |
 | 🔒 [Security Skills](./security-skills) | 3 | **NOUVEAU** — Threat modeling, API hardening, audit de dépendances |
@@ -199,6 +199,7 @@ La plus grande collection open-source de skills pour Claude — **234 skills** c
 | [wireframe-advisor](./dev-skills/wireframe-advisor) | _"wireframe", "maquette", "mockup", "prototype"_ |
 | [user-flow-designer](./dev-skills/user-flow-designer) | _"user flow", "parcours utilisateur", "onboarding"_ |
 | [design-critique](./dev-skills/design-critique) | _"critique mon design", "UI review", "feedback"_ |
+| [pencil-ui-designer](./dev-skills/pencil-ui-designer) | _"design moi", "génère une maquette", "landing page", "dashboard", "app mobile", "/pencil"_ |
 
 ### 📱 Mobile (5)
 | Skill | Déclencheur |
