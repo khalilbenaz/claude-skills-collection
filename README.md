@@ -1,10 +1,10 @@
 # 🧠 Claude Skills Collection
 
-La plus grande collection open-source de skills pour Claude — **181 skills** couvrant **14 domaines** du développement, de la sécurité, des agents IA, du design, et de la vie quotidienne.
+La plus grande collection open-source de skills pour Claude — **201 skills** couvrant **14 domaines** du développement, de la sécurité, des agents IA, du design, et de la vie quotidienne.
 
 > Un skill transforme Claude en assistant spécialisé avec un workflow structuré étape par étape.
 
-[![Skills](https://img.shields.io/badge/skills-181-blue)]()
+[![Skills](https://img.shields.io/badge/skills-201-blue)]()
 [![Categories](https://img.shields.io/badge/catégories-14-green)]()
 [![License](https://img.shields.io/badge/license-MIT-yellow)]()
 [![Language](https://img.shields.io/badge/langue-Français-red)]()
@@ -15,7 +15,7 @@ La plus grande collection open-source de skills pour Claude — **181 skills** c
 
 | Catégorie | Skills | Description |
 |-----------|--------|-------------|
-| 🤖 [Agent Skills](./agent-skills) | 25 | Agents IA : frameworks (CrewAI, AutoGen, LangGraph, MCP), patterns, déploiement, sécurité, use cases |
+| 🤖 [Agent Skills](./agent-skills) | 45 | Agents IA : frameworks, sous-agents, hiérarchies, délégation, communication, pipelines, déploiement, sécurité |
 | 💻 [Dev Skills](./dev-skills) | 77 | Développement complet : sécurité, architecture, DevOps, frontend, mobile, IA, langages, data, testing, UX/UI, blockchain, game dev |
 | 🏥 [Health Skills](./health-skills) | 16 | Suivi santé, analyses, consultations, douleurs, allergies |
 | 🧠 [Psy Skills](./psy-skills) | 12 | Santé mentale, émotions, thérapie, crise, burnout |
@@ -32,7 +32,7 @@ La plus grande collection open-source de skills pour Claude — **181 skills** c
 
 ---
 
-## 🤖 Agent Skills — 25 Skills en 5 sous-catégories
+## 🤖 Agent Skills — 45 Skills en 9 sous-catégories
 
 ### 🔧 Frameworks (5)
 | Skill | Déclencheur |
@@ -78,6 +78,42 @@ La plus grande collection open-source de skills pour Claude — **181 skills** c
 | [agent-context-manager](./agent-skills/agent-context-manager) | _"context window", "token limit", "context overflow"_ |
 | [voice-agent-builder](./agent-skills/voice-agent-builder) | _"voice agent", "agent vocal", "Vapi", "LiveKit"_ |
 | [agent-marketplace-creator](./agent-skills/agent-marketplace-creator) | _"marketplace agent", "agent store", "agent registry"_ |
+
+### 👨‍👦 Sous-Agents Core (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [subagent-delegator](./agent-skills/subagent-delegator) | _"sous-agent", "délégation", "agent parent", "dispatch"_ |
+| [agent-hierarchy-designer](./agent-skills/agent-hierarchy-designer) | _"hiérarchie agent", "manager agent", "worker agent", "arbre d'agents"_ |
+| [agent-task-decomposer](./agent-skills/agent-task-decomposer) | _"décomposer tâche", "sous-tâches", "work breakdown", "agent planner"_ |
+| [agent-result-aggregator](./agent-skills/agent-result-aggregator) | _"agréger résultats", "fusionner", "combiner outputs", "synthèse"_ |
+| [agent-supervisor-builder](./agent-skills/agent-supervisor-builder) | _"supervisor", "contrôler sous-agents", "agent oversight"_ |
+
+### 🔩 Sous-Agents Spécialisés (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [web-scraper-subagent](./agent-skills/web-scraper-subagent) | _"sous-agent web", "scraper agent", "browser subagent"_ |
+| [code-review-subagent](./agent-skills/code-review-subagent) | _"sous-agent review", "PR review agent", "quality check"_ |
+| [api-caller-subagent](./agent-skills/api-caller-subagent) | _"sous-agent API", "HTTP agent", "REST agent"_ |
+| [file-processor-subagent](./agent-skills/file-processor-subagent) | _"sous-agent fichier", "PDF agent", "Excel agent"_ |
+| [database-query-subagent](./agent-skills/database-query-subagent) | _"sous-agent DB", "SQL agent", "NL2SQL", "text-to-SQL"_ |
+
+### 📡 Communication & Coordination (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [agent-message-protocol](./agent-skills/agent-message-protocol) | _"protocole agent", "message protocol", "inter-agent communication"_ |
+| [agent-handoff-designer](./agent-skills/agent-handoff-designer) | _"handoff", "transfert agent", "passer la main", "relay"_ |
+| [agent-consensus-builder](./agent-skills/agent-consensus-builder) | _"consensus", "vote agents", "décision collective", "agent debate"_ |
+| [agent-conflict-resolver](./agent-skills/agent-conflict-resolver) | _"conflit agent", "résultats contradictoires", "arbitrage"_ |
+| [agent-state-synchronizer](./agent-skills/agent-state-synchronizer) | _"synchronisation", "état partagé", "shared state", "concurrent agents"_ |
+
+### ⚙️ Sous-Agents Avancés (5)
+| Skill | Déclencheur |
+|-------|-------------|
+| [agent-spawner](./agent-skills/agent-spawner) | _"spawner", "créer agent dynamiquement", "agent factory"_ |
+| [agent-pool-manager](./agent-skills/agent-pool-manager) | _"pool agent", "agent reuse", "warm agents", "worker pool"_ |
+| [agent-retry-strategist](./agent-skills/agent-retry-strategist) | _"retry agent", "fallback", "error recovery", "circuit breaker"_ |
+| [agent-load-balancer](./agent-skills/agent-load-balancer) | _"load balancer", "distribution charge", "répartir tâches"_ |
+| [agent-pipeline-composer](./agent-skills/agent-pipeline-composer) | _"pipeline agent", "chaîne d'agents", "agent DAG", "sequential"_ |
 
 ---
 
@@ -266,7 +302,7 @@ zip ../../crewai-expert.skill SKILL.md
 | Document | Contenu |
 |----------|---------|
 | [🚀 Getting Started](./docs/GETTING_STARTED.md) | Installation, utilisation, FAQ |
-| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 181 skills avec déclencheurs et livrables |
+| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 201 skills avec déclencheurs et livrables |
 | [🛠️ Creating Skills](./docs/CREATING_SKILLS.md) | Guide + template pour créer son propre skill |
 | [🧭 Design Principles](./docs/DESIGN_PRINCIPLES.md) | 8 principes de conception |
 | [🤝 Contributing](./docs/CONTRIBUTING.md) | Comment contribuer |
@@ -308,6 +344,6 @@ MIT — Libre d'utilisation, modification et redistribution.
 ---
 
 <p align="center">
-  <strong>181 skills • 14 catégories • 100% open-source</strong><br>
+  <strong>201 skills • 14 catégories • 100% open-source</strong><br>
   Fait avec 🤖💻🔒🧠🎨 par <a href="https://github.com/khalilbenaz">@khalilbenaz</a>
 </p>
