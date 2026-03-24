@@ -1,11 +1,10 @@
 # 🧠 Claude Skills Collection
 
-La plus grande collection open-source de skills pour Claude — **235 skills** couvrant **18 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
+La plus grande collection open-source de skills pour Claude — *241 skills** couvrant **18 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
 
 > Un skill transforme Claude en assistant spécialisé avec un workflow structuré étape par étape.
 
-[![Skills](https://img.shields.io/badge/skills-235-blue)]()
-[![Categories](https://img.shields.io/badge/catégories-18-green)]()
+[![Skills](https://img.shields.io/badge/skills-241-blue)]()[![Categories](https://img.shields.io/badge/catégories-18-green)]()
 [![License](https://img.shields.io/badge/license-MIT-yellow)]()
 [![Language](https://img.shields.io/badge/langue-Français-red)]()
 
