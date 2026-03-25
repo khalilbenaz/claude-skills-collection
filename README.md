@@ -1,10 +1,10 @@
 # 🧠 Claude Skills Collection
 
-La plus grande collection open-source de skills pour Claude — *241 skills** couvrant **18 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
+La plus grande collection open-source de skills pour Claude — **243 skills** couvrant **19 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
 
 > Un skill transforme Claude en assistant spécialisé avec un workflow structuré étape par étape.
 
-[![Skills](https://img.shields.io/badge/skills-241-blue)]()[![Categories](https://img.shields.io/badge/catégories-18-green)]()
+[![Skills](https://img.shields.io/badge/skills-243-blue)]()[![Categories](https://img.shields.io/badge/catégories-19-green)]()
 [![License](https://img.shields.io/badge/license-MIT-yellow)]()
 [![Language](https://img.shields.io/badge/langue-Français-red)]()
 
@@ -387,7 +387,7 @@ zip ../../crewai-expert.skill SKILL.md
 | Document | Contenu |
 |----------|---------|
 | [🚀 Getting Started](./docs/GETTING_STARTED.md) | Installation, utilisation, FAQ |
-| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 234 skills avec déclencheurs et livrables |
+| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 243 skills avec déclencheurs et livrables |
 | [🛠️ Creating Skills](./docs/CREATING_SKILLS.md) | Guide + template pour créer son propre skill |
 | [🧭 Design Principles](./docs/DESIGN_PRINCIPLES.md) | 8 principes de conception |
 | [🤝 Contributing](./docs/CONTRIBUTING.md) | Comment contribuer |
@@ -429,6 +429,6 @@ MIT — Libre d'utilisation, modification et redistribution.
 ---
 
 <p align="center">
-  <strong>234 skills • 18 catégories • 100% open-source</strong><br>
+  <strong>243 skills • 19 catégories • 100% open-source</strong><br>
   Fait avec 🤖💻🔒🧠🎨 par <a href="https://github.com/khalilbenaz">@khalilbenaz</a>
 </p>
