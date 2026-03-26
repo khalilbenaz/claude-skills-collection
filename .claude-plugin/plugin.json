@@ -1,0 +1,19 @@
+{
+  "name": "claude-skills-collection",
+  "version": "1.0.0",
+  "description": "347 professional skills for Claude Code — dev, cloud, security, AI/ML, business, and more",
+  "author": {
+    "name": "Khalil BENAZZOU"
+  },
+  "repository": "https://github.com/khalilbenaz/claude-skills-collection",
+  "homepage": "https://khalilbenaz.github.io/claude-skills-collection/",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "skills",
+    "productivity",
+    "development"
+  ],
+  "skills": "./skills/"
+}

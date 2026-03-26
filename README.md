@@ -10,6 +10,24 @@ La plus grande collection open-source de skills pour Claude — **347 skills** c
 
 ---
 
+## Installation (Claude Code Plugin)
+
+```bash
+/plugin marketplace add https://github.com/khalilbenaz/claude-skills-collection
+/plugin install claude-skills-collection
+```
+
+Une fois installé, tous les 347 skills sont disponibles comme slash commands dans Claude Code. Par exemple :
+
+```
+/dev-docker-composer
+/agent-spawner
+/cloud-aws-architect
+/security-threat-modeling
+```
+
+---
+
 ## 📦 Catégories
 
 | Catégorie | Skills | Description |
