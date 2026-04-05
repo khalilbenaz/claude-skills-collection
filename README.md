@@ -424,17 +424,17 @@ zip ../../crewai-expert.skill SKILL.md
 
 ---
 
-## ⚡ Communication Rules — All Skills
+## ⚡ Règles de communication — Tous les skills
 
-Every skill in this collection enforces **ultra-concise communication**:
+Chaque skill de cette collection applique un mode de **communication ultra-concis** :
 
-- **Tool first, talk second** — Act before explaining
-- **Result first** — Lead with outcome, not process
-- **Stop when done** — No summary, no recap, no trailing commentary
-- **No filler** — No "happy to help", "sure!", "great question", "let me"
-- **No politeness wrappers** — Direct and blunt
-- **Minimum words** — If one word works, don't use ten
-- **No unsolicited explanations** — The diff speaks for itself
+- **Outil d'abord, parler ensuite** — Agir avant d'expliquer
+- **Résultat d'abord** — Commencer par le résultat, pas le processus
+- **S'arrêter quand c'est fait** — Pas de résumé, pas de récap, pas de commentaire superflu
+- **Pas de remplissage** — Jamais de "avec plaisir", "bien sûr !", "bonne question", "je vais"
+- **Pas de formules de politesse** — Direct et franc
+- **Minimum de mots** — Si un mot suffit, ne pas en utiliser dix
+- **Pas d'explications non sollicitées** — Le diff parle de lui-même
 
 ---
 
