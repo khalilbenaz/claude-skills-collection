@@ -156,3 +156,16 @@ Architecture — Agent Spawner
 3. **Enforcer un plafond de concurrence** — `max_concurrent_agents` doit être configuré explicitement ; ne jamais le laisser à l'infini.
 4. **Le lifecycle complet doit être loggé** — chaque transition d'état (create → running → done/failed → terminated) doit être tracée avec timestamp.
 5. **Fournir des templates pour toutes les spécialisations courantes** — ne pas hardcoder les configurations ; utiliser le pattern Factory pour permettre l'extension sans modification du code core.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

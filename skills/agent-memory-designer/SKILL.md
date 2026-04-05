@@ -56,3 +56,16 @@ Utilise ce skill lorsque tu dois concevoir ou améliorer le système de mémoire
 - **Privacy by design** : chaque souvenir doit être associé à un user_id ; n'injecte jamais la mémoire d'un utilisateur dans le contexte d'un autre.
 - **Graceful degradation** : si le vector store est indisponible, l'agent doit fonctionner sans mémoire long-terme plutôt que de tomber en erreur.
 - **Token budget strict** : la section mémoire du prompt ne doit jamais dépasser un pourcentage fixe (ex: 20%) de la fenêtre de contexte disponible.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

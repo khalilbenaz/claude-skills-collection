@@ -21,3 +21,16 @@ description: Conception de dashboards Tableau incluant calculated fields, LOD ex
 - Toujours utiliser les LOD expressions FIXED plutôt que des sous-requêtes ou des blending complexes pour les calculs multi-niveaux de granularité.
 - Préférer les extracts (.hyper) aux connexions live pour les dashboards fréquemment consultés afin d'améliorer les temps de chargement.
 - Toujours tester les dashboards sur les données de production réelles et avec les volumes attendus avant la publication pour éviter les problèmes de performance.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

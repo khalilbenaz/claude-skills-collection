@@ -130,3 +130,16 @@ async def adaptive_consensus(agents_pool: list, question: str, options: list) ->
 3. **Définir le seuil de consensus avant le vote** — Décide a priori si le gagnant doit atteindre 51%, 66% ou 100% des votes. Ne pas ajuster le seuil après avoir vu les résultats.
 4. **Documente le trade-off coût/fiabilité** — Chaque agent supplémentaire réduit la variance mais multiplie les coûts. Justifie explicitement le nombre d'agents choisi dans la documentation de l'architecture.
 5. **Adapte au framework** — LangGraph : nodes parallèles + conditional aggregation. AutoGen : GroupChat avec `speaker_selection="round_robin"`. CrewAI : crew avec agents aux rôles distincts. Custom : `asyncio.gather` + fonctions d'agrégation.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

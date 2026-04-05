@@ -21,3 +21,16 @@ description: Sécurité cloud incluant IAM, encryption, networking, compliance, 
 - Toujours chiffrer les données sensibles avec des Customer Managed Keys (CMK) et activer la rotation automatique des clés.
 - Implémenter le tagging obligatoire sur toutes les ressources cloud pour assurer la traçabilité, la gestion des coûts et l'application des politiques de sécurité.
 - Ne jamais désactiver les logs d'audit (CloudTrail, Activity Log, Audit Logs) ; les conserver au minimum 12 mois dans un stockage immuable.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

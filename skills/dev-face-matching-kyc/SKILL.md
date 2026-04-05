@@ -34,3 +34,16 @@ description: Vérification biométrique d'identité : face matching selfie vs do
 *   •  Pour les documents marocains (CIN biométrique, passeport) : la photo sur la CIN contient un filigrane micro-texte et une hologramme. Si l'image document a une qualité insuffisante (photo recadrée, faible résolution < 200x250 pixels), flag `document_photo_quality: LOW` et exiger une re-capture.
 
 *   •  Logue tous les événements de décision (audit log immutable) : timestamp, device_fingerprint, face_match_score, liveness_score, decision, et reviewer_id (si review manuelle). Stocke les logs dans un système append-only (ex. AWS CloudWatch Logs avec KMS, ou ELK Stack avec WORM storage).
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

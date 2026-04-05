@@ -61,3 +61,16 @@ Utilise ce skill pour concevoir un agent capable de mener des recherches autonom
 - **Transparence sur la confiance** : inclure toujours un indicateur de confiance (haute / moyenne / basse) par section, basé sur la qualité et la concordance des sources trouvées.
 - **Limites de budget** : tout agent de recherche doit avoir un budget explicite (nombre de sources, temps, tokens) pour éviter les coûts incontrôlés. Implémente des alertes à 80% du budget consommé.
 - **Frameworks recommandés** : [Tavily](https://tavily.com/) pour la recherche, [LangGraph](https://langchain-ai.github.io/langgraph/) pour l'orchestration, [Firecrawl](https://firecrawl.dev/) pour l'extraction, [Perplexity API](https://docs.perplexity.ai/) comme alternative tout-en-un. Utilise GPT-4o ou Claude Opus pour la synthèse finale.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

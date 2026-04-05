@@ -352,3 +352,16 @@ Architecture — Pipeline Composer (DAG)
 3. **Les stages sans dépendances communes doivent s'exécuter en parallèle** (fan-out) pour minimiser la latence totale du pipeline.
 4. **Chaque stage définit sa propre politique d'erreur** — le pipeline ne doit pas avoir une politique globale unique ; certains stages sont critiques (abort), d'autres sont optionnels (skip avec default_value).
 5. **Mesurer et exposer la latence par stage** pour identifier les goulots d'étranglement et décider où investir en optimisation (cache, modèle plus rapide, parallélisation).
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

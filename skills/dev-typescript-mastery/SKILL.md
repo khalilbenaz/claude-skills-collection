@@ -30,3 +30,16 @@ description: Maîtrise de TypeScript avec types avancés et patterns. Se déclen
 - Ne jamais utiliser `any` : remplacer par `unknown` avec narrowing, `never` pour les branches impossibles, ou des generics pour la flexibilité.
 - Générer les types depuis la source de vérité (schéma DB, OpenAPI, Zod schema) plutôt que les écrire manuellement pour éviter la désynchro.
 - Expliquer les types complexes avec des commentaires JSDoc (`/** */`) ; un type bien nommé avec un commentaire vaut mieux qu'un type inline incompréhensible.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

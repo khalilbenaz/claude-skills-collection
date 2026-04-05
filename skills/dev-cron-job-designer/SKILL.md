@@ -28,3 +28,16 @@ description: Conception de tâches planifiées — cron expressions, scheduling 
 - Documente chaque tâche planifiée avec son expression cron, sa description fonctionnelle, sa durée attendue et son contact responsable.
 - Évite les exécutions aux heures rondes (00, 15, 30, 45) pour répartir la charge — ajoute un décalage (ex. :03, :17, :33).
 - Prévois un mécanisme de déclenchement manuel pour chaque tâche planifiée, indépendamment du scheduler, pour les cas de rattrapage ou de debug.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

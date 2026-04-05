@@ -88,3 +88,16 @@ description: Techniques avancées de prompt engineering pour LLMs. Se déclenche
 - **Préférer le prompt chaining au prompt monolithique** : une tâche en 3 étapes sequentielles donne de meilleurs résultats qu'une seule instruction complexe — plus facile à déboguer et à optimiser.
 - **Adapter au modèle cible** : un prompt optimisé pour Claude peut donner des résultats médiocres sur GPT-4 — tester sur le modèle de production final.
 - **Documenter les intentions** : commentez les sections critiques du prompt (pourquoi cette contrainte, pourquoi cet exemple) — indispensable pour la maintenance et le travail en équipe.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

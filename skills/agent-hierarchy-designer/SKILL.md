@@ -182,3 +182,16 @@ Utiliser ce skill lorsqu'une tâche complexe nécessite plusieurs couches d'agen
 3. **Les communications respectent la hiérarchie** : un worker ne contacte pas directement l'orchestrateur — il passe par son manager.
 4. **Chaque niveau dispose d'un budget explicite** (tokens, API calls, temps) alloué par son parent pour prévenir les dépassements de coût.
 5. **La hiérarchie est documentée et versionnée** : tout changement de structure (ajout d'un niveau, nouveau manager) fait l'objet d'un changelog pour faciliter le débogage en production.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -23,3 +23,16 @@ description: Architecture SDK mobile fintech (Kotlin Multiplatform). Conception 
 * **Async everywhere** : Kotlin Coroutines pour toutes les opérations IO. Dispatcher.IO pour DB/Retrofit, Dispatchers.Main pour UI. Timeout sur tous les appels réseau (30s max).
 * **Error handling standardisé** : Result<E, T> sealed class pour erreurs métier. Custom exceptions avec codes d'erreur métier (ERR_KYC_FAILED, ERR_AUTH_EXPIRED). Jamais de try/catch silencieux.
 * **Offline-first** : Room database comme source de vérité locale. Sync bidirectionnelle intelligente (last-write-wins ou conflict resolution custom). UI toujours affichable même sans réseau.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

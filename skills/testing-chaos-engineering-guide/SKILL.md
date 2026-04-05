@@ -20,3 +20,16 @@ description: Principes et outils de chaos engineering pour tester la résilience
 - Ne jamais lancer d'expérience de chaos sans monitoring actif et sans mécanisme d'arrêt d'urgence (kill switch) testé et fonctionnel.
 - Obtenir l'accord explicite des parties prenantes (management, équipe ops) avant toute expérience en production ; documenter le périmètre et les risques.
 - Traiter chaque découverte comme une opportunité d'amélioration : créer systématiquement des actions correctives avec un responsable et une échéance.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

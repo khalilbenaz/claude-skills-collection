@@ -82,3 +82,16 @@ Guide complet pour la conception et l'implémentation de solutions de computer v
 3. **Adapter les métriques à la tâche métier** : La accuracy globale est souvent trompeuse. Utiliser mAP pour la détection, IoU pour la segmentation, et considérer le coût métier des faux positifs vs faux négatifs pour calibrer le seuil de confiance.
 
 4. **Tester sur des conditions réelles** : Les images de test doivent refléter les conditions réelles de déploiement (éclairage, angle, résolution, occlusions). Un modèle performant sur un dataset propre peut échouer en conditions réelles.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

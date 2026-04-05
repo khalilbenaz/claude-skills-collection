@@ -28,3 +28,16 @@ description: Plan de réponse aux incidents de sécurité — préparation, dét
 - Respecte strictement les obligations légales de notification (RGPD, réglementations sectorielles) — le non-respect expose l'organisation à des sanctions.
 - Teste le plan de réponse aux incidents au minimum deux fois par an avec des exercices de simulation impliquant toutes les parties prenantes.
 - Applique le principe du besoin d'en connaître pour la communication sur l'incident — ne divulgue les détails techniques qu'aux personnes habilitées.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

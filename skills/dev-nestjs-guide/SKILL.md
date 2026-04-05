@@ -30,3 +30,16 @@ description: Développement backend NestJS avec modules, controllers, providers,
 - Injecte les dépendances via le constructeur plutôt que d'instancier manuellement — laisse le conteneur IoC de NestJS gérer le cycle de vie.
 - Implémente toujours la gestion d'erreurs avec des `HttpException` typées et des exception filters custom pour un format de réponse cohérent.
 - Sépare la logique métier dans les services et la logique de transport dans les controllers — un service ne doit jamais dépendre du protocole HTTP.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

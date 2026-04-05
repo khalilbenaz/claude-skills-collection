@@ -58,3 +58,16 @@ Rappels des consultations de suivi habituelles.
 
 ## Rappel obligatoire
 > ⚠️ Ce suivi est un outil d'organisation. Respectez les consignes de votre chirurgien. En cas de signe d'alerte (fièvre, infection, saignement), contactez votre équipe chirurgicale ou les urgences.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

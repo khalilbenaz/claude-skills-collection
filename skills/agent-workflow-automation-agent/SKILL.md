@@ -21,3 +21,16 @@ description: Construction d'agents d'automatisation de workflows métier incluan
 - Toujours conserver un audit trail complet de chaque exécution de workflow (entrées, sorties, décisions, timestamps) pour la traçabilité et le debugging.
 - Implémenter un circuit breaker sur chaque connecteur externe pour éviter les cascades de pannes quand un système tiers est indisponible.
 - Toujours prévoir un mode de fallback manuel permettant aux utilisateurs de reprendre le contrôle quand l'agent ne peut pas traiter un cas automatiquement.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

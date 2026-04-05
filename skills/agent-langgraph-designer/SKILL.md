@@ -354,3 +354,16 @@ if __name__ == "__main__":
 4. **Préférer `stream_mode="updates"` pour les UIs temps réel** — Le mode `"values"` retourne l'état complet à chaque nœud (verbeux). `"updates"` ne retourne que les changements, ce qui est plus efficace pour les interfaces utilisateur qui affichent la progression.
 
 5. **Tester avec LangGraph Studio avant de déployer** — LangGraph Studio offre une visualisation interactive du graphe, des breakpoints et l'inspection du state nœud par nœud. C'est l'outil de debug indispensable avant tout déploiement en production.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

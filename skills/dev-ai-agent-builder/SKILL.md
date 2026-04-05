@@ -88,3 +88,16 @@ description: Conception et implémentation d'agents IA autonomes avec outils et 
 - **Tracer toutes les décisions** : logguer chaque appel d'outil, chaque raisonnement intermédiaire, chaque erreur. Indispensable pour déboguer et améliorer l'agent.
 - **Séparer la logique agent de la logique métier** : les outils sont des wrappers fins sur les fonctions métier existantes — facilite les tests unitaires et le remplacement du LLM.
 - **Tester avec des cas adversariaux** : tenter de faire boucler l'agent, lui donner des instructions contradictoires, simuler des échecs d'outils — la robustesse se construit par les edge cases.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

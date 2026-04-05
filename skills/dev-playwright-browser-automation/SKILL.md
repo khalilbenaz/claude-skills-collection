@@ -55,3 +55,16 @@ description: Automatisation de navigateur via Playwright MCP — naviguer, cliqu
 - Préférer l'inspection structurée aux captures d'écran pour l'automatisation.
 - Attendre le chargement complet avant de valider un résultat.
 - Ne jamais supposer la structure d'une page — toujours vérifier d'abord.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

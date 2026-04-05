@@ -30,3 +30,16 @@ description: Scénarios d'automatisation avec Make (ex-Integromat) — modules, 
 - Implémenter systématiquement des Error Handlers sur les modules qui interagissent avec des API externes — les timeouts et erreurs réseau sont fréquents.
 - Documenter chaque scénario avec des notes sur les modules et nommer explicitement les connexions — un scénario visuel non documenté devient incompréhensible après quelques semaines.
 - Tester avec l'option "Run once" avant d'activer le scheduling — vérifier chaque module individuellement et valider les données de sortie.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

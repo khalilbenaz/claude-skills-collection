@@ -51,3 +51,16 @@ Utilise ce skill lorsque tu dois concevoir un système où plusieurs agents IA c
 - **Idempotence** : les appels d'agents doivent être idempotents pour permettre les retries sans effets de bord.
 - **Transparence des coûts** : chaque invocation d'agent a un coût en tokens/argent ; implante un budget global et interromps le workflow si le budget est dépassé.
 - **Testabilité** : chaque agent doit être testable en isolation avec des inputs/outputs mockés, indépendamment de l'orchestrateur.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

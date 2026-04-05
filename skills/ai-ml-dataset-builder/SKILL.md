@@ -90,3 +90,16 @@ Guide complet pour la construction, la curation et la gestion de datasets de qua
 4. **Évaluer et corriger les biais** : Analyser systématiquement les biais de représentation dans le dataset (genre, ethnie, géographie, etc.). Un modèle entraîné sur des données biaisées reproduira et amplifiera ces biais en production.
 
 5. **Versionner le dataset comme du code** : Chaque version du dataset doit être identifiable et récupérable. Utiliser DVC, Git LFS ou un système équivalent pour garantir la reproductibilité des expériences.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -62,3 +62,16 @@ description: Guide la pratique du Test-Driven Development pas à pas. Se déclen
 - Ne laisse jamais un test en échec plus longtemps que nécessaire.
 - Les tests sont la documentation vivante du comportement attendu du système.
 - Adapte le style (London vs Chicago, BDD vs TDD pur) au contexte et à l'équipe.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

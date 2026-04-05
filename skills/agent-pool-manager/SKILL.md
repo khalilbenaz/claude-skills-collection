@@ -213,3 +213,16 @@ Architecture — Agent Pool Manager
 3. **Implémenter le pattern context manager** (`with pool.borrow() as agent`) — garantit le retour de l'agent même en cas d'exception.
 4. **Refresher les agents après `max_uses` utilisations** — les agents LLM peuvent dégrader subtilement leurs performances après de nombreuses interactions ; le refresh préventif évite ce problème.
 5. **Exposer les métriques du pool en temps réel** — utilisation, temps d'attente, throughput : ces données sont indispensables pour dimensionner correctement le pool.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

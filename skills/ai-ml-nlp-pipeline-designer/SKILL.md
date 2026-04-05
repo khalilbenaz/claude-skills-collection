@@ -89,3 +89,16 @@ Guide complet pour la conception et l'implémentation de pipelines de traitement
 4. **Gérer la longueur des textes explicitement** : Définir une stratégie claire pour les textes dépassant la limite du tokenizer (troncation, sliding window, hierarchical approach). Ignorer ce problème cause des pertes silencieuses d'information.
 
 5. **Versionner le pipeline complet** : Le modèle seul ne suffit pas. Versionner ensemble le code de prétraitement, le tokenizer, le modèle et le post-traitement. Un changement dans n'importe quel composant peut modifier les résultats.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

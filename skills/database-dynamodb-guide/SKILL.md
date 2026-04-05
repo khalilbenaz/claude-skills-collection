@@ -21,3 +21,16 @@ description: Modélisation et requêtes DynamoDB incluant single-table design, G
 - Distribuer uniformément les écritures sur les partitions en choisissant des partition keys à haute cardinalité pour éviter les hot partitions.
 - Toujours activer le Point-in-Time Recovery (PITR) et les backups automatiques pour la protection des données en production.
 - Limiter la taille des items à moins de 100 KB (max 400 KB) en externalisant les données volumineuses vers S3 avec une référence dans DynamoDB.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

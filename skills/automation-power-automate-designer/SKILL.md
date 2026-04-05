@@ -30,3 +30,16 @@ description: Création de workflows avec Power Automate — flows, triggers, con
 - Respecter les limites de l'API (throttling) en ajoutant des délais (`Delay`) et en paginant les requêtes pour les grandes collections de données.
 - Utiliser les solutions Power Platform pour le versioning et le déploiement — ne jamais modifier un flow directement en production.
 - Tester avec des données réalistes incluant les cas limites (champs vides, caractères spéciaux, grands volumes) avant la mise en production.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

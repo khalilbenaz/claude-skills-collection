@@ -20,3 +20,16 @@ description: Orchestration avec Docker Swarm incluant services, stacks, overlay 
 - Toujours définir des health checks sur chaque service pour permettre au Swarm de détecter et remplacer automatiquement les containers défaillants.
 - Configurer des resource limits (CPU et mémoire) sur chaque service pour éviter qu'un service défaillant ne consomme toutes les ressources du noeud.
 - Toujours tester les rolling updates sur un environnement de staging avec `--update-failure-action rollback` avant de déployer en production.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

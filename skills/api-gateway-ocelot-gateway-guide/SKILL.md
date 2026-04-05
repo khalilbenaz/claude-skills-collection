@@ -153,3 +153,16 @@ builder.Services.AddOcelot().AddConsul();
 - Séparer la configuration par fichier (`ocelot.dev.json`, `ocelot.prod.json`).
 - Configurer les **QoS options** (circuit breaker, timeout) sur chaque route.
 - L'aggregation ne doit pas masquer les erreurs — logger chaque sous-requête.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

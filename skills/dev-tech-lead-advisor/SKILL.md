@@ -30,3 +30,16 @@ description: Guide pour tech leads : architecture, code reviews, mentoring et d�
 - **Standards automatisés, pas policiés** : Les conventions non-automatisées créent de la friction et des conflits en review. Si une règle est importante, elle doit être vérifiée par un outil, pas par la mémoire.
 - **Nommer la dette, ne pas la cacher** : Rendre la dette technique visible et quantifiée. La cacher pour "ne pas inquiéter" conduit à des crises imprévues. Un management informé peut décider en connaissance de cause.
 - **Feedback continu, pas annuel** : Le mentoring efficace se fait en continu, lors des reviews et des 1:1 réguliers. Attendre la revue annuelle pour donner du feedback est trop tard pour corriger et trop tôt pour être actionnnable.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

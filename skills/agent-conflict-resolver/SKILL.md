@@ -168,3 +168,16 @@ class AgentPerformanceTracker:
 3. **L'arbitre est neutre** — L'agent arbitre ne doit jamais être l'un des agents en conflit. Utilise un agent dédié ou un modèle distinct pour l'arbitrage.
 4. **Documente les trade-offs** — La résolution par confiance est rapide mais peut être biaisée. La vérification externe est fiable mais lente. L'arbitrage LLM est flexible mais coûteux. Choisis et documente explicitement.
 5. **Adapte au framework** — LangGraph : node de détection + conditional resolution branches. CrewAI : task de validation croisée. AutoGen : agent `ConflictResolver` dans le GroupChat. Custom : middleware de comparaison après `asyncio.gather`.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

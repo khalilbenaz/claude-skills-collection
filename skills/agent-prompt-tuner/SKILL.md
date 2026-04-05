@@ -37,3 +37,16 @@ Utilise ce skill lorsqu'un agent produit des résultats incorrects, incohérents
 - **Spécificité des instructions** : les instructions vagues ("réponds bien", "sois précis") sont moins efficaces que les instructions spécifiques ("réponds en 3 phrases maximum", "inclus toujours une source"). Chaque instruction doit être vérifiable.
 - **Trade-offs documentés** : documenter explicitement les compromis de chaque décision de prompt (longueur vs coût, raisonnement explicite vs latence, strictesse vs flexibilité) pour faciliter les décisions futures de l'équipe.
 - **Ne pas sur-optimiser** : un prompt trop spécifique au dataset de test généralise mal en production. Valider toujours sur un ensemble de données hors du dataset d'optimisation avant le déploiement.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

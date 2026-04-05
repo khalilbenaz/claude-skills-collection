@@ -21,3 +21,16 @@ description: Configuration et dépannage DNS incluant zones, records, DNSSEC, r�
 - Définir des TTL adaptés au contexte : courts (300s) pour les enregistrements susceptibles de changer fréquemment, longs (86400s) pour les enregistrements stables.
 - Vérifier systématiquement la syntaxe des fichiers de zone avec `named-checkzone` ou un outil équivalent avant de recharger la configuration DNS.
 - Maintenir une documentation à jour de tous les enregistrements DNS avec leur justification, leur propriétaire et leur date de dernière modification.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -30,3 +30,16 @@ description: Développement d'APIs Node.js avec Express, middleware, routing, ge
 - Ne place jamais de logique métier dans les routes ou les controllers — délègue aux services pour garantir la testabilité et la réutilisabilité.
 - Retourne toujours des réponses HTTP cohérentes avec un format standardisé (`{ success, data, error, message }`) sur toutes les routes.
 - Gère correctement les signaux d'arrêt (`SIGTERM`, `SIGINT`) pour un graceful shutdown qui ferme les connexions base de données et termine les requêtes en cours.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

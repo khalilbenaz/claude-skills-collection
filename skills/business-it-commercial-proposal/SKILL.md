@@ -43,3 +43,16 @@ description: Génération d'offres commerciales professionnelles pour des projet
 - **Proposer des variantes ou des options** : Donner au client le choix entre un MVP et une version complète élargit les chances de signature.
 - **Soigner la forme autant que le fond** : Une offre bien présentée, sans fautes, avec des visuels clairs reflète le sérieux et le professionnalisme du prestataire.
 - **Inclure une date de validité** : Toute offre doit préciser sa durée de validité (ex. 30 ou 60 jours) pour créer une incitation à décider rapidement.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -21,3 +21,16 @@ description: Optimisation MySQL/MariaDB incluant slow query log, stratégie d'in
 - Toujours utiliser GTID pour la réplication afin de simplifier le failover et éviter les incohérences de position binlog.
 - Préférer `EXPLAIN ANALYZE` (MySQL 8.0.18+) à `EXPLAIN` seul pour obtenir les temps d'exécution réels et non estimés.
 - Ne jamais augmenter `max_connections` sans ajuster proportionnellement la mémoire allouée par connexion (`sort_buffer_size`, `join_buffer_size`).
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -30,3 +30,16 @@ description: Bonnes pratiques Python pour code propre, performant et maintenable
 - Ne jamais ignorer les exceptions silencieusement (`except Exception: pass`) ; logger ou re-raise avec contexte (`raise ValueError("msg") from e`).
 - Utiliser les outils de l'écosystème moderne : `uv` pour la vitesse, `ruff` remplace `flake8`+`isort`+`pylint`, `httpx` remplace `requests` pour l'async.
 - Expliquer le "pourquoi" dans les commentaires, pas le "quoi" ; le code doit s'auto-documenter via des noms explicites et des type hints précis.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -137,3 +137,16 @@ description: Orchestration de workflows IA complexes avec chaînes et pipelines.
 - **Toujours implémenter les checkpoints** : un workflow de 10 minutes qui échoue à l'étape 9 doit pouvoir reprendre depuis l'étape 9, pas depuis le début — économise du temps et de l'argent.
 - **Loguer l'état complet à chaque transition** : en cas d'erreur en production, l'état au moment de la défaillance est la seule information de débogage disponible — ne pas lésiner sur les logs structurés.
 - **Définir des SLAs clairs** : timeout par nœud, coût maximum par run, temps de réponse cible — sans ces limites, un workflow peut consommer des ressources indéfiniment en cas de dysfonctionnement.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

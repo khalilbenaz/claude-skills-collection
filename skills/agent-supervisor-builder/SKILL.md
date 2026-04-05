@@ -304,3 +304,16 @@ Utiliser ce skill lors de la construction d'un agent qui doit coordonner et supe
 3. **Le supervisor ne doit jamais exécuter les tâches lui-même** sauf en mode dégradé explicite — son rôle est de coordonner, pas de produire.
 4. **Chaque intervention est loggée** avec le motif, le contexte, l'action prise et le résultat, pour permettre l'audit et l'amélioration continue des règles.
 5. **Le supervisor maintient une limite de correction par agent par tâche** : au-delà de `max_corrections` (recommandé : 3), l'agent est marqué comme `problematic` et la tâche est réassignée.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

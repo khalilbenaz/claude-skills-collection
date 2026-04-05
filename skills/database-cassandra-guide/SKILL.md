@@ -21,3 +21,16 @@ description: Modélisation et administration Apache Cassandra incluant partition
 - Ne jamais utiliser des secondary indexes Cassandra sur des colonnes à haute cardinalité ; préférer la création de tables de lookup dédiées.
 - Exécuter `nodetool repair` régulièrement (au moins tous les `gc_grace_seconds`) pour éviter la résurrection de données supprimées (tombstone).
 - Toujours tester les migrations de schéma en rolling fashion, noeud par noeud, pour éviter les interruptions de service.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

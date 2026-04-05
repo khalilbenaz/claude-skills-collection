@@ -223,3 +223,16 @@ class CircuitBreaker:
 3. **Circuit breaker obligatoire** — Tout accès au state store externe doit être protégé par un circuit breaker. La perte de connexion au state store ne doit pas faire crasher tous les agents simultanément.
 4. **Documente les trade-offs de consistance** — Consistance forte (toutes les lectures voient la dernière écriture) est lente. Consistance éventuelle est rapide mais produit des stale reads. Choisis et documente explicitement le niveau de consistance requis par chaque champ.
 5. **Adapte au framework** — LangGraph : utilise le `State` object natif avec reducers pour les champs partagés. CrewAI : `shared_memory` ou outil de lecture/écriture partagé. AutoGen : `ConversableAgent` avec shared context. Custom : `asyncio.Lock` pour l'in-process, Redis pour le multi-process.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

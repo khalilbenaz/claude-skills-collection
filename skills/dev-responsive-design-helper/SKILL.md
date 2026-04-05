@@ -30,3 +30,16 @@ description: Conception responsive et mobile-first pour tout type de site ou app
 - Fournir du code complet avec les media queries intégrées, pas en séparé.
 - Tester les performances sur mobile (CPU throttling 4x dans DevTools) — un layout responsive lent n'est pas acceptable.
 - Documenter les choix de breakpoints et les raisons dans les commentaires CSS.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

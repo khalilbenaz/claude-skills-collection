@@ -23,3 +23,16 @@ description: Kotlin avancé pour Android fintech. Coroutines, Flows, Sealed clas
 * **Kotlin-first** : Éviter Java interop quand possible. Properties au lieu de getters/setters. Named arguments, default parameters. Extension functions au lieu de Utils classes. Null safety stricte (?/!!).
 * **Composition over inheritance** : Prefer sealed classes/interfaces over deep inheritance. Use delegation (by keyword) instead of inheritance. Avoid final classes only for testing needs (mockito).
 * **Immutability by default** : val > var, immutable collections (listOf vs mutableListOf), data classes pour value objects. Functional transformations (map/filter) au lieu de for-loops mutables.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

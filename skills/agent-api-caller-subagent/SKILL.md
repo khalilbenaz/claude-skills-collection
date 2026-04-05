@@ -98,3 +98,16 @@ PyJWT>=2.8.0
 4. **Réutilisabilité universelle** — Le sous-agent doit fonctionner avec n'importe quelle API REST ou GraphQL publique sans modification de code. Toute spécificité d'une API (endpoint de refresh token, format de pagination non-standard) doit être configurable via le schéma d'entrée, jamais hardcodée.
 
 5. **Code Python fonctionnel fourni** — Fournir une implémentation complète de la classe `APICallerSubAgent` avec méthodes `run(input_schema) -> output_schema`, `_authenticate()`, `_execute_with_retry()`, `_paginate()`, `_transform_response()`, support async via `asyncio`, et un exemple d'orchestration multi-APIs par un agent parent.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

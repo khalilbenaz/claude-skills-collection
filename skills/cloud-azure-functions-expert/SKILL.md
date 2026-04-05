@@ -20,3 +20,16 @@ description: Développement Azure Functions incluant triggers, bindings, Durable
 - Toujours configurer des retry policies explicites et des dead-letter queues pour les triggers basés sur les messages afin d'éviter la perte de données.
 - Préférer le Premium Plan avec VNET integration pour les fonctions qui accèdent à des ressources privées plutôt que d'exposer ces ressources publiquement.
 - Ne jamais dépasser 5 minutes d'exécution sur le Consumption Plan ; découper les traitements longs en orchestrations Durable Functions.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

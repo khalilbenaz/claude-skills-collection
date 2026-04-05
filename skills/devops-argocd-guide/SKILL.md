@@ -21,3 +21,16 @@ description: GitOps avec ArgoCD incluant applications, sync, rollbacks, multi-cl
 - Toujours configurer des health checks personnalisés pour les CRDs et les ressources non-standard afin qu'ArgoCD puisse évaluer correctement l'état de santé.
 - Séparer les credentials et secrets du repo GitOps en utilisant Sealed Secrets, SOPS ou External Secrets Operator pour ne jamais stocker de secrets en clair dans Git.
 - Implémenter le pattern App of Apps pour tout nouveau cluster afin de garantir un bootstrapping reproductible et une gestion centralisée.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

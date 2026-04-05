@@ -72,3 +72,16 @@ Utilise ce skill pour concevoir un agent commercial capable de gérer automatiqu
 - **Personnalisation authentique** : un email généré doit sembler écrit par un humain, pas par un robot. Évite les tournures génériques ("J'espère que ce message vous trouve bien"). L'accroche doit démontrer une vraie connaissance de l'entreprise ou du contact.
 - **Limites de volume** : n'envoie jamais plus de 100-200 emails/jour depuis un seul domaine pour préserver la délivrabilité. Réchauffe les nouveaux domaines progressivement (10 → 50 → 100 emails/jour sur 4 semaines). Monitore le taux de bounce (< 2%) et de spam (< 0.1%).
 - **Frameworks recommandés** : [Apollo.io](https://apollo.io/) pour l'enrichissement et les séquences, [Clay](https://clay.com/) pour l'enrichissement avancé, [LangChain](https://python.langchain.com/) pour l'orchestration de l'agent, [Instantly](https://instantly.ai/) pour l'envoi d'emails, [HubSpot API](https://developers.hubspot.com/) ou [Salesforce API](https://developer.salesforce.com/) pour le CRM. Modèle recommandé : Claude Sonnet pour la rédaction, Claude Haiku pour la classification.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

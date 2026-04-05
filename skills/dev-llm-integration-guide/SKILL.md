@@ -141,3 +141,16 @@ description: Intégration de LLMs dans des applications via API. Se déclenche a
 - **Toujours avoir un fallback** : si le modèle premium échoue, fallback sur un modèle moins cher/plus disponible — la résilience est non-négociable en production.
 - **Tracker les coûts dès le début** : implémenter un compteur de tokens par session/utilisateur avant le lancement — les coûts LLM peuvent exploser sans monitoring.
 - **Tester avec `temperature=0`** pour les tâches déterministes (extraction, classification) et `temperature=0.7-1.0` pour la génération créative — ne pas utiliser les defaults sans réflexion.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

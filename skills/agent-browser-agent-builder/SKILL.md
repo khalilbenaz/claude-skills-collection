@@ -21,3 +21,16 @@ description: Construction d'agents de navigation web autonomes incluant scraping
 - Toujours implémenter des délais raisonnables entre les requêtes pour ne pas surcharger les serveurs cibles et éviter le blocage IP.
 - Persister systématiquement l'état de session (cookies, tokens) pour éviter les ré-authentifications coûteuses et les déclenchements de sécurité.
 - Toujours capturer des screenshots à chaque étape critique du workflow pour faciliter le debugging et l'audit des actions de l'agent.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

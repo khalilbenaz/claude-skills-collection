@@ -30,3 +30,16 @@ description: Patterns Apache Kafka — topics, partitions, consumer groups, exac
 - Implémente la gestion des erreurs avec un dead letter topic pour les messages non traitables plutôt que de bloquer le consumer group.
 - Ne stocke jamais de payloads volumineux dans Kafka — utilise le pattern Claim Check (référence vers un stockage externe) pour les données dépassant 1 MB.
 - Monitore le consumer lag comme métrique principale de santé — un lag croissant indique un problème de capacité ou de traitement.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

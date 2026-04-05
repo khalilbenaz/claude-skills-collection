@@ -37,3 +37,16 @@ Utilise ce skill lorsqu'un agent atteint les limites de sa fenêtre de contexte,
 - **Transparence des compromis** : informer l'utilisateur lorsqu'une compression de contexte a eu lieu et peut affecter la cohérence des réponses. Ne jamais simuler une mémoire parfaite qui n'existe pas.
 - **Adapter la stratégie au modèle** : les stratégies de contexte varient significativement selon le modèle (fenêtre disponible, coût par token, qualité de la compression). Recalibrer lors de tout changement de modèle.
 - **Tester les cas de débordement** : inclure des tests spécifiques pour les scénarios de near-overflow et overflow dans la suite de tests de l'agent. Ces cas sont souvent les plus difficiles à diagnostiquer en production.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

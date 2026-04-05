@@ -21,3 +21,16 @@ description: Gouvernance des données incluant catalogues, lineage, qualité, ow
 - Toujours automatiser les contrôles de qualité dans les pipelines de données plutôt que de compter sur des vérifications manuelles ponctuelles.
 - Classifier toutes les données contenant des informations personnelles (PII) dès leur ingestion et appliquer automatiquement les politiques de masquage appropriées.
 - Documenter chaque dataset dans le catalogue avec au minimum : description, propriétaire, classification, schéma et fréquence de mise à jour.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

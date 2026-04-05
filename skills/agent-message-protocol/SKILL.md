@@ -107,3 +107,16 @@ async def consume_messages(r: aioredis.Redis, stream: str, group: str, consumer:
 3. **Idempotence obligatoire pour at-least-once** — Tout handler de message doit être idempotent : traiter le même message deux fois ne doit pas produire d'effets différents. Utilise le `message_id` comme clé de déduplication.
 4. **Documente les trade-offs de delivery** — At-most-once est rapide mais perd des messages. Exactly-once est sûr mais coûteux. Choisis explicitement et documente la décision dans l'architecture.
 5. **Adapte au framework** — LangGraph : utilise les `Command` objects et le state graph. CrewAI : exploite le mécanisme de `tool` return. AutoGen : utilise les `GroupChat` messages. Pour du custom, implémente un `MessageBus` Python avec `asyncio.Queue` et un dispatcher.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -351,3 +351,16 @@ Effectue les ajustements demandés et propose un nouveau cycle de test si les ch
 - **Ne pas deviner, demander** — Si une information critique manque pour concevoir un bon skill (domaine, techno, contraintes), la demander avant de générer. Un skill basé sur des suppositions sera médiocre.
 
 - **Respecter le format exact** — Le frontmatter YAML doit être syntaxiquement parfait (tirets de délimitation, guillemets, pas d'indentation fantaisiste). Le markdown doit être propre et bien structuré. Un SKILL.md mal formaté ne sera pas détecté par Claude Code.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

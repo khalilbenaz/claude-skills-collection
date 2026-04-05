@@ -28,3 +28,16 @@ description: Gestion de services avec systemd — units, timers, journalctl, boo
 - Configurer `Restart=on-failure` et `RestartSec=5s` pour les services critiques afin d'assurer la résilience automatique sans boucle de redémarrage trop rapide.
 - Utiliser les overrides avec `systemctl edit <service>` plutôt que modifier directement les fichiers unit fournis par les paquets — cela crée un fichier drop-in dans `/etc/systemd/system/<service>.d/`.
 - Toujours vérifier les logs avec `journalctl -u <service> -n 50 --no-pager` avant de déclarer un service fonctionnel.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

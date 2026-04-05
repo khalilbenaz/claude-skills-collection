@@ -30,3 +30,16 @@ description: Création de processus d'onboarding pour nouveaux développeurs. Se
 - **Objectifs clairs à J1, J7, J30** : Sans jalons définis, l'onboarding s'étire sans structure. Des objectifs clairs aident le nouveau dev à mesurer sa progression et à demander de l'aide au bon moment.
 - **Le buddy n'est pas le manager** : Le rôle du buddy est d'offrir un espace safe pour les questions "bêtes" et les doutes. Cette relation fonctionne mieux avec un pair qu'avec un supérieur hiérarchique.
 - **Améliorer en continu grâce aux nouveaux arrivants** : Chaque nouveau dev révèle des imperfections invisibles aux membres historiques. Leur feedback est le meilleur outil d'amélioration de l'onboarding.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

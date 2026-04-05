@@ -95,3 +95,16 @@ Guide complet pour l'optimisation de modèles de machine learning en vue du dép
 4. **Adapter l'optimisation au hardware cible** : Une optimisation performante sur GPU peut être contre-productive sur CPU. Toujours benchmarker sur le hardware réel de déploiement, pas uniquement sur la machine de développement.
 
 5. **Documenter les compromis** : Chaque optimisation implique un trade-off entre taille, vitesse et qualité. Documenter précisément ces compromis pour permettre une prise de décision éclairée lors du déploiement.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

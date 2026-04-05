@@ -98,3 +98,16 @@ Utilise ce skill lorsque tu dois concevoir, implémenter ou améliorer les outil
 - **Retours standardisés** : tous tes outils doivent retourner le même format de base (`status`, `data`/`error`) pour simplifier la gestion côté agent.
 - **Idempotence où possible** : les outils de lecture sont naturellement idempotents ; pour les outils d'écriture, implémente des guards contre les doubles appels (idempotency keys).
 - **Framework-agnostic d'abord** : implémente la logique métier de l'outil indépendamment du framework agent (LangChain, LlamaIndex, etc.) pour faciliter la migration et les tests.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

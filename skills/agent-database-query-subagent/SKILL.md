@@ -104,3 +104,16 @@ pydantic>=2.0.0
 4. **Graceful degradation** — Si la génération NL → SQL échoue, demander une clarification plutôt que de générer une requête incorrecte. Si le schéma est incomplet, indiquer les tables/colonnes inconnues dans `errors` plutôt que de deviner. En cas de timeout, retourner les lignes déjà fetchées avec `truncated: true`. Ne jamais retourner des résultats silencieusement incomplets.
 
 5. **Code Python fonctionnel fourni** — Fournir une implémentation complète de la classe `DatabaseQuerySubAgent` avec méthodes `run(input_schema) -> output_schema`, `_infer_schema()`, `_generate_sql()`, `_validate_query()`, `_execute_safe()`, `_process_results()`, gestion de `QuerySession` pour le contexte conversationnel, et un exemple d'intégration dans un agent analytique piloté par questions utilisateur.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

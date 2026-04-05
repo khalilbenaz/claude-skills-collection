@@ -30,3 +30,16 @@ description: Développement PHP Laravel avec Eloquent ORM, Blade templates, migr
 - Ne place jamais de logique métier dans les controllers ou les models — délègue aux services et actions pour la testabilité.
 - Protège toujours les routes sensibles avec les middleware d'authentification (`auth:sanctum`) et d'autorisation (policies et gates).
 - Utilise les queues pour toutes les opérations longues (envoi d'emails, traitement d'images, appels API externes) afin de ne jamais bloquer la requête HTTP.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

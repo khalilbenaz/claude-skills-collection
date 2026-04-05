@@ -21,3 +21,16 @@ description: Techniques de storytelling pour communication professionnelle inclu
 - Limiter une histoire à un seul message clé pour maximiser l'impact et la rétention
 - Adapter le registre narratif au contexte professionnel : pitch investisseur, présentation client, formation interne, keynote
 - Inclure systématiquement un élément de vulnérabilité ou d'échec qui rend le récit humain et relatable
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

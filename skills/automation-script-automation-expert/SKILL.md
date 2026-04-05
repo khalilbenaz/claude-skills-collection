@@ -30,3 +30,16 @@ description: Automatisation par scripts (PowerShell, Python, Bash) pour tâches 
 - Rendre chaque script idempotent — une ré-exécution ne doit pas dupliquer les données ni provoquer d'effets de bord indésirables.
 - Ne jamais stocker les credentials en clair dans les scripts — utiliser des variables d'environnement, des gestionnaires de secrets (Vault, Azure Key Vault), ou des fichiers protégés avec permissions restrictives.
 - Inclure un mode dry-run (`--dry-run`) qui affiche les actions sans les exécuter — indispensable pour valider le comportement avant l'exécution réelle.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

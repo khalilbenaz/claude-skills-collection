@@ -21,3 +21,16 @@ description: Optimisation et administration SQL Server. Se déclenche avec "SQL 
 - Toujours analyser les wait stats (sys.dm_os_wait_stats) pour comprendre la nature des ralentissements avant d'appliquer des corrections.
 - Éviter les curseurs et les boucles WHILE en faveur des opérations ensemblistes (set-based) pour les traitements de données.
 - Tester les changements de configuration et d'index sur un environnement de pré-production avec une charge représentative.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -61,3 +61,16 @@ Utilise ce skill pour construire un agent capable d'analyser des données de man
 - **Limiter l'exposition des données** : en production, n'affiche jamais de données brutes en masse dans les réponses. Agrège, anonymise, ou limite à des échantillons représentatifs (max 50 lignes affichées).
 - **Contextualiser les métriques** : ne pas présenter un chiffre isolé sans contexte. Toujours accompagner d'une comparaison (vs. période précédente, vs. moyenne, vs. cible), d'une tendance et d'une interprétation.
 - **Fiabilité des insights** : indiquer systématiquement le niveau de confiance statistique des insights générés (taille de l'échantillon, p-value si test statistique, biais potentiels des données source). Évite les conclusions hâtives sur de petits échantillons.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -90,3 +90,16 @@ Guide complet pour le suivi structuré d'expériences de machine learning, le ve
 4. **Nommer et taguer systématiquement** : Un run sans nom descriptif ni tags est inutilisable pour la comparaison future. Appliquer la convention de nommage de l'équipe sans exception.
 
 5. **Nettoyer régulièrement** : Archiver ou supprimer les runs exploratoires obsolètes. Un espace de tracking encombré ralentit la recherche et masque les résultats importants.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

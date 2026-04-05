@@ -89,3 +89,16 @@ radon>=6.0.0
 4. **Réutilisabilité multi-langage** — Le sous-agent doit supporter au minimum Python, JavaScript, TypeScript, Java et Go. La détection automatique du langage (si `language` non fourni) doit être tentée via analyse heuristique des tokens et extensions. Dégradation gracieuse si l'outil statique spécifique n'est pas disponible.
 
 5. **Code Python fonctionnel fourni** — Fournir une implémentation complète de la classe `CodeReviewSubAgent` avec méthodes `run(input_schema) -> output_schema`, `_run_static_analysis()`, `_run_security_scan()`, `_compute_score()`, et un exemple d'intégration dans un pipeline CI/CD agent-based.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

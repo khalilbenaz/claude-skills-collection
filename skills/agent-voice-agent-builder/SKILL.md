@@ -37,3 +37,16 @@ Utilise ce skill lorsque tu dois concevoir ou implémenter un agent vocal intera
 - **Transparence sur les limites** : l'agent vocal doit clairement indiquer quand il ne comprend pas ou quand il transfère vers un humain. Ne jamais simuler une compréhension qui n'a pas eu lieu.
 - **Tester avec de vraies voix** : les tests purement textuels ne suffisent pas. Valider obligatoirement avec des enregistrements audio réels avant la mise en production, couvrant les accents, âges et conditions d'enregistrement variés.
 - **Fallback humain toujours disponible** : tout agent vocal en production doit avoir un mécanisme de transfert vers un agent humain accessible à tout moment. Définir les déclencheurs automatiques (frustration détectée, échecs répétés, demande explicite).
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

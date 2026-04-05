@@ -21,3 +21,16 @@ description: Aide à rédiger des contrats de prestation freelance avec les clau
 - Les CGV doivent être transmises et acceptées avant le début de la prestation.
 - Inclure systématiquement une clause de résiliation avec préavis raisonnable (15-30 jours).
 - Ce skill fournit des modèles indicatifs, pas des conseils juridiques : recommander un avocat pour les contrats importants.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

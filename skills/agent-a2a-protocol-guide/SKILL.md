@@ -30,3 +30,16 @@ description: Guide du protocole Agent-to-Agent (A2A) de Google pour l'interopér
 - Implémente toujours les mécanismes de timeout et d'annulation pour éviter les tâches bloquées indéfiniment.
 - Conçois les agents comme des services indépendants et stateless — l'état des tâches doit être persisté côté serveur.
 - Documente clairement les skills et le format des artifacts produits par chaque agent pour faciliter l'intégration.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

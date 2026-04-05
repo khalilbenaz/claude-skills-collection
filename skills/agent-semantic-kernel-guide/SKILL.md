@@ -406,3 +406,16 @@ if __name__ == "__main__":
 4. **Versionner les prompt templates avec Git** — Les fichiers `skprompt.txt` + `config.json` sont du code au même titre que le C#. Les stocker dans le repo, les versionner, les tester avec des prompts de validation automatisés dans la CI/CD.
 
 5. **Gérer les erreurs de function calling explicitement** — Les appels de fonctions peuvent échouer (timeout, API externe down). Toujours encapsuler les `KernelFunction` dans des try/catch et retourner des messages d'erreur descriptifs plutôt que de lever des exceptions qui interrompent le flow du LLM.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

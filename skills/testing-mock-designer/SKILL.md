@@ -20,3 +20,16 @@ description: Conception de mocks, stubs et fakes pour les tests unitaires et d'i
 - Limiter le nombre de mocks par test à 2-3 maximum ; un excès de mocks signale un couplage excessif dans le code de production.
 - Toujours vérifier que les interfaces mockées correspondent aux contrats réels ; mettre à jour les mocks quand les interfaces évoluent.
 - Éviter les mocks partiels (partial mocks) qui testent un mélange de code réel et simulé, source fréquente de faux positifs.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

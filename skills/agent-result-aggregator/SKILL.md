@@ -239,3 +239,16 @@ Utiliser ce skill dès que plusieurs sous-agents ont produit des résultats qui 
 3. **La confiance globale est le minimum des confidences individuelles**, pas la moyenne — un résultat final est aussi fiable que son maillon le plus faible.
 4. **Documenter chaque conflit résolu** dans les métadonnées du résultat final pour permettre l'audit et l'amélioration continue du système.
 5. **Limiter la taille de l'output agrégé** : un résultat trop verbeux est inutilisable. Définir une longueur cible et utiliser le LLM de synthèse pour respecter cette contrainte.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

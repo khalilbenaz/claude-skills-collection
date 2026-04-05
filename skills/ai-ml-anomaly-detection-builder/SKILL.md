@@ -110,3 +110,16 @@ Guide complet pour la conception et l'implémentation de systèmes de détection
 4. **Le seuil est aussi important que le modèle** : Un excellent modèle avec un seuil mal calibré est inutile. Investir autant de temps dans le calibrage du seuil que dans l'entraînement du modèle, et recalibrer régulièrement en production.
 
 5. **Prévoir la dérive des données** : Les patterns normaux et anormaux évoluent dans le temps. Mettre en place un monitoring du data drift et un processus de réentraînement périodique pour maintenir la pertinence du système.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

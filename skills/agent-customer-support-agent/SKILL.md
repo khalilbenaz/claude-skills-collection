@@ -64,3 +64,16 @@ Utilise ce skill pour concevoir un agent de support client capable de répondre 
 - **Escalade rapide sur les sujets sensibles** : rembourser, traiter des données personnelles, des litiges légaux ou des menaces de résiliation ne doit jamais être géré seul par l'agent. Escalade immédiate obligatoire sur ces topics.
 - **Cohérence cross-canal** : l'historique de conversation doit être partagé entre tous les canaux. Un client qui a déjà expliqué son problème par email ne doit jamais avoir à tout répéter sur le chat.
 - **Frameworks recommandés** : [Rasa](https://rasa.com/) pour les flows structurés, [LangGraph](https://langchain-ai.github.io/langgraph/) pour les agents complexes, [Voiceflow](https://www.voiceflow.com/) pour le design no-code, [Zendesk Sunshine](https://www.zendesk.fr/) pour l'intégration CRM. Modèles conseillés : Claude Haiku (réponses rapides) + Claude Sonnet (questions complexes).
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

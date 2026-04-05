@@ -20,3 +20,16 @@ description: Modélisation et requêtes MongoDB. Se déclenche avec "MongoDB", "
 - Ne jamais utiliser $where ou des opérations JavaScript côté serveur en production pour des raisons de performance et de sécurité.
 - Toujours valider le plan d'exécution avec explain("executionStats") avant de déployer une nouvelle requête ou un nouvel index.
 - Prévoir une stratégie de migration de schéma progressive (versionning de documents) plutôt que des migrations destructives.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

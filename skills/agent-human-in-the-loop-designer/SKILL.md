@@ -71,3 +71,16 @@ Utilise ce skill lorsque tu dois intégrer des points de contrôle humain dans u
 - **Asymétrie risque** : le coût d'une escalade inutile (quelques secondes humaines) est bien moindre que le coût d'une action incorrecte non vérifiée ; calibre les seuils en faveur de la prudence.
 - **Boucle de feedback fermée** : un système HITL sans mécanisme de retour vers l'agent n'améliore rien ; chaque correction doit alimenter l'amélioration continue du système.
 - **Test du chemin de refus** : teste systématiquement ce qui se passe quand un humain rejette ou corrige l'action de l'agent — le workflow doit être aussi robuste dans ce cas que dans le cas d'approbation.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

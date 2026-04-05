@@ -172,3 +172,16 @@ Utiliser ce skill lorsqu'un agent parent doit distribuer du travail à des sous-
 3. **Toujours implémenter un circuit breaker** : si un sous-agent échoue N fois consécutives, le mettre en quarantaine automatiquement.
 4. **Favoriser l'idempotence** : les tâches déléguées doivent pouvoir être rejouées sans effet de bord si le retry est nécessaire.
 5. **Documenter les contrats d'interface** : chaque sous-agent expose un `capability manifest` décrivant ce qu'il peut faire, ses inputs attendus et ses outputs garantis.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

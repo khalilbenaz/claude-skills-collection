@@ -37,3 +37,16 @@ Utilise ce skill lorsque tu dois créer une plateforme de distribution d'agents 
 - **Transparence des coûts** : afficher clairement le coût estimé par appel (ou par usage typique) pour chaque agent, en incluant les coûts LLM sous-jacents. Les utilisateurs ne doivent jamais avoir de surprise sur leur facture.
 - **Propriété intellectuelle claire** : la licence de chaque agent doit être déclarée explicitement (MIT, Apache 2.0, commercial, propriétaire). Le marketplace doit vérifier que les agents ne réutilisent pas du code ou des prompts sans autorisation appropriée.
 - **Observabilité pour les créateurs** : fournir aux créateurs d'agents des métriques détaillées sur l'usage de leurs agents (appels, erreurs, latence, satisfaction) pour leur permettre d'améliorer continuellement leurs créations. Sans données, il n'y a pas d'amélioration possible.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -104,3 +104,16 @@ lxml>=4.9.0
 4. **Efficacité mémoire** — Pour les fichiers > 50 Mo, utiliser systématiquement le mode streaming/chunking. Les DataFrames pandas doivent être explicitement libérés après usage. Utiliser des générateurs plutôt que des listes pour les transformations en pipeline. Reporter la consommation mémoire approximative dans `stats`.
 
 5. **Code Python fonctionnel fourni** — Fournir une implémentation complète de la classe `FileProcessorSubAgent` avec méthodes `run(input_schema) -> output_schema`, `_detect_file_type()`, `_parse_file()`, `_transform_data()`, `_generate_output()`, support du batch processing, et un exemple d'intégration dans un pipeline d'ingestion de données piloté par agent.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

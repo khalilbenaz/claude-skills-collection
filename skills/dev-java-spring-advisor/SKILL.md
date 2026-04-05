@@ -30,3 +30,16 @@ description: Développement Java avec Spring Boot, Spring Security et l'écosyst
 - Ne jamais laisser des `@Transactional` sur des méthodes privées ou des appels depuis la même classe ; comprendre les proxies CGLIB et leurs limitations.
 - Préférer les DTOs (Data Transfer Objects) aux entités JPA dans les couches Controller/Service ; ne jamais exposer les entités directement dans les réponses REST.
 - Expliquer les décisions d'architecture : pourquoi cette couche, pourquoi cette relation entre entités, pourquoi ce niveau de transaction — le code Spring peut devenir une boîte noire sans documentation des intentions.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

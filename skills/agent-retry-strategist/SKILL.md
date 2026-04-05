@@ -284,3 +284,16 @@ Architecture — Retry Strategist
 3. **Modifier la tâche après le premier échec** — un retry identique sur un même input aura tendance à produire le même échec ; changer le prompt, le modèle ou le scope améliore les chances.
 4. **Tout ce qui dépasse `max_attempts` va en Dead Letter Queue** — ne jamais silencieusement abandonner une tâche ; la DLQ garantit la traçabilité et la reprise possible.
 5. **Mesurer et analyser les patterns d'échec** — le rapport de failures doit alimenter un processus d'amélioration continue des politiques de retry.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

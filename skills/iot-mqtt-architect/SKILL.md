@@ -21,3 +21,16 @@ description: Architecture de messaging IoT avec MQTT incluant brokers, topics, Q
 - Utiliser QoS 0 par défaut et ne monter en QoS que pour les messages critiques afin de préserver la bande passante
 - Implémenter systématiquement le Last Will Testament pour détecter les déconnexions inattendues des appareils
 - Documenter la structure des topics et le format des payloads (JSON recommandé) dans un contrat d'interface partagé
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -21,3 +21,16 @@ description: Tests end-to-end avec Cypress, couvrant le setup, les commandes per
 - Isoler chaque test : chaque spec doit pouvoir s'exécuter indépendamment sans dépendre de l'état laissé par un test précédent.
 - Stocker les variables d'environnement sensibles (URLs, credentials) dans `cypress.env.json` ou les variables CI, jamais en dur dans le code.
 - Limiter la portée des tests E2E aux parcours critiques ; déléguer les vérifications unitaires et d'intégration aux outils appropriés.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -289,3 +289,16 @@ Architecture — Agent Load Balancer
 3. **Implémenter le cost-aware routing par défaut** — dans les systèmes multi-modèles, router automatiquement vers le modèle le moins cher capable de traiter la tâche réduit significativement les coûts.
 4. **Mesurer et exposer les métriques de distribution** (p50, p95, p99 latency par agent, déséquilibre de charge) pour permettre le rebalancing et le dimensionnement du pool.
 5. **Les sticky sessions doivent avoir un TTL explicite** — documenter la durée d'affinité et la stratégie de fallback quand l'agent affine devient indisponible.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

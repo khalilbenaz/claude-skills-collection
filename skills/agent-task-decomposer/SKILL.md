@@ -209,3 +209,16 @@ Utiliser ce skill lorsqu'une tâche principale est trop vaste ou trop hétérog�
 3. **Toujours calculer le chemin critique** et prioriser son exécution pour minimiser le temps total d'exécution.
 4. **Prévoir systématiquement un plan de fallback** pour chaque sous-tâche sur le chemin critique — une alternative moins optimale mais fonctionnelle en cas d'échec.
 5. **Documenter les hypothèses de décomposition** : expliquer pourquoi telle tâche a été découpée de cette façon, pour faciliter le re-planning si le contexte change.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

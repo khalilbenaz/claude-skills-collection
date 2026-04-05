@@ -429,3 +429,16 @@ def stream_response(thread_id: str, assistant_id: str, user_message: str):
 4. **Utiliser `truncation_strategy` sur les threads longs** — Par défaut, tous les messages d'un thread sont envoyés au LLM (coût croissant). Configurer `truncation_strategy={"type": "last_messages", "last_messages": 20}` sur les runs pour contrôler les coûts en production.
 
 5. **Implémenter un retry avec backoff exponentiel pour les rate limits** — L'API OpenAI retourne des `RateLimitError` (429) lors de pics de charge. Toujours encapsuler les appels API dans un retry avec délai exponentiel (1s, 2s, 4s, max 60s) et alerter si le retry échoue après 5 tentatives.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

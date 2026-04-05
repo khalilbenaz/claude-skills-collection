@@ -21,3 +21,16 @@ description: Guide de développement React Native avec Expo et navigation. Se d�
 - Priorise la performance et l'UX : signal les anti-patterns courants (setState dans les boucles, FlatList sans keyExtractor, animations sur le JS thread).
 - Mentionne les alternatives Expo vs bare workflow et leurs implications sur la maintenance et les mises à jour natives.
 - En cas de problème lié aux modules natifs, précise si le projet utilise Expo Managed, Bare Workflow, ou React Native CLI pur avant de proposer une solution.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

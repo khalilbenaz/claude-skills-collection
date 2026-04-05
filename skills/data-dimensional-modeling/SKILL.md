@@ -128,3 +128,16 @@ VALUES ('CUST-123', 'Jean Dupont', 'jean@new.com', 'Lyon', 'Premium', GETDATE())
 - La **dimension Date** est obligatoire et doit être pré-remplie.
 - Les mesures dans les faits doivent être **additives** quand possible.
 - Documenter le type de SCD choisi pour chaque attribut de dimension.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

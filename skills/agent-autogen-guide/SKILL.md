@@ -243,3 +243,16 @@ if __name__ == "__main__":
 4. **Dimensionner `max_consecutive_auto_reply` et `max_round`** — Ces deux limites sont vos filets de sécurité contre les boucles infinies et les coûts incontrôlés. Commencez bas (5-10) et augmentez selon les besoins.
 
 5. **Séparer les rôles clairement dans `system_message`** — La qualité d'un Group Chat dépend directement de la clarté des `system_message`. Chaque agent doit avoir un rôle unique, non ambigu, avec des instructions sur quand intervenir et quand passer la parole.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

@@ -21,3 +21,16 @@ description: Construction d'agents de gestion d'emails incluant tri, réponse au
 - Toujours conserver l'email original et les métadonnées de classification dans un audit trail pour la traçabilité et la conformité RGPD.
 - Implémenter un mécanisme de rate limiting sur les réponses automatiques pour éviter les boucles d'emails (auto-reply storm) entre agents.
 - Ne jamais transférer automatiquement des pièces jointes sans les scanner préalablement pour les malwares et vérifier leur conformité.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

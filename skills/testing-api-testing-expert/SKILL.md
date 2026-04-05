@@ -21,3 +21,16 @@ description: Tests d'API REST et GraphQL avec les outils majeurs du marché, inc
 - Rendre chaque test idempotent : le test doit pouvoir s'exécuter plusieurs fois de suite sans effet de bord, en nettoyant les données créées via setup/teardown.
 - Couvrir systématiquement les codes d'erreur HTTP et les messages d'erreur associés ; les scénarios d'erreur sont aussi importants que les scénarios de succès.
 - Maintenir les collections Postman et les contrats Pact versionnés dans le dépôt Git au même titre que le code source.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

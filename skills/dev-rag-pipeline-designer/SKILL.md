@@ -129,3 +129,16 @@ description: Conception de pipelines RAG (Retrieval-Augmented Generation). Se d�
 - **Stocker les métadonnées dès l'ingestion** : source, date, auteur, section — indispensable pour le filtrage et la citation. Difficile à ajouter après coup.
 - **Évaluer avant d'optimiser** : sans dataset d'évaluation, toute "amélioration" est anecdotique. Construire le dataset en priorité, puis itérer sur les métriques RAGAS.
 - **Prévoir la mise à jour incrémentale** : les documents évoluent — implémenter un pipeline de détection de changements et de ré-indexation partielle dès le début.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

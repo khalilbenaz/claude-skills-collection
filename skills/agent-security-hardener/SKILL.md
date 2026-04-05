@@ -91,3 +91,16 @@ Utilise ce skill lorsque l'utilisateur veut sécuriser un agent IA avant ou apr�
 - Documente les pièges courants : faux sentiment de sécurité avec un seul guardrail, inputs encodés qui contournent les filtres basiques, prompt injection via des sources de données externes (web, fichiers).
 - Adapte les recommandations au niveau de risque réel de l'application (agent interne vs public, données sensibles ou non).
 - Ne jamais sacrifier l'utilisabilité au point de rendre l'agent inutilisable — calibrer les guardrails avec des tests sur des cas d'usage légitimes.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

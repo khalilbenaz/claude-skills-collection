@@ -72,3 +72,16 @@ Utilise ce skill lorsque tu dois mesurer, comparer ou améliorer la qualité d'u
 - **Métriques proxy vs métriques réelles** : le token usage est une métrique proxy du coût ; la satisfaction utilisateur est la métrique réelle — ne confonds pas les deux et mesure les deux quand c'est possible.
 - **Reproductibilité** : fixe les seeds aléatoires, les versions de modèle et les timestamps des tests pour pouvoir reproduire et comparer des résultats dans le temps.
 - **Documente les anti-patterns détectés** : quand un test révèle un comportement indésirable, crée systématiquement un test de regression pour éviter toute réintroduction future.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

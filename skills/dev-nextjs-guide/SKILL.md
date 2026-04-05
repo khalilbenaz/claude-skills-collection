@@ -30,3 +30,16 @@ description: Développement d'applications Next.js avec App Router, Server Compo
 - Utilise les conventions de fichiers Next.js (`loading.tsx`, `error.tsx`) plutôt que des solutions custom pour la gestion des états de chargement et d'erreur.
 - Valide systématiquement les entrées utilisateur dans les Server Actions et Route Handlers avant toute opération.
 - Propose des solutions compatibles avec le déploiement edge quand la latence est critique.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

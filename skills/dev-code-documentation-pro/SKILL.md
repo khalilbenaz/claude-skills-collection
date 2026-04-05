@@ -30,3 +30,16 @@ description: Documentation de code avec commentaires, docstrings et annotations 
 - **Documentation = critère de qualité** : Une PR qui ajoute une API publique sans docstring est incomplète. La documentation fait partie du code livré, pas d'une tâche optionnelle séparée.
 - **Tests comme documentation vivante** : Des tests bien nommés (`should_return_404_when_user_not_found`) documentent le comportement attendu et restent toujours à jour puisqu'ils s'exécutent.
 - **Automatiser pour maintenir** : La documentation non-automatisée se dégrade. Générer, déployer et vérifier la documentation en CI garantit sa fraîcheur et sa cohérence.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

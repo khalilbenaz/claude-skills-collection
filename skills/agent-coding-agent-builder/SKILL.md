@@ -62,3 +62,16 @@ Utilise ce skill lorsque tu dois concevoir ou implémenter un agent autonome cap
 - **Tests obligatoires** : tout code généré doit être accompagné de tests. Le taux de couverture cible est ≥ 80%. Refuse de committer du code non testé.
 - **Limiter les itérations** : implémente un mécanisme de timeout et de compteur d'itérations pour éviter les boucles infinies coûteuses. Maximum 10 tentatives par tâche.
 - **Frameworks recommandés** : [LangChain Agents](https://python.langchain.com/), [AutoGen](https://microsoft.github.io/autogen/), [SWE-agent](https://swe-agent.com/), [Aider](https://aider.chat/), [E2B](https://e2b.dev/) pour le sandboxing. Priorise la fiabilité sur la performance brute.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

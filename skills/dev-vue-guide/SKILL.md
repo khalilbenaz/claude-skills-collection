@@ -30,3 +30,16 @@ description: Développement d'applications Vue.js 3 avec Composition API, Pinia,
 - Évite les mutations directes du state en dehors des actions Pinia — garde la logique métier dans les stores.
 - Privilégie les composables pour la logique partagée plutôt que les mixins, qui sont dépréciés en Vue 3.
 - Définis toujours les props avec des types TypeScript explicites via `defineProps<T>()` pour garantir la sécurité de type.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

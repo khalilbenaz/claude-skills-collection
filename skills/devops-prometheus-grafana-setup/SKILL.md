@@ -139,3 +139,16 @@ groups:
 - Les alertes critiques doivent avoir un `for` d'au moins 5 minutes pour éviter les faux positifs.
 - Les dashboards Grafana doivent inclure les 4 golden signals (latence, trafic, erreurs, saturation).
 - Les labels Prometheus doivent avoir une cardinalité maîtrisée (pas d'IDs uniques).
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

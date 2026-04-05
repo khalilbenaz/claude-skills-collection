@@ -21,3 +21,16 @@ description: Automatisation d'audits de sécurité incluant scanning, reporting,
 - Toujours scanner les images Docker et les dépendances à chaque build et pas seulement lors de leur ajout, car de nouvelles CVE sont publiées quotidiennement.
 - Définir des SLAs de remédiation par sévérité (critique: 48h, haute: 7j, moyenne: 30j, basse: 90j) et les respecter strictement.
 - Centraliser tous les findings dans un outil unique de suivi pour éviter la dispersion et garantir une vue consolidée de la posture de sécurité.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

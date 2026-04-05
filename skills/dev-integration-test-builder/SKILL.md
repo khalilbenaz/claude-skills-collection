@@ -60,3 +60,16 @@ description: Crée des tests d'intégration pour vérifier l'interaction entre c
 - Nomme chaque test de façon descriptive pour refléter le scénario métier testé.
 - Ne simule pas ce qui peut être testé réellement via TestContainers ou équivalent.
 - Assure l'isolation totale : un test ne doit jamais dépendre de l'état laissé par un autre.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

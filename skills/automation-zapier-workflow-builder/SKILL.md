@@ -28,3 +28,16 @@ description: Automatisation avec Zapier — Zaps multi-étapes, filtres, paths, 
 - Préférer les Paths aux Zaps multiples quand la logique diverge selon une condition — cela centralise la maintenance et réduit les risques d'incohérence.
 - Documenter chaque Zap avec un nom descriptif et des notes expliquant le contexte métier — les Zaps orphelins sans documentation deviennent rapidement ingérables.
 - Surveiller les erreurs via le Task History et configurer des alertes email pour les échecs — un Zap en erreur silencieuse peut bloquer un processus métier critique.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

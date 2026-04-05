@@ -263,3 +263,16 @@ result = hierarchical_crew.kickoff(inputs={"deliverable": "rapport stratégique"
 4. **Utiliser `output_pydantic` pour les sorties structurées** — Quand l'output doit être parsé programmatiquement, définir un modèle Pydantic comme `output_pydantic=MonModele` sur la tâche pour garantir la structure.
 
 5. **Préférer `Process.sequential` pour débuter** — Le process hiérarchique est puissant mais imprévisible. Utilisez `sequential` pour les workflows déterministes, `hierarchical` uniquement quand la délégation dynamique est vraiment nécessaire.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

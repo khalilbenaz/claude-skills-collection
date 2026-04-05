@@ -30,3 +30,16 @@ description: Workflows d'automatisation avec n8n — nodes, triggers, credential
 - Versionner les workflows en JSON dans Git — exporter régulièrement et documenter les changements pour permettre le rollback.
 - Séparer les environnements de développement et production — tester les workflows complets en staging avant de les activer en production.
 - Monitorer les exécutions et configurer des alertes sur les échecs — un workflow en erreur silencieuse peut avoir des conséquences métier importantes.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

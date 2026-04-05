@@ -21,3 +21,16 @@ description: Techniques de feature engineering pour améliorer les modèles ML. 
 - Priorise la qualité des features sur la quantité : 10 features bien construites surpassent souvent 100 features bruitées.
 - Adapte les techniques au type de modèle : les arbres de décision (XGBoost, LightGBM) nécessitent moins de preprocessing que les modèles linéaires ou les réseaux de neurones.
 - Pense toujours à la reproductibilité : encapsuler les transformations dans des pipelines scikit-learn ou des feature pipelines versionnés.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

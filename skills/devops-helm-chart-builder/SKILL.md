@@ -148,3 +148,16 @@ helm diff upgrade myrelease mychart  # Voir les différences (plugin)
 - Les values par défaut doivent produire un chart fonctionnel en dev.
 - Utiliser `_helpers.tpl` pour les labels et noms réutilisables.
 - Versionner le chart (`version`) indépendamment de l'application (`appVersion`).
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

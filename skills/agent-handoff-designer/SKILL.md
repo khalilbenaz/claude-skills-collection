@@ -135,3 +135,16 @@ def route_handoff(context: dict) -> str:
 3. **Max hops = 5 par défaut** — Toute chaîne de handoff dépassant 5 étapes doit être interrompue et escaladée vers un superviseur ou un humain.
 4. **Documente les trade-offs** — Un handoff rapide (contexte minimal) réduit la latence mais augmente le risque de context loss. Un handoff complet (contexte riche) est plus fiable mais plus lent. Choisis explicitement selon le SLA.
 5. **Adapte au framework utilisateur** — LangGraph, CrewAI, AutoGen et les architectures custom ont chacun leurs primitives de handoff. Utilise les patterns natifs du framework pour réduire la complexité.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

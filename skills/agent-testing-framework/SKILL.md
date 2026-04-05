@@ -37,3 +37,16 @@ Utilise ce skill lorsque tu dois mettre en place une stratégie de test pour un 
 - **Évaluation sémantique** : ne jamais comparer les sorties LLM par égalité exacte de chaînes — utiliser des métriques sémantiques, des LLM-as-judge ou des regex bien définis pour les structures attendues.
 - **Tests adversariaux obligatoires** : tout agent exposé à des utilisateurs externes doit passer une batterie adversariale documentée avant la mise en production. Les vulnérabilités non bloquantes doivent figurer dans le changelog.
 - **Prioriser la maintenabilité** : préférer 20 tests bien conçus et stables à 200 tests fragiles. Chaque test doit avoir un nom explicite, une assertion claire et un message d'échec informatif.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

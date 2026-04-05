@@ -47,3 +47,16 @@ description: Génération d'offres commerciales professionnelles pour tout type 
 - **Inclure une date de validité** : Toute proposition commerciale doit préciser sa durée de validité (généralement 30 à 60 jours).
 - **Mentionner les conditions de commande** : Préciser ce qui déclenche le démarrage de la mission (bon de commande, acompte, signature de contrat).
 - **Ne jamais sous-estimer la forme** : Une offre lisible, structurée, sans fautes d'orthographe et visuellement soignée est perçue comme le reflet de la qualité de service.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

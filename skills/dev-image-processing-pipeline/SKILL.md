@@ -23,3 +23,16 @@ description: Pipeline traitement d'image mobile (Kotlin ML Kit, OpenCV, CameraX)
 * **ML Kit first** : Préférer ML Kit de Google (optimisé mobile, TFLite, support ar/fr) avant OpenCV. Utiliser CameraX ML Vision pour processing temps réel. Fallback OpenCV pour opérations avancées.
 * **Async processing** : Toutes opérations IO sur Dispatchers.IO, UI update sur Main. Timeout max 5s par étape. Cancelable avec Job lifecycle. UI feedback progress (ProgressBar, Skeleton).
 * **Cross-platform** : Kotlin Multiplatform avec shared processing logic. Expect/actual pour CameraX (Android) vs AVFoundation (iOS). Un API : processImage(Bitmap) -> Result<Image, Error>.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

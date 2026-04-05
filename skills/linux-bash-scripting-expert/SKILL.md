@@ -30,3 +30,16 @@ description: Écriture de scripts Bash avancés — variables, boucles, fonction
 - Utiliser `shellcheck` sur chaque script avant déploiement — cet outil détecte les erreurs courantes et les pratiques dangereuses.
 - Préférer les commandes internes Bash (parameter expansion, arithmétique `$(())`) aux appels externes (`sed`, `awk`, `cut`) quand c'est possible pour améliorer la performance.
 - Fournir toujours un message d'usage (`usage()`) et gérer les options avec `getopts` ou `getopt` pour rendre le script utilisable par d'autres.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

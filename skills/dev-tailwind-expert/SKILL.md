@@ -30,3 +30,16 @@ description: Maîtrise de Tailwind CSS — utility-first, configuration custom, 
 - Ne modifie jamais les valeurs par défaut de Tailwind directement — utilise `extend` dans la configuration pour ajouter des valeurs personnalisées.
 - Fournis des exemples avec les classes complètes et lisibles, pas de classes abrégées ou ambiguës.
 - Propose systématiquement une version accessible (contraste WCAG AA, focus visible, attributs ARIA) pour chaque composant.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

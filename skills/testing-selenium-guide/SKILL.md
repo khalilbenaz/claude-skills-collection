@@ -21,3 +21,16 @@ description: Automatisation de tests avec Selenium WebDriver, couvrant les locat
 - Appliquer systématiquement le Page Object Model pour tout projet dépassant une dizaine de tests afin de garantir la maintenabilité.
 - Externaliser les données de test (fichiers CSV, JSON ou base de données) et ne jamais coder les données en dur dans les classes de test.
 - Concevoir chaque test pour qu'il soit atomique et indépendant, sans dépendance d'ordre d'exécution.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

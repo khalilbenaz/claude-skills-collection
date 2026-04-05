@@ -30,3 +30,16 @@ description: Développement d'applications Angular avec modules, composants, ser
 - Active systématiquement `changeDetection: OnPush` sur chaque composant pour éviter les cycles de détection inutiles.
 - Ne place jamais de logique métier dans les composants — délègue aux services injectables pour la testabilité et la réutilisabilité.
 - Gère toujours les erreurs HTTP dans les interceptors et les services, jamais directement dans les composants.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.

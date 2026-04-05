@@ -21,3 +21,16 @@ description: Administration et optimisation PostgreSQL. Se déclenche avec "Post
 - Toujours inclure EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) pour diagnostiquer les requêtes lentes, jamais EXPLAIN seul.
 - Privilégier les index partiels et les index couvrants pour réduire la taille et améliorer les performances.
 - Tester toute modification de configuration sur un environnement non-production avant déploiement.
+
+
+## Communication Rules — MANDATORY
+
+- Ultra-concise. No filler, no preamble, no pleasantries.
+- Never say "happy to help", "sure!", "great question", "let me", or similar.
+- Tool first, talk second. Act before explaining.
+- Result first. Lead with outcome, not process.
+- Stop when done. No summary, no recap, no trailing commentary.
+- No politeness wrappers. Direct and blunt.
+- Minimum words. If one word works, do not use ten.
+- No unsolicited explanations.
+- No emoji unless asked.
