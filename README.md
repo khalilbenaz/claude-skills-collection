@@ -1,10 +1,10 @@
 # 🧠 Claude Skills Collection
 
-La plus grande collection open-source de skills pour Claude — **347 skills** couvrant **32 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
+La plus grande collection open-source de skills pour Claude — **348 skills** couvrant **32 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
 
 > Un skill transforme Claude en assistant spécialisé avec un workflow structuré étape par étape.
 
-[![Skills](https://img.shields.io/badge/skills-347-blue)]()[![Categories](https://img.shields.io/badge/catégories-32-green)]()
+[![Skills](https://img.shields.io/badge/skills-348-blue)]()[![Categories](https://img.shields.io/badge/catégories-32-green)]()
 [![License](https://img.shields.io/badge/license-MIT-yellow)]()
 [![Language](https://img.shields.io/badge/langue-Français-red)]()
 
@@ -17,7 +17,7 @@ La plus grande collection open-source de skills pour Claude — **347 skills** c
 /plugin install claude-skills-collection
 ```
 
-Une fois installé, tous les 347 skills sont disponibles comme slash commands dans Claude Code. Par exemple :
+Une fois installé, tous les 348 skills sont disponibles comme slash commands dans Claude Code. Par exemple :
 
 ```
 /dev-docker-composer
@@ -32,7 +32,7 @@ Une fois installé, tous les 347 skills sont disponibles comme slash commands da
 
 | Catégorie | Skills | Description |
 |-----------|--------|-------------|
-| 🤖 [Agent Skills](./agent-skills) | 46 | Agents IA : frameworks, sous-agents, hiérarchies, délégation, communication, pipelines, déploiement, sécurité, **orchestrateur intelligent** |
+| 🤖 [Agent Skills](./agent-skills) | 47 | Agents IA : frameworks, sous-agents, hiérarchies, délégation, communication, pipelines, déploiement, sécurité, **orchestrateur intelligent**, **workflows multi-agent** |
 | 💻 [Dev Skills](./dev-skills) | 93 | Développement complet : sécurité, architecture, DevOps, frontend, mobile, IA, langages, data, testing, UX/UI, blockchain, game dev, **.NET, gRPC, Prisma, RabbitMQ, OAuth2** |
 | 🔧 [DevOps Skills](./devops-skills) | 4 | **NOUVEAU** — Terraform, Helm, Prometheus/Grafana, Azure Cloud |
 | 📊 [Data Skills](./data-skills) | 3 | **NOUVEAU** — SQL avancé, modélisation dimensionnelle, qualité des données |
@@ -53,12 +53,13 @@ Une fois installé, tous les 347 skills sont disponibles comme slash commands da
 
 ---
 
-## 🤖 Agent Skills — 46 Skills en 10 sous-catégories
+## 🤖 Agent Skills — 47 Skills en 10 sous-catégories
 
-### 🧭 Orchestration & Routing (1)
+### 🧭 Orchestration & Routing (2)
 | Skill | Déclencheur |
 |-------|-------------|
 | [skill-router](./agent-skills/skill-router) | _"quel skill utiliser", "aide-moi à choisir", "orchestrateur", "dispatch", "route"_ |
+| [workflows](./agent-skills/workflows) | _"workflow", "orchestrer des agents", "fan-out", "multi-agent", "paralléliser des sous-agents", "audit exhaustif", "vérification adversariale"_ |
 
 ### 🔧 Frameworks (5)
 | Skill | Déclencheur |
@@ -405,7 +406,7 @@ zip ../../crewai-expert.skill SKILL.md
 | Document | Contenu |
 |----------|---------|
 | [🚀 Getting Started](./docs/GETTING_STARTED.md) | Installation, utilisation, FAQ |
-| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 347 skills avec déclencheurs et livrables |
+| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 348 skills avec déclencheurs et livrables |
 | [🛠️ Creating Skills](./docs/CREATING_SKILLS.md) | Guide + template pour créer son propre skill |
 | [🧭 Design Principles](./docs/DESIGN_PRINCIPLES.md) | 8 principes de conception |
 | [🤝 Contributing](./docs/CONTRIBUTING.md) | Comment contribuer |
@@ -461,6 +462,6 @@ MIT — Libre d'utilisation, modification et redistribution.
 ---
 
 <p align="center">
-  <strong>347 skills • 32 catégories • 100% open-source</strong><br>
+  <strong>348 skills • 32 catégories • 100% open-source</strong><br>
   Fait avec 🤖💻🔒🧠🎨 par <a href="https://github.com/khalilbenaz">@khalilbenaz</a>
 </p>
