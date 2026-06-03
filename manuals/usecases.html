@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>45 cas d'usage — Claude Skills Collection</title>
+<meta name="description" content="45 séquences de skills prêtes à l'emploi pour les vrais projets : dev, cloud, sécurité, data, business et vie quotidienne.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+
+.uc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:1rem}
+.uc-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.3rem 1.4rem;display:flex;flex-direction:column}
+.uc-card:hover{border-color:var(--accent)}
+.uc-title{font-weight:700;font-size:1.02rem;margin-bottom:.2rem}
+.uc-goal{color:var(--text-muted);font-size:.85rem;margin-bottom:.9rem}
+.uc-steps{list-style:none;margin:0 0 1rem;flex:1}
+.uc-steps li{display:flex;align-items:center;gap:.55rem;padding:.28rem 0;font-size:.85rem}
+.step-num{flex:none;width:1.3rem;height:1.3rem;border-radius:50%;background:rgba(124,92,252,.15);color:var(--accent-light);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc-steps a{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--cyan);text-decoration:none}
+.uc-steps a:hover{text-decoration:underline}
+.step-role{color:var(--text-dim);font-size:.76rem;margin-left:auto;text-align:right}
+.uc-card .invoke{font-size:.72rem;color:var(--text-muted);line-height:1.5}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main style="max-width:1200px">
+<h1 class="skill-title" style="font-family:'Inter',sans-serif">🧭 Cas d'usage</h1>
+<p class="lead">45 séquences de skills prêtes à l'emploi, du dev à la vie quotidienne. Chaque étape pointe vers son manuel — et la commande copiable lance toute la séquence dans Claude Code via le skill-router.</p>
+<input class="search" id="q" type="search" placeholder="Rechercher un cas d'usage… (ex : burnout, kubernetes, freelance)">
+<section class="cat-section" data-cat><div class="cat-title">💻 Développement <span class="cat-count">6 cas d'usage</span></div><div class="uc-grid"><div class="uc-card" data-search="lancer un mvp saas passer de l'idée au produit déployé project-kickstart system-design-helper rest-api-designer postgres-expert nextjs-guide cicd-pipeline-builder">
+<div class="uc-title">🚀 Lancer un MVP SaaS</div>
+<div class="uc-goal">Passer de l'idée au produit déployé</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./project-kickstart.html">project-kickstart</a><span class="step-role">Cadrage du projet</span></li>
+<li><span class="step-num">2</span><a href="./system-design-helper.html">system-design-helper</a><span class="step-role">Architecture</span></li>
+<li><span class="step-num">3</span><a href="./rest-api-designer.html">rest-api-designer</a><span class="step-role">API REST</span></li>
+<li><span class="step-num">4</span><a href="./postgres-expert.html">postgres-expert</a><span class="step-role">Base de données</span></li>
+<li><span class="step-num">5</span><a href="./nextjs-guide.html">nextjs-guide</a><span class="step-role">Frontend</span></li>
+<li><span class="step-num">6</span><a href="./cicd-pipeline-builder.html">cicd-pipeline-builder</a><span class="step-role">CI/CD</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Passer de l'idée au produit déployé. Utilise la séquence /project-kickstart puis /system-design-helper puis /rest-api-designer puis /postgres-expert puis /nextjs-guide puis /cicd-pipeline-builder.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="résoudre un incident en production du symptôme au post-mortem log-analyzer bug-debugger performance-profiler incident-postmortem-guide">
+<div class="uc-title">🐛 Résoudre un incident en production</div>
+<div class="uc-goal">Du symptôme au post-mortem</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./log-analyzer.html">log-analyzer</a><span class="step-role">Analyse des logs</span></li>
+<li><span class="step-num">2</span><a href="./bug-debugger.html">bug-debugger</a><span class="step-role">Diagnostic</span></li>
+<li><span class="step-num">3</span><a href="./performance-profiler.html">performance-profiler</a><span class="step-role">Profiling</span></li>
+<li><span class="step-num">4</span><a href="./incident-postmortem-guide.html">incident-postmortem-guide</a><span class="step-role">Post-mortem blameless</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Du symptôme au post-mortem. Utilise la séquence /log-analyzer puis /bug-debugger puis /performance-profiler puis /incident-postmortem-guide.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="refactorer un code legacy moderniser sans tout casser clean-architecture-guide design-patterns-advisor unit-test-generator test-coverage-analyzer technical-debt-manager">
+<div class="uc-title">🔄 Refactorer un code legacy</div>
+<div class="uc-goal">Moderniser sans tout casser</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./clean-architecture-guide.html">clean-architecture-guide</a><span class="step-role">Architecture cible</span></li>
+<li><span class="step-num">2</span><a href="./design-patterns-advisor.html">design-patterns-advisor</a><span class="step-role">Patterns</span></li>
+<li><span class="step-num">3</span><a href="./unit-test-generator.html">unit-test-generator</a><span class="step-role">Filet de sécurité</span></li>
+<li><span class="step-num">4</span><a href="./test-coverage-analyzer.html">test-coverage-analyzer</a><span class="step-role">Couverture</span></li>
+<li><span class="step-num">5</span><a href="./technical-debt-manager.html">technical-debt-manager</a><span class="step-role">Plan de dette</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Moderniser sans tout casser. Utilise la séquence /clean-architecture-guide puis /design-patterns-advisor puis /unit-test-generator puis /test-coverage-analyzer puis /technical-debt-manager.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="créer une app mobile cross-platform du design au store mobile-app-architect flutter-helper ui-design-system-builder integration-test-builder">
+<div class="uc-title">📱 Créer une app mobile</div>
+<div class="uc-goal">Cross-platform du design au store</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./mobile-app-architect.html">mobile-app-architect</a><span class="step-role">Architecture mobile</span></li>
+<li><span class="step-num">2</span><a href="./flutter-helper.html">flutter-helper</a><span class="step-role">Développement Flutter</span></li>
+<li><span class="step-num">3</span><a href="./ui-design-system-builder.html">ui-design-system-builder</a><span class="step-role">Design system</span></li>
+<li><span class="step-num">4</span><a href="./integration-test-builder.html">integration-test-builder</a><span class="step-role">Tests</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Cross-platform du design au store. Utilise la séquence /mobile-app-architect puis /flutter-helper puis /ui-design-system-builder puis /integration-test-builder.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="site web rapide et accessible performance, accessibilité et seo nextjs-guide tailwind-expert web-performance-optimizer accessibility-checker seo-optimizer">
+<div class="uc-title">🌐 Site web rapide et accessible</div>
+<div class="uc-goal">Performance, accessibilité et SEO</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./nextjs-guide.html">nextjs-guide</a><span class="step-role">Framework</span></li>
+<li><span class="step-num">2</span><a href="./tailwind-expert.html">tailwind-expert</a><span class="step-role">Styles</span></li>
+<li><span class="step-num">3</span><a href="./web-performance-optimizer.html">web-performance-optimizer</a><span class="step-role">Core Web Vitals</span></li>
+<li><span class="step-num">4</span><a href="./accessibility-checker.html">accessibility-checker</a><span class="step-role">WCAG</span></li>
+<li><span class="step-num">5</span><a href="./seo-optimizer.html">seo-optimizer</a><span class="step-role">Référencement</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Performance, accessibilité et SEO. Utilise la séquence /nextjs-guide puis /tailwind-expert puis /web-performance-optimizer puis /accessibility-checker puis /seo-optimizer.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="publier une api publique contrat, doc, tests et quotas rest-api-designer openapi-contract-first api-doc-generator api-testing-expert rate-limiter-designer">
+<div class="uc-title">🔌 Publier une API publique</div>
+<div class="uc-goal">Contrat, doc, tests et quotas</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./rest-api-designer.html">rest-api-designer</a><span class="step-role">Design</span></li>
+<li><span class="step-num">2</span><a href="./openapi-contract-first.html">openapi-contract-first</a><span class="step-role">Contrat OpenAPI</span></li>
+<li><span class="step-num">3</span><a href="./api-doc-generator.html">api-doc-generator</a><span class="step-role">Documentation</span></li>
+<li><span class="step-num">4</span><a href="./api-testing-expert.html">api-testing-expert</a><span class="step-role">Tests</span></li>
+<li><span class="step-num">5</span><a href="./rate-limiter-designer.html">rate-limiter-designer</a><span class="step-role">Quotas</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Contrat, doc, tests et quotas. Utilise la séquence /rest-api-designer puis /openapi-contract-first puis /api-doc-generator puis /api-testing-expert puis /rate-limiter-designer.&quot;</div><button class="copy-btn">Copier</button></div>
+</div></div></section>
+<section class="cat-section" data-cat><div class="cat-title">🤖 Agents IA <span class="cat-count">4 cas d'usage</span></div><div class="uc-grid"><div class="uc-card" data-search="construire un système multi-agents orchestration, mémoire, outils et tests agent-task-decomposer multi-agent-orchestrator agent-memory-designer mcp-server-builder agent-testing-framework">
+<div class="uc-title">🧩 Construire un système multi-agents</div>
+<div class="uc-goal">Orchestration, mémoire, outils et tests</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./agent-task-decomposer.html">agent-task-decomposer</a><span class="step-role">Décomposition</span></li>
+<li><span class="step-num">2</span><a href="./multi-agent-orchestrator.html">multi-agent-orchestrator</a><span class="step-role">Architecture</span></li>
+<li><span class="step-num">3</span><a href="./agent-memory-designer.html">agent-memory-designer</a><span class="step-role">Mémoire</span></li>
+<li><span class="step-num">4</span><a href="./mcp-server-builder.html">mcp-server-builder</a><span class="step-role">Tools MCP</span></li>
+<li><span class="step-num">5</span><a href="./agent-testing-framework.html">agent-testing-framework</a><span class="step-role">Tests</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Orchestration, mémoire, outils et tests. Utilise la séquence /agent-task-decomposer puis /multi-agent-orchestrator puis /agent-memory-designer puis /mcp-server-builder puis /agent-testing-framework.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="chatbot rag d'entreprise répondre depuis vos documents internes rag-pipeline-designer llm-integration-guide prompt-engineering-pro agent-evaluation-framework">
+<div class="uc-title">📚 Chatbot RAG d'entreprise</div>
+<div class="uc-goal">Répondre depuis vos documents internes</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./rag-pipeline-designer.html">rag-pipeline-designer</a><span class="step-role">Pipeline RAG</span></li>
+<li><span class="step-num">2</span><a href="./llm-integration-guide.html">llm-integration-guide</a><span class="step-role">Intégration LLM</span></li>
+<li><span class="step-num">3</span><a href="./prompt-engineering-pro.html">prompt-engineering-pro</a><span class="step-role">Prompts</span></li>
+<li><span class="step-num">4</span><a href="./agent-evaluation-framework.html">agent-evaluation-framework</a><span class="step-role">Évaluation</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Répondre depuis vos documents internes. Utilise la séquence /rag-pipeline-designer puis /llm-integration-guide puis /prompt-engineering-pro puis /agent-evaluation-framework.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="créer un serveur mcp donner de nouveaux outils à claude mcp-server-builder tool-calling-architect agent-testing-framework">
+<div class="uc-title">🛠️ Créer un serveur MCP</div>
+<div class="uc-goal">Donner de nouveaux outils à Claude</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./mcp-server-builder.html">mcp-server-builder</a><span class="step-role">Serveur MCP</span></li>
+<li><span class="step-num">2</span><a href="./tool-calling-architect.html">tool-calling-architect</a><span class="step-role">Design des tools</span></li>
+<li><span class="step-num">3</span><a href="./agent-testing-framework.html">agent-testing-framework</a><span class="step-role">Tests</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Donner de nouveaux outils à Claude. Utilise la séquence /mcp-server-builder puis /tool-calling-architect puis /agent-testing-framework.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="agent vocal de support client voix, escalade humaine, supervision voice-agent-builder customer-support-agent human-in-the-loop-designer agent-observability">
+<div class="uc-title">🎙️ Agent vocal de support client</div>
+<div class="uc-goal">Voix, escalade humaine, supervision</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./voice-agent-builder.html">voice-agent-builder</a><span class="step-role">Agent vocal</span></li>
+<li><span class="step-num">2</span><a href="./customer-support-agent.html">customer-support-agent</a><span class="step-role">Logique support</span></li>
+<li><span class="step-num">3</span><a href="./human-in-the-loop-designer.html">human-in-the-loop-designer</a><span class="step-role">Escalade humaine</span></li>
+<li><span class="step-num">4</span><a href="./agent-observability.html">agent-observability</a><span class="step-role">Supervision</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Voix, escalade humaine, supervision. Utilise la séquence /voice-agent-builder puis /customer-support-agent puis /human-in-the-loop-designer puis /agent-observability.&quot;</div><button class="copy-btn">Copier</button></div>
+</div></div></section>
+<section class="cat-section" data-cat><div class="cat-title">📊 Data & Bases de données <span class="cat-count">4 cas d'usage</span></div><div class="uc-grid"><div class="uc-card" data-search="pipeline data analytics de la source au dashboard data-pipeline-builder etl-designer dbt-guide dimensional-modeling power-bi-designer">
+<div class="uc-title">🏭 Pipeline data analytics</div>
+<div class="uc-goal">De la source au dashboard</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./data-pipeline-builder.html">data-pipeline-builder</a><span class="step-role">Pipeline</span></li>
+<li><span class="step-num">2</span><a href="./etl-designer.html">etl-designer</a><span class="step-role">ETL</span></li>
+<li><span class="step-num">3</span><a href="./dbt-guide.html">dbt-guide</a><span class="step-role">Transformations</span></li>
+<li><span class="step-num">4</span><a href="./dimensional-modeling.html">dimensional-modeling</a><span class="step-role">Modèle en étoile</span></li>
+<li><span class="step-num">5</span><a href="./power-bi-designer.html">power-bi-designer</a><span class="step-role">Dashboards</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : De la source au dashboard. Utilise la séquence /data-pipeline-builder puis /etl-designer puis /dbt-guide puis /dimensional-modeling puis /power-bi-designer.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="accélérer une base lente requêtes, index et cache database-query-optimizer sql-server-tuner caching-strategy redis-patterns">
+<div class="uc-title">🐢 Accélérer une base lente</div>
+<div class="uc-goal">Requêtes, index et cache</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./database-query-optimizer.html">database-query-optimizer</a><span class="step-role">Plans d'exécution</span></li>
+<li><span class="step-num">2</span><a href="./sql-server-tuner.html">sql-server-tuner</a><span class="step-role">Tuning serveur</span></li>
+<li><span class="step-num">3</span><a href="./caching-strategy.html">caching-strategy</a><span class="step-role">Stratégie de cache</span></li>
+<li><span class="step-num">4</span><a href="./redis-patterns.html">redis-patterns</a><span class="step-role">Cache Redis</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Requêtes, index et cache. Utilise la séquence /database-query-optimizer puis /sql-server-tuner puis /caching-strategy puis /redis-patterns.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="migrer une base sans downtime schéma, données et cohérence database-design-advisor database-migration-helper outbox-pattern-guide data-quality-checker">
+<div class="uc-title">🚚 Migrer une base sans downtime</div>
+<div class="uc-goal">Schéma, données et cohérence</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./database-design-advisor.html">database-design-advisor</a><span class="step-role">Schéma cible</span></li>
+<li><span class="step-num">2</span><a href="./database-migration-helper.html">database-migration-helper</a><span class="step-role">Migrations</span></li>
+<li><span class="step-num">3</span><a href="./outbox-pattern-guide.html">outbox-pattern-guide</a><span class="step-role">Cohérence</span></li>
+<li><span class="step-num">4</span><a href="./data-quality-checker.html">data-quality-checker</a><span class="step-role">Validation</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Schéma, données et cohérence. Utilise la séquence /database-design-advisor puis /database-migration-helper puis /outbox-pattern-guide puis /data-quality-checker.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="mettre un modèle ml en production du dataset au déploiement dataset-builder feature-engineering-guide ml-experiment-tracker model-optimization-guide ml-model-deployer">
+<div class="uc-title">🧠 Mettre un modèle ML en production</div>
+<div class="uc-goal">Du dataset au déploiement</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./dataset-builder.html">dataset-builder</a><span class="step-role">Dataset</span></li>
+<li><span class="step-num">2</span><a href="./feature-engineering-guide.html">feature-engineering-guide</a><span class="step-role">Features</span></li>
+<li><span class="step-num">3</span><a href="./ml-experiment-tracker.html">ml-experiment-tracker</a><span class="step-role">Expériences</span></li>
+<li><span class="step-num">4</span><a href="./model-optimization-guide.html">model-optimization-guide</a><span class="step-role">Optimisation</span></li>
+<li><span class="step-num">5</span><a href="./ml-model-deployer.html">ml-model-deployer</a><span class="step-role">Déploiement</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Du dataset au déploiement. Utilise la séquence /dataset-builder puis /feature-engineering-guide puis /ml-experiment-tracker puis /model-optimization-guide puis /ml-model-deployer.&quot;</div><button class="copy-btn">Copier</button></div>
+</div></div></section>
+<section class="cat-section" data-cat><div class="cat-title">☁️ Cloud & DevOps <span class="cat-count">4 cas d'usage</span></div><div class="uc-grid"><div class="uc-card" data-search="migrer vers le cloud plan, iac, sécurité et coûts cloud-migration-planner aws-architect terraform-guide cloud-security-guide cloud-cost-optimizer">
+<div class="uc-title">✈️ Migrer vers le cloud</div>
+<div class="uc-goal">Plan, IaC, sécurité et coûts</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./cloud-migration-planner.html">cloud-migration-planner</a><span class="step-role">Stratégie</span></li>
+<li><span class="step-num">2</span><a href="./aws-architect.html">aws-architect</a><span class="step-role">Architecture cible</span></li>
+<li><span class="step-num">3</span><a href="./terraform-guide.html">terraform-guide</a><span class="step-role">IaC</span></li>
+<li><span class="step-num">4</span><a href="./cloud-security-guide.html">cloud-security-guide</a><span class="step-role">Sécurité</span></li>
+<li><span class="step-num">5</span><a href="./cloud-cost-optimizer.html">cloud-cost-optimizer</a><span class="step-role">FinOps</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Plan, IaC, sécurité et coûts. Utilise la séquence /cloud-migration-planner puis /aws-architect puis /terraform-guide puis /cloud-security-guide puis /cloud-cost-optimizer.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="plateforme kubernetes complète gitops, monitoring et résilience kubernetes-helper helm-chart-builder argocd-guide prometheus-grafana-setup chaos-engineering-guide">
+<div class="uc-title">☸️ Plateforme Kubernetes complète</div>
+<div class="uc-goal">GitOps, monitoring et résilience</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./kubernetes-helper.html">kubernetes-helper</a><span class="step-role">Cluster</span></li>
+<li><span class="step-num">2</span><a href="./helm-chart-builder.html">helm-chart-builder</a><span class="step-role">Charts</span></li>
+<li><span class="step-num">3</span><a href="./argocd-guide.html">argocd-guide</a><span class="step-role">GitOps</span></li>
+<li><span class="step-num">4</span><a href="./prometheus-grafana-setup.html">prometheus-grafana-setup</a><span class="step-role">Monitoring</span></li>
+<li><span class="step-num">5</span><a href="./chaos-engineering-guide.html">chaos-engineering-guide</a><span class="step-role">Résilience</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : GitOps, monitoring et résilience. Utilise la séquence /kubernetes-helper puis /helm-chart-builder puis /argocd-guide puis /prometheus-grafana-setup puis /chaos-engineering-guide.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="déployer un microservice en prod du conteneur au monitoring docker-composer helm-chart-builder azure-devops-pipeline-advisor health-check-monitor prometheus-grafana-setup">
+<div class="uc-title">🚢 Déployer un microservice en prod</div>
+<div class="uc-goal">Du conteneur au monitoring</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./docker-composer.html">docker-composer</a><span class="step-role">Conteneurisation</span></li>
+<li><span class="step-num">2</span><a href="./helm-chart-builder.html">helm-chart-builder</a><span class="step-role">Chart Kubernetes</span></li>
+<li><span class="step-num">3</span><a href="./azure-devops-pipeline-advisor.html">azure-devops-pipeline-advisor</a><span class="step-role">CI/CD</span></li>
+<li><span class="step-num">4</span><a href="./health-check-monitor.html">health-check-monitor</a><span class="step-role">Probes</span></li>
+<li><span class="step-num">5</span><a href="./prometheus-grafana-setup.html">prometheus-grafana-setup</a><span class="step-role">Monitoring</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Du conteneur au monitoring. Utilise la séquence /docker-composer puis /helm-chart-builder puis /azure-devops-pipeline-advisor puis /health-check-monitor puis /prometheus-grafana-setup.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="ci/cd de a à z du commit au déploiement sécurisé git-workflow-helper github-actions-expert integration-test-builder secrets-scanner">
+<div class="uc-title">🔁 CI/CD de A à Z</div>
+<div class="uc-goal">Du commit au déploiement sécurisé</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./git-workflow-helper.html">git-workflow-helper</a><span class="step-role">Workflow Git</span></li>
+<li><span class="step-num">2</span><a href="./github-actions-expert.html">github-actions-expert</a><span class="step-role">Pipelines</span></li>
+<li><span class="step-num">3</span><a href="./integration-test-builder.html">integration-test-builder</a><span class="step-role">Tests</span></li>
+<li><span class="step-num">4</span><a href="./secrets-scanner.html">secrets-scanner</a><span class="step-role">Secrets</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Du commit au déploiement sécurisé. Utilise la séquence /git-workflow-helper puis /github-actions-expert puis /integration-test-builder puis /secrets-scanner.&quot;</div><button class="copy-btn">Copier</button></div>
+</div></div></section>
+<section class="cat-section" data-cat><div class="cat-title">🔒 Sécurité & Conformité <span class="cat-count">4 cas d'usage</span></div><div class="uc-grid"><div class="uc-card" data-search="audit de sécurité complet menaces, vulnérabilités, réponse threat-modeling owasp-checker vulnerability-analyzer pentest-assistant incident-response-plan">
+<div class="uc-title">🛡️ Audit de sécurité complet</div>
+<div class="uc-goal">Menaces, vulnérabilités, réponse</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./threat-modeling.html">threat-modeling</a><span class="step-role">STRIDE</span></li>
+<li><span class="step-num">2</span><a href="./owasp-checker.html">owasp-checker</a><span class="step-role">OWASP Top 10</span></li>
+<li><span class="step-num">3</span><a href="./vulnerability-analyzer.html">vulnerability-analyzer</a><span class="step-role">CVE</span></li>
+<li><span class="step-num">4</span><a href="./pentest-assistant.html">pentest-assistant</a><span class="step-role">Tests d'intrusion</span></li>
+<li><span class="step-num">5</span><a href="./incident-response-plan.html">incident-response-plan</a><span class="step-role">Plan de réponse</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Menaces, vulnérabilités, réponse. Utilise la séquence /threat-modeling puis /owasp-checker puis /vulnerability-analyzer puis /pentest-assistant puis /incident-response-plan.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="sécuriser une api de paiement hardening, auth et conformité api-security-hardener oauth2-oidc-advisor rate-limiter-designer dependency-audit fintech-compliance-checker">
+<div class="uc-title">💳 Sécuriser une API de paiement</div>
+<div class="uc-goal">Hardening, auth et conformité</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./api-security-hardener.html">api-security-hardener</a><span class="step-role">Hardening</span></li>
+<li><span class="step-num">2</span><a href="./oauth2-oidc-advisor.html">oauth2-oidc-advisor</a><span class="step-role">Auth JWT/OIDC</span></li>
+<li><span class="step-num">3</span><a href="./rate-limiter-designer.html">rate-limiter-designer</a><span class="step-role">Rate limiting</span></li>
+<li><span class="step-num">4</span><a href="./dependency-audit.html">dependency-audit</a><span class="step-role">Audit CVE</span></li>
+<li><span class="step-num">5</span><a href="./fintech-compliance-checker.html">fintech-compliance-checker</a><span class="step-role">PCI-DSS</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Hardening, auth et conformité. Utilise la séquence /api-security-hardener puis /oauth2-oidc-advisor puis /rate-limiter-designer puis /dependency-audit puis /fintech-compliance-checker.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="mise en conformité rgpd données personnelles et zéro-trust gdpr-checklist compliance-checker zero-trust-architect security-audit-automation">
+<div class="uc-title">📜 Mise en conformité RGPD</div>
+<div class="uc-goal">Données personnelles et zéro-trust</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./gdpr-checklist.html">gdpr-checklist</a><span class="step-role">Checklist RGPD</span></li>
+<li><span class="step-num">2</span><a href="./compliance-checker.html">compliance-checker</a><span class="step-role">Conformité</span></li>
+<li><span class="step-num">3</span><a href="./zero-trust-architect.html">zero-trust-architect</a><span class="step-role">Zéro-trust</span></li>
+<li><span class="step-num">4</span><a href="./security-audit-automation.html">security-audit-automation</a><span class="step-role">Audits continus</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Données personnelles et zéro-trust. Utilise la séquence /gdpr-checklist puis /compliance-checker puis /zero-trust-architect puis /security-audit-automation.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="stratégie de tests complète unitaire, e2e, charge et mocks test-strategy-planner unit-test-generator cypress-e2e-guide load-test-planner mock-designer">
+<div class="uc-title">🧪 Stratégie de tests complète</div>
+<div class="uc-goal">Unitaire, E2E, charge et mocks</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./test-strategy-planner.html">test-strategy-planner</a><span class="step-role">Stratégie</span></li>
+<li><span class="step-num">2</span><a href="./unit-test-generator.html">unit-test-generator</a><span class="step-role">Tests unitaires</span></li>
+<li><span class="step-num">3</span><a href="./cypress-e2e-guide.html">cypress-e2e-guide</a><span class="step-role">E2E</span></li>
+<li><span class="step-num">4</span><a href="./load-test-planner.html">load-test-planner</a><span class="step-role">Charge</span></li>
+<li><span class="step-num">5</span><a href="./mock-designer.html">mock-designer</a><span class="step-role">Mocks</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Unitaire, E2E, charge et mocks. Utilise la séquence /test-strategy-planner puis /unit-test-generator puis /cypress-e2e-guide puis /load-test-planner puis /mock-designer.&quot;</div><button class="copy-btn">Copier</button></div>
+</div></div></section>
+<section class="cat-section" data-cat><div class="cat-title">🔧 Infra, Réseaux & IoT <span class="cat-count">5 cas d'usage</span></div><div class="uc-grid"><div class="uc-card" data-search="projet iot de bout en bout du capteur au cloud arduino-project-guide mqtt-architect edge-computing-designer raspberry-pi-setup">
+<div class="uc-title">📡 Projet IoT de bout en bout</div>
+<div class="uc-goal">Du capteur au cloud</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./arduino-project-guide.html">arduino-project-guide</a><span class="step-role">Prototype</span></li>
+<li><span class="step-num">2</span><a href="./mqtt-architect.html">mqtt-architect</a><span class="step-role">Messaging MQTT</span></li>
+<li><span class="step-num">3</span><a href="./edge-computing-designer.html">edge-computing-designer</a><span class="step-role">Edge</span></li>
+<li><span class="step-num">4</span><a href="./raspberry-pi-setup.html">raspberry-pi-setup</a><span class="step-role">Passerelle</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Du capteur au cloud. Utilise la séquence /arduino-project-guide puis /mqtt-architect puis /edge-computing-designer puis /raspberry-pi-setup.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="diagnostiquer un problème réseau de la capture au firewall tcp-ip-troubleshooter dns-expert wireshark-analyst firewall-configurator">
+<div class="uc-title">🌐 Diagnostiquer un problème réseau</div>
+<div class="uc-goal">De la capture au firewall</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./tcp-ip-troubleshooter.html">tcp-ip-troubleshooter</a><span class="step-role">Diagnostic TCP/IP</span></li>
+<li><span class="step-num">2</span><a href="./dns-expert.html">dns-expert</a><span class="step-role">DNS</span></li>
+<li><span class="step-num">3</span><a href="./wireshark-analyst.html">wireshark-analyst</a><span class="step-role">Analyse de trames</span></li>
+<li><span class="step-num">4</span><a href="./firewall-configurator.html">firewall-configurator</a><span class="step-role">Firewall</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : De la capture au firewall. Utilise la séquence /tcp-ip-troubleshooter puis /dns-expert puis /wireshark-analyst puis /firewall-configurator.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="durcir un serveur linux admin, sécurité et automatisation linux-admin-guide linux-security-hardener systemd-manager bash-scripting-expert">
+<div class="uc-title">🐧 Durcir un serveur Linux</div>
+<div class="uc-goal">Admin, sécurité et automatisation</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./linux-admin-guide.html">linux-admin-guide</a><span class="step-role">Administration</span></li>
+<li><span class="step-num">2</span><a href="./linux-security-hardener.html">linux-security-hardener</a><span class="step-role">Hardening</span></li>
+<li><span class="step-num">3</span><a href="./systemd-manager.html">systemd-manager</a><span class="step-role">Services</span></li>
+<li><span class="step-num">4</span><a href="./bash-scripting-expert.html">bash-scripting-expert</a><span class="step-role">Automatisation</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Admin, sécurité et automatisation. Utilise la séquence /linux-admin-guide puis /linux-security-hardener puis /systemd-manager puis /bash-scripting-expert.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="gateway api d'entreprise routage, sécurité et quotas yarp-gateway-designer kong-api-gateway rate-limiter-designer api-security-hardener">
+<div class="uc-title">🚪 Gateway API d'entreprise</div>
+<div class="uc-goal">Routage, sécurité et quotas</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./yarp-gateway-designer.html">yarp-gateway-designer</a><span class="step-role">Gateway YARP</span></li>
+<li><span class="step-num">2</span><a href="./kong-api-gateway.html">kong-api-gateway</a><span class="step-role">Kong</span></li>
+<li><span class="step-num">3</span><a href="./rate-limiter-designer.html">rate-limiter-designer</a><span class="step-role">Quotas</span></li>
+<li><span class="step-num">4</span><a href="./api-security-hardener.html">api-security-hardener</a><span class="step-role">Sécurité</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Routage, sécurité et quotas. Utilise la séquence /yarp-gateway-designer puis /kong-api-gateway puis /rate-limiter-designer puis /api-security-hardener.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="automatiser les process métier no-code et scripts sur mesure n8n-workflow-designer zapier-workflow-builder power-automate-designer script-automation-expert">
+<div class="uc-title">⚙️ Automatiser les process métier</div>
+<div class="uc-goal">No-code et scripts sur mesure</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./n8n-workflow-designer.html">n8n-workflow-designer</a><span class="step-role">n8n</span></li>
+<li><span class="step-num">2</span><a href="./zapier-workflow-builder.html">zapier-workflow-builder</a><span class="step-role">Zapier</span></li>
+<li><span class="step-num">3</span><a href="./power-automate-designer.html">power-automate-designer</a><span class="step-role">Power Automate</span></li>
+<li><span class="step-num">4</span><a href="./script-automation-expert.html">script-automation-expert</a><span class="step-role">Scripts</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : No-code et scripts sur mesure. Utilise la séquence /n8n-workflow-designer puis /zapier-workflow-builder puis /power-automate-designer puis /script-automation-expert.&quot;</div><button class="copy-btn">Copier</button></div>
+</div></div></section>
+<section class="cat-section" data-cat><div class="cat-title">💼 Carrière & Business <span class="cat-count">6 cas d'usage</span></div><div class="uc-grid"><div class="uc-card" data-search="décrocher un nouveau job cv, linkedin, entretien, salaire cv-builder linkedin-optimizer interview-prep salary-negotiation">
+<div class="uc-title">🎯 Décrocher un nouveau job</div>
+<div class="uc-goal">CV, LinkedIn, entretien, salaire</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./cv-builder.html">cv-builder</a><span class="step-role">CV percutant</span></li>
+<li><span class="step-num">2</span><a href="./linkedin-optimizer.html">linkedin-optimizer</a><span class="step-role">Profil LinkedIn</span></li>
+<li><span class="step-num">3</span><a href="./interview-prep.html">interview-prep</a><span class="step-role">Entretiens</span></li>
+<li><span class="step-num">4</span><a href="./salary-negotiation.html">salary-negotiation</a><span class="step-role">Négociation</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : CV, LinkedIn, entretien, salaire. Utilise la séquence /cv-builder puis /linkedin-optimizer puis /interview-prep puis /salary-negotiation.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="réussir sa reconversion du bilan au portfolio career-transition-planner learning-roadmap study-planner portfolio-builder">
+<div class="uc-title">🧭 Réussir sa reconversion</div>
+<div class="uc-goal">Du bilan au portfolio</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./career-transition-planner.html">career-transition-planner</a><span class="step-role">Plan de transition</span></li>
+<li><span class="step-num">2</span><a href="./learning-roadmap.html">learning-roadmap</a><span class="step-role">Roadmap</span></li>
+<li><span class="step-num">3</span><a href="./study-planner.html">study-planner</a><span class="step-role">Planning d'étude</span></li>
+<li><span class="step-num">4</span><a href="./portfolio-builder.html">portfolio-builder</a><span class="step-role">Portfolio</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Du bilan au portfolio. Utilise la séquence /career-transition-planner puis /learning-roadmap puis /study-planner puis /portfolio-builder.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="lancer son activité freelance tarifs, contrats et facturation freelance-pricing client-contract-builder invoice-generator portfolio-builder">
+<div class="uc-title">🧾 Lancer son activité freelance</div>
+<div class="uc-goal">Tarifs, contrats et facturation</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./freelance-pricing.html">freelance-pricing</a><span class="step-role">Tarification</span></li>
+<li><span class="step-num">2</span><a href="./client-contract-builder.html">client-contract-builder</a><span class="step-role">Contrats</span></li>
+<li><span class="step-num">3</span><a href="./invoice-generator.html">invoice-generator</a><span class="step-role">Factures</span></li>
+<li><span class="step-num">4</span><a href="./portfolio-builder.html">portfolio-builder</a><span class="step-role">Portfolio</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Tarifs, contrats et facturation. Utilise la séquence /freelance-pricing puis /client-contract-builder puis /invoice-generator puis /portfolio-builder.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="gagner un appel d'offres de l'estimation au pitch it-commercial-proposal project-estimation-helper pitch-deck-designer presentation-builder">
+<div class="uc-title">🏆 Gagner un appel d'offres</div>
+<div class="uc-goal">De l'estimation au pitch</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./it-commercial-proposal.html">it-commercial-proposal</a><span class="step-role">Proposition</span></li>
+<li><span class="step-num">2</span><a href="./project-estimation-helper.html">project-estimation-helper</a><span class="step-role">Estimation</span></li>
+<li><span class="step-num">3</span><a href="./pitch-deck-designer.html">pitch-deck-designer</a><span class="step-role">Pitch deck</span></li>
+<li><span class="step-num">4</span><a href="./presentation-builder.html">presentation-builder</a><span class="step-role">Présentation</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : De l'estimation au pitch. Utilise la séquence /it-commercial-proposal puis /project-estimation-helper puis /pitch-deck-designer puis /presentation-builder.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="pitcher devant des investisseurs story, slides et prise de parole storytelling-expert pitch-deck-designer public-speaking-coach">
+<div class="uc-title">🎤 Pitcher devant des investisseurs</div>
+<div class="uc-goal">Story, slides et prise de parole</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./storytelling-expert.html">storytelling-expert</a><span class="step-role">Narratif</span></li>
+<li><span class="step-num">2</span><a href="./pitch-deck-designer.html">pitch-deck-designer</a><span class="step-role">Slides</span></li>
+<li><span class="step-num">3</span><a href="./public-speaking-coach.html">public-speaking-coach</a><span class="step-role">Prise de parole</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Story, slides et prise de parole. Utilise la séquence /storytelling-expert puis /pitch-deck-designer puis /public-speaking-coach.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="piloter une équipe agile sprints, vélocité et rétros sprint-planner team-velocity-tracker retro-facilitator stakeholder-communicator">
+<div class="uc-title">📋 Piloter une équipe agile</div>
+<div class="uc-goal">Sprints, vélocité et rétros</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./sprint-planner.html">sprint-planner</a><span class="step-role">Sprints</span></li>
+<li><span class="step-num">2</span><a href="./team-velocity-tracker.html">team-velocity-tracker</a><span class="step-role">Vélocité</span></li>
+<li><span class="step-num">3</span><a href="./retro-facilitator.html">retro-facilitator</a><span class="step-role">Rétrospectives</span></li>
+<li><span class="step-num">4</span><a href="./stakeholder-communicator.html">stakeholder-communicator</a><span class="step-role">Communication</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Sprints, vélocité et rétros. Utilise la séquence /sprint-planner puis /team-velocity-tracker puis /retro-facilitator puis /stakeholder-communicator.&quot;</div><button class="copy-btn">Copier</button></div>
+</div></div></section>
+<section class="cat-section" data-cat><div class="cat-title">📣 Contenu & Marketing <span class="cat-count">4 cas d'usage</span></div><div class="uc-grid"><div class="uc-card" data-search="stratégie de contenu du blog aux réseaux sociaux blog-post-writer seo-optimizer content-repurposer social-media-strategist email-marketing-designer">
+<div class="uc-title">✍️ Stratégie de contenu</div>
+<div class="uc-goal">Du blog aux réseaux sociaux</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./blog-post-writer.html">blog-post-writer</a><span class="step-role">Articles</span></li>
+<li><span class="step-num">2</span><a href="./seo-optimizer.html">seo-optimizer</a><span class="step-role">SEO</span></li>
+<li><span class="step-num">3</span><a href="./content-repurposer.html">content-repurposer</a><span class="step-role">Repurposing</span></li>
+<li><span class="step-num">4</span><a href="./social-media-strategist.html">social-media-strategist</a><span class="step-role">Réseaux sociaux</span></li>
+<li><span class="step-num">5</span><a href="./email-marketing-designer.html">email-marketing-designer</a><span class="step-role">Newsletters</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Du blog aux réseaux sociaux. Utilise la séquence /blog-post-writer puis /seo-optimizer puis /content-repurposer puis /social-media-strategist puis /email-marketing-designer.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="maîtriser le prompting des prompts robustes et optimisés prompt-optimizer mega-prompt-builder system-prompt-architect chain-of-thought-designer prompt-debugger">
+<div class="uc-title">🪄 Maîtriser le prompting</div>
+<div class="uc-goal">Des prompts robustes et optimisés</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./prompt-optimizer.html">prompt-optimizer</a><span class="step-role">Optimisation</span></li>
+<li><span class="step-num">2</span><a href="./mega-prompt-builder.html">mega-prompt-builder</a><span class="step-role">Mega-prompts</span></li>
+<li><span class="step-num">3</span><a href="./system-prompt-architect.html">system-prompt-architect</a><span class="step-role">System prompts</span></li>
+<li><span class="step-num">4</span><a href="./chain-of-thought-designer.html">chain-of-thought-designer</a><span class="step-role">Raisonnement</span></li>
+<li><span class="step-num">5</span><a href="./prompt-debugger.html">prompt-debugger</a><span class="step-role">Debug</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Des prompts robustes et optimisés. Utilise la séquence /prompt-optimizer puis /mega-prompt-builder puis /system-prompt-architect puis /chain-of-thought-designer puis /prompt-debugger.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="contenu pour le marché marocain arabe, darija et démarches locales arabic-content-writer darija-translator morocco-admin-guide">
+<div class="uc-title">🌍 Contenu pour le marché marocain</div>
+<div class="uc-goal">Arabe, darija et démarches locales</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./arabic-content-writer.html">arabic-content-writer</a><span class="step-role">Contenu arabe</span></li>
+<li><span class="step-num">2</span><a href="./darija-translator.html">darija-translator</a><span class="step-role">Darija</span></li>
+<li><span class="step-num">3</span><a href="./morocco-admin-guide.html">morocco-admin-guide</a><span class="step-role">Démarches</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Arabe, darija et démarches locales. Utilise la séquence /arabic-content-writer puis /darija-translator puis /morocco-admin-guide.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="documentation projet professionnelle adr, api docs et onboarding adr-writer api-doc-generator technical-writing-guide developer-onboarding-builder changelog-writer">
+<div class="uc-title">📄 Documentation projet professionnelle</div>
+<div class="uc-goal">ADR, API docs et onboarding</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./adr-writer.html">adr-writer</a><span class="step-role">Décisions (ADR)</span></li>
+<li><span class="step-num">2</span><a href="./api-doc-generator.html">api-doc-generator</a><span class="step-role">Docs API</span></li>
+<li><span class="step-num">3</span><a href="./technical-writing-guide.html">technical-writing-guide</a><span class="step-role">Rédaction</span></li>
+<li><span class="step-num">4</span><a href="./developer-onboarding-builder.html">developer-onboarding-builder</a><span class="step-role">Onboarding</span></li>
+<li><span class="step-num">5</span><a href="./changelog-writer.html">changelog-writer</a><span class="step-role">Changelogs</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : ADR, API docs et onboarding. Utilise la séquence /adr-writer puis /api-doc-generator puis /technical-writing-guide puis /developer-onboarding-builder puis /changelog-writer.&quot;</div><button class="copy-btn">Copier</button></div>
+</div></div></section>
+<section class="cat-section" data-cat><div class="cat-title">🌱 Vie quotidienne <span class="cat-count">8 cas d'usage</span></div><div class="uc-grid"><div class="uc-card" data-search="reprendre ses finances en main budget, dépenses et épargne budget-tracker expense-analyzer savings-goal-planner tax-prep-checklist">
+<div class="uc-title">💰 Reprendre ses finances en main</div>
+<div class="uc-goal">Budget, dépenses et épargne</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./budget-tracker.html">budget-tracker</a><span class="step-role">Budget</span></li>
+<li><span class="step-num">2</span><a href="./expense-analyzer.html">expense-analyzer</a><span class="step-role">Analyse</span></li>
+<li><span class="step-num">3</span><a href="./savings-goal-planner.html">savings-goal-planner</a><span class="step-role">Épargne</span></li>
+<li><span class="step-num">4</span><a href="./tax-prep-checklist.html">tax-prep-checklist</a><span class="step-role">Impôts</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Budget, dépenses et épargne. Utilise la séquence /budget-tracker puis /expense-analyzer puis /savings-goal-planner puis /tax-prep-checklist.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="préparer une consultation médicale arriver préparé chez le médecin symptom-tracker medical-history-summary health-question-builder doctor-visit-prep lab-explainer">
+<div class="uc-title">🩺 Préparer une consultation médicale</div>
+<div class="uc-goal">Arriver préparé chez le médecin</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./symptom-tracker.html">symptom-tracker</a><span class="step-role">Symptômes</span></li>
+<li><span class="step-num">2</span><a href="./medical-history-summary.html">medical-history-summary</a><span class="step-role">Historique</span></li>
+<li><span class="step-num">3</span><a href="./health-question-builder.html">health-question-builder</a><span class="step-role">Questions</span></li>
+<li><span class="step-num">4</span><a href="./doctor-visit-prep.html">doctor-visit-prep</a><span class="step-role">Préparation</span></li>
+<li><span class="step-num">5</span><a href="./lab-explainer.html">lab-explainer</a><span class="step-role">Analyses</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Arriver préparé chez le médecin. Utilise la séquence /symptom-tracker puis /medical-history-summary puis /health-question-builder puis /doctor-visit-prep puis /lab-explainer.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="prévenir le burnout évaluer, comprendre, agir burnout-assessment emotional-checkin cbt-thought-record breathing-exercise-guide">
+<div class="uc-title">🧘 Prévenir le burnout</div>
+<div class="uc-goal">Évaluer, comprendre, agir</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./burnout-assessment.html">burnout-assessment</a><span class="step-role">Évaluation</span></li>
+<li><span class="step-num">2</span><a href="./emotional-checkin.html">emotional-checkin</a><span class="step-role">Check-in</span></li>
+<li><span class="step-num">3</span><a href="./cbt-thought-record.html">cbt-thought-record</a><span class="step-role">TCC</span></li>
+<li><span class="step-num">4</span><a href="./breathing-exercise-guide.html">breathing-exercise-guide</a><span class="step-role">Respiration</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Évaluer, comprendre, agir. Utilise la séquence /burnout-assessment puis /emotional-checkin puis /cbt-thought-record puis /breathing-exercise-guide.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="préparer un examen plan, fiches et révisions learning-roadmap study-planner flashcard-generator exam-prep concept-explainer">
+<div class="uc-title">🎓 Préparer un examen</div>
+<div class="uc-goal">Plan, fiches et révisions</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./learning-roadmap.html">learning-roadmap</a><span class="step-role">Roadmap</span></li>
+<li><span class="step-num">2</span><a href="./study-planner.html">study-planner</a><span class="step-role">Planning</span></li>
+<li><span class="step-num">3</span><a href="./flashcard-generator.html">flashcard-generator</a><span class="step-role">Flashcards</span></li>
+<li><span class="step-num">4</span><a href="./exam-prep.html">exam-prep</a><span class="step-role">Révisions</span></li>
+<li><span class="step-num">5</span><a href="./concept-explainer.html">concept-explainer</a><span class="step-role">Concepts difficiles</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Plan, fiches et révisions. Utilise la séquence /learning-roadmap puis /study-planner puis /flashcard-generator puis /exam-prep puis /concept-explainer.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="organiser un voyage du visa à la valise trip-planner visa-checker travel-budget packing-checklist local-phrase-book">
+<div class="uc-title">✈️ Organiser un voyage</div>
+<div class="uc-goal">Du visa à la valise</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./trip-planner.html">trip-planner</a><span class="step-role">Itinéraire</span></li>
+<li><span class="step-num">2</span><a href="./visa-checker.html">visa-checker</a><span class="step-role">Visa</span></li>
+<li><span class="step-num">3</span><a href="./travel-budget.html">travel-budget</a><span class="step-role">Budget</span></li>
+<li><span class="step-num">4</span><a href="./packing-checklist.html">packing-checklist</a><span class="step-role">Valise</span></li>
+<li><span class="step-num">5</span><a href="./local-phrase-book.html">local-phrase-book</a><span class="step-role">Phrases locales</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Du visa à la valise. Utilise la séquence /trip-planner puis /visa-checker puis /travel-budget puis /packing-checklist puis /local-phrase-book.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="organiser la vie de famille routines et suivi des enfants child-milestone-tracker screen-time-planner bedtime-routine-builder homework-helper">
+<div class="uc-title">👨‍👩‍👧 Organiser la vie de famille</div>
+<div class="uc-goal">Routines et suivi des enfants</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./child-milestone-tracker.html">child-milestone-tracker</a><span class="step-role">Développement</span></li>
+<li><span class="step-num">2</span><a href="./screen-time-planner.html">screen-time-planner</a><span class="step-role">Écrans</span></li>
+<li><span class="step-num">3</span><a href="./bedtime-routine-builder.html">bedtime-routine-builder</a><span class="step-role">Coucher</span></li>
+<li><span class="step-num">4</span><a href="./homework-helper.html">homework-helper</a><span class="step-role">Devoirs</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Routines et suivi des enfants. Utilise la séquence /child-milestone-tracker puis /screen-time-planner puis /bedtime-routine-builder puis /homework-helper.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="gérer un litige locatif droits, courriers et recours tenant-rights-guide contract-reader complaint-letter-writer small-claims-prep">
+<div class="uc-title">⚖️ Gérer un litige locatif</div>
+<div class="uc-goal">Droits, courriers et recours</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./tenant-rights-guide.html">tenant-rights-guide</a><span class="step-role">Droits</span></li>
+<li><span class="step-num">2</span><a href="./contract-reader.html">contract-reader</a><span class="step-role">Lecture du bail</span></li>
+<li><span class="step-num">3</span><a href="./complaint-letter-writer.html">complaint-letter-writer</a><span class="step-role">Courriers</span></li>
+<li><span class="step-num">4</span><a href="./small-claims-prep.html">small-claims-prep</a><span class="step-role">Recours</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Droits, courriers et recours. Utilise la séquence /tenant-rights-guide puis /contract-reader puis /complaint-letter-writer puis /small-claims-prep.&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+<div class="uc-card" data-search="préparer une conversation difficile cadre, feedback et résolution difficult-conversation-prep feedback-giver conflict-resolver boundary-setter">
+<div class="uc-title">🤝 Préparer une conversation difficile</div>
+<div class="uc-goal">Cadre, feedback et résolution</div>
+<ol class="uc-steps"><li><span class="step-num">1</span><a href="./difficult-conversation-prep.html">difficult-conversation-prep</a><span class="step-role">Préparation</span></li>
+<li><span class="step-num">2</span><a href="./feedback-giver.html">feedback-giver</a><span class="step-role">Feedback</span></li>
+<li><span class="step-num">3</span><a href="./conflict-resolver.html">conflict-resolver</a><span class="step-role">Résolution</span></li>
+<li><span class="step-num">4</span><a href="./boundary-setter.html">boundary-setter</a><span class="step-role">Limites</span></li></ol>
+<div class="cmd-block"><div class="invoke">claude &quot;Objectif : Cadre, feedback et résolution. Utilise la séquence /difficult-conversation-prep puis /feedback-giver puis /conflict-resolver puis /boundary-setter.&quot;</div><button class="copy-btn">Copier</button></div>
+</div></div></section>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+const q=document.getElementById('q');
+q.addEventListener('input',()=>{
+  const v=q.value.trim().toLowerCase();
+  document.querySelectorAll('.uc-card').forEach(c=>c.classList.toggle('hidden',v&&!c.dataset.search.includes(v)));
+  document.querySelectorAll('[data-cat]').forEach(s=>s.classList.toggle('hidden',!s.querySelector('.uc-card:not(.hidden)')));
+});
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>

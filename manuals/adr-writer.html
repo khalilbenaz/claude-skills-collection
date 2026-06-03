@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>smart-contract-auditor — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Audit de sécurité de smart contracts Solidity et blockchain.">
+<title>adr-writer — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Rédaction d'Architecture Decision Records (ADR) pour documenter les choix d'architecture avec leur contexte, alternatives et conséquences.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -63,9 +63,9 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <body>
 <nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
 <main>
-<span class="badge">💻 Développement</span>
-<h1 class="skill-title">smart-contract-auditor</h1>
-<p class="lead">Audit de sécurité de smart contracts Solidity et blockchain.</p>
+<span class="badge">📄 Documentation</span>
+<h1 class="skill-title">adr-writer</h1>
+<p class="lead">Rédaction d'Architecture Decision Records (ADR) pour documenter les choix d'architecture avec leur contexte, alternatives et conséquences.</p>
 
 
 
@@ -73,61 +73,157 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <h2>⚡ Installation &amp; lancement en 1 commande</h2>
 <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
 <div class="cmd-label">macOS / Linux</div>
-<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- smart-contract-auditor --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- adr-writer --launch</div><button class="copy-btn">Copier</button></div>
 <div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
-<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } smart-contract-auditor -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } adr-writer -Launch&quot;</div><button class="copy-btn">Copier</button></div>
 </div>
 
 <div class="panel">
 <h2>🚀 Déjà installé ?</h2>
-<div class="cmd-block"><div class="invoke">claude &quot;/smart-contract-auditor&quot;</div><button class="copy-btn">Copier</button></div>
-<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/smart-contract-auditor</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+<div class="cmd-block"><div class="invoke">claude &quot;/adr-writer&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/adr-writer</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">smart contract</span><span class="trigger">Solidity</span><span class="trigger">audit blockchain</span><span class="trigger">vulnérabilité smart contract</span><span class="trigger">reentrancy</span><span class="trigger">ERC-20</span><span class="trigger">ERC-721</span><span class="trigger">Web3 security</span></div></div>
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">ADR</span><span class="trigger">architecture decision record</span><span class="trigger">décision d'architecture</span><span class="trigger">choix technique</span><span class="trigger">documenter une décision</span><span class="trigger">pourquoi ce choix</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>
 <div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
-cp -r claude-skills-collection/dev-skills/smart-contract-auditor ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
-<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/dev-skills/smart-contract-auditor" target="_blank">dev-skills/smart-contract-auditor</a></p>
+cp -r claude-skills-collection/docs/adr-writer ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/docs/adr-writer" target="_blank">docs/adr-writer</a></p>
 </div>
 
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
-<h1>Smart Contract Auditor</h1>
+<h1>Rédacteur d'ADR (Architecture Decision Records)</h1>
 <h2>Workflow</h2>
 <ol>
-<li><strong>Lecture et compréhension du contrat</strong> : Analyser la logique métier, les flux de tokens, les rôles et permissions, les interactions entre contrats, et documenter l'architecture générale avant toute analyse de sécurité.</li>
+<li><strong>Identifier</strong> : une décision d'architecture significative a été prise ou doit l'être.</li>
+<li><strong>Contextualiser</strong> : décrire le problème et les contraintes.</li>
+<li><strong>Documenter les options</strong> : lister les alternatives avec avantages/inconvénients.</li>
+<li><strong>Rédiger l'ADR</strong> : format structuré, concis et pérenne.</li>
 </ol>
-<ol>
-<li><strong>Vérification des vulnérabilités classiques</strong> : Identifier les failles connues telles que reentrancy (appels externes avant mise à jour d'état), integer overflow/underflow, front-running, access control défaillant, et problèmes de timestamp dependance.</li>
-</ol>
-<ol>
-<li><strong>Analyse des patterns de sécurité</strong> : Vérifier l'application du pattern checks-effects-interactions, l'utilisation de pull payments plutôt que push, la présence de guard modifiers, et la gestion correcte des erreurs avec revert/require/assert.</li>
-</ol>
-<ol>
-<li><strong>Vérification des standards</strong> : Contrôler la conformité aux standards ERC-20, ERC-721 et ERC-1155, valider l'utilisation correcte des bibliothèques OpenZeppelin, et vérifier la compatibilité avec les interfaces attendues par l'écosystème.</li>
-</ol>
-<ol>
-<li><strong>Gas optimization</strong> : Analyser l'utilisation de storage vs memory, détecter les boucles coûteuses, identifier les opportunités de batch operations, vérifier l'usage de variables constant/immutable, et optimiser les patterns d'écriture en storage.</li>
-</ol>
-<ol>
-<li><strong>Tests et fuzzing</strong> : Écrire et exécuter des tests unitaires avec Foundry, mettre en place du fuzzing sur les fonctions critiques, définir des invariants de test, et effectuer des fork tests sur mainnet pour simuler des scénarios réels.</li>
-</ol>
-<ol>
-<li><strong>Outils d'analyse statique</strong> : Exécuter Slither pour détecter les patterns vulnérables, Mythril pour l'analyse symbolique, Echidna pour le fuzzing basé sur propriétés, et Certora Prover pour la vérification formelle des invariants critiques.</li>
-</ol>
-<ol>
-<li><strong>Rapport d'audit structuré</strong> : Rédiger un rapport complet classant chaque finding par sévérité (Critical/High/Medium/Low/Info), avec description de la vulnérabilité, proof of concept reproductible, recommandation de correction, et suivi du statut de remédiation.</li>
-</ol>
+<h2>Template ADR</h2>
+<pre><code class="lang-markdown"># ADR-XXXX : [Titre de la décision]
+
+**Date** : YYYY-MM-DD
+**Statut** : Proposé | Accepté | Déprécié | Remplacé par ADR-YYYY
+**Décideurs** : [Noms ou équipes]
+
+## Contexte
+
+[Quel est le problème ? Pourquoi devons-nous prendre cette décision maintenant ?
+Quelles sont les contraintes (techniques, métier, équipe, budget, délai) ?]
+
+## Décision
+
+[La décision prise, formulée clairement.]
+
+**Nous avons décidé de [choix] parce que [raison principale].**
+
+## Alternatives considérées
+
+### Option A : [Nom]
+- ✅ [Avantage 1]
+- ✅ [Avantage 2]
+- ❌ [Inconvénient 1]
+- ❌ [Inconvénient 2]
+
+### Option B : [Nom] ← **Retenue**
+- ✅ [Avantage 1]
+- ✅ [Avantage 2]
+- ❌ [Inconvénient 1]
+
+### Option C : [Nom]
+- ✅ [Avantage 1]
+- ❌ [Inconvénient 1]
+- ❌ [Inconvénient 2]
+
+## Conséquences
+
+### Positives
+- [Conséquence positive 1]
+- [Conséquence positive 2]
+
+### Négatives
+- [Trade-off accepté 1]
+- [Trade-off accepté 2]
+
+### Risques
+- [Risque identifié + mitigation]
+
+## Références
+- [Lien vers la discussion / ticket / RFC]
+- [Documentation technique pertinente]</code></pre>
+<h2>Exemple concret</h2>
+<pre><code class="lang-markdown"># ADR-0012 : Utiliser RabbitMQ comme message broker
+
+**Date** : 2025-10-15
+**Statut** : Accepté
+**Décideurs** : Équipe backend, Tech Lead
+
+## Contexte
+
+Notre architecture microservices a besoin d'un système de messaging
+asynchrone pour la communication inter-services. Le volume actuel est
+de ~50K messages/jour avec une projection à 500K/jour dans 12 mois.
+L'équipe a de l'expérience avec RabbitMQ mais pas avec Kafka.
+
+## Décision
+
+**Nous avons décidé d'utiliser RabbitMQ avec MassTransit parce que
+l'équipe le maîtrise déjà et que le volume projeté reste dans ses
+capacités.**
+
+## Alternatives considérées
+
+### Apache Kafka
+- ✅ Meilleur pour les très hauts volumes (&gt;1M msg/s)
+- ✅ Rétention durable des messages
+- ❌ Courbe d'apprentissage élevée pour l'équipe
+- ❌ Surdimensionné pour notre volume actuel
+- ❌ Infrastructure plus lourde (ZooKeeper/KRaft)
+
+### RabbitMQ + MassTransit ← **Retenu**
+- ✅ Équipe expérimentée
+- ✅ MassTransit simplifie les patterns (saga, outbox)
+- ✅ Adapté au volume actuel et projeté
+- ❌ Moins performant que Kafka au-delà de 1M msg/s
+
+### Azure Service Bus
+- ✅ Service managé, pas d'infra à gérer
+- ❌ Vendor lock-in Azure
+- ❌ Coût élevé à fort volume
+
+## Conséquences
+
+### Positives
+- Mise en production rapide (équipe déjà formée)
+- Patterns saga et outbox via MassTransit
+
+### Négatives
+- Migration vers Kafka nécessaire si &gt;1M msg/jour
+- Pas de replay de messages natif
+
+### Risques
+- Si le volume dépasse les projections, revoir cette décision (ADR à planifier)</code></pre>
+<h2>Organisation des ADRs</h2>
+<pre><code>docs/
+└── adr/
+    ├── README.md           # Index des ADRs
+    ├── 0001-use-csharp.md
+    ├── 0002-microservices-architecture.md
+    ├── 0012-use-rabbitmq.md
+    └── template.md         # Template vierge</code></pre>
+<h2>Quand écrire un ADR ?</h2>
+<table><thead><tr><th>Situation</th><th>ADR nécessaire ?</th></tr></thead><tbody><tr><td>Choix de framework/langage</td><td>Oui</td></tr><tr><td>Choix de base de données</td><td>Oui</td></tr><tr><td>Pattern d'architecture (CQRS, Event Sourcing)</td><td>Oui</td></tr><tr><td>Choix de librairie mineure</td><td>Non</td></tr><tr><td>Refactoring interne</td><td>Non (sauf si changement de pattern)</td></tr><tr><td>Migration d'infrastructure</td><td>Oui</td></tr></tbody></table>
 <h2>Règles</h2>
 <ul>
-<li>Fournis toujours des exemples de code Solidity concrets et des PoC exploitables pour illustrer chaque vulnérabilité identifiée.</li>
-<li>Classe systématiquement les findings par niveau de sévérité et évalue l'impact réel sur les fonds et la logique du protocole.</li>
-<li>Recommande en priorité les solutions éprouvées (OpenZeppelin, patterns standards) plutôt que des implémentations personnalisées.</li>
-<li>Mentionne les outils recommandés pour chaque type d'analyse : Slither, Foundry, Hardhat, Echidna, Mythril, Certora.</li>
-<li>Priorise la sécurité sur la performance : une optimisation de gas ne vaut jamais le risque d'introduire une vulnérabilité exploitable.</li>
+<li>Un ADR documente <strong>une seule décision</strong>.</li>
+<li>Le statut doit être mis à jour quand une décision est remplacée.</li>
+<li>Inclure au moins <strong>2 alternatives</strong> pour montrer que le choix est réfléchi.</li>
+<li>Les ADRs ne sont <strong>jamais supprimés</strong> — ils sont marqués comme dépréciés/remplacés.</li>
+<li>Écrire l'ADR <strong>au moment de la décision</strong>, pas après coup.</li>
 </ul>
 </article>
 </main>

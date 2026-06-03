@@ -29,6 +29,7 @@ const CATEGORY_META = {
   'dev-skills':           { label: 'Développement',    icon: '💻', color: '#7c5cfc' },
   'devops-skills':        { label: 'DevOps',           icon: '🔁', color: '#fb923c' },
   'docs-skills':          { label: 'Documentation',    icon: '📄', color: '#8888a0' },
+  'docs':                 { label: 'Documentation',    icon: '📄', color: '#8888a0' },
   'education-skills':     { label: 'Éducation',        icon: '🎓', color: '#fbbf24' },
   'finance-skills':       { label: 'Finance',          icon: '💰', color: '#34d399' },
   'freelance-skills':     { label: 'Freelance',        icon: '🧾', color: '#f472b6' },
@@ -58,6 +59,118 @@ const LIVE_APPS = {
     desc: 'Application web gratuite : plusieurs styles de CV, photo de profil, export PDF. Aucune installation requise.',
   },
 };
+
+// Cas d'usage multi-skills — chaque nom est validé contre les skills existants au build
+const USE_CASES = [
+  { theme: '💻 Développement', cases: [
+    { icon: '🚀', title: 'Lancer un MVP SaaS', goal: 'Passer de l\'idée au produit déployé', steps: [
+      ['project-kickstart', 'Cadrage du projet'], ['system-design-helper', 'Architecture'], ['rest-api-designer', 'API REST'], ['postgres-expert', 'Base de données'], ['nextjs-guide', 'Frontend'], ['cicd-pipeline-builder', 'CI/CD'] ] },
+    { icon: '🐛', title: 'Résoudre un incident en production', goal: 'Du symptôme au post-mortem', steps: [
+      ['log-analyzer', 'Analyse des logs'], ['bug-debugger', 'Diagnostic'], ['performance-profiler', 'Profiling'], ['incident-postmortem-guide', 'Post-mortem blameless'] ] },
+    { icon: '🔄', title: 'Refactorer un code legacy', goal: 'Moderniser sans tout casser', steps: [
+      ['clean-architecture-guide', 'Architecture cible'], ['design-patterns-advisor', 'Patterns'], ['unit-test-generator', 'Filet de sécurité'], ['test-coverage-analyzer', 'Couverture'], ['technical-debt-manager', 'Plan de dette'] ] },
+    { icon: '📱', title: 'Créer une app mobile', goal: 'Cross-platform du design au store', steps: [
+      ['mobile-app-architect', 'Architecture mobile'], ['flutter-helper', 'Développement Flutter'], ['ui-design-system-builder', 'Design system'], ['integration-test-builder', 'Tests'] ] },
+    { icon: '🌐', title: 'Site web rapide et accessible', goal: 'Performance, accessibilité et SEO', steps: [
+      ['nextjs-guide', 'Framework'], ['tailwind-expert', 'Styles'], ['web-performance-optimizer', 'Core Web Vitals'], ['accessibility-checker', 'WCAG'], ['seo-optimizer', 'Référencement'] ] },
+    { icon: '🔌', title: 'Publier une API publique', goal: 'Contrat, doc, tests et quotas', steps: [
+      ['rest-api-designer', 'Design'], ['openapi-contract-first', 'Contrat OpenAPI'], ['api-doc-generator', 'Documentation'], ['api-testing-expert', 'Tests'], ['rate-limiter-designer', 'Quotas'] ] },
+  ]},
+  { theme: '🤖 Agents IA', cases: [
+    { icon: '🧩', title: 'Construire un système multi-agents', goal: 'Orchestration, mémoire, outils et tests', steps: [
+      ['agent-task-decomposer', 'Décomposition'], ['multi-agent-orchestrator', 'Architecture'], ['agent-memory-designer', 'Mémoire'], ['mcp-server-builder', 'Tools MCP'], ['agent-testing-framework', 'Tests'] ] },
+    { icon: '📚', title: 'Chatbot RAG d\'entreprise', goal: 'Répondre depuis vos documents internes', steps: [
+      ['rag-pipeline-designer', 'Pipeline RAG'], ['llm-integration-guide', 'Intégration LLM'], ['prompt-engineering-pro', 'Prompts'], ['agent-evaluation-framework', 'Évaluation'] ] },
+    { icon: '🛠️', title: 'Créer un serveur MCP', goal: 'Donner de nouveaux outils à Claude', steps: [
+      ['mcp-server-builder', 'Serveur MCP'], ['tool-calling-architect', 'Design des tools'], ['agent-testing-framework', 'Tests'] ] },
+    { icon: '🎙️', title: 'Agent vocal de support client', goal: 'Voix, escalade humaine, supervision', steps: [
+      ['voice-agent-builder', 'Agent vocal'], ['customer-support-agent', 'Logique support'], ['human-in-the-loop-designer', 'Escalade humaine'], ['agent-observability', 'Supervision'] ] },
+  ]},
+  { theme: '📊 Data & Bases de données', cases: [
+    { icon: '🏭', title: 'Pipeline data analytics', goal: 'De la source au dashboard', steps: [
+      ['data-pipeline-builder', 'Pipeline'], ['etl-designer', 'ETL'], ['dbt-guide', 'Transformations'], ['dimensional-modeling', 'Modèle en étoile'], ['power-bi-designer', 'Dashboards'] ] },
+    { icon: '🐢', title: 'Accélérer une base lente', goal: 'Requêtes, index et cache', steps: [
+      ['database-query-optimizer', 'Plans d\'exécution'], ['sql-server-tuner', 'Tuning serveur'], ['caching-strategy', 'Stratégie de cache'], ['redis-patterns', 'Cache Redis'] ] },
+    { icon: '🚚', title: 'Migrer une base sans downtime', goal: 'Schéma, données et cohérence', steps: [
+      ['database-design-advisor', 'Schéma cible'], ['database-migration-helper', 'Migrations'], ['outbox-pattern-guide', 'Cohérence'], ['data-quality-checker', 'Validation'] ] },
+    { icon: '🧠', title: 'Mettre un modèle ML en production', goal: 'Du dataset au déploiement', steps: [
+      ['dataset-builder', 'Dataset'], ['feature-engineering-guide', 'Features'], ['ml-experiment-tracker', 'Expériences'], ['model-optimization-guide', 'Optimisation'], ['ml-model-deployer', 'Déploiement'] ] },
+  ]},
+  { theme: '☁️ Cloud & DevOps', cases: [
+    { icon: '✈️', title: 'Migrer vers le cloud', goal: 'Plan, IaC, sécurité et coûts', steps: [
+      ['cloud-migration-planner', 'Stratégie'], ['aws-architect', 'Architecture cible'], ['terraform-guide', 'IaC'], ['cloud-security-guide', 'Sécurité'], ['cloud-cost-optimizer', 'FinOps'] ] },
+    { icon: '☸️', title: 'Plateforme Kubernetes complète', goal: 'GitOps, monitoring et résilience', steps: [
+      ['kubernetes-helper', 'Cluster'], ['helm-chart-builder', 'Charts'], ['argocd-guide', 'GitOps'], ['prometheus-grafana-setup', 'Monitoring'], ['chaos-engineering-guide', 'Résilience'] ] },
+    { icon: '🚢', title: 'Déployer un microservice en prod', goal: 'Du conteneur au monitoring', steps: [
+      ['docker-composer', 'Conteneurisation'], ['helm-chart-builder', 'Chart Kubernetes'], ['azure-devops-pipeline-advisor', 'CI/CD'], ['health-check-monitor', 'Probes'], ['prometheus-grafana-setup', 'Monitoring'] ] },
+    { icon: '🔁', title: 'CI/CD de A à Z', goal: 'Du commit au déploiement sécurisé', steps: [
+      ['git-workflow-helper', 'Workflow Git'], ['github-actions-expert', 'Pipelines'], ['integration-test-builder', 'Tests'], ['secrets-scanner', 'Secrets'] ] },
+  ]},
+  { theme: '🔒 Sécurité & Conformité', cases: [
+    { icon: '🛡️', title: 'Audit de sécurité complet', goal: 'Menaces, vulnérabilités, réponse', steps: [
+      ['threat-modeling', 'STRIDE'], ['owasp-checker', 'OWASP Top 10'], ['vulnerability-analyzer', 'CVE'], ['pentest-assistant', 'Tests d\'intrusion'], ['incident-response-plan', 'Plan de réponse'] ] },
+    { icon: '💳', title: 'Sécuriser une API de paiement', goal: 'Hardening, auth et conformité', steps: [
+      ['api-security-hardener', 'Hardening'], ['oauth2-oidc-advisor', 'Auth JWT/OIDC'], ['rate-limiter-designer', 'Rate limiting'], ['dependency-audit', 'Audit CVE'], ['fintech-compliance-checker', 'PCI-DSS'] ] },
+    { icon: '📜', title: 'Mise en conformité RGPD', goal: 'Données personnelles et zéro-trust', steps: [
+      ['gdpr-checklist', 'Checklist RGPD'], ['compliance-checker', 'Conformité'], ['zero-trust-architect', 'Zéro-trust'], ['security-audit-automation', 'Audits continus'] ] },
+    { icon: '🧪', title: 'Stratégie de tests complète', goal: 'Unitaire, E2E, charge et mocks', steps: [
+      ['test-strategy-planner', 'Stratégie'], ['unit-test-generator', 'Tests unitaires'], ['cypress-e2e-guide', 'E2E'], ['load-test-planner', 'Charge'], ['mock-designer', 'Mocks'] ] },
+  ]},
+  { theme: '🔧 Infra, Réseaux & IoT', cases: [
+    { icon: '📡', title: 'Projet IoT de bout en bout', goal: 'Du capteur au cloud', steps: [
+      ['arduino-project-guide', 'Prototype'], ['mqtt-architect', 'Messaging MQTT'], ['edge-computing-designer', 'Edge'], ['raspberry-pi-setup', 'Passerelle'] ] },
+    { icon: '🌐', title: 'Diagnostiquer un problème réseau', goal: 'De la capture au firewall', steps: [
+      ['tcp-ip-troubleshooter', 'Diagnostic TCP/IP'], ['dns-expert', 'DNS'], ['wireshark-analyst', 'Analyse de trames'], ['firewall-configurator', 'Firewall'] ] },
+    { icon: '🐧', title: 'Durcir un serveur Linux', goal: 'Admin, sécurité et automatisation', steps: [
+      ['linux-admin-guide', 'Administration'], ['linux-security-hardener', 'Hardening'], ['systemd-manager', 'Services'], ['bash-scripting-expert', 'Automatisation'] ] },
+    { icon: '🚪', title: 'Gateway API d\'entreprise', goal: 'Routage, sécurité et quotas', steps: [
+      ['yarp-gateway-designer', 'Gateway YARP'], ['kong-api-gateway', 'Kong'], ['rate-limiter-designer', 'Quotas'], ['api-security-hardener', 'Sécurité'] ] },
+    { icon: '⚙️', title: 'Automatiser les process métier', goal: 'No-code et scripts sur mesure', steps: [
+      ['n8n-workflow-designer', 'n8n'], ['zapier-workflow-builder', 'Zapier'], ['power-automate-designer', 'Power Automate'], ['script-automation-expert', 'Scripts'] ] },
+  ]},
+  { theme: '💼 Carrière & Business', cases: [
+    { icon: '🎯', title: 'Décrocher un nouveau job', goal: 'CV, LinkedIn, entretien, salaire', steps: [
+      ['cv-builder', 'CV percutant'], ['linkedin-optimizer', 'Profil LinkedIn'], ['interview-prep', 'Entretiens'], ['salary-negotiation', 'Négociation'] ] },
+    { icon: '🧭', title: 'Réussir sa reconversion', goal: 'Du bilan au portfolio', steps: [
+      ['career-transition-planner', 'Plan de transition'], ['learning-roadmap', 'Roadmap'], ['study-planner', 'Planning d\'étude'], ['portfolio-builder', 'Portfolio'] ] },
+    { icon: '🧾', title: 'Lancer son activité freelance', goal: 'Tarifs, contrats et facturation', steps: [
+      ['freelance-pricing', 'Tarification'], ['client-contract-builder', 'Contrats'], ['invoice-generator', 'Factures'], ['portfolio-builder', 'Portfolio'] ] },
+    { icon: '🏆', title: 'Gagner un appel d\'offres', goal: 'De l\'estimation au pitch', steps: [
+      ['it-commercial-proposal', 'Proposition'], ['project-estimation-helper', 'Estimation'], ['pitch-deck-designer', 'Pitch deck'], ['presentation-builder', 'Présentation'] ] },
+    { icon: '🎤', title: 'Pitcher devant des investisseurs', goal: 'Story, slides et prise de parole', steps: [
+      ['storytelling-expert', 'Narratif'], ['pitch-deck-designer', 'Slides'], ['public-speaking-coach', 'Prise de parole'] ] },
+    { icon: '📋', title: 'Piloter une équipe agile', goal: 'Sprints, vélocité et rétros', steps: [
+      ['sprint-planner', 'Sprints'], ['team-velocity-tracker', 'Vélocité'], ['retro-facilitator', 'Rétrospectives'], ['stakeholder-communicator', 'Communication'] ] },
+  ]},
+  { theme: '📣 Contenu & Marketing', cases: [
+    { icon: '✍️', title: 'Stratégie de contenu', goal: 'Du blog aux réseaux sociaux', steps: [
+      ['blog-post-writer', 'Articles'], ['seo-optimizer', 'SEO'], ['content-repurposer', 'Repurposing'], ['social-media-strategist', 'Réseaux sociaux'], ['email-marketing-designer', 'Newsletters'] ] },
+    { icon: '🪄', title: 'Maîtriser le prompting', goal: 'Des prompts robustes et optimisés', steps: [
+      ['prompt-optimizer', 'Optimisation'], ['mega-prompt-builder', 'Mega-prompts'], ['system-prompt-architect', 'System prompts'], ['chain-of-thought-designer', 'Raisonnement'], ['prompt-debugger', 'Debug'] ] },
+    { icon: '🌍', title: 'Contenu pour le marché marocain', goal: 'Arabe, darija et démarches locales', steps: [
+      ['arabic-content-writer', 'Contenu arabe'], ['darija-translator', 'Darija'], ['morocco-admin-guide', 'Démarches'] ] },
+    { icon: '📄', title: 'Documentation projet professionnelle', goal: 'ADR, API docs et onboarding', steps: [
+      ['adr-writer', 'Décisions (ADR)'], ['api-doc-generator', 'Docs API'], ['technical-writing-guide', 'Rédaction'], ['developer-onboarding-builder', 'Onboarding'], ['changelog-writer', 'Changelogs'] ] },
+  ]},
+  { theme: '🌱 Vie quotidienne', cases: [
+    { icon: '💰', title: 'Reprendre ses finances en main', goal: 'Budget, dépenses et épargne', steps: [
+      ['budget-tracker', 'Budget'], ['expense-analyzer', 'Analyse'], ['savings-goal-planner', 'Épargne'], ['tax-prep-checklist', 'Impôts'] ] },
+    { icon: '🩺', title: 'Préparer une consultation médicale', goal: 'Arriver préparé chez le médecin', steps: [
+      ['symptom-tracker', 'Symptômes'], ['medical-history-summary', 'Historique'], ['health-question-builder', 'Questions'], ['doctor-visit-prep', 'Préparation'], ['lab-explainer', 'Analyses'] ] },
+    { icon: '🧘', title: 'Prévenir le burnout', goal: 'Évaluer, comprendre, agir', steps: [
+      ['burnout-assessment', 'Évaluation'], ['emotional-checkin', 'Check-in'], ['cbt-thought-record', 'TCC'], ['breathing-exercise-guide', 'Respiration'] ] },
+    { icon: '🎓', title: 'Préparer un examen', goal: 'Plan, fiches et révisions', steps: [
+      ['learning-roadmap', 'Roadmap'], ['study-planner', 'Planning'], ['flashcard-generator', 'Flashcards'], ['exam-prep', 'Révisions'], ['concept-explainer', 'Concepts difficiles'] ] },
+    { icon: '✈️', title: 'Organiser un voyage', goal: 'Du visa à la valise', steps: [
+      ['trip-planner', 'Itinéraire'], ['visa-checker', 'Visa'], ['travel-budget', 'Budget'], ['packing-checklist', 'Valise'], ['local-phrase-book', 'Phrases locales'] ] },
+    { icon: '👨‍👩‍👧', title: 'Organiser la vie de famille', goal: 'Routines et suivi des enfants', steps: [
+      ['child-milestone-tracker', 'Développement'], ['screen-time-planner', 'Écrans'], ['bedtime-routine-builder', 'Coucher'], ['homework-helper', 'Devoirs'] ] },
+    { icon: '⚖️', title: 'Gérer un litige locatif', goal: 'Droits, courriers et recours', steps: [
+      ['tenant-rights-guide', 'Droits'], ['contract-reader', 'Lecture du bail'], ['complaint-letter-writer', 'Courriers'], ['small-claims-prep', 'Recours'] ] },
+    { icon: '🤝', title: 'Préparer une conversation difficile', goal: 'Cadre, feedback et résolution', steps: [
+      ['difficult-conversation-prep', 'Préparation'], ['feedback-giver', 'Feedback'], ['conflict-resolver', 'Résolution'], ['boundary-setter', 'Limites'] ] },
+  ]},
+];
 
 // ---------- markdown minimal ----------
 const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -195,6 +308,7 @@ function summary(desc) {
 
 // ---------- collect ----------
 const categories = readdirSync(ROOT).filter((d) => d.endsWith('-skills') && statSync(join(ROOT, d)).isDirectory());
+categories.push('docs'); // docs/adr-writer est aussi un skill
 const skills = [];
 for (const cat of categories.sort()) {
   for (const dir of readdirSync(join(ROOT, cat)).sort()) {
@@ -268,7 +382,7 @@ const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link 
 
 const navHtml = (depth) => {
   const p = depth === 0 ? '.' : '..';
-  return `<nav><a class="nav-brand" href="${p}/index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="${depth === 0 ? './index.html' : './index.html'}">Manuels</a></li><li><a href="${p}/index.html">Accueil</a></li><li><a href="${REPO}" target="_blank">GitHub</a></li></ul></nav>`;
+  return `<nav><a class="nav-brand" href="${p}/index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="${p}/index.html">Accueil</a></li><li><a href="${REPO}" target="_blank">GitHub</a></li></ul></nav>`;
 };
 
 function skillPage(s) {
@@ -380,10 +494,83 @@ q.addEventListener('input',()=>{
 </html>`;
 }
 
+function usecasesPage() {
+  // Validation : chaque skill référencé doit exister
+  const known = new Set(skills.map((s) => s.name));
+  const unknown = USE_CASES.flatMap((t) => t.cases.flatMap((c) => c.steps.map(([n]) => n))).filter((n) => !known.has(n));
+  if (unknown.length) throw new Error(`Skills inconnus dans USE_CASES : ${[...new Set(unknown)].join(', ')}`);
+
+  const nbCases = USE_CASES.reduce((a, t) => a + t.cases.length, 0);
+  const sections = USE_CASES.map((t) => {
+    const cards = t.cases.map((c) => {
+      const steps = c.steps.map(([n, role], i) =>
+        `<li><span class="step-num">${i + 1}</span><a href="./${n}.html">${n}</a><span class="step-role">${escapeHtml(role)}</span></li>`
+      ).join('\n');
+      const routerPrompt = `claude "Objectif : ${c.goal}. Utilise la séquence ${c.steps.map(([n]) => '/' + n).join(' puis ')}."`;
+      return `<div class="uc-card" data-search="${escapeHtml((c.title + ' ' + c.goal + ' ' + c.steps.map(([n]) => n).join(' ')).toLowerCase())}">
+<div class="uc-title">${c.icon} ${escapeHtml(c.title)}</div>
+<div class="uc-goal">${escapeHtml(c.goal)}</div>
+<ol class="uc-steps">${steps}</ol>
+<div class="cmd-block"><div class="invoke">${escapeHtml(routerPrompt)}</div><button class="copy-btn">Copier</button></div>
+</div>`;
+    }).join('\n');
+    return `<section class="cat-section" data-cat><div class="cat-title">${t.theme} <span class="cat-count">${t.cases.length} cas d'usage</span></div><div class="uc-grid">${cards}</div></section>`;
+  }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${nbCases} cas d'usage — Claude Skills Collection</title>
+<meta name="description" content="${nbCases} séquences de skills prêtes à l'emploi pour les vrais projets : dev, cloud, sécurité, data, business et vie quotidienne.">
+${FONTS}
+<style>${CSS}
+.uc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:1rem}
+.uc-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.3rem 1.4rem;display:flex;flex-direction:column}
+.uc-card:hover{border-color:var(--accent)}
+.uc-title{font-weight:700;font-size:1.02rem;margin-bottom:.2rem}
+.uc-goal{color:var(--text-muted);font-size:.85rem;margin-bottom:.9rem}
+.uc-steps{list-style:none;margin:0 0 1rem;flex:1}
+.uc-steps li{display:flex;align-items:center;gap:.55rem;padding:.28rem 0;font-size:.85rem}
+.step-num{flex:none;width:1.3rem;height:1.3rem;border-radius:50%;background:rgba(124,92,252,.15);color:var(--accent-light);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.uc-steps a{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--cyan);text-decoration:none}
+.uc-steps a:hover{text-decoration:underline}
+.step-role{color:var(--text-dim);font-size:.76rem;margin-left:auto;text-align:right}
+.uc-card .invoke{font-size:.72rem;color:var(--text-muted);line-height:1.5}
+</style>
+</head>
+<body>
+${navHtml(1)}
+<main style="max-width:1200px">
+<h1 class="skill-title" style="font-family:'Inter',sans-serif">🧭 Cas d'usage</h1>
+<p class="lead">${nbCases} séquences de skills prêtes à l'emploi, du dev à la vie quotidienne. Chaque étape pointe vers son manuel — et la commande copiable lance toute la séquence dans Claude Code via le skill-router.</p>
+<input class="search" id="q" type="search" placeholder="Rechercher un cas d'usage… (ex : burnout, kubernetes, freelance)">
+${sections}
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+const q=document.getElementById('q');
+q.addEventListener('input',()=>{
+  const v=q.value.trim().toLowerCase();
+  document.querySelectorAll('.uc-card').forEach(c=>c.classList.toggle('hidden',v&&!c.dataset.search.includes(v)));
+  document.querySelectorAll('[data-cat]').forEach(s=>s.classList.toggle('hidden',!s.querySelector('.uc-card:not(.hidden)')));
+});
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>`;
+}
+
 // ---------- write ----------
 mkdirSync(OUT, { recursive: true });
 for (const s of skills) writeFileSync(join(OUT, `${s.name}.html`), skillPage(s));
 writeFileSync(join(OUT, 'index.html'), catalogPage());
+writeFileSync(join(OUT, 'usecases.html'), usecasesPage());
 // Index machine-lisible consommé par install.sh / install.ps1
 writeFileSync(join(OUT, 'skills.index'), skills.map((s) => `${s.name} ${s.cat}/${s.dir}`).join('\n') + '\n');
 console.log(`✓ ${skills.length} manuels générés dans manuals/ (+ index.html, skills.index)`);

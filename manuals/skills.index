@@ -226,6 +226,7 @@ gitlab-ci-guide devops-skills/gitlab-ci-guide
 helm-chart-builder devops-skills/helm-chart-builder
 prometheus-grafana-setup devops-skills/prometheus-grafana-setup
 terraform-guide devops-skills/terraform-guide
+adr-writer docs/adr-writer
 concept-explainer education-skills/concept-explainer
 exam-prep education-skills/exam-prep
 flashcard-generator education-skills/flashcard-generator
