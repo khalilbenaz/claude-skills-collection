@@ -51,6 +51,13 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 .card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
 .card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
 </style>
 </head>
 <body>
@@ -63,17 +70,26 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 
 
 <div class="panel">
-<h2>🚀 Comment l'utiliser</h2>
-<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
-<div class="invoke">/tailwind-expert</div>
-<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- tailwind-expert --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } tailwind-expert -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">claude &quot;/tailwind-expert&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/tailwind-expert</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
 <div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">Tailwind</span><span class="trigger">Tailwind CSS</span><span class="trigger">utility-first</span><span class="trigger">tailwind.config</span><span class="trigger">classes Tailwind</span></div></div>
 
 <div class="panel">
-<h2>📦 Installation</h2>
-<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/dev-skills/tailwind-expert ~/.claude/skills/</div>
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
+cp -r claude-skills-collection/dev-skills/tailwind-expert ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/dev-skills/tailwind-expert" target="_blank">dev-skills/tailwind-expert</a></p>
 </div>
 
@@ -116,5 +132,13 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
 </body>
 </html>

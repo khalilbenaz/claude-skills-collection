@@ -12,6 +12,7 @@ import { join, basename } from 'node:path';
 const ROOT = join(import.meta.dirname, '..');
 const OUT = join(ROOT, 'manuals');
 const REPO = 'https://github.com/khalilbenaz/claude-skills-collection';
+const RAW = 'https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main';
 
 const CATEGORY_META = {
   'agent-skills':         { label: 'Agents IA',        icon: '🤖', color: '#7c5cfc' },
@@ -254,6 +255,13 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 .card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
 .card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
 `;
 
 const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">`;
@@ -291,17 +299,25 @@ ${navHtml(1)}
 ${appHtml}
 
 <div class="panel">
-<h2>🚀 Comment l'utiliser</h2>
-<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
-<div class="invoke">/${escapeHtml(s.name)}</div>
-<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="${REPO}/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">${escapeHtml(`curl -fsSL ${RAW}/install.sh | sh -s -- ${s.name} --launch`)}</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">${escapeHtml(`iex "& { $(iwr -useb ${RAW}/install.ps1) } ${s.name} -Launch"`)}</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">${escapeHtml(`claude "/${s.name}"`)}</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/${escapeHtml(s.name)}</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="${REPO}/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
 ${triggersHtml}
 
 <div class="panel">
-<h2>📦 Installation</h2>
-<div class="invoke">git clone ${REPO}.git<br>cp -r claude-skills-collection/${s.cat}/${s.dir} ~/.claude/skills/</div>
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">${escapeHtml(`git clone ${REPO}.git\ncp -r claude-skills-collection/${s.cat}/${s.dir} ~/.claude/skills/`)}</div><button class="copy-btn">Copier</button></div>
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="${REPO}/tree/main/${s.cat}/${s.dir}" target="_blank">${s.cat}/${s.dir}</a></p>
 </div>
 
@@ -311,6 +327,14 @@ ${mdToHtml(s.body)}
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
 </body>
 </html>`;
 }
@@ -360,4 +384,6 @@ q.addEventListener('input',()=>{
 mkdirSync(OUT, { recursive: true });
 for (const s of skills) writeFileSync(join(OUT, `${s.name}.html`), skillPage(s));
 writeFileSync(join(OUT, 'index.html'), catalogPage());
-console.log(`✓ ${skills.length} manuels générés dans manuals/ (+ index.html)`);
+// Index machine-lisible consommé par install.sh / install.ps1
+writeFileSync(join(OUT, 'skills.index'), skills.map((s) => `${s.name} ${s.cat}/${s.dir}`).join('\n') + '\n');
+console.log(`✓ ${skills.length} manuels générés dans manuals/ (+ index.html, skills.index)`);
