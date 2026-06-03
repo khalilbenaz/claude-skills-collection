@@ -49,6 +49,15 @@ const CATEGORY_META = {
   'writing-skills':       { label: 'Écriture',         icon: '🖊️', color: '#9b7fff' },
 };
 
+// Apps en ligne associées à certains skills
+const LIVE_APPS = {
+  'cv-builder': {
+    url: 'https://cv-builder-c9z.pages.dev/',
+    label: 'CV Builder — Créez votre CV en ligne',
+    desc: 'Application web gratuite : plusieurs styles de CV, photo de profil, export PDF. Aucune installation requise.',
+  },
+};
+
 // ---------- markdown minimal ----------
 const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -256,6 +265,10 @@ const navHtml = (depth) => {
 
 function skillPage(s) {
   const cat = CATEGORY_META[s.cat] || { label: s.cat, icon: '📦', color: '#8888a0' };
+  const app = LIVE_APPS[s.name];
+  const appHtml = app
+    ? `<div class="panel" style="border-color:rgba(52,211,153,.4);background:linear-gradient(135deg,rgba(52,211,153,.08),var(--bg-card))"><h2 style="color:var(--green)">✨ Essayez en ligne</h2><p style="color:var(--text-muted);font-size:.92rem;margin-bottom:1rem">${escapeHtml(app.desc)}</p><a href="${app.url}" target="_blank" rel="noopener" style="display:inline-block;background:var(--green);color:#0a0a0f;font-weight:700;padding:.7rem 1.4rem;border-radius:10px;text-decoration:none;font-size:.95rem">🚀 ${escapeHtml(app.label)}</a></div>`
+    : '';
   const triggersHtml = s.triggers.length
     ? `<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers">${s.triggers.map((t) => `<span class="trigger">${escapeHtml(t)}</span>`).join('')}</div></div>`
     : '';
@@ -274,6 +287,8 @@ ${navHtml(1)}
 <span class="badge">${cat.icon} ${cat.label}</span>
 <h1 class="skill-title">${escapeHtml(s.name)}</h1>
 <p class="lead">${escapeHtml(s.summary)}</p>
+
+${appHtml}
 
 <div class="panel">
 <h2>🚀 Comment l'utiliser</h2>
