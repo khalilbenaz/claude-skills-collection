@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-pipeline-composer — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Composition de pipelines de sous-agents où la sortie d'un agent alimente l'entrée du suivant.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-pipeline-composer</h1>
+<p class="lead">Composition de pipelines de sous-agents où la sortie d'un agent alimente l'entrée du suivant.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-pipeline-composer</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">pipeline agent</span><span class="trigger">chaîne d'agents</span><span class="trigger">agent chain</span><span class="trigger">agent pipeline</span><span class="trigger">sequential agents</span><span class="trigger">workflow agents</span><span class="trigger">ETL agent</span><span class="trigger">agent DAG</span><span class="trigger">composer agents</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/pipeline-composer ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/pipeline-composer" target="_blank">agent-skills/pipeline-composer</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Pipeline Composer</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utiliser ce skill lorsqu'une tâche complexe doit être décomposée en étapes séquentielles ou parallèles, chaque étape étant assurée par un sous-agent spécialisé dont le résultat alimente directement l'étape suivante. Ce skill est adapté aux workflows de type ETL (Extract-Transform-Load), aux pipelines de traitement de contenu (recherche → analyse → rédaction → révision) et à toute architecture où les dépendances entre étapes forment un graphe orienté acyclique (DAG). Il est également pertinent pour les systèmes où la reprise sur erreur en cours de pipeline est critique.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Conception du pipeline</strong> — Choisir la topologie adaptée à la tâche : <code>linear</code> (chaîne séquentielle A→B→C), <code>DAG</code> (graphe avec dépendances multiples), <code>conditional branch</code> (if/else selon le résultat d'un stage), <code>loop</code> (itérer jusqu'à satisfaction d'un critère), <code>map-reduce</code> (fan-out vers N agents, fan-in pour agréger).</li>
+</ol>
+<ol>
+<li><strong>Définition des stages</strong> — Chaque stage est un sous-agent avec un schéma d'entrée et de sortie défini explicitement (types, format, champs obligatoires). La définition du schéma est le contrat entre les stages ; un schéma flou est la principale source de bugs de pipeline.</li>
+</ol>
+<ol>
+<li><strong>Data flow</strong> — Définir les transformations entre les stages : mapping des champs de sortie vers les champs d'entrée, transformations intermédiaires (parsing, filtrage, enrichissement), validation du format avant transmission au stage suivant.</li>
+</ol>
+<ol>
+<li><strong>Stages parallèles</strong> — Implémenter le fan-out (distribuer le même input à N agents en parallèle) et le fan-in (attendre la complétion de tous les agents parallèles et agréger leurs sorties avant de continuer). Utiliser <code>asyncio.gather</code> ou équivalent.</li>
+</ol>
+<ol>
+<li><strong>Conditional branching</strong> — Après un stage de décision, router vers différentes branches du pipeline selon le résultat. Implémenter <code>switch/case</code> sur les sorties des agents pour une logique de branchement lisible et extensible.</li>
+</ol>
+<ol>
+<li><strong>Error handling par stage</strong> — Chaque stage définit sa propre politique d'erreur : <code>retry</code> (relancer le stage), <code>skip</code> (passer au stage suivant avec une valeur par défaut), <code>default_value</code> (injecter une valeur de remplacement), <code>pipeline_abort</code> (arrêter tout), <code>partial_completion</code> (continuer avec les données disponibles).</li>
+</ol>
+<ol>
+<li><strong>Checkpoint et resumability</strong> — Persister l'état du pipeline après chaque stage complété (fichier JSON, base de données, Redis). En cas de crash, reprendre à partir du dernier checkpoint valide sans ré-exécuter les stages déjà terminés.</li>
+</ol>
+<ol>
+<li><strong>Stream processing</strong> — Pour les pipelines à haute performance, ne pas attendre la complétion totale d'un stage avant d'alimenter le suivant. Utiliser des générateurs Python ou des queues asyncio pour faire transiter les tokens ou les chunks au fil de leur production.</li>
+</ol>
+<ol>
+<li><strong>Pipeline versioning</strong> — Versionner les définitions de pipeline (v1, v2, v3). Permettre l'A/B testing entre deux versions de pipeline sur un même jeu de données. Implémenter le rollback vers une version stable en cas de régression.</li>
+</ol>
+<ol>
+<li><strong>Monitoring</strong> — Mesurer la latence par stage pour identifier les goulots d'étranglement. Calculer le throughput global du pipeline. Visualiser le flux sous forme de graphe avec les états en temps réel (pending, running, done, failed).</li>
+</ol>
+<pre><code class="lang-python"># Exemple d'implémentation Python — Pipeline Composer avec DAG, checkpoints et streaming
+import asyncio
+import json
+import time
+from dataclasses import dataclass, field, asdict
+from typing import Any, Callable, Optional
+from pathlib import Path
+from enum import Enum
+
+
+class StageStatus(Enum):
+    PENDING = &quot;pending&quot;
+    RUNNING = &quot;running&quot;
+    DONE = &quot;done&quot;
+    FAILED = &quot;failed&quot;
+    SKIPPED = &quot;skipped&quot;
+
+
+class ErrorPolicy(Enum):
+    RETRY = &quot;retry&quot;
+    SKIP = &quot;skip&quot;
+    DEFAULT_VALUE = &quot;default_value&quot;
+    ABORT = &quot;abort&quot;
+    PARTIAL = &quot;partial&quot;
+
+
+@dataclass
+class StageResult:
+    stage_id: str
+    status: StageStatus
+    output: Any = None
+    error: Optional[str] = None
+    latency_s: float = 0.0
+    started_at: float = field(default_factory=time.time)
+
+
+@dataclass
+class StageDefinition:
+    id: str
+    name: str
+    agent_fn: Callable           # fonction async qui exécute le sous-agent
+    depends_on: list[str] = field(default_factory=list)  # IDs des stages précédents
+    error_policy: ErrorPolicy = ErrorPolicy.RETRY
+    default_value: Any = None
+    timeout_seconds: float = 60.0
+    input_mapping: dict = field(default_factory=dict)  # output_key → input_key
+
+
+class PipelineCheckpoint:
+    def __init__(self, run_id: str, checkpoint_dir: str = &quot;/tmp/pipeline_checkpoints&quot;):
+        self.run_id = run_id
+        self.path = Path(checkpoint_dir) / f&quot;{run_id}.json&quot;
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.state: dict[str, StageResult] = {}
+        self._load()
+
+    def _load(self):
+        if self.path.exists():
+            raw = json.loads(self.path.read_text())
+            self.state = {
+                k: StageResult(
+                    stage_id=v[&quot;stage_id&quot;],
+                    status=StageStatus(v[&quot;status&quot;]),
+                    output=v.get(&quot;output&quot;),
+                    error=v.get(&quot;error&quot;),
+                    latency_s=v.get(&quot;latency_s&quot;, 0),
+                )
+                for k, v in raw.items()
+            }
+            print(f&quot;[CHECKPOINT] Reprise depuis checkpoint — {len(self.state)} stages restaurés&quot;)
+
+    def save(self, result: StageResult):
+        self.state[result.stage_id] = result
+        serializable = {
+            k: {
+                &quot;stage_id&quot;: v.stage_id,
+                &quot;status&quot;: v.status.value,
+                &quot;output&quot;: v.output,
+                &quot;error&quot;: v.error,
+                &quot;latency_s&quot;: v.latency_s,
+            }
+            for k, v in self.state.items()
+        }
+        self.path.write_text(json.dumps(serializable, indent=2, default=str))
+
+    def is_completed(self, stage_id: str) -&gt; bool:
+        return (
+            stage_id in self.state
+            and self.state[stage_id].status == StageStatus.DONE
+        )
+
+    def get_output(self, stage_id: str) -&gt; Any:
+        return self.state.get(stage_id, StageResult(stage_id, StageStatus.PENDING)).output
+
+
+class PipelineComposer:
+    def __init__(self, pipeline_id: str, version: str = &quot;v1&quot;):
+        self.pipeline_id = pipeline_id
+        self.version = version
+        self.stages: dict[str, StageDefinition] = {}
+        self.results: dict[str, StageResult] = {}
+
+    def add_stage(self, stage: StageDefinition) -&gt; &quot;PipelineComposer&quot;:
+        self.stages[stage.id] = stage
+        return self  # fluent interface
+
+    def _resolve_input(self, stage: StageDefinition) -&gt; dict:
+        &quot;&quot;&quot;Construire l'input d'un stage depuis les outputs des stages précédents.&quot;&quot;&quot;
+        resolved = {}
+        for dep_id in stage.depends_on:
+            dep_output = self.results.get(dep_id, StageResult(dep_id, StageStatus.PENDING)).output
+            if isinstance(dep_output, dict):
+                resolved.update(dep_output)
+            else:
+                resolved[dep_id] = dep_output
+        # Appliquer le mapping explicite
+        for out_key, in_key in stage.input_mapping.items():
+            if out_key in resolved:
+                resolved[in_key] = resolved.pop(out_key)
+        return resolved
+
+    async def _run_stage(
+        self,
+        stage: StageDefinition,
+        checkpoint: PipelineCheckpoint
+    ) -&gt; StageResult:
+        # Skip si déjà complété (reprise depuis checkpoint)
+        if checkpoint.is_completed(stage.id):
+            print(f&quot;[SKIP] Stage '{stage.id}' déjà complété — skip&quot;)
+            return checkpoint.state[stage.id]
+
+        input_data = self._resolve_input(stage)
+        start = time.time()
+        result = StageResult(stage_id=stage.id, status=StageStatus.RUNNING)
+
+        try:
+            output = await asyncio.wait_for(
+                stage.agent_fn(**input_data),
+                timeout=stage.timeout_seconds
+            )
+            result.status = StageStatus.DONE
+            result.output = output
+        except Exception as e:
+            result.error = str(e)
+            print(f&quot;[ERROR] Stage '{stage.id}' échoué: {e}&quot;)
+
+            if stage.error_policy == ErrorPolicy.ABORT:
+                result.status = StageStatus.FAILED
+                raise
+            elif stage.error_policy == ErrorPolicy.SKIP:
+                result.status = StageStatus.SKIPPED
+                result.output = None
+            elif stage.error_policy == ErrorPolicy.DEFAULT_VALUE:
+                result.status = StageStatus.DONE
+                result.output = stage.default_value
+            elif stage.error_policy == ErrorPolicy.PARTIAL:
+                result.status = StageStatus.DONE
+                result.output = {&quot;partial&quot;: True, &quot;error&quot;: str(e)}
+
+        result.latency_s = time.time() - start
+        self.results[stage.id] = result
+        checkpoint.save(result)
+        print(f&quot;[STAGE] '{stage.id}' → {result.status.value} ({result.latency_s:.2f}s)&quot;)
+        return result
+
+    def _topological_sort(self) -&gt; list[list[str]]:
+        &quot;&quot;&quot;Retourner les stages groupés par niveau de parallélisme.&quot;&quot;&quot;
+        in_degree = {sid: 0 for sid in self.stages}
+        for stage in self.stages.values():
+            for dep in stage.depends_on:
+                in_degree[stage.id] = in_degree.get(stage.id, 0) + 1
+
+        levels = []
+        remaining = set(self.stages.keys())
+        completed = set()
+
+        while remaining:
+            ready = [
+                sid for sid in remaining
+                if all(dep in completed for dep in self.stages[sid].depends_on)
+            ]
+            if not ready:
+                raise ValueError(&quot;Cycle détecté dans le DAG du pipeline&quot;)
+            levels.append(ready)
+            completed.update(ready)
+            remaining -= set(ready)
+
+        return levels
+
+    async def run(self, run_id: str = None) -&gt; dict[str, StageResult]:
+        &quot;&quot;&quot;Exécuter le pipeline avec parallélisme et reprise depuis checkpoint.&quot;&quot;&quot;
+        run_id = run_id or f&quot;{self.pipeline_id}-{int(time.time())}&quot;
+        checkpoint = PipelineCheckpoint(run_id)
+
+        print(f&quot;[PIPELINE] Démarrage {self.pipeline_id} ({self.version}) — run_id={run_id}&quot;)
+        levels = self._topological_sort()
+
+        for level_idx, level_stages in enumerate(levels):
+            print(f&quot;[LEVEL {level_idx}] Stages parallèles: {level_stages}&quot;)
+            tasks = [
+                self._run_stage(self.stages[sid], checkpoint)
+                for sid in level_stages
+            ]
+            await asyncio.gather(*tasks)
+
+        print(f&quot;[PIPELINE] Terminé — {len(self.results)} stages exécutés&quot;)
+        return self.results
+
+    def bottleneck_report(self) -&gt; list[dict]:
+        &quot;&quot;&quot;Identifier les goulots d'étranglement.&quot;&quot;&quot;
+        return sorted(
+            [{&quot;stage&quot;: sid, &quot;latency_s&quot;: r.latency_s} for sid, r in self.results.items()],
+            key=lambda x: x[&quot;latency_s&quot;],
+            reverse=True,
+        )
+
+
+# Usage — Pipeline de traitement de contenu
+async def research_agent(topic: str) -&gt; dict:
+    await asyncio.sleep(0.1)  # simuler l'appel LLM
+    return {&quot;raw_research&quot;: f&quot;Résultats de recherche sur: {topic}&quot;, &quot;sources&quot;: 5}
+
+async def analysis_agent(raw_research: str, sources: int) -&gt; dict:
+    await asyncio.sleep(0.1)
+    return {&quot;analysis&quot;: f&quot;Analyse de: {raw_research[:50]}...&quot;, &quot;confidence&quot;: 0.87}
+
+async def writing_agent(analysis: str, confidence: float) -&gt; dict:
+    await asyncio.sleep(0.1)
+    return {&quot;draft&quot;: f&quot;Article basé sur: {analysis[:50]}...&quot;, &quot;words&quot;: 500}
+
+async def review_agent(draft: str) -&gt; dict:
+    await asyncio.sleep(0.05)
+    return {&quot;final&quot;: draft, &quot;approved&quot;: True, &quot;revision_count&quot;: 1}
+
+
+async def main():
+    pipeline = PipelineComposer(&quot;content-pipeline&quot;, version=&quot;v2&quot;)
+    
+    (pipeline
+        .add_stage(StageDefinition(
+            id=&quot;research&quot;, name=&quot;Recherche&quot;, agent_fn=research_agent,
+            depends_on=[], timeout_seconds=30,
+            input_mapping={}
+        ))
+        .add_stage(StageDefinition(
+            id=&quot;analysis&quot;, name=&quot;Analyse&quot;, agent_fn=analysis_agent,
+            depends_on=[&quot;research&quot;], timeout_seconds=45,
+        ))
+        .add_stage(StageDefinition(
+            id=&quot;writing&quot;, name=&quot;Rédaction&quot;, agent_fn=writing_agent,
+            depends_on=[&quot;analysis&quot;], timeout_seconds=60,
+        ))
+        .add_stage(StageDefinition(
+            id=&quot;review&quot;, name=&quot;Révision&quot;, agent_fn=review_agent,
+            depends_on=[&quot;writing&quot;], timeout_seconds=30,
+            error_policy=ErrorPolicy.DEFAULT_VALUE,
+            default_value={&quot;final&quot;: &quot;Article non révisé&quot;, &quot;approved&quot;: False},
+        ))
+    )
+
+    # Injecter l'input initial dans le premier stage
+    pipeline.stages[&quot;research&quot;].agent_fn = lambda: research_agent(&quot;intelligence artificielle&quot;)
+    
+    results = await pipeline.run(run_id=&quot;content-run-001&quot;)
+    print(&quot;\n=== Rapport de bottlenecks ===&quot;)
+    for item in pipeline.bottleneck_report():
+        print(f&quot;  {item['stage']}: {item['latency_s']:.3f}s&quot;)</code></pre>
+<pre><code>Architecture — Pipeline Composer (DAG)
+
+  Input ──► [Stage A: Research]
+                    │
+            ┌───────┴───────┐   ← fan-out (parallèle)
+            ▼               ▼
+    [Stage B: Analysis] [Stage C: Translate]
+            │               │
+            └───────┬───────┘   ← fan-in (attendre les 2)
+                    │
+            [Stage D: Writing]
+                    │
+            ┌───────┴───────┐   ← conditional branch
+            ▼               ▼
+    [Stage E: Review]  [Stage F: FastPublish]
+    (si confidence&gt;0.8) (si confidence&lt;=0.8)
+            │
+    Checkpoint ──► JSON sur disque
+            │
+          Output
+
+  Chaque flèche = data flow (output → input mapping)
+  Chaque stage = agent indépendant avec timeout et error policy</code></pre>
+<p><strong>Comparaison LangGraph vs CrewAI vs Custom :</strong></p>
+<table><thead><tr><th>Critère</th><th>LangGraph</th><th>CrewAI</th><th>Custom Python</th></tr></thead><tbody><tr><td>DAG natif</td><td>Oui (StateGraph)</td><td>Non (séquentiel)</td><td>asyncio.gather</td></tr><tr><td>Checkpoints</td><td>Oui (built-in)</td><td>Non</td><td>Manuel (JSON/Redis)</td></tr><tr><td>Conditional branching</td><td>Oui (edges)</td><td>Limité</td><td>Manuel</td></tr><tr><td>Stream processing</td><td>Oui (streaming)</td><td>Non</td><td>asyncio generators</td></tr><tr><td>Pipeline versioning</td><td>Non</td><td>Non</td><td>Manuel</td></tr><tr><td>Bottleneck detection</td><td>Non</td><td>Non</td><td>Manuel</td></tr></tbody></table>
+<h2>Anti-patterns</h2>
+<ul>
+<li><strong>Pipeline sans checkpoint</strong> — Un pipeline de 10 stages qui crashe au stage 9 et recommence depuis le début est un gaspillage coûteux. Les checkpoints sont non-négociables pour les pipelines longs.</li>
+<li><strong>Pas de validation entre les stages</strong> — Transmettre un output malformé au stage suivant sans validation produit des erreurs cryptiques difficiles à déboguer. Valider le schéma de sortie à chaque frontière entre stages.</li>
+<li><strong>Stage trop couplé au précédent</strong> — Un stage qui suppose un format d'entrée très spécifique est difficile à réutiliser et à tester isolément. Définir des schémas d'interface clairs et utiliser le mapping explicite.</li>
+<li><strong>Pas de timeout par stage</strong> — Un stage qui tourne indéfiniment bloque tout le pipeline. Chaque stage doit avoir un timeout configuré, avec une politique d'erreur explicite pour le cas dépassement.</li>
+</ul>
+<h2>Règles</h2>
+<ol>
+<li><strong>Chaque stage doit avoir un schéma d'entrée et de sortie explicitement documenté</strong> — c'est le contrat du pipeline ; tout changement de schéma doit être versionné.</li>
+<li><strong>Toujours implémenter des checkpoints</strong> après chaque stage complété pour permettre la reprise sans ré-exécution des stages réussis.</li>
+<li><strong>Les stages sans dépendances communes doivent s'exécuter en parallèle</strong> (fan-out) pour minimiser la latence totale du pipeline.</li>
+<li><strong>Chaque stage définit sa propre politique d'erreur</strong> — le pipeline ne doit pas avoir une politique globale unique ; certains stages sont critiques (abort), d'autres sont optionnels (skip avec default_value).</li>
+<li><strong>Mesurer et exposer la latence par stage</strong> pour identifier les goulots d'étranglement et décider où investir en optimisation (cache, modèle plus rapide, parallélisation).</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

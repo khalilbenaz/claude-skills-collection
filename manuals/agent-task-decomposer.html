@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-task-decomposer — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Décomposition automatique de tâches complexes en sous-tâches pour distribution aux sous-agents.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-task-decomposer</h1>
+<p class="lead">Décomposition automatique de tâches complexes en sous-tâches pour distribution aux sous-agents.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-task-decomposer</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">décomposer tâche</span><span class="trigger">task decomposition</span><span class="trigger">découper en sous-tâches</span><span class="trigger">diviser le travail</span><span class="trigger">plan d'exécution agent</span><span class="trigger">agent planner</span><span class="trigger">work breakdown agent</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/task-decomposer ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/task-decomposer" target="_blank">agent-skills/task-decomposer</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Task Decomposer</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utiliser ce skill lorsqu'une tâche principale est trop vaste ou trop hétérogène pour être confiée à un seul agent. Il s'applique dès que la parallélisation peut accélérer l'exécution, ou lorsque différentes parties d'une tâche requièrent des compétences ou outils distincts. Indispensable avant tout dispatch vers des sous-agents.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Analyse de la tâche principale</strong></li>
+<ul>
+<li>Identifier l'objectif final précis : quel livrable, quel format, quelle qualité attendue</li>
+<li>Recenser les contraintes : deadline, budget tokens, outils disponibles, données d'entrée</li>
+<li>Comprendre le contexte : quelle connaissance préalable est nécessaire, quels sont les risques</li>
+<li>Poser les questions de clarification si l'objectif est ambigu avant de décomposer</li>
+</ul>
+</ol>
+<p>   ```python    class TaskAnalysis(BaseModel):        objective: str        expected_output: str        constraints: list[str]        available_tools: list[str]        deadline_seconds: Optional[int]        context: dict    ```</p>
+<ol>
+<li><strong>Stratégie de décomposition (choisir le bon modèle)</strong></li>
+<ul>
+<li><code>sequential</code> : les sous-tâches s'enchaînent, chacune dépend de la précédente (pipeline)</li>
+<li><code>parallel</code> : toutes les sous-tâches sont indépendantes, exécutées simultanément</li>
+<li><code>tree</code> : une tâche se décompose récursivement en branches, réunies à la racine</li>
+<li><code>DAG (Directed Acyclic Graph)</code> : graphe de dépendances complexe, certaines tâches parallèles, d'autres séquentielles</li>
+</ul>
+</ol>
+<p>   ```python    from enum import Enum</p>
+<p>   class DecompositionStrategy(Enum):        SEQUENTIAL = &quot;sequential&quot;        PARALLEL = &quot;parallel&quot;        TREE = &quot;tree&quot;        DAG = &quot;dag&quot;</p>
+<p>   def choose_strategy(task: TaskAnalysis) -&gt; DecompositionStrategy:        if all_independent(task.subtasks):            return DecompositionStrategy.PARALLEL        elif has_complex_dependencies(task.subtasks):            return DecompositionStrategy.DAG        else:            return DecompositionStrategy.SEQUENTIAL    ```</p>
+<ol>
+<li><strong>Identification des sous-tâches (atomicité et complétude)</strong></li>
+<ul>
+<li>Chaque sous-tâche doit être <strong>atomique</strong> : réalisable par un seul agent sans sous-décomposition</li>
+<li>Chaque sous-tâche doit être <strong>complète</strong> : produire un livrable intermédiaire utilisable</li>
+<li>Chaque sous-tâche doit être <strong>indépendante</strong> autant que possible pour maximiser le parallélisme</li>
+<li>Nommer chaque sous-tâche avec un verbe d'action : <code>rechercher_sources</code>, <code>rédiger_intro</code>, <code>valider_faits</code></li>
+</ul>
+</ol>
+<p>   ```python    class SubTask(BaseModel):        subtask_id: str        name: str        description: str        required_inputs: list[str]   # IDs des sous-tâches dont ce résultat dépend        expected_output: str        required_capability: str     # &quot;search&quot; | &quot;write&quot; | &quot;code&quot; | &quot;validate&quot;        complexity: str              # &quot;low&quot; | &quot;medium&quot; | &quot;high&quot;    ```</p>
+<ol>
+<li><strong>Modélisation des dépendances (DAG ordering)</strong></li>
+<ul>
+<li>Construire un graphe orienté : nœuds = sous-tâches, arêtes = dépendances</li>
+<li>Vérifier l'absence de cycles (sinon deadlock assuré)</li>
+<li>Calculer le <strong>chemin critique</strong> : la chaîne de sous-tâches la plus longue, qui définit la durée totale</li>
+<li>Identifier les sous-tâches qui peuvent être parallélisées (pas de dépendances communes)</li>
+</ul>
+</ol>
+<p>   ```python    import networkx as nx</p>
+<p>   def build_dependency_graph(subtasks: list[SubTask]) -&gt; nx.DiGraph:        G = nx.DiGraph()        for task in subtasks:            G.add_node(task.subtask_id)            for dep in task.required_inputs:                G.add_edge(dep, task.subtask_id)        if not nx.is_directed_acyclic_graph(G):            raise ValueError(&quot;Cycle détecté dans les dépendances !&quot;)        return G</p>
+<p>   def get_execution_order(G: nx.DiGraph) -&gt; list[list[str]]:        # Retourne des batches de tâches exécutables en parallèle        return list(nx.topological_generations(G))    ```</p>
+<ol>
+<li><strong>Estimation de complexité par sous-tâche</strong></li>
+<ul>
+<li><code>low</code> : tâche simple, modèle léger suffisant (ex: GPT-4o-mini), durée &lt; 10s</li>
+<li><code>medium</code> : raisonnement modéré, modèle standard (ex: GPT-4o), durée 10-60s</li>
+<li><code>high</code> : complexité élevée, modèle premium (ex: o3, Claude Opus), durée &gt; 60s</li>
+<li>Estimation du coût token pour allouer le budget de manière optimale</li>
+</ul>
+</ol>
+<p>   ```python    def estimate_complexity(subtask: SubTask) -&gt; dict:        base_tokens = {            &quot;low&quot;: 500,            &quot;medium&quot;: 2000,            &quot;high&quot;: 8000        }        return {            &quot;model&quot;: select_model(subtask.complexity),            &quot;estimated_tokens&quot;: base_tokens[subtask.complexity],            &quot;timeout&quot;: {&quot;low&quot;: 15, &quot;medium&quot;: 60, &quot;high&quot;: 180}[subtask.complexity]        }    ```</p>
+<ol>
+<li><strong>Assignment aux sous-agents (matching capacités/tâches)</strong></li>
+<ul>
+<li>Mapper chaque sous-tâche à l'agent le plus qualifié selon <code>required_capability</code></li>
+<li>Appliquer le load balancing : ne pas surcharger un seul agent si d'autres sont disponibles</li>
+<li>Respecter la spécialisation : envoyer les tâches de code au <code>CodeAgent</code>, de recherche au <code>SearchAgent</code></li>
+</ul>
+</ol>
+<p>   ```python    class TaskAssigner:        def assign(self, subtasks: list[SubTask], agents: list) -&gt; dict:            assignments = {}            capability_map = self._build_capability_map(agents)            for task in subtasks:                eligible = capability_map.get(task.required_capability, [])                if not eligible:                    raise ValueError(f&quot;Aucun agent pour la capacité : {task.required_capability}&quot;)                # Load balancing : prendre l'agent avec le moins de tâches assignées                agent = min(eligible, key=lambda a: len(assignments.get(a.id, [])))                assignments.setdefault(agent.id, []).append(task)            return assignments    ```</p>
+<ol>
+<li><strong>Execution plan generation (plan d'exécution)</strong></li>
+<ul>
+<li>Générer un plan d'exécution avec : ordre des batches, agents assignés, timeouts</li>
+<li>Calculer le parallelisme maximal : combien de sous-tâches peuvent s'exécuter simultanément</li>
+<li>Identifier le chemin critique pour prioriser les tâches les plus bloquantes</li>
+</ul>
+</ol>
+<p>   ```python    class ExecutionPlan(BaseModel):        plan_id: str        batches: list[list[str]]       # Groupes de subtask_ids exécutables en parallèle        assignments: dict[str, str]    # subtask_id -&gt; agent_id        critical_path: list[str]       # Chemin le plus long        estimated_total_time: float        estimated_total_cost: float</p>
+<p>   def generate_plan(subtasks, graph, assignments) -&gt; ExecutionPlan:        batches = list(nx.topological_generations(graph))        critical = nx.dag_longest_path(graph)        return ExecutionPlan(            plan_id=uuid4().hex,            batches=batches,            assignments=assignments,            critical_path=critical,            estimated_total_time=sum(estimate_complexity(t)[&quot;timeout&quot;] for t in critical)        )    ```</p>
+<ol>
+<li><strong>Checkpoint et validation intermédiaire</strong></li>
+<ul>
+<li>Avant de passer au batch suivant, valider les résultats du batch précédent</li>
+<li>Vérifier : format conforme, données complètes, pas d'erreurs silencieuses</li>
+<li>Si une sous-tâche critique échoue, décider : retry, fallback, ou arrêt du plan</li>
+</ul>
+</ol>
+<p>   ```python    async def execute_with_checkpoints(plan: ExecutionPlan, agents: dict):        results = {}        for batch in plan.batches:            batch_results = await execute_parallel_batch(batch, agents, results)            # Valider avant de continuer            for task_id, result in batch_results.items():                if not validate_intermediate_result(result):                    await handle_failure(task_id, plan, agents, results)            results.update(batch_results)        return results    ```</p>
+<ol>
+<li><strong>Re-planning dynamique (adaptation en temps réel)</strong></li>
+<ul>
+<li>Si une sous-tâche échoue et que le retry ne suffit pas, re-décomposer cette partie</li>
+<li>Si une sous-tâche prend trop de temps, diviser en sous-tâches plus petites à la volée</li>
+<li>Si le contexte change (nouvelles informations), mettre à jour le plan et notifier les agents concernés</li>
+</ul>
+</ol>
+<p>   ```python    class DynamicReplanner:        def replan_on_failure(self, failed_task: SubTask, plan: ExecutionPlan) -&gt; ExecutionPlan:            # Décomposer plus finement la tâche échouée            finer_subtasks = decompose_further(failed_task)            # Supprimer la tâche originale et insérer les nouvelles            updated_plan = insert_subtasks(plan, failed_task.subtask_id, finer_subtasks)            return updated_plan    ```</p>
+<ol>
+<li><strong>Visualisation du plan (Gantt et dependency graph)</strong></li>
+<ul>
+<li>Générer une représentation visuelle pour valider le plan avant exécution</li>
+<li>Gantt-like : afficher les batches sur une timeline avec les durées estimées</li>
+<li>Dependency graph : DOT format pour Graphviz ou Mermaid pour affichage dans Markdown</li>
+</ul>
+</ol>
+<p>    ```python     def to_mermaid(plan: ExecutionPlan, subtasks: dict) -&gt; str:         lines = [&quot;graph TD&quot;]         for task_id, task in subtasks.items():             lines.append(f'  {task_id}[&quot;{task.name}&quot;]')             for dep in task.required_inputs:                 lines.append(f'  {dep} --&gt; {task_id}')         return &quot;\n&quot;.join(lines)     ```</p>
+<h2>Anti-patterns</h2>
+<ul>
+<li><strong>Sous-tâches trop couplées</strong> : des sous-tâches qui partagent un état mutable ou des effets de bord empêchent la parallélisation et créent des race conditions. Chaque sous-tâche doit opérer sur ses propres données.</li>
+<li><strong>Décomposition trop fine</strong> : découper en dizaines de micro-tâches génère plus d'overhead de coordination que de gain en parallélisme. Une bonne granularité signifie que chaque sous-tâche prend au moins 5-10 secondes à exécuter.</li>
+<li><strong>Pas de dépendances modélisées</strong> : ignorer les dépendances et tout exécuter en parallèle cause des résultats incohérents quand une tâche utilise le résultat d'une autre qui n'est pas encore terminée.</li>
+<li><strong>Plan rigide sans adaptation</strong> : un plan d'exécution figé qui ne peut pas être modifié en cas d'échec ou de nouvelle information conduit à l'échec total de la mission au moindre imprévu.</li>
+</ul>
+<h2>Règles</h2>
+<ol>
+<li><strong>Valider le DAG avant exécution</strong> : détecter les cycles et les dépendances manquantes avant de lancer quoi que ce soit pour éviter les deadlocks et les erreurs de runtime.</li>
+<li><strong>Chaque sous-tâche produit un livrable vérifiable</strong> : sans output mesurable, impossible de détecter un échec silencieux ou de construire sur le résultat.</li>
+<li><strong>Toujours calculer le chemin critique</strong> et prioriser son exécution pour minimiser le temps total d'exécution.</li>
+<li><strong>Prévoir systématiquement un plan de fallback</strong> pour chaque sous-tâche sur le chemin critique — une alternative moins optimale mais fonctionnelle en cas d'échec.</li>
+<li><strong>Documenter les hypothèses de décomposition</strong> : expliquer pourquoi telle tâche a été découpée de cette façon, pour faciliter le re-planning si le contexte change.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

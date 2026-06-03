@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-spawner — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Création dynamique de sous-agents à la volée avec configuration, lifecycle management et resource allocation.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-spawner</h1>
+<p class="lead">Création dynamique de sous-agents à la volée avec configuration, lifecycle management et resource allocation.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-spawner</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">spawner</span><span class="trigger">créer agent dynamiquement</span><span class="trigger">spawn agent</span><span class="trigger">agent factory</span><span class="trigger">agent dynamique</span><span class="trigger">instancier agent</span><span class="trigger">agent à la volée</span><span class="trigger">dynamic agent creation</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/spawner ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/spawner" target="_blank">agent-skills/spawner</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Spawner</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utiliser ce skill lorsqu'une tâche nécessite la création dynamique de sous-agents spécialisés pendant l'exécution — par exemple quand la complexité d'une requête dépasse les capacités d'un agent unique ou que des traitements parallèles indépendants sont requis. Ce skill est adapté aux architectures multi-agents où le nombre et le type d'agents ne peuvent pas être déterminés à l'avance. Il convient également aux systèmes de type &quot;agent factory&quot; où des gabarits réutilisables doivent être instanciés avec des configurations contextuelles différentes.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Définir les templates d'agents</strong> — Créer des gabarits réutilisables (system prompt, tools autorisés, modèle LLM, contraintes, timeout). Chaque template définit une spécialisation : <code>ResearcherTemplate</code>, <code>CoderTemplate</code>, <code>ReviewerTemplate</code>, etc.</li>
+</ol>
+<ol>
+<li><strong>Identifier le déclencheur de spawn</strong> — Évaluer les conditions qui justifient la création d'un nouvel agent : complexité de la tâche, besoin de spécialisation, parallélisme requis, manque de compétence de l'agent courant.</li>
+</ol>
+<ol>
+<li><strong>Configuration dynamique</strong> — Injecter le contexte spécifique dans le template sélectionné : données d'entrée, instructions particulières, tools adaptés à la tâche, sélection du modèle selon le budget disponible.</li>
+</ol>
+<ol>
+<li><strong>Resource allocation</strong> — Allouer les ressources avant le spawn : budget tokens, timeout maximal, liste des tools accessibles, niveau de permission, modèle LLM (premium vs économique selon la criticité).</li>
+</ol>
+<ol>
+<li><strong>Lifecycle management</strong> — Piloter l'agent à travers les phases <code>create → initialize → execute → report → terminate</code>. Chaque transition doit être loggée avec un timestamp et l'état résultant.</li>
+</ol>
+<ol>
+<li><strong>Agent registry</strong> — Enregistrer chaque agent spawné dans un registre central : identifiant unique (UUID), statut courant, heure de création, référence au parent, tâche assignée, métriques d'utilisation.</li>
+</ol>
+<ol>
+<li><strong>Agents éphémères vs persistants</strong> — Distinguer les agents one-shot (créés pour une tâche unique puis détruits) des agents persistants (maintenus entre les tâches pour réduire le warm-up). Adapter la stratégie selon le coût et la fréquence d'utilisation.</li>
+</ol>
+<ol>
+<li><strong>Rate limiting</strong> — Enforcer les limites : nombre maximal d'agents concurrents, cadence de spawn (agents/seconde), budget total alloué à l'ensemble du pool, file d'attente si le plafond est atteint.</li>
+</ol>
+<ol>
+<li><strong>Cleanup et garbage collection</strong> — Terminer les agents inactifs après un timeout, libérer les ressources allouées, archiver les logs de résultats, supprimer les entrées du registre pour les agents terminés.</li>
+</ol>
+<ol>
+<li><strong>Factory patterns</strong> — Implémenter des patterns reconnus : <code>AgentFactory</code> (création centralisée), <code>Builder</code> (configuration étape par étape), héritage de templates, composition de capacités pour créer des agents hybrides.</li>
+</ol>
+<pre><code class="lang-python"># Exemple d'implémentation Python — AgentFactory
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Optional
+
+@dataclass
+class AgentTemplate:
+    name: str
+    system_prompt: str
+    tools: list[str]
+    model: str = &quot;claude-3-5-sonnet&quot;
+    max_tokens: int = 4096
+    timeout_seconds: int = 120
+
+@dataclass
+class AgentInstance:
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    template_name: str = &quot;&quot;
+    status: str = &quot;created&quot;  # created | running | done | failed | terminated
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    parent_id: Optional[str] = None
+    result: Optional[str] = None
+
+class AgentFactory:
+    _templates: dict[str, AgentTemplate] = {}
+    _registry: dict[str, AgentInstance] = {}
+    _max_concurrent: int = 10
+
+    @classmethod
+    def register_template(cls, template: AgentTemplate):
+        cls._templates[template.name] = template
+
+    @classmethod
+    def spawn(cls, template_name: str, context: dict, parent_id: str = None) -&gt; AgentInstance:
+        if len([a for a in cls._registry.values() if a.status == &quot;running&quot;]) &gt;= cls._max_concurrent:
+            raise RuntimeError(&quot;Max concurrent agents reached — task queued&quot;)
+        
+        template = cls._templates[template_name]
+        agent = AgentInstance(template_name=template_name, parent_id=parent_id)
+        cls._registry[agent.id] = agent
+        
+        # Injecter le contexte dans le system prompt
+        enriched_prompt = template.system_prompt.format(**context)
+        agent.status = &quot;running&quot;
+        
+        print(f&quot;[SPAWN] Agent {agent.id} ({template_name}) créé à {agent.created_at}&quot;)
+        return agent
+
+    @classmethod
+    def terminate(cls, agent_id: str, result: str = None):
+        if agent_id in cls._registry:
+            cls._registry[agent_id].status = &quot;terminated&quot;
+            cls._registry[agent_id].result = result
+            print(f&quot;[TERMINATE] Agent {agent_id} terminé.&quot;)
+
+    @classmethod
+    def active_agents(cls) -&gt; list[AgentInstance]:
+        return [a for a in cls._registry.values() if a.status == &quot;running&quot;]
+
+# Usage
+researcher_tpl = AgentTemplate(
+    name=&quot;researcher&quot;,
+    system_prompt=&quot;Tu es un chercheur expert en {domain}. Analyse: {task}&quot;,
+    tools=[&quot;search_web&quot;, &quot;fetch_url&quot;],
+    model=&quot;claude-3-5-haiku&quot;
+)
+AgentFactory.register_template(researcher_tpl)
+
+agent = AgentFactory.spawn(&quot;researcher&quot;, {&quot;domain&quot;: &quot;IA&quot;, &quot;task&quot;: &quot;LLM benchmarks 2025&quot;})
+AgentFactory.terminate(agent.id, result=&quot;Rapport de recherche complet&quot;)</code></pre>
+<pre><code>Architecture — Agent Spawner
+
+  Parent Agent
+      │
+      ▼
+  AgentFactory
+  ┌─────────────────────────────────┐
+  │  Templates Registry             │
+  │  ┌─────────┐ ┌───────────────┐  │
+  │  │Coder    │ │ Researcher    │  │
+  │  │Template │ │ Template      │  │
+  │  └─────────┘ └───────────────┘  │
+  └────────────┬────────────────────┘
+               │ spawn()
+               ▼
+  Agent Registry (UUID → AgentInstance)
+  ┌──────────┬──────────┬──────────┐
+  │ Agent A  │ Agent B  │ Agent C  │
+  │ running  │ done     │ running  │
+  └──────────┴──────────┴──────────┘
+               │
+               ▼
+  Rate Limiter → max_concurrent=10
+  GC → terminate idle agents</code></pre>
+<p><strong>Comparaison LangGraph vs CrewAI vs Custom :</strong></p>
+<table><thead><tr><th>Critère</th><th>LangGraph</th><th>CrewAI</th><th>Custom Python</th></tr></thead><tbody><tr><td>Spawn dynamique</td><td>Via <code>Send()</code> API</td><td><code>Agent()</code> instanciation</td><td>Total contrôle</td></tr><tr><td>Templates</td><td>Nodes réutilisables</td><td><code>Agent</code> configs</td><td>Dataclasses</td></tr><tr><td>Registry</td><td>State graph</td><td>Crew internal</td><td>Dict custom</td></tr><tr><td>Rate limiting</td><td>Manuel</td><td>Manuel</td><td>Manuel</td></tr><tr><td>Lifecycle</td><td>Graph states</td><td>Task lifecycle</td><td>Manuel</td></tr></tbody></table>
+<h2>Anti-patterns</h2>
+<ul>
+<li><strong>Spawn sans limite</strong> — Ne jamais créer des agents sans plafond de concurrence. Un burst de 100 agents simultanés peut saturer les quotas API et exploser le budget en quelques secondes.</li>
+<li><strong>Pas de cleanup</strong> — Les agents qui restent en état <code>running</code> sans surveillance consomment des ressources et polluent le registre. Toujours implémenter un timeout et un garbage collector.</li>
+<li><strong>Agents orphelins</strong> — Spawner un agent sans référence au parent empêche la remontée des résultats et le suivi des erreurs. Toujours passer <code>parent_id</code> au moment du spawn.</li>
+<li><strong>Recréer au lieu de réutiliser</strong> — Spawner un nouvel agent pour chaque micro-tâche est inefficace. Préférer la réutilisation via un pool (voir <code>agent-pool-manager</code>) quand les agents sont identiques.</li>
+</ul>
+<h2>Règles</h2>
+<ol>
+<li><strong>Tout agent spawné doit avoir un identifiant unique</strong> (UUID) enregistré dans le registre central dès sa création, avec référence au parent.</li>
+<li><strong>Le resource budget doit être défini avant le spawn</strong> — modèle, max_tokens, timeout et tools sont immuables après instanciation.</li>
+<li><strong>Enforcer un plafond de concurrence</strong> — <code>max_concurrent_agents</code> doit être configuré explicitement ; ne jamais le laisser à l'infini.</li>
+<li><strong>Le lifecycle complet doit être loggé</strong> — chaque transition d'état (create → running → done/failed → terminated) doit être tracée avec timestamp.</li>
+<li><strong>Fournir des templates pour toutes les spécialisations courantes</strong> — ne pas hardcoder les configurations ; utiliser le pattern Factory pour permettre l'extension sans modification du code core.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

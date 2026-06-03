@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>autogen-guide — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Développement d'agents conversationnels avec Microsoft AutoGen. Création de group chats, agents spécialisés et workflows multi-agents avec exécution de code.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">autogen-guide</h1>
+<p class="lead">Développement d'agents conversationnels avec Microsoft AutoGen. Création de group chats, agents spécialisés et workflows multi-agents avec exécution de code.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/autogen-guide</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">AutoGen</span><span class="trigger">Microsoft AutoGen</span><span class="trigger">autogen agent</span><span class="trigger">group chat agent</span><span class="trigger">ConversableAgent</span><span class="trigger">AssistantAgent</span><span class="trigger">UserProxyAgent</span><span class="trigger">coding agent</span><span class="trigger">agents qui conversent</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/autogen-guide ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/autogen-guide" target="_blank">agent-skills/autogen-guide</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>AutoGen Guide — Agents Conversationnels Microsoft</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utiliser ce skill quand l'utilisateur veut construire des agents qui conversent entre eux pour résoudre des problèmes complexes, notamment pour des systèmes de coding agents (génération et exécution de code automatique), des workflows de résolution de problèmes par discussion multi-agents, ou des pipelines où des agents spécialisés débattent et collaborent. AutoGen excelle pour les cas d'usage impliquant l'écriture et l'exécution de code Python dans une boucle.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Installation et configuration initiale</strong></li>
+<ul>
+<li>Installer : <code>pip install pyautogen==0.3.2</code> (ou <code>autogen-agentchat~=0.2</code> pour la v0.2 stable)</li>
+<li>Pour AutoGen v0.4+ (nouvelle API) : <code>pip install autogen-agentchat autogen-ext[openai]</code></li>
+<li>Configurer les modèles via <code>OAI_CONFIG_LIST</code> (fichier JSON) ou dict Python :</li>
+</ul>
+</ol>
+<p>     ```python      config_list = [          {&quot;model&quot;: &quot;gpt-4o&quot;, &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]},          {&quot;model&quot;: &quot;gpt-4o-mini&quot;, &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]},      ]      ```</p>
+<ul>
+<li>Variables d'env : <code>OPENAI_API_KEY</code>, optionnellement <code>OAI_CONFIG_LIST</code> (chemin fichier)</li>
+</ul>
+<ol>
+<li><strong>Agents de base</strong></li>
+<ul>
+<li><code>AssistantAgent</code> : agent LLM qui génère des réponses et du code, ne l'exécute pas</li>
+<li><code>UserProxyAgent</code> : agent qui peut exécuter du code, simuler l'humain, orchestrer</li>
+<li><code>ConversableAgent</code> : classe de base, tous les agents en héritent</li>
+<li>Paramètres clés : <code>name</code>, <code>system_message</code>, <code>llm_config</code>, <code>human_input_mode</code>, <code>max_consecutive_auto_reply</code></li>
+</ul>
+</ol>
+<ol>
+<li><strong>Configuration des LLMs (llm_config)</strong></li>
+<ul>
+<li>Structure <code>llm_config</code> : <code>{&quot;config_list&quot;: [...], &quot;temperature&quot;: 0, &quot;cache_seed&quot;: 42}</code></li>
+<li><code>cache_seed</code> : met en cache les réponses LLM pour reproduire les résultats (mettre à <code>None</code> en prod)</li>
+<li>Model routing : lister plusieurs modèles dans <code>config_list</code> — AutoGen essaie dans l'ordre en cas d'échec</li>
+<li><code>llm_config=False</code> sur <code>UserProxyAgent</code> pour désactiver le LLM (proxy pur)</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Group Chat — conversation multi-agents</strong></li>
+<ul>
+<li><code>GroupChat</code> : définit les agents participants, <code>max_round</code>, <code>speaker_selection_method</code></li>
+<li><code>GroupChatManager</code> : orchestre le GroupChat, nécessite son propre <code>llm_config</code></li>
+<li>Méthodes de sélection du speaker : <code>&quot;auto&quot;</code> (LLM choisit), <code>&quot;round_robin&quot;</code>, <code>&quot;random&quot;</code>, ou une fonction custom</li>
+<li>Contraindre les transitions : <code>allowed_or_disallowed_speaker_transitions</code> pour un flow déterministe</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Exécution de code (code_execution_config)</strong></li>
+<ul>
+<li>Configuration sur <code>UserProxyAgent</code> :</li>
+</ul>
+</ol>
+<p>     ```python      code_execution_config={          &quot;executor&quot;: LocalCommandLineCodeExecutor(work_dir=&quot;coding&quot;),          &quot;last_n_messages&quot;: 3,      }      ```</p>
+<ul>
+<li><code>LocalCommandLineCodeExecutor</code> : exécute localement (attention à la sécurité !)</li>
+<li><code>DockerCommandLineCodeExecutor</code> : exécution isolée dans Docker (recommandé en prod)</li>
+<li>Désactiver l'exécution : <code>code_execution_config=False</code></li>
+</ul>
+<ol>
+<li><strong>Tool use — appels de fonctions</strong></li>
+<ul>
+<li>Définir les fonctions et les enregistrer :</li>
+</ul>
+</ol>
+<p>     ```python      from autogen import register_function</p>
+<p>     def get_weather(city: str) -&gt; str:          &quot;&quot;&quot;Retourne la météo pour une ville.&quot;&quot;&quot;          return f&quot;Météo pour {city}: ensoleillé, 22°C&quot;</p>
+<p>     register_function(          get_weather,          caller=assistant,    # agent qui appelle l'outil          executor=user_proxy, # agent qui exécute l'outil          name=&quot;get_weather&quot;,          description=&quot;Obtenir la météo actuelle d'une ville&quot;,      )      ```</p>
+<ul>
+<li>Les tools sont définis comme JSON Schema dans <code>llm_config[&quot;tools&quot;]</code></li>
+</ul>
+<ol>
+<li><strong>Human-in-the-loop</strong></li>
+<ul>
+<li><code>human_input_mode=&quot;ALWAYS&quot;</code> : demande input humain à chaque tour</li>
+<li><code>human_input_mode=&quot;NEVER&quot;</code> : entièrement automatique (défaut pour automation)</li>
+<li><code>human_input_mode=&quot;TERMINATE&quot;</code> : demande input seulement quand l'agent veut terminer</li>
+<li><code>is_termination_msg</code> : fonction lambda pour détecter le message de fin (ex: <code>lambda x: &quot;TERMINATE&quot; in x.get(&quot;content&quot;, &quot;&quot;)</code>)</li>
+<li><code>max_consecutive_auto_reply=10</code> : stoppe automatiquement après N tours sans input humain</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Patterns avancés</strong></li>
+<ul>
+<li><strong>Nested chats</strong> : un agent peut initier une sous-conversation et en récupérer le résultat comme un seul message</li>
+<li><strong>Teachable agents</strong> : <code>TeachableAgent</code> — mémorise les enseignements de l'utilisateur via une base de données</li>
+<li><strong>RAG agents</strong> : <code>RetrieveAssistantAgent</code> + <code>RetrieveUserProxyAgent</code> pour la retrieval-augmented generation</li>
+<li><strong>Society of Mind</strong> : pattern où plusieurs chats indépendants alimentent un agent synthétiseur</li>
+<li><strong>Swarm</strong> (v0.4+) : orchestration légère avec <code>RoundRobinGroupChat</code>, <code>SelectorGroupChat</code></li>
+</ul>
+</ol>
+<ol>
+<li><strong>Gestion de l'état et historique</strong></li>
+<ul>
+<li>Accéder à l'historique : <code>agent.chat_messages</code> (dict par agent interlocuteur)</li>
+<li>Résumer la conversation : utiliser un agent dédié à la synthèse</li>
+<li>Checkpointing : sauvegarder <code>chat_messages</code> en JSON pour reprendre une session</li>
+<li>Resumabilité : réinitialiser avec <code>agent.reset()</code> ou injecter l'historique manuellement</li>
+</ul>
+</ol>
+<ol>
+<li><strong>AutoGen Studio et déploiement</strong></li>
+<ul>
+<li><code>pip install autogenstudio</code> — interface GUI no-code pour créer des workflows</li>
+<li>Lancement : <code>autogenstudio ui --port 8080</code></li>
+<li>API REST : AutoGen Studio expose un endpoint pour déclencher des workflows via HTTP</li>
+<li>En production : wrapper FastAPI + gestion des sessions avec UUID de conversation</li>
+<li>Monitoring : intégration OpenTelemetry disponible dans AutoGen v0.4+</li>
+</ul>
+</ol>
+<h2>Exemples de code</h2>
+<h3>Système de coding agents : résolution automatique de problèmes Python</h3>
+<pre><code class="lang-python">import os
+import autogen
+from autogen.coding import LocalCommandLineCodeExecutor
+
+# Configuration LLM
+config_list = [{&quot;model&quot;: &quot;gpt-4o&quot;, &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]}]
+llm_config = {&quot;config_list&quot;: config_list, &quot;temperature&quot;: 0, &quot;cache_seed&quot;: None}
+
+# Assistant : génère le code
+assistant = autogen.AssistantAgent(
+    name=&quot;assistant&quot;,
+    system_message=(
+        &quot;Vous êtes un expert Python. Quand on vous pose un problème, &quot;
+        &quot;écrivez du code Python pour le résoudre. &quot;
+        &quot;Vérifiez toujours les résultats. &quot;
+        &quot;Répondez TERMINATE quand le problème est résolu.&quot;
+    ),
+    llm_config=llm_config,
+)
+
+# UserProxy : exécute le code généré
+user_proxy = autogen.UserProxyAgent(
+    name=&quot;user_proxy&quot;,
+    human_input_mode=&quot;NEVER&quot;,
+    max_consecutive_auto_reply=10,
+    is_termination_msg=lambda x: x.get(&quot;content&quot;, &quot;&quot;).rstrip().endswith(&quot;TERMINATE&quot;),
+    code_execution_config={
+        &quot;executor&quot;: LocalCommandLineCodeExecutor(
+            work_dir=&quot;./coding_workspace&quot;,
+            timeout=60,
+        ),
+    },
+    system_message=&quot;Executor de code. Exécute le code et rapporte les résultats.&quot;,
+)
+
+# Lancement de la conversation
+if __name__ == &quot;__main__&quot;:
+    result = user_proxy.initiate_chat(
+        assistant,
+        message=(
+            &quot;Téléchargez les données de cours d'Apple (AAPL) pour les 30 derniers jours &quot;
+            &quot;et tracez un graphique avec matplotlib. Sauvegardez le graphique en PNG.&quot;
+        ),
+    )
+    print(f&quot;Résumé : {result.summary}&quot;)</code></pre>
+<h3>Group Chat multi-agents avec rôles spécialisés</h3>
+<pre><code class="lang-python">import os
+import autogen
+
+config_list = [{&quot;model&quot;: &quot;gpt-4o&quot;, &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]}]
+llm_config = {&quot;config_list&quot;: config_list, &quot;temperature&quot;: 0.1}
+
+# Définition des agents spécialisés
+product_manager = autogen.AssistantAgent(
+    name=&quot;ProductManager&quot;,
+    system_message=(
+        &quot;Vous êtes un Product Manager. Vous analysez les besoins, &quot;
+        &quot;définissez les spécifications et coordonnez l'équipe. &quot;
+        &quot;Répondez TERMINATE quand le livrable est complet.&quot;
+    ),
+    llm_config=llm_config,
+)
+
+developer = autogen.AssistantAgent(
+    name=&quot;Developer&quot;,
+    system_message=(
+        &quot;Vous êtes un développeur senior Python/FastAPI. &quot;
+        &quot;Vous implémentez les fonctionnalités demandées avec du code propre et testé.&quot;
+    ),
+    llm_config=llm_config,
+)
+
+security_expert = autogen.AssistantAgent(
+    name=&quot;SecurityExpert&quot;,
+    system_message=(
+        &quot;Vous êtes un expert en cybersécurité. &quot;
+        &quot;Vous vérifiez le code pour les vulnérabilités OWASP Top 10 &quot;
+        &quot;et proposez des correctifs.&quot;
+    ),
+    llm_config=llm_config,
+)
+
+# UserProxy qui n'exécute pas de code dans cet exemple
+user_proxy = autogen.UserProxyAgent(
+    name=&quot;UserProxy&quot;,
+    human_input_mode=&quot;NEVER&quot;,
+    max_consecutive_auto_reply=0,
+    is_termination_msg=lambda x: &quot;TERMINATE&quot; in x.get(&quot;content&quot;, &quot;&quot;),
+    code_execution_config=False,
+)
+
+# Configuration du Group Chat
+groupchat = autogen.GroupChat(
+    agents=[user_proxy, product_manager, developer, security_expert],
+    messages=[],
+    max_round=15,
+    speaker_selection_method=&quot;auto&quot;,
+    # Transitions autorisées pour un flow structuré
+    allowed_or_disallowed_speaker_transitions={
+        user_proxy: [product_manager],
+        product_manager: [developer, security_expert],
+        developer: [security_expert, product_manager],
+        security_expert: [developer, product_manager],
+    },
+    speaker_transitions_type=&quot;allowed&quot;,
+)
+
+manager = autogen.GroupChatManager(
+    groupchat=groupchat,
+    llm_config=llm_config,
+)
+
+# Démarrer la conversation
+if __name__ == &quot;__main__&quot;:
+    user_proxy.initiate_chat(
+        manager,
+        message=(
+            &quot;Créez une API REST FastAPI sécurisée avec un endpoint POST /login &quot;
+            &quot;qui accepte email/password, valide les entrées et retourne un JWT. &quot;
+            &quot;Assurez-vous qu'elle résiste aux injections et brute-force.&quot;
+        ),
+    )</code></pre>
+<h2>Règles</h2>
+<ol>
+<li><strong>Toujours définir <code>is_termination_msg</code></strong> — Sans condition de terminaison, les conversations peuvent boucler indéfiniment. Utilisez une convention claire comme le mot &quot;TERMINATE&quot; dans le <code>system_message</code> de chaque agent, et détectez-le avec une lambda.</li>
+</ol>
+<ol>
+<li><strong>Utiliser Docker pour l'exécution de code en production</strong> — <code>LocalCommandLineCodeExecutor</code> présente des risques de sécurité (exécution arbitraire). Toujours utiliser <code>DockerCommandLineCodeExecutor</code> en environnement de production ou partagé.</li>
+</ol>
+<ol>
+<li><strong>Mettre <code>cache_seed=None</code> en production</strong> — Le cache basé sur <code>cache_seed</code> est utile pour le développement (reproductibilité, économie de tokens) mais doit être désactivé en production pour obtenir des réponses fraîches.</li>
+</ol>
+<ol>
+<li><strong>Dimensionner <code>max_consecutive_auto_reply</code> et <code>max_round</code></strong> — Ces deux limites sont vos filets de sécurité contre les boucles infinies et les coûts incontrôlés. Commencez bas (5-10) et augmentez selon les besoins.</li>
+</ol>
+<ol>
+<li><strong>Séparer les rôles clairement dans <code>system_message</code></strong> — La qualité d'un Group Chat dépend directement de la clarté des <code>system_message</code>. Chaque agent doit avoir un rôle unique, non ambigu, avec des instructions sur quand intervenir et quand passer la parole.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

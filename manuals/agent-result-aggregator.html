@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-result-aggregator — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Agrégation et synthèse des résultats de multiples sous-agents en un résultat cohérent.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-result-aggregator</h1>
+<p class="lead">Agrégation et synthèse des résultats de multiples sous-agents en un résultat cohérent.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-result-aggregator</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">agréger résultats</span><span class="trigger">fusionner résultats</span><span class="trigger">combiner outputs</span><span class="trigger">agent aggregator</span><span class="trigger">merge results</span><span class="trigger">synthèse multi-agent</span><span class="trigger">consolider résultats agents</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/result-aggregator ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/result-aggregator" target="_blank">agent-skills/result-aggregator</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Result Aggregator</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utiliser ce skill dès que plusieurs sous-agents ont produit des résultats qui doivent être fusionnés en un output unique cohérent. Applicable pour les résultats complémentaires (chaque agent couvre une partie), les résultats redondants (plusieurs agents ont traité la même question), ou les résultats contradictoires (les agents ont abouti à des conclusions différentes).</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Définir le format de sortie attendu</strong></li>
+<ul>
+<li>Spécifier le schema exact du résultat final avant de commencer l'agrégation</li>
+<li>Choisir le niveau de détail : résumé exécutif, rapport complet, JSON structuré, réponse conversationnelle</li>
+<li>Définir les champs obligatoires vs optionnels pour détecter les résultats incomplets</li>
+</ul>
+</ol>
+<p>   ```python    from pydantic import BaseModel    from typing import Optional, Any</p>
+<p>   class AggregatedResult(BaseModel):        result_id: str        summary: str        details: dict[str, Any]        sources: list[dict]       # Attribution par sous-agent        confidence: float         # 0.0 - 1.0        conflicts: list[dict]     # Contradictions détectées et résolues        metadata: dict    ```</p>
+<ol>
+<li><strong>Collecte des résultats (gathering asynchrone)</strong></li>
+<ul>
+<li>Utiliser <code>asyncio.gather</code> pour collecter tous les résultats en parallèle</li>
+<li>Gérer les timeouts : un sous-agent lent ne doit pas bloquer l'agrégation</li>
+<li>Distinguer les résultats complets des résultats partiels des échecs</li>
+</ul>
+</ol>
+<p>   ```python    import asyncio    from dataclasses import dataclass</p>
+<p>   @dataclass    class AgentResult:        agent_id: str        status: str        # &quot;complete&quot; | &quot;partial&quot; | &quot;failed&quot;        data: Any        confidence: float        execution_time: float</p>
+<p>   async def collect_all_results(agents: list, timeout: int = 60) -&gt; list[AgentResult]:        tasks = [asyncio.wait_for(agent.get_result(), timeout=timeout) for agent in agents]        raw_results = await asyncio.gather(*tasks, return_exceptions=True)        return [            r if not isinstance(r, Exception)            else AgentResult(agent_id=agents[i].id, status=&quot;failed&quot;, data=None, confidence=0.0, execution_time=timeout)            for i, r in enumerate(raw_results)        ]    ```</p>
+<ol>
+<li><strong>Validation des résultats (qualité et conformité)</strong></li>
+<ul>
+<li>Vérifier la conformité au schema attendu pour chaque résultat reçu</li>
+<li>Scorer la qualité : longueur minimale, présence des champs clés, cohérence interne</li>
+<li>Catégoriser : <code>valid</code>, <code>partial</code> (manque des champs), <code>invalid</code> (hors schema), <code>empty</code></li>
+</ul>
+</ol>
+<p>   ```python    class ResultValidator:        def validate(self, result: AgentResult, schema: BaseModel) -&gt; dict:            score = 0.0            issues = []            if result.status == &quot;failed&quot;:                return {&quot;valid&quot;: False, &quot;score&quot;: 0.0, &quot;issues&quot;: [&quot;Agent a échoué&quot;]}            try:                schema.model_validate(result.data)                score += 0.5            except Exception as e:                issues.append(f&quot;Non-conformité schema: {e}&quot;)            # Vérification qualité supplémentaire            if result.confidence &gt;= 0.7:                score += 0.3            if result.execution_time &lt; 60:                score += 0.2            return {&quot;valid&quot;: score &gt;= 0.5, &quot;score&quot;: score, &quot;issues&quot;: issues}    ```</p>
+<ol>
+<li><strong>Résolution de conflits (contradictions entre agents)</strong></li>
+<ul>
+<li>Détecter les contradictions : deux agents donnent des réponses incompatibles sur le même fait</li>
+<li>Stratégie <code>voting</code> : prendre la réponse majoritaire si 3+ agents ou plus</li>
+<li>Stratégie <code>confidence-based</code> : prendre la réponse de l'agent avec la confiance la plus haute</li>
+<li>Stratégie <code>LLM arbitration</code> : demander à un LLM de trancher en analysant les deux versions</li>
+</ul>
+</ol>
+<p>   ```python    class ConflictResolver:        def resolve(self, conflicts: list[tuple], strategy: str = &quot;confidence&quot;) -&gt; dict:            resolved = {}            for field, competing_values in conflicts:                if strategy == &quot;voting&quot;:                    resolved[field] = max(set(v for _, v in competing_values),                                          key=lambda x: sum(1 for _, v in competing_values if v == x))                elif strategy == &quot;confidence&quot;:                    resolved[field] = max(competing_values, key=lambda x: x[0])[1]                elif strategy == &quot;llm&quot;:                    resolved[field] = self._llm_arbitrate(field, competing_values)            return resolved</p>
+<p>       def _llm_arbitrate(self, field: str, options: list) -&gt; Any:            prompt = f&quot;Choisir la meilleure valeur pour '{field}': {options}. Justifier.&quot;            return llm.invoke(prompt)    ```</p>
+<ol>
+<li><strong>Déduplication (éliminer les redondances)</strong></li>
+<ul>
+<li>Détecter les résultats identiques ou quasi-identiques (même contenu, sources différentes)</li>
+<li><code>Exact dedup</code> : hash MD5/SHA des données, supprimer les doublons exacts</li>
+<li><code>Semantic dedup</code> : embeddings + similarité cosinus pour détecter les paraphrases</li>
+</ul>
+</ol>
+<p>   ```python    from sklearn.metrics.pairwise import cosine_similarity    import numpy as np</p>
+<p>   class SemanticDeduplicator:        def __init__(self, similarity_threshold: float = 0.92):            self.threshold = similarity_threshold</p>
+<p>       def deduplicate(self, results: list[AgentResult]) -&gt; list[AgentResult]:            texts = [str(r.data) for r in results]            embeddings = embed_batch(texts)  # Votre fonction d'embedding            kept = [0]            for i in range(1, len(results)):                sims = cosine_similarity([embeddings[i]], [embeddings[j] for j in kept])[0]                if max(sims) &lt; self.threshold:                    kept.append(i)            return [results[i] for i in kept]    ```</p>
+<ol>
+<li><strong>Ranking et priorisation (sélection des meilleurs résultats)</strong></li>
+<ul>
+<li>Scorer chaque résultat selon : confiance de l'agent, qualité de validation, fraîcheur des données</li>
+<li>Prioriser les résultats des agents spécialisés sur les agents généralistes</li>
+<li>En cas de budget de tokens limité, tronquer en gardant les résultats les mieux scorés</li>
+</ul>
+</ol>
+<p>   ```python    class ResultRanker:        def rank(self, results: list[AgentResult], validations: list[dict]) -&gt; list[tuple]:            scored = []            for result, validation in zip(results, validations):                score = (                    result.confidence * 0.4 +                    validation[&quot;score&quot;] * 0.4 +                    (1.0 if result.status == &quot;complete&quot; else 0.3) * 0.2                )                scored.append((score, result))            return sorted(scored, reverse=True, key=lambda x: x[0])    ```</p>
+<ol>
+<li><strong>Synthèse (fusion en un output cohérent)</strong></li>
+<ul>
+<li>Pour des résultats complémentaires : concatener intelligemment en évitant les redites</li>
+<li>Pour des résultats redondants : prendre le meilleur et enrichir avec les nuances des autres</li>
+<li>Utiliser un LLM pour la synthèse finale quand la structure est complexe</li>
+</ul>
+</ol>
+<p>   ```python    class LLMSynthesizer:        def synthesize(self, ranked_results: list, output_format: str) -&gt; str:            context = &quot;\n\n&quot;.join([                f&quot;[Agent {r.agent_id}, confiance={r.confidence:.2f}]\n{r.data}&quot;                for _, r in ranked_results[:5]  # Top 5 résultats            ])            prompt = f&quot;&quot;&quot;Synthétise les résultats suivants de multiple agents en un {output_format} cohérent.            Résous les contradictions, élimine les répétitions, garde les informations les plus précises.</p>
+<p>           Résultats des agents :            {context}</p>
+<p>           Output attendu: {output_format}&quot;&quot;&quot;            return llm.invoke(prompt)    ```</p>
+<ol>
+<li><strong>Citation et attribution (source tracking)</strong></li>
+<ul>
+<li>Tracer quelle information vient de quel sous-agent dans le résultat final</li>
+<li>Permet l'audit post-hoc et le débogage en cas d'erreur dans le résultat agrégé</li>
+<li>Format de citation : <code>[Agent: research_agent_1, confiance: 0.92, timestamp: ...]</code></li>
+</ul>
+</ol>
+<p>   ```python    class SourceTracker:        def __init__(self):            self.attributions = {}</p>
+<p>       def track(self, field: str, value: Any, source_agent: AgentResult):            self.attributions[field] = {                &quot;agent_id&quot;: source_agent.agent_id,                &quot;confidence&quot;: source_agent.confidence,                &quot;execution_time&quot;: source_agent.execution_time,                &quot;status&quot;: source_agent.status            }</p>
+<p>       def generate_attribution_report(self) -&gt; dict:            return {&quot;sources&quot;: self.attributions}    ```</p>
+<ol>
+<li><strong>Quality assurance (vérification du résultat final)</strong></li>
+<ul>
+<li>Vérifier la cohérence interne du résultat agrégé (pas de contradictions internes résiduelles)</li>
+<li>Fact-checking léger : les affirmations clés sont-elles étayées par au moins une source ?</li>
+<li>Completeness check : tous les champs obligatoires du schema de sortie sont-ils remplis ?</li>
+</ul>
+</ol>
+<p>   ```python    class FinalQAChecker:        def check(self, aggregated: AggregatedResult) -&gt; dict:            issues = []            # Vérification complétude            if not aggregated.summary or len(aggregated.summary) &lt; 50:                issues.append(&quot;Résumé trop court ou absent&quot;)            if not aggregated.sources:                issues.append(&quot;Aucune attribution de source&quot;)            if aggregated.confidence &lt; 0.3:                issues.append(&quot;Confiance trop basse — résultat peu fiable&quot;)            # Cohérence            if aggregated.conflicts and not all(c.get(&quot;resolved&quot;) for c in aggregated.conflicts):                issues.append(&quot;Des conflits non résolus subsistent&quot;)            return {&quot;passed&quot;: len(issues) == 0, &quot;issues&quot;: issues}    ```</p>
+<ol>
+<li><strong>Output formatting (mise en forme finale)</strong></li>
+<ul>
+<li>Adapter le format au contexte : JSON pour une API, Markdown pour un humain, texte brut pour un LLM suivant</li>
+<li>Inclure les métadonnées : nombre d'agents, taux de succès, confiance globale, durée d'exécution</li>
+<li>Proposer différents niveaux de détail : résumé / complet / avec sources</li>
+</ul>
+</ol>
+<p>    ```python     class OutputFormatter:         def format(self, result: AggregatedResult, mode: str = &quot;full&quot;) -&gt; str:             if mode == &quot;summary&quot;:                 return result.summary             elif mode == &quot;json&quot;:                 return result.model_dump_json(indent=2)             elif mode == &quot;markdown&quot;:                 lines = [f&quot;# Résultat agrégé\n\n{result.summary}\n\n## Détails\n&quot;]                 for k, v in result.details.items():                     lines.append(f&quot;### {k}\n{v}\n&quot;)                 lines.append(f&quot;\n---\n*Confiance: {result.confidence:.0%} | Sources: {len(result.sources)} agents*&quot;)                 return &quot;\n&quot;.join(lines)     ```</p>
+<h2>Anti-patterns</h2>
+<ul>
+<li><strong>Concaténer sans synthétiser</strong> : empiler les résultats des agents les uns après les autres sans fusion intelligente produit un output redondant, incohérent et trop long. Toujours passer par une étape de synthèse qui fusionne et déduplique.</li>
+<li><strong>Ignorer les conflits</strong> : quand deux agents se contredisent, laisser les deux affirmations dans le résultat final crée de la confusion. Chaque conflit doit être détecté, documenté et résolu explicitement.</li>
+<li><strong>Pas de validation du résultat final</strong> : même si chaque résultat individuel est valide, leur agrégation peut produire des incohérences. Toujours exécuter un QA check sur l'output final avant de le livrer.</li>
+<li><strong>Perdre l'attribution des sources</strong> : un résultat agrégé sans traçabilité est un résultat non auditable. Conserver systématiquement le lien entre chaque information et le sous-agent qui l'a produite.</li>
+</ul>
+<h2>Règles</h2>
+<ol>
+<li><strong>Toujours définir le schema du résultat final avant de lancer l'agrégation</strong> — travailler vers un format inconnu rend l'agrégation non déterministe.</li>
+<li><strong>Les résultats partiels sont mieux que rien</strong> : si un sous-agent a échoué, inclure ses résultats partiels avec un flag <code>partial</code> plutôt que de les ignorer complètement.</li>
+<li><strong>La confiance globale est le minimum des confidences individuelles</strong>, pas la moyenne — un résultat final est aussi fiable que son maillon le plus faible.</li>
+<li><strong>Documenter chaque conflit résolu</strong> dans les métadonnées du résultat final pour permettre l'audit et l'amélioration continue du système.</li>
+<li><strong>Limiter la taille de l'output agrégé</strong> : un résultat trop verbeux est inutilisable. Définir une longueur cible et utiliser le LLM de synthèse pour respecter cette contrainte.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

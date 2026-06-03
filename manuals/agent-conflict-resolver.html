@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-conflict-resolver — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Résolution de conflits entre agents ou sous-agents quand les résultats sont contradictoires.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-conflict-resolver</h1>
+<p class="lead">Résolution de conflits entre agents ou sous-agents quand les résultats sont contradictoires.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-conflict-resolver</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">conflit agent</span><span class="trigger">agent conflict</span><span class="trigger">résultats contradictoires</span><span class="trigger">agent disagreement</span><span class="trigger">contradiction agents</span><span class="trigger">arbitrage agent</span><span class="trigger">résoudre conflit agents</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/conflict-resolver ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/conflict-resolver" target="_blank">agent-skills/conflict-resolver</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Conflict Resolver</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utilise ce skill lorsque deux agents ou plus ont produit des résultats contradictoires, incompatibles ou mutuellement exclusifs sur la même question ou la même tâche. Cela arrive typiquement dans les architectures multi-agents parallèles où plusieurs agents traitent la même entrée, dans les pipelines avec validation croisée, ou lorsqu'un agent de vérification contredit le résultat d'un agent de production. L'objectif est de résoudre le conflit de façon traçable et d'alimenter un feedback loop pour prévenir les futurs conflits.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Détecter le conflit automatiquement</strong> — Implémente une couche de détection qui compare les outputs des agents après chaque étape parallèle. Types de conflits à détecter : <strong>contradiction directe</strong> (agent A dit &quot;vrai&quot;, agent B dit &quot;faux&quot;), <strong>incohérence numérique</strong> (agent A retourne 1500€, agent B retourne 2300€ pour le même calcul), <strong>inconsistance logique</strong> (les deux conclusions ne peuvent pas être vraies simultanément), <strong>conflit de priorité</strong> (agent A recommande action X, agent B recommande action Y incompatible avec X).</li>
+</ol>
+<pre><code class="lang-python">from dataclasses import dataclass
+from typing import Any
+
+@dataclass
+class ConflictDetectionResult:
+    has_conflict: bool
+    conflict_type: str  # &quot;direct_contradiction&quot; | &quot;numerical_inconsistency&quot; | &quot;logical_conflict&quot; | &quot;priority_conflict&quot;
+    severity: str       # &quot;critical&quot; | &quot;major&quot; | &quot;minor&quot;
+    agent_a: str
+    agent_b: str
+    output_a: Any
+    output_b: Any
+    description: str
+
+def detect_conflict(output_a: Any, agent_a: str, output_b: Any, agent_b: str) -&gt; ConflictDetectionResult:
+    # Détection numérique
+    if isinstance(output_a, (int, float)) and isinstance(output_b, (int, float)):
+        diff_pct = abs(output_a - output_b) / max(abs(output_a), abs(output_b), 1)
+        if diff_pct &gt; 0.10:  # &gt;10% d'écart
+            return ConflictDetectionResult(
+                has_conflict=True, conflict_type=&quot;numerical_inconsistency&quot;,
+                severity=&quot;major&quot; if diff_pct &gt; 0.30 else &quot;minor&quot;,
+                agent_a=agent_a, agent_b=agent_b,
+                output_a=output_a, output_b=output_b,
+                description=f&quot;Écart de {diff_pct:.1%} entre {agent_a} et {agent_b}&quot;
+            )
+    # Détection booléenne
+    if isinstance(output_a, bool) and isinstance(output_b, bool) and output_a != output_b:
+        return ConflictDetectionResult(
+            has_conflict=True, conflict_type=&quot;direct_contradiction&quot;, severity=&quot;critical&quot;,
+            agent_a=agent_a, agent_b=agent_b, output_a=output_a, output_b=output_b,
+            description=f&quot;{agent_a} dit {output_a}, {agent_b} dit {output_b}&quot;
+        )
+    return ConflictDetectionResult(has_conflict=False, conflict_type=&quot;none&quot;, severity=&quot;none&quot;,
+                                    agent_a=agent_a, agent_b=agent_b,
+                                    output_a=output_a, output_b=output_b, description=&quot;&quot;)</code></pre>
+<ol>
+<li><strong>Classifier le conflit</strong> — Évalue deux dimensions : <strong>nature</strong> (factuel vs opinion — un conflit factuel a une réponse vérifiable, un conflit d'opinion nécessite un jugement) et <strong>criticité</strong> (critique : la décision est irréversible ou à fort impact ; majeur : peut être corrigé mais coûteux ; mineur : acceptable de prendre l'un ou l'autre). Cette classification détermine la stratégie de résolution. Un conflit factuel critique nécessite une vérification externe. Un conflit d'opinion mineur peut se résoudre par majority vote.</li>
+</ol>
+<ol>
+<li><strong>Rassembler les preuves</strong> — Avant de résoudre, demande à chaque agent impliqué de <strong>justifier son résultat</strong> : fournir les sources utilisées, le raisonnement étape par étape (chain-of-thought), le score de confiance auto-évalué (0.0–1.0) et les hypothèses ou limites reconnues. Cette étape est critique : souvent, la justification révèle qu'un agent a utilisé des données périmées ou a fait une hypothèse erronée, ce qui simplifie la résolution.</li>
+</ol>
+<pre><code class="lang-python">async def gather_evidence(conflict: ConflictDetectionResult, agents: dict) -&gt; dict:
+    evidence_a = await agents[conflict.agent_a].justify(
+        output=conflict.output_a,
+        prompt=&quot;Explique ton raisonnement étape par étape, liste tes sources, donne ton score de confiance (0-1) et identifie tes hypothèses.&quot;
+    )
+    evidence_b = await agents[conflict.agent_b].justify(
+        output=conflict.output_b,
+        prompt=&quot;Explique ton raisonnement étape par étape, liste tes sources, donne ton score de confiance (0-1) et identifie tes hypothèses.&quot;
+    )
+    return {
+        &quot;agent_a&quot;: {&quot;output&quot;: conflict.output_a, &quot;evidence&quot;: evidence_a},
+        &quot;agent_b&quot;: {&quot;output&quot;: conflict.output_b, &quot;evidence&quot;: evidence_b}
+    }</code></pre>
+<ol>
+<li><strong>Appliquer la stratégie de résolution adaptée</strong> — Sélectionne selon le type de conflit : <strong>source verification</strong> (conflit factuel → vérifier avec une source externe authoritative), <strong>authority-based</strong> (l'agent avec la plus haute expertise sur ce domaine gagne), <strong>recency-based</strong> (l'agent avec les données les plus récentes gagne, pour les informations temporelles), <strong>majority vote</strong> (si N&gt;2 agents et majorité claire), <strong>arbitration</strong> (agent arbitre neutre, voir étape 5). Applique toujours la stratégie la moins coûteuse en premier.</li>
+</ol>
+<pre><code class="lang-python">class ConflictResolutionStrategy:
+    @staticmethod
+    def source_verification(conflict, evidence: dict, external_source) -&gt; dict:
+        ground_truth = external_source.lookup(conflict.output_a, conflict.output_b)
+        winner = &quot;agent_a&quot; if ground_truth == conflict.output_a else &quot;agent_b&quot;
+        return {&quot;winner&quot;: winner, &quot;method&quot;: &quot;source_verification&quot;, &quot;ground_truth&quot;: ground_truth}
+
+    @staticmethod
+    def confidence_based(evidence: dict) -&gt; dict:
+        conf_a = evidence[&quot;agent_a&quot;][&quot;evidence&quot;].get(&quot;confidence&quot;, 0.5)
+        conf_b = evidence[&quot;agent_b&quot;][&quot;evidence&quot;].get(&quot;confidence&quot;, 0.5)
+        if abs(conf_a - conf_b) &lt; 0.1:
+            return {&quot;winner&quot;: None, &quot;method&quot;: &quot;confidence_tie&quot;, &quot;needs_escalation&quot;: True}
+        winner = &quot;agent_a&quot; if conf_a &gt; conf_b else &quot;agent_b&quot;
+        return {&quot;winner&quot;: winner, &quot;method&quot;: &quot;confidence_based&quot;, &quot;confidence_delta&quot;: abs(conf_a - conf_b)}</code></pre>
+<ol>
+<li><strong>Utiliser un agent arbitre (LLM-as-judge)</strong> — Lorsque les stratégies déterministes ne suffisent pas, invoque un <strong>agent arbitre neutre</strong> : un LLM avec un prompt structuré d'évaluation qui reçoit les deux outputs et leurs justifications, applique des critères d'évaluation explicites (exactitude, cohérence, sourcing, raisonnement), et produit un verdict motivé. L'arbitre ne doit pas être l'un des agents en conflit. Utilise un modèle plus puissant que les agents en conflit si possible.</li>
+</ol>
+<pre><code class="lang-python">ARBITRATOR_PROMPT = &quot;&quot;&quot;Tu es un arbitre neutre. Voici deux réponses contradictoires à la même question.
+
+Question: {question}
+
+Réponse A (de {agent_a}): {output_a}
+Justification A: {evidence_a}
+
+Réponse B (de {agent_b}): {output_b}
+Justification B: {evidence_b}
+
+Évalue selon ces critères :
+1. Exactitude factuelle (sources vérifiables)
+2. Cohérence du raisonnement
+3. Complétude de la réponse
+4. Score de confiance déclaré
+
+Détermine quelle réponse est la plus fiable, explique ton raisonnement, et fournis un score de confiance dans ta décision (0-1).
+Réponds en JSON : {{&quot;winner&quot;: &quot;A&quot;|&quot;B&quot;|&quot;neither&quot;, &quot;reasoning&quot;: &quot;...&quot;, &quot;confidence&quot;: 0.0-1.0}}
+&quot;&quot;&quot;</code></pre>
+<ol>
+<li><strong>Appliquer la stratégie de merge</strong> — Certains conflits ne sont pas de vraies contradictions mais des <strong>résultats complémentaires</strong> : l'agent A a traité une partie du problème, l'agent B une autre. Dans ce cas, merge les outputs plutôt que de choisir un gagnant. Stratégies de merge : <strong>union</strong> (conserver toutes les informations non contradictoires), <strong>intersection</strong> (conserver uniquement les informations partagées), <strong>weighted merge</strong> (chaque champ est pris de l'agent avec la plus haute confiance sur ce champ), <strong>synthesis</strong> (appeler un LLM pour synthétiser les deux en une réponse cohérente).</li>
+</ol>
+<ol>
+<li><strong>Définir les règles d'escalation</strong> — Escalade obligatoire si : <code>confidence_in_resolution &lt; 0.5</code> (l'arbitre lui-même est incertain), conflit de <strong>criticité critique</strong> sans résolution déterministe, conflit <strong>persistant</strong> (même après arbitrage un agent conteste), ou conflit impliquant des <strong>données sensibles</strong> (financières, médicales, légales). L'escalation vers un superviseur humain doit inclure le résumé du conflit, les deux positions et les preuves rassemblées.</li>
+</ol>
+<pre><code class="lang-python">def should_escalate(resolution_result: dict, conflict: ConflictDetectionResult) -&gt; bool:
+    return (
+        resolution_result.get(&quot;confidence&quot;, 1.0) &lt; 0.5 or
+        conflict.severity == &quot;critical&quot; and resolution_result.get(&quot;method&quot;) != &quot;source_verification&quot; or
+        resolution_result.get(&quot;needs_escalation&quot;, False)
+    )</code></pre>
+<ol>
+<li><strong>Logger la résolution</strong> — Chaque résolution de conflit doit être documentée : <code>conflict_id</code>, <code>timestamp</code>, <code>agents_involved</code>, <code>conflict_type</code>, <code>severity</code>, <code>outputs_in_conflict</code>, <code>evidence_gathered</code>, <code>resolution_strategy_used</code>, <code>resolution_result</code>, <code>winner</code>, <code>reasoning</code>, <code>confidence_in_resolution</code>, <code>escalated</code> (booléen), <code>resolution_duration_ms</code>. Ces logs constituent une base de données précieuse pour analyser les patterns de conflits récurrents.</li>
+</ol>
+<ol>
+<li><strong>Prévenir les futurs conflits</strong> — Analyse les logs de conflits pour identifier les causes racines : <strong>instructions ambiguës</strong> (les deux agents avaient raison selon leur interprétation → clarifier les prompts), <strong>scopes qui se chevauchent</strong> (deux agents traitent la même sous-tâche → mieux décomposer), <strong>données inconsistantes</strong> (les agents utilisaient des versions différentes de la même donnée → state store partagé), <strong>manque de contexte</strong> (un agent manquait d'information → améliorer le context packaging).</li>
+</ol>
+<ol>
+<li><strong>Alimenter le feedback loop</strong> — Le résultat de chaque résolution doit informer les futurs dispatches : si l'agent A perd systématiquement sur les questions de type X, réduire sa priorité pour ce type ou mettre à jour son prompt. Implémenter un <strong>performance tracker</strong> par agent et par type de tâche. Utiliser ces métriques dans le routing conditionnel pour favoriser les agents avec le meilleur track record.</li>
+</ol>
+<pre><code class="lang-python">class AgentPerformanceTracker:
+    def __init__(self):
+        self.wins: dict[str, int] = {}
+        self.losses: dict[str, int] = {}
+        self.by_task_type: dict[str, dict[str, int]] = {}
+
+    def record_resolution(self, winner: str, loser: str, task_type: str):
+        self.wins[winner] = self.wins.get(winner, 0) + 1
+        self.losses[loser] = self.losses.get(loser, 0) + 1
+        self.by_task_type.setdefault(task_type, {})
+        self.by_task_type[task_type][winner] = self.by_task_type[task_type].get(winner, 0) + 1
+
+    def win_rate(self, agent_id: str) -&gt; float:
+        wins = self.wins.get(agent_id, 0)
+        losses = self.losses.get(agent_id, 0)
+        total = wins + losses
+        return wins / total if total &gt; 0 else 0.5</code></pre>
+<h2>Anti-patterns</h2>
+<ul>
+<li><strong>Toujours prendre le premier résultat</strong> — Dans un pipeline parallèle, le premier agent à répondre n'est pas nécessairement le plus fiable. La vitesse ne corrèle pas avec la qualité. Toujours vérifier la présence de conflits avant d'accepter un résultat.</li>
+<li><strong>Ignorer les conflits mineurs</strong> — Les conflits classifiés comme &quot;mineurs&quot; révèlent souvent des problèmes systémiques (prompts ambigus, données inconsistantes) qui deviennent critiques si non traités. Logger et analyser tous les conflits, même résolus par défaut.</li>
+<li><strong>Boucle de re-resolution infinie</strong> — Si l'arbitre contredit lui-même l'un des agents, ne pas relancer un nouveau cycle d'arbitrage indéfiniment. Maximum 2 rounds d'arbitrage, puis escalation humaine obligatoire.</li>
+<li><strong>Absence de logging</strong> — Résoudre un conflit sans le documenter prive le système de la possibilité d'apprendre et de prévenir les récurrences. Chaque résolution, même triviale, doit être loggée.</li>
+</ul>
+<h2>Règles</h2>
+<ol>
+<li><strong>Détection automatique obligatoire</strong> — Tout output produit en parallèle par plusieurs agents doit passer par une couche de détection de conflits avant d'être utilisé. Ne jamais merger des résultats sans vérification.</li>
+<li><strong>Stratégie déterministe d'abord</strong> — Tente toujours la résolution déterministe (vérification de source, confiance, autorité) avant de recourir à l'arbitrage LLM, plus coûteux et moins prévisible.</li>
+<li><strong>L'arbitre est neutre</strong> — L'agent arbitre ne doit jamais être l'un des agents en conflit. Utilise un agent dédié ou un modèle distinct pour l'arbitrage.</li>
+<li><strong>Documente les trade-offs</strong> — La résolution par confiance est rapide mais peut être biaisée. La vérification externe est fiable mais lente. L'arbitrage LLM est flexible mais coûteux. Choisis et documente explicitement.</li>
+<li><strong>Adapte au framework</strong> — LangGraph : node de détection + conditional resolution branches. CrewAI : task de validation croisée. AutoGen : agent <code>ConflictResolver</code> dans le GroupChat. Custom : middleware de comparaison après <code>asyncio.gather</code>.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-handoff-designer — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Design de handoffs fluides entre agents — transfert de contexte, d'état et de responsabilité.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-handoff-designer</h1>
+<p class="lead">Design de handoffs fluides entre agents — transfert de contexte, d'état et de responsabilité.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-handoff-designer</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">handoff</span><span class="trigger">transfert agent</span><span class="trigger">agent handoff</span><span class="trigger">passer la main</span><span class="trigger">relay agent</span><span class="trigger">agent transition</span><span class="trigger">changement d'agent</span><span class="trigger">routing entre agents</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/handoff-designer ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/handoff-designer" target="_blank">agent-skills/handoff-designer</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Handoff Designer</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utilise ce skill lorsqu'un agent doit transférer la responsabilité d'une tâche ou d'une conversation à un autre agent spécialisé. Cela s'applique aux cas de routing basé sur les capacités (un agent généraliste délègue à un spécialiste), d'escalade (transfert vers un agent de niveau supérieur ou vers un humain), et de chaînes de traitement (pipeline A → B → C). L'objectif est que l'utilisateur et le système ne perçoivent aucune rupture.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Identifier quand déclencher un handoff</strong> — Quatre situations justifient un handoff : <strong>capability boundary</strong> (l'agent courant n'a pas les outils ou la connaissance pour continuer), <strong>spécialisation</strong> (un autre agent est optimisé pour cette sous-tâche), <strong>escalation</strong> (la complexité ou le risque dépasse le seuil de l'agent courant), <strong>load balancing</strong> (l'agent courant est saturé). Définis des règles explicites (<code>intent_router.yaml</code> ou fonction Python) pour chaque condition.</li>
+</ol>
+<pre><code class="lang-python">from enum import Enum
+
+class HandoffReason(Enum):
+    CAPABILITY_BOUNDARY = &quot;capability_boundary&quot;
+    SPECIALIZATION = &quot;specialization&quot;
+    ESCALATION = &quot;escalation&quot;
+    LOAD_BALANCING = &quot;load_balancing&quot;
+
+def should_handoff(agent_id: str, task: dict, agent_capabilities: dict) -&gt; tuple[bool, HandoffReason | None]:
+    required_caps = task.get(&quot;required_capabilities&quot;, [])
+    available_caps = agent_capabilities.get(agent_id, [])
+    missing = [c for c in required_caps if c not in available_caps]
+    if missing:
+        return True, HandoffReason.CAPABILITY_BOUNDARY
+    if task.get(&quot;risk_level&quot;, 0) &gt; 7:
+        return True, HandoffReason.ESCALATION
+    return False, None</code></pre>
+<ol>
+<li><strong>Packager le contexte</strong> — Avant le handoff, l'agent émetteur doit synthétiser : un <strong>résumé de la conversation</strong> (5–10 phrases max), les <strong>faits clés extraits</strong> (entités nommées, valeurs critiques, décisions prises), l'<strong>intent utilisateur</strong> reformulé, les <strong>entités</strong> (noms, dates, montants, références), le <strong>progrès accompli</strong> (pourcentage, étapes terminées), et les <strong>contraintes ou préférences utilisateur</strong> détectées. Limite la taille du context package à 2 000 tokens pour ne pas surcharger l'agent récepteur.</li>
+</ol>
+<ol>
+<li><strong>Transférer l'état</strong> — Le state transfer doit inclure : l'historique conversationnel résumé (pas le transcript complet), les données extraites structurées, la progression de la tâche (<code>task_progress: {&quot;step&quot;: 3, &quot;total&quot;: 7, &quot;completed&quot;: [&quot;collect_info&quot;, &quot;validate&quot;]}</code>), les préférences utilisateur détectées et les variables de contexte techniques (IDs de session, références externes). Stocke ces données dans un state store partagé référencé par un <code>context_ref</code>.</li>
+</ol>
+<pre><code class="lang-python">from dataclasses import dataclass, field
+from typing import Any
+
+@dataclass
+class HandoffContext:
+    conversation_summary: str
+    key_facts: dict[str, Any]
+    user_intent: str
+    entities: dict[str, Any]
+    task_progress: dict[str, Any]
+    user_preferences: dict[str, Any]
+    context_ref: str  # clé dans le state store partagé
+    handoff_reason: str
+    source_agent: str
+    target_agent: str
+
+def package_context(conversation_history: list, agent_id: str) -&gt; HandoffContext:
+    # Appel LLM pour résumer et extraire les faits clés
+    summary = summarize_conversation(conversation_history)
+    facts = extract_key_facts(conversation_history)
+    return HandoffContext(
+        conversation_summary=summary,
+        key_facts=facts,
+        user_intent=detect_intent(conversation_history),
+        entities=extract_entities(conversation_history),
+        task_progress={},
+        user_preferences={},
+        context_ref=store_context(conversation_history),
+        handoff_reason=&quot;&quot;,
+        source_agent=agent_id,
+        target_agent=&quot;&quot;
+    )</code></pre>
+<ol>
+<li><strong>Exécuter le protocole de handoff</strong> — Séquence en 4 étapes : <strong>(a)</strong> notifier l'agent cible avec le context package, <strong>(b)</strong> attendre la confirmation de readiness (ACK avec <code>ready: true</code>), <strong>(c)</strong> effectuer le switch (l'agent émetteur passe en mode <code>inactive</code> ou <code>standby</code>), <strong>(d)</strong> confirmer le handoff complété à l'orchestrateur. Ne jamais switcher sans avoir reçu le <code>ready</code> de l'agent cible. Timeout recommandé : 5 secondes, puis fallback.</li>
+</ol>
+<ol>
+<li><strong>Assurer une UX transparente</strong> — L'utilisateur ne doit pas répéter ce qu'il a déjà dit. L'agent récepteur doit <strong>s'introduire brièvement</strong> (&quot;Je prends en charge votre demande depuis [Agent A]...&quot;), <strong>démontrer qu'il a le contexte</strong> en reprenant un fait clé, et <strong>ne pas poser de questions déjà répondues</strong>. Si une info manque, précise pourquoi elle est nécessaire. Génère un message de transition optionnel côté UI : &quot;Transfert vers le spécialiste X en cours…&quot;</li>
+</ol>
+<ol>
+<li><strong>Gérer l'échec du handoff</strong> — Si l'agent cible ne répond pas dans le timeout : <strong>(a) retry</strong> une fois après 2 secondes, <strong>(b) alternative agent</strong> si un agent de même capacité est disponible, <strong>(c) return to sender</strong> : l'agent original reprend la main avec une capacité dégradée, <strong>(d) human escalation</strong> : créer un ticket de support avec le contexte complet. Log chaque tentative échouée avec horodatage et raison.</li>
+</ol>
+<pre><code class="lang-python">import asyncio
+
+async def execute_handoff(source_agent, target_agent_id: str, context: HandoffContext, timeout: float = 5.0):
+    try:
+        ack = await asyncio.wait_for(
+            target_agent.notify_handoff(context),
+            timeout=timeout
+        )
+        if ack.get(&quot;ready&quot;):
+            source_agent.set_state(&quot;standby&quot;)
+            return {&quot;success&quot;: True, &quot;target&quot;: target_agent_id}
+    except asyncio.TimeoutError:
+        pass
+    # Fallback
+    alternative = find_alternative_agent(target_agent_id)
+    if alternative:
+        return await execute_handoff(source_agent, alternative, context, timeout)
+    source_agent.set_state(&quot;active&quot;)  # Return to sender
+    return {&quot;success&quot;: False, &quot;reason&quot;: &quot;target_unavailable&quot;}</code></pre>
+<ol>
+<li><strong>Gérer les chaînes multi-hop</strong> — Dans une chaîne A → B → C, chaque étape doit : <strong>incrémenter un compteur de hops</strong> (bloquer si <code>hop_count &gt; MAX_HOPS</code>, recommandé : 5), <strong>accumuler les résumés</strong> de chaque agent (pas re-résumer indéfiniment), <strong>maintenir le <code>correlation_id</code> original</strong>, et <strong>tracker la chaîne</strong> dans un <code>handoff_chain: [&quot;agent_A&quot;, &quot;agent_B&quot;]</code>. Préviens la dégradation du contexte en stockant les snapshots à chaque hop dans le state store.</li>
+</ol>
+<ol>
+<li><strong>Implémenter le routing conditionnel</strong> — Définis les règles de handoff dans une table de routing : si <code>intent == &quot;billing&quot;</code> → <code>billing_agent</code>, si <code>sentiment_score &lt; 0.3</code> → <code>escalation_agent</code>, si <code>language == &quot;ar&quot;</code> → <code>arabic_specialist</code>. Implémente ce routing engine comme une fonction pure testable. Dans LangGraph, utilise les conditional edges. Dans CrewAI, utilise les <code>Task</code> routing conditions.</li>
+</ol>
+<pre><code class="lang-python">ROUTING_RULES = [
+    {&quot;condition&quot;: lambda ctx: ctx[&quot;intent&quot;] == &quot;billing&quot;, &quot;target&quot;: &quot;billing_agent&quot;},
+    {&quot;condition&quot;: lambda ctx: ctx.get(&quot;sentiment_score&quot;, 1.0) &lt; 0.3, &quot;target&quot;: &quot;escalation_agent&quot;},
+    {&quot;condition&quot;: lambda ctx: ctx.get(&quot;complexity_score&quot;, 0) &gt; 8, &quot;target&quot;: &quot;senior_agent&quot;},
+]
+
+def route_handoff(context: dict) -&gt; str:
+    for rule in ROUTING_RULES:
+        if rule[&quot;condition&quot;](context):
+            return rule[&quot;target&quot;]
+    return &quot;default_agent&quot;</code></pre>
+<ol>
+<li><strong>Mesurer la qualité des handoffs</strong> — Métriques essentielles : <strong>fréquence</strong> (handoffs/heure, par agent source), <strong>taux de succès</strong> (handoffs sans retry / total), <strong>context loss score</strong> (évaluation LLM de la qualité du contexte transféré, 0–1), <strong>satisfaction utilisateur post-handoff</strong> (feedback implicite via task completion rate), <strong>temps moyen de transition</strong> (délai entre fin agent A et premier message agent B).</li>
+</ol>
+<ol>
+<li><strong>Implémenter selon le framework</strong> — <strong>LangGraph</strong> : utilise <code>Command(goto=&quot;target_node&quot;)</code> avec le state mis à jour. <strong>OpenAI Assistants</strong> : <code>client.beta.threads.runs.cancel()</code> + nouveau run sur un autre assistant avec le thread partagé. <strong>CrewAI</strong> : délégation via <code>Agent.delegate()</code>. <strong>AutoGen</strong> : <code>GroupChatManager</code> avec <code>speaker_selection_method=&quot;auto&quot;</code>. <strong>Custom</strong> : implémente un <code>HandoffOrchestrator</code> qui gère le cycle de vie complet.</li>
+</ol>
+<h2>Anti-patterns</h2>
+<ul>
+<li><strong>Perdre le contexte au handoff</strong> — Transférer uniquement l'intent sans les faits clés force l'utilisateur à tout répéter. Packager toujours un contexte structuré complet avant le handoff.</li>
+<li><strong>Boucle de handoff infinie (A→B→A)</strong> — Sans limite de hops ni détection de cycles, deux agents peuvent se renvoyer la tâche indéfiniment. Implémente <code>max_hops</code> et une vérification de la <code>handoff_chain</code> pour détecter les cycles.</li>
+<li><strong>Handoff sans confirmation de readiness</strong> — Switcher vers un agent cible qui n'est pas disponible ou pas prêt provoque des messages perdus. Toujours attendre l'ACK <code>ready: true</code> avant le switch.</li>
+<li><strong>Forcer l'utilisateur à répéter</strong> — Si l'agent récepteur pose des questions déjà répondues, l'expérience utilisateur est dégradée et la confiance dans le système est perdue. Vérifier le contexte reçu avant de générer la première réponse.</li>
+</ul>
+<h2>Règles</h2>
+<ol>
+<li><strong>Le contexte package est obligatoire</strong> — Aucun handoff ne peut s'effectuer sans un <code>HandoffContext</code> valide. Même pour un handoff simple, le résumé et l'intent sont le minimum requis.</li>
+<li><strong>Confirmation avant switch</strong> — L'agent émetteur ne passe jamais en mode <code>inactive</code> sans avoir reçu le <code>ready: true</code> de l'agent cible dans le délai imparti.</li>
+<li><strong>Max hops = 5 par défaut</strong> — Toute chaîne de handoff dépassant 5 étapes doit être interrompue et escaladée vers un superviseur ou un humain.</li>
+<li><strong>Documente les trade-offs</strong> — Un handoff rapide (contexte minimal) réduit la latence mais augmente le risque de context loss. Un handoff complet (contexte riche) est plus fiable mais plus lent. Choisis explicitement selon le SLA.</li>
+<li><strong>Adapte au framework utilisateur</strong> — LangGraph, CrewAI, AutoGen et les architectures custom ont chacun leurs primitives de handoff. Utilise les patterns natifs du framework pour réduire la complexité.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

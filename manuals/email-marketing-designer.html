@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>email-marketing-designer — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Conception de campagnes email marketing — séquences automatisées, segmentation, A/B testing et délivrabilité.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">📣 Marketing</span>
+<h1 class="skill-title">email-marketing-designer</h1>
+<p class="lead">Conception de campagnes email marketing — séquences automatisées, segmentation, A/B testing et délivrabilité.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/email-marketing-designer</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">email marketing</span><span class="trigger">newsletter</span><span class="trigger">mailing</span><span class="trigger">séquence email</span><span class="trigger">Mailchimp</span><span class="trigger">SendGrid</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/marketing-skills/email-marketing-designer ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/marketing-skills/email-marketing-designer" target="_blank">marketing-skills/email-marketing-designer</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Email Marketing Designer</h1>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Définir la stratégie email</strong> — identifier les objectifs (nurturing, conversion, fidélisation, réactivation), cartographier le parcours client et les points de contact email, choisir la plateforme adaptée (Mailchimp, SendGrid, Brevo, ConvertKit), et planifier le calendrier d'envoi.</li>
+</ol>
+<ol>
+<li><strong>Construire et segmenter la liste</strong> — collecter les adresses via des formulaires opt-in conformes RGPD (double opt-in recommandé), segmenter la base par critères démographiques, comportementaux (historique d'achat, engagement) et lifecycle stage, et nettoyer régulièrement les contacts inactifs.</li>
+</ol>
+<ol>
+<li><strong>Concevoir les séquences automatisées</strong> — créer les flux clés : séquence de bienvenue (welcome series), abandon de panier, post-achat, réactivation des inactifs, anniversaire, et onboarding produit, avec des délais et conditions de branchement adaptés au comportement du destinataire.</li>
+</ol>
+<ol>
+<li><strong>Rédiger le contenu des emails</strong> — écrire des objets accrocheurs (40-50 caractères, personnalisation, urgence sans clickbait), structurer le corps avec une hiérarchie claire (un message principal, un CTA visible), personnaliser avec les merge tags (<code>{{prenom}}</code>, <code>{{produit}}</code>), et adapter le ton à la marque.</li>
+</ol>
+<ol>
+<li><strong>Designer le template HTML</strong> — créer des templates responsive qui s'affichent correctement sur tous les clients mail (Outlook, Gmail, Apple Mail), utiliser les tables pour la mise en page, inclure une version texte, respecter le ratio texte/image (60/40 minimum), et tester le rendu avec Litmus ou Email on Acid.</li>
+</ol>
+<ol>
+<li><strong>Configurer la délivrabilité</strong> — authentifier le domaine d'envoi avec SPF, DKIM et DMARC, surveiller la réputation IP avec les outils des FAI, maintenir un taux de plainte inférieur à 0.1%, gérer les bounces (hard et soft), et respecter les bonnes pratiques anti-spam (lien de désinscription visible, adresse physique).</li>
+</ol>
+<ol>
+<li><strong>Lancer des tests A/B</strong> — tester systématiquement les variables clés : objet (formulation, longueur, emoji), heure d'envoi, contenu (long vs. court), CTA (couleur, texte, position), et expéditeur (nom de la marque vs. nom personnel), en envoyant à un échantillon significatif avant le déploiement complet.</li>
+</ol>
+<ol>
+<li><strong>Analyser et optimiser</strong> — suivre les KPIs essentiels (taux d'ouverture, taux de clic, taux de conversion, taux de désinscription, revenue par email), comparer par segment et par type de campagne, identifier les tendances, et itérer sur le contenu et la stratégie en fonction des résultats.</li>
+</ol>
+<h2>Règles</h2>
+<ul>
+<li>Respecter strictement le RGPD et le consentement — ne jamais envoyer d'emails à des contacts qui n'ont pas explicitement opté in, et rendre la désinscription simple et immédiate.</li>
+<li>Nettoyer la liste régulièrement en supprimant les hard bounces et les inactifs depuis plus de 6 mois — une liste propre améliore la délivrabilité et réduit les coûts.</li>
+<li>Ne jamais sacrifier la délivrabilité pour le volume — un email qui arrive en spam a un impact nul, prioriser la qualité de la liste et la réputation de l'expéditeur.</li>
+<li>Tester le rendu sur au moins 5 clients mail différents avant chaque envoi — un email cassé visuellement détruit la crédibilité de la marque.</li>
+<li>Toujours fournir de la valeur avant de demander quelque chose — les emails purement promotionnels sans contenu utile augmentent les désinscriptions.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tool-calling-architect — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Design et implémentation de systèmes de tool calling pour agents IA. Function calling, API wrapping, schema design.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">tool-calling-architect</h1>
+<p class="lead">Design et implémentation de systèmes de tool calling pour agents IA. Function calling, API wrapping, schema design.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/tool-calling-architect</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">tool calling</span><span class="trigger">function calling</span><span class="trigger">tools agent</span><span class="trigger">API tools</span><span class="trigger">agent tools</span><span class="trigger">créer un outil</span><span class="trigger">custom tool</span><span class="trigger">tool schema</span><span class="trigger">MCP tool</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/tool-calling-architect ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/tool-calling-architect" target="_blank">agent-skills/tool-calling-architect</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Tool Calling Architect</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utilise ce skill lorsque tu dois concevoir, implémenter ou améliorer les outils (tools/functions) d'un agent IA. Il couvre la création d'outils depuis zéro, le wrapping d'APIs existantes, la conception de schémas JSON pour le function calling, et la mise en place du protocole MCP. S'applique aussi bien aux outils simples (recherche web, calcul) qu'aux pipelines complexes de tool chaining.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Design de l'outil</strong> — Avant d'écrire du code, définis précisément : un nom en snake_case explicite (<code>search_web</code>, <code>create_calendar_event</code>), une description en langage naturel que le LLM comprend sans ambiguïté, des paramètres typés et nommés clairement, et le schéma de retour. La qualité de la description détermine si le LLM saura quand et comment utiliser l'outil.</li>
+</ol>
+<ol>
+<li><strong>JSON Schema pour function calling</strong> — Rédige le schéma OpenAI-compatible avec <code>name</code>, <code>description</code>, <code>parameters</code> (JSON Schema). Chaque paramètre doit avoir <code>type</code>, <code>description</code> et, si applicable, <code>enum</code> ou <code>default</code>. Liste explicitement les paramètres <code>required</code>.</li>
+</ol>
+<p>   ```python    tool_schema = {        &quot;name&quot;: &quot;search_web&quot;,        &quot;description&quot;: &quot;Recherche des informations actuelles sur le web. Utilise cet outil quand tu as besoin d'informations récentes ou factuelles.&quot;,        &quot;parameters&quot;: {            &quot;type&quot;: &quot;object&quot;,            &quot;properties&quot;: {                &quot;query&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;description&quot;: &quot;La requête de recherche en langage naturel&quot;},                &quot;max_results&quot;: {&quot;type&quot;: &quot;integer&quot;, &quot;description&quot;: &quot;Nombre max de résultats&quot;, &quot;default&quot;: 5}            },            &quot;required&quot;: [&quot;query&quot;]        }    }    ```</p>
+<ol>
+<li><strong>Implémentation du tool</strong> — Wrape chaque outil dans une fonction Python avec validation des inputs (Pydantic recommandé), gestion des erreurs explicite, timeout, et retour d'un format standardisé. Ne laisse jamais une exception non catchée remonter au LLM.</li>
+</ol>
+<p>   ```python    from pydantic import BaseModel    import httpx</p>
+<p>   class SearchInput(BaseModel):        query: str        max_results: int = 5</p>
+<p>   async def search_web(query: str, max_results: int = 5) -&gt; dict:        try:            validated = SearchInput(query=query, max_results=max_results)            async with httpx.AsyncClient(timeout=10) as client:                resp = await client.get(SEARCH_API_URL, params=validated.dict())                resp.raise_for_status()                return {&quot;status&quot;: &quot;success&quot;, &quot;results&quot;: resp.json()[&quot;items&quot;][:max_results]}        except Exception as e:            return {&quot;status&quot;: &quot;error&quot;, &quot;message&quot;: str(e)}    ```</p>
+<ol>
+<li><strong>Tool discovery et sélection</strong> — Filtre les outils disponibles selon le contexte pour réduire le bruit dans le prompt : dynamic tool loading (charge uniquement les outils pertinents à la tâche), tool filtering par tags/catégories, <code>tool_choice</code> API parameter pour forcer ou exclure des outils. Évite de passer 20+ outils simultanément.</li>
+</ol>
+<ol>
+<li><strong>Parallel tool calling</strong> — Exploite le parallel tool calling natif des APIs modernes (OpenAI, Anthropic) : le LLM retourne plusieurs tool calls en un seul tour, exécute-les en parallèle avec <code>asyncio.gather</code>, puis retourne tous les résultats en un seul message. Réduit significativement la latence.</li>
+</ol>
+<p>   ```python    tool_calls = response.tool_calls  # plusieurs calls retournés    results = await asyncio.gather(*[dispatch_tool(tc) for tc in tool_calls])    ```</p>
+<ol>
+<li><strong>Tool chaining</strong> — Conçois des pipelines où l'output d'un outil devient l'input d'un autre : soit via l'agent lui-même (le LLM décide de la chaîne), soit via un pipeline déterministe pour les workflows prévisibles. Documente les types d'entrée/sortie pour faciliter la composition.</li>
+</ol>
+<ol>
+<li><strong>MCP (Model Context Protocol)</strong> — Pour exposer des outils via MCP : implémente un MCP server (Python SDK <code>mcp</code>), définis les <code>tools</code> (équivalent function calling), les <code>resources</code> (données exposées en lecture), et les <code>prompts</code> (templates réutilisables). Choisis le transport approprié : <code>stdio</code> (local), <code>HTTP+SSE</code> (distant).</li>
+</ol>
+<p>   ```python    from mcp.server import Server    from mcp.server.stdio import stdio_server</p>
+<p>   app = Server(&quot;mon-serveur&quot;)</p>
+<p>   @app.list_tools()    async def list_tools():        return [Tool(name=&quot;search_web&quot;, description=&quot;...&quot;, inputSchema={...})]</p>
+<p>   @app.call_tool()    async def call_tool(name: str, arguments: dict):        if name == &quot;search_web&quot;:            return await search_web(**arguments)    ```</p>
+<ol>
+<li><strong>Sécurité</strong> — Applique systématiquement : validation/sanitisation des inputs (rejette les injections), sandboxing pour les outils d'exécution de code (Docker, subprocess limité), rate limiting par outil et par utilisateur, permission scoping (l'agent ne peut appeler que les outils autorisés pour la session), limites de coût (budget par outil, par session).</li>
+</ol>
+<ol>
+<li><strong>Testing des tools</strong> — Teste chaque outil en isolation : unit tests avec inputs valides/invalides/edge cases, integration tests contre les vrais endpoints (ou mocks fidèles), tests de timeout et de comportement en cas d'erreur. Vérifie que le schéma JSON est correct et que le LLM l'interprète comme prévu.</li>
+</ol>
+<p>   ```python    async def test_search_web():        result = await search_web(query=&quot;test&quot;, max_results=3)        assert result[&quot;status&quot;] == &quot;success&quot;        assert len(result[&quot;results&quot;]) &lt;= 3</p>
+<p>   async def test_search_web_error():        result = await search_web(query=&quot;&quot;)        assert result[&quot;status&quot;] == &quot;error&quot;    ```</p>
+<ol>
+<li><strong>Monitoring</strong> — Instrumente chaque appel d'outil : usage stats (quels outils sont appelés le plus), latence par outil, taux d'erreur, coût par appel (APIs payantes), détection des appels inutiles (outil appelé mais résultat ignoré). Mets en place des logs structurés avec tool_name, inputs, outputs, durée.</li>
+</ol>
+<h2>Règles</h2>
+<ul>
+<li><strong>Description d'outil = documentation LLM</strong> : une description vague produit des appels incorrects ; sois aussi précis que si tu documentais une API publique pour un développeur humain.</li>
+<li><strong>Anti-pattern — outil fourre-tout</strong> : un outil qui fait &quot;plusieurs choses selon les paramètres&quot; confuse le LLM ; crée plusieurs outils spécialisés plutôt qu'un seul outil générique.</li>
+<li><strong>Retours standardisés</strong> : tous tes outils doivent retourner le même format de base (<code>status</code>, <code>data</code>/<code>error</code>) pour simplifier la gestion côté agent.</li>
+<li><strong>Idempotence où possible</strong> : les outils de lecture sont naturellement idempotents ; pour les outils d'écriture, implémente des guards contre les doubles appels (idempotency keys).</li>
+<li><strong>Framework-agnostic d'abord</strong> : implémente la logique métier de l'outil indépendamment du framework agent (LangChain, LlamaIndex, etc.) pour faciliter la migration et les tests.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

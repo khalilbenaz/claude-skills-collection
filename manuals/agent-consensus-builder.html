@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-consensus-builder — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Mécanismes de consensus et de vote entre agents pour prendre des décisions collectives fiables.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-consensus-builder</h1>
+<p class="lead">Mécanismes de consensus et de vote entre agents pour prendre des décisions collectives fiables.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-consensus-builder</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">consensus agent</span><span class="trigger">vote agents</span><span class="trigger">décision collective</span><span class="trigger">agent voting</span><span class="trigger">multi-agent decision</span><span class="trigger">majority vote</span><span class="trigger">agent debate</span><span class="trigger">agent deliberation</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/consensus-builder ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/consensus-builder" target="_blank">agent-skills/consensus-builder</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Consensus Builder</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utilise ce skill lorsqu'une décision critique ne peut pas être prise de façon fiable par un seul agent, notamment lorsque l'incertitude est élevée, que plusieurs perspectives sont nécessaires (analyse de risque, évaluation qualitative) ou que les conséquences d'une erreur sont significatives. Le consensus multi-agents augmente la robustesse en réduisant les biais d'un seul LLM. N'utilise pas le consensus pour les faits vérifiables : cherche simplement la réponse.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Décider quand utiliser le consensus</strong> — Le consensus est justifié si : la décision est <strong>critique</strong> (conséquences irréversibles ou coûteuses), il existe une <strong>incertitude élevée</strong> (pas de réponse factuellement vérifiable), <strong>plusieurs perspectives</strong> enrichissent l'analyse (technique, business, éthique), ou le système a déjà produit des <strong>réponses contradictoires</strong> sur des questions similaires. Ne pas utiliser pour : les faits (dates, calculs, données vérifiables), les décisions triviales, les situations où la latence est critique.</li>
+</ol>
+<ol>
+<li><strong>Choisir la méthode de vote</strong> — Selon la nature de la décision : <strong>majority vote</strong> (≥50%+1, décisions binaires simples), <strong>supermajority</strong> (≥66%, décisions risquées), <strong>weighted vote</strong> (chaque agent a un poids selon son expertise ou son historique de performance), <strong>ranked choice voting</strong> (Instant-Runoff, pour choisir entre N options), <strong>approval voting</strong> (chaque agent approuve toutes les options acceptables, prend l'option avec le plus d'approbations), <strong>Borda count</strong> (chaque agent classe les options, points attribués selon le rang).</li>
+</ol>
+<pre><code class="lang-python">from collections import Counter
+from typing import Any
+
+def majority_vote(votes: list[str]) -&gt; str:
+    counts = Counter(votes)
+    winner, count = counts.most_common(1)[0]
+    return winner if count &gt; len(votes) / 2 else &quot;no_consensus&quot;
+
+def weighted_vote(votes: list[tuple[str, float]]) -&gt; str:
+    scores: dict[str, float] = {}
+    for option, weight in votes:
+        scores[option] = scores.get(option, 0) + weight
+    return max(scores, key=scores.get)
+
+def borda_count(rankings: list[list[str]]) -&gt; str:
+    n = len(rankings[0])
+    scores: dict[str, int] = {}
+    for ranking in rankings:
+        for i, option in enumerate(ranking):
+            scores[option] = scores.get(option, 0) + (n - i - 1)
+    return max(scores, key=scores.get)</code></pre>
+<ol>
+<li><strong>Organiser le débat entre agents</strong> — Le pattern de débat structuré en 3 rounds : <strong>(a) Argumentation initiale</strong> : chaque agent formule sa position et ses arguments (prompt distinct, réponses parallèles), <strong>(b) Cross-examination</strong> : chaque agent reçoit les arguments des autres et peut les critiquer ou nuancer sa position, <strong>(c) Rebuttal et vote final</strong> : chaque agent formule sa position finale après avoir entendu les contre-arguments. Un modérateur (agent supplémentaire ou règle déterministe) synthétise et appelle au vote.</li>
+</ol>
+<pre><code class="lang-python">import asyncio
+
+async def run_debate(agents: list, question: str, options: list[str]) -&gt; dict:
+    # Round 1 : positions initiales
+    initial_positions = await asyncio.gather(*[
+        agent.argue(question, options, round=1) for agent in agents
+    ])
+    # Round 2 : cross-examination
+    critiques = await asyncio.gather(*[
+        agent.critique(question, initial_positions, own_position=initial_positions[i])
+        for i, agent in enumerate(agents)
+    ])
+    # Round 3 : vote final
+    final_votes = await asyncio.gather(*[
+        agent.final_vote(question, options, initial_positions, critiques)
+        for agent in agents
+    ])
+    return {&quot;votes&quot;: final_votes, &quot;positions&quot;: initial_positions, &quot;critiques&quot;: critiques}</code></pre>
+<ol>
+<li><strong>Implémenter le vote pondéré par confiance</strong> — Chaque agent vote en fournissant non seulement son choix mais aussi un <strong>score de confiance</strong> (0.0–1.0). Le résultat final est calculé par <strong>weighted aggregation</strong> : <code>score(option) = Σ(confidence_i * vote_i_for_option)</code>. Un agent très incertain (confiance 0.3) influence moins le résultat qu'un agent certain (confiance 0.9). Normalise les scores de confiance si nécessaire.</li>
+</ol>
+<pre><code class="lang-python">def confidence_weighted_consensus(
+    votes: list[dict[str, Any]]  # [{&quot;choice&quot;: &quot;A&quot;, &quot;confidence&quot;: 0.8}, ...]
+) -&gt; dict:
+    option_scores: dict[str, float] = {}
+    for vote in votes:
+        choice = vote[&quot;choice&quot;]
+        confidence = vote[&quot;confidence&quot;]
+        option_scores[choice] = option_scores.get(choice, 0) + confidence
+    total = sum(option_scores.values())
+    normalized = {k: v / total for k, v in option_scores.items()}
+    winner = max(normalized, key=normalized.get)
+    return {&quot;winner&quot;: winner, &quot;scores&quot;: normalized, &quot;confidence&quot;: normalized[winner]}</code></pre>
+<ol>
+<li><strong>Assurer la diversité d'opinion</strong> — Pour que le consensus soit utile, les agents doivent avoir des perspectives différentes. Techniques : <strong>prompts différents</strong> (chaque agent reçoit un framing distinct : optimiste, pessimiste, technique, business), <strong>températures différentes</strong> (0.3 pour l'agent conservateur, 0.9 pour l'agent créatif), <strong>rôles distincts</strong> (avocat du diable, avocat de la proposition, analyste neutre), <strong>données d'entrée partielles</strong> (chaque agent voit un sous-ensemble différent du contexte). Sans diversité, le consensus amplifie les biais plutôt que de les corriger.</li>
+</ol>
+<ol>
+<li><strong>Résoudre les deadlocks</strong> — En cas d'égalité parfaite : <strong>(a) tiebreaker par règle</strong> : l'option la plus conservatrice/sûre gagne, <strong>(b) moderator agent</strong> : un agent supplémentaire est invoqué avec le dossier complet pour trancher, <strong>(c) escalation humaine</strong> : le choix est présenté à un humain avec les arguments pro/contra de chaque option, <strong>(d) random avec logging</strong> : dernier recours, documenté explicitement. Évite les deadlocks en choisissant un nombre impair d'agents votants.</li>
+</ol>
+<ol>
+<li><strong>Valider le consensus et gérer la minorité</strong> — Après le vote : vérifier la <strong>cohérence interne</strong> (le résultat est-il compatible avec les faits connus ?), générer un <strong>minority report</strong> (documenter les arguments de la minorité perdante), <strong>logger les dissenting opinions</strong> (elles peuvent être précieuses pour le debugging futur), et calculer un <strong>consensus strength score</strong> (ratio de votes pour le gagnant / total votes).</li>
+</ol>
+<pre><code class="lang-python">def validate_consensus(votes: list[str], winner: str) -&gt; dict:
+    total = len(votes)
+    winner_count = votes.count(winner)
+    minority = [v for v in set(votes) if v != winner]
+    return {
+        &quot;winner&quot;: winner,
+        &quot;consensus_strength&quot;: winner_count / total,
+        &quot;is_strong&quot;: winner_count / total &gt;= 0.66,
+        &quot;minority_options&quot;: minority,
+        &quot;minority_count&quot;: total - winner_count,
+        &quot;requires_review&quot;: winner_count / total &lt; 0.51
+    }</code></pre>
+<ol>
+<li><strong>Implémenter techniquement</strong> — Calls LLM parallèles avec <code>asyncio.gather</code> pour minimiser la latence. Chaque agent est un prompt distinct avec un rôle clair. Agrège les résultats avec les fonctions de vote ci-dessus. Pour les agents avec des prompts différents, utilise une factory : <code>create_agent(role=&quot;pessimist&quot;, temperature=0.3)</code>. Framework : LangGraph (nodes parallèles + aggregation node), LangChain (LCEL parallel branches), AutoGen (GroupChat avec prompts distincts).</li>
+</ol>
+<ol>
+<li><strong>Optimiser les coûts</strong> — Le consensus est coûteux (N appels LLM). Stratégies d'optimisation : <strong>progressive escalation</strong> (commencer avec 2 agents, escalader à 5 seulement si désaccord), <strong>lightweight preliminary vote</strong> (premier vote avec un modèle petit/rapide, débat complet seulement si pas de consensus), <strong>caching</strong> (si la même question a déjà obtenu un consensus fort, réutiliser), <strong>scoring de nécessité</strong> (déclencher le consensus complet uniquement si <code>uncertainty_score &gt; 0.6</code>).</li>
+</ol>
+<pre><code class="lang-python">async def adaptive_consensus(agents_pool: list, question: str, options: list) -&gt; dict:
+    # D'abord essayer avec 2 agents
+    quick_result = await run_vote(agents_pool[:2], question, options)
+    if quick_result[&quot;consensus_strength&quot;] &gt;= 0.9:
+        return {**quick_result, &quot;method&quot;: &quot;quick_consensus&quot;}
+    # Escalade à N agents si pas de consensus fort
+    full_result = await run_debate(agents_pool, question, options)
+    return {**full_result, &quot;method&quot;: &quot;full_debate&quot;}</code></pre>
+<ol>
+<li><strong>Maintenir un audit trail</strong> — Chaque session de consensus doit produire un log structuré : <code>question</code>, <code>options</code>, <code>agents</code> (avec leurs rôles et configurations), <code>rounds</code> (arguments et votes à chaque round), <code>final_result</code> (gagnant, scores, méthode), <code>dissenting_opinions</code> (arguments de la minorité), <code>consensus_strength</code>, <code>timestamp</code>, <code>duration_ms</code>. Stocke ces logs pour analyse des patterns de désaccord et amélioration des prompts.</li>
+</ol>
+<h2>Anti-patterns</h2>
+<ul>
+<li><strong>Utiliser le consensus pour des faits vérifiables</strong> — Si la question a une réponse factuelle (date, calcul, donnée de référence), le consensus ne fait qu'amplifier les hallucinations collectives. Cherche simplement la réponse avec les bons outils.</li>
+<li><strong>Tous les agents avec le même prompt</strong> — Un consensus entre agents identiques ne produit pas de diversité d'opinion, juste de la redondance coûteuse. Chaque agent doit avoir un rôle, un framing ou une température distincts.</li>
+<li><strong>Ignorer les opinions minoritaires</strong> — Les arguments de la minorité contiennent souvent des risques ou des nuances importants. Log toujours les dissenting opinions et présente-les dans le résultat.</li>
+<li><strong>Trop de rounds de délibération</strong> — Un débat de plus de 3 rounds converge rarement vers de nouvelles informations et augmente exponentiellement les coûts. Limite à 2–3 rounds maximum.</li>
+</ul>
+<h2>Règles</h2>
+<ol>
+<li><strong>Diversité obligatoire</strong> — Un consensus multi-agents n'est valide que si les agents ont des perspectives distinctes (prompts, températures, rôles ou données d'entrée différents). Sinon, utilise un seul agent.</li>
+<li><strong>Toujours produire un minority report</strong> — Même quand le consensus est fort, documenter les arguments perdants. Ils peuvent révéler des risques non pris en compte par la majorité.</li>
+<li><strong>Définir le seuil de consensus avant le vote</strong> — Décide a priori si le gagnant doit atteindre 51%, 66% ou 100% des votes. Ne pas ajuster le seuil après avoir vu les résultats.</li>
+<li><strong>Documente le trade-off coût/fiabilité</strong> — Chaque agent supplémentaire réduit la variance mais multiplie les coûts. Justifie explicitement le nombre d'agents choisi dans la documentation de l'architecture.</li>
+<li><strong>Adapte au framework</strong> — LangGraph : nodes parallèles + conditional aggregation. AutoGen : GroupChat avec <code>speaker_selection=&quot;round_robin&quot;</code>. CrewAI : crew avec agents aux rôles distincts. Custom : <code>asyncio.gather</code> + fonctions d'agrégation.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

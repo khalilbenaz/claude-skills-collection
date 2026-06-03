@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>accessibility-checker — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Vérifie et améliore l'accessibilité web (WCAG 2.1).">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">💻 Développement</span>
+<h1 class="skill-title">accessibility-checker</h1>
+<p class="lead">Vérifie et améliore l'accessibilité web (WCAG 2.1).</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/accessibility-checker</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">accessibilité</span><span class="trigger">a11y</span><span class="trigger">WCAG</span><span class="trigger">screen reader</span><span class="trigger">ARIA</span><span class="trigger">contraste</span><span class="trigger">accessible</span><span class="trigger">handicap</span><span class="trigger">lecteur d'écran</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/dev-skills/accessibility-checker ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/dev-skills/accessibility-checker" target="_blank">dev-skills/accessibility-checker</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Accessibility Checker</h1>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Audit des critères WCAG 2.1 niveau AA</strong> : parcourir les quatre principes — Perceivable (contenu perceptible), Operable (interface utilisable), Understandable (contenu compréhensible), Robust (compatible technologies d'assistance) — et identifier les violations par niveau de criticité.</li>
+</ol>
+<ol>
+<li><strong>Navigation clavier</strong> : vérifier l'ordre de tabulation logique (tab order suit le flux visuel), que le focus est toujours visible (<code>outline</code> non supprimé), que des skip links existent pour sauter la navigation, et qu'aucune keyboard trap ne bloque l'utilisateur.</li>
+</ol>
+<ol>
+<li><strong>Sémantique HTML</strong> : contrôler l'utilisation correcte des landmarks (<code>&lt;main&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;header&gt;</code>, <code>&lt;footer&gt;</code>), la hiérarchie des titres (h1 &gt; h2 &gt; h3 sans saut), les labels associés aux champs, et les rôles implicites des éléments natifs.</li>
+</ol>
+<ol>
+<li><strong>ARIA correctement utilisé</strong> : s'assurer que <code>aria-label</code>, <code>aria-describedby</code>, <code>aria-expanded</code>, <code>aria-controls</code> et les live regions (<code>aria-live</code>) sont appliqués uniquement là où le HTML natif ne suffit pas — pas d'ARIA redondant ou incorrect.</li>
+</ol>
+<ol>
+<li><strong>Contrastes et couleurs</strong> : vérifier le ratio de contraste (minimum 4.5:1 pour le texte normal, 3:1 pour les grands textes ≥18px), s'assurer que l'information n'est jamais transmise par la couleur seule, et tester en mode daltonien.</li>
+</ol>
+<ol>
+<li><strong>Images et médias</strong> : valider les textes alternatifs (<code>alt</code>) informatifs pour les images porteuses de sens, <code>alt=&quot;&quot;</code> pour les images décoratives, sous-titres pour les vidéos, audio descriptions pour les contenus visuels complexes, et transcriptions pour les podcasts.</li>
+</ol>
+<ol>
+<li><strong>Formulaires accessibles</strong> : associer chaque champ à son <code>&lt;label&gt;</code> via <code>for</code>/<code>id</code>, fournir des messages d'erreur clairs liés au champ (<code>aria-describedby</code>), ne pas bloquer la validation sur le seul format visuel, et permettre la correction avant soumission.</li>
+</ol>
+<ol>
+<li><strong>Tests avec outils</strong> : intégrer axe-core ou Lighthouse pour les tests automatisés, tester manuellement avec NVDA (Windows) et VoiceOver (macOS/iOS), et ajouter pa11y-ci dans la pipeline CI/CD pour prévenir les régressions.</li>
+</ol>
+<h2>Règles</h2>
+<ul>
+<li>L'accessibilité est une exigence légale dans de nombreux pays : traiter chaque violation comme un bug critique.</li>
+<li>Préférer le HTML sémantique natif à ARIA — un <code>&lt;button&gt;</code> vaut mieux qu'un <code>&lt;div role=&quot;button&quot;&gt;</code>.</li>
+<li>Tester avec de vrais lecteurs d'écran, pas uniquement des outils automatisés (qui ne détectent que ~30% des problèmes).</li>
+<li>Fournir des exemples de code corrigé, pas seulement la liste des problèmes.</li>
+<li>Documenter le niveau WCAG (A, AA, AAA) et le critère exact (ex. 1.4.3 Contrast) pour chaque point soulevé.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

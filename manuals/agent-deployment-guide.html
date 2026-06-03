@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-deployment-guide — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Déploiement d'agents IA en production avec scalabilité et fiabilité.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-deployment-guide</h1>
+<p class="lead">Déploiement d'agents IA en production avec scalabilité et fiabilité.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-deployment-guide</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">déployer agent</span><span class="trigger">agent en production</span><span class="trigger">agent API</span><span class="trigger">hosting agent</span><span class="trigger">agent scaling</span><span class="trigger">agent infrastructure</span><span class="trigger">servir un agent</span><span class="trigger">agent cloud</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/deployment-guide ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/deployment-guide" target="_blank">agent-skills/deployment-guide</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Deployment Guide</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utilise ce skill lorsque l'utilisateur souhaite passer d'un agent fonctionnel en local à un déploiement production fiable et scalable. Couvre tous les patterns de déploiement : API synchrone, worker asynchrone, webhook, tâche planifiée, ou streaming temps réel. Applicable sur AWS, Azure, GCP, ou infrastructure on-premise.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Architecture de déploiement</strong> — Choisir le pattern adapté au use case :</li>
+<ul>
+<li>API synchrone (FastAPI) : réponses &lt; 30s, usage interactif</li>
+<li>Worker async (Celery/Bull) : tâches longues, &gt; 30s</li>
+<li>Webhook handler : déclenché par événements externes (GitHub, Slack, Stripe)</li>
+<li>Scheduled agent (cron) : rapports périodiques, maintenance automatisée</li>
+<li>Real-time streaming : UI conversationnelle, SSE ou WebSocket</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Containerisation</strong> — Créer un <code>Dockerfile</code> optimisé pour l'agent :</li>
+</ol>
+<p>   ```dockerfile    FROM python:3.11-slim    WORKDIR /app    COPY requirements.txt .    RUN pip install --no-cache-dir -r requirements.txt    COPY . .    CMD [&quot;uvicorn&quot;, &quot;main:app&quot;, &quot;--host&quot;, &quot;0.0.0.0&quot;, &quot;--port&quot;, &quot;8080&quot;]    ```    Gérer les model weights séparément (volume ou S3), ne jamais inclure de secrets dans l'image.</p>
+<ol>
+<li><strong>API wrapping</strong> — Encapsuler l'agent dans une API robuste :</li>
+<ul>
+<li>Input validation avec Pydantic (schéma strict, limites de taille)</li>
+<li>Gestion async native (<code>async def</code>, streaming avec <code>StreamingResponse</code>)</li>
+<li>Endpoint de santé <code>/health</code> et <code>/ready</code></li>
+<li>Timeout configurables par type de requête</li>
+<li>Idempotency keys pour éviter les doubles exécutions</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Queue et async processing</strong> — Pour les tâches longues :</li>
+<ul>
+<li>Celery + Redis/RabbitMQ (Python)</li>
+<li>Bull + Redis (Node.js)</li>
+<li>Azure Service Bus / AWS SQS / GCP Pub/Sub (cloud-native)</li>
+<li>Pattern : soumettre la tâche → retourner un <code>task_id</code> → polling ou webhook de complétion</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Scaling</strong> — Configurer la scalabilité :</li>
+<ul>
+<li>Horizontal scaling : plusieurs instances stateless, load balancer (nginx, ALB, Traefik)</li>
+<li>Auto-scaling : HPA Kubernetes basé CPU/mémoire ou métriques custom (queue depth)</li>
+<li>Connection pooling vers les APIs LLM (httpx avec limites, retry exponentiel)</li>
+<li>Rate limiting par utilisateur en amont (API Gateway, nginx)</li>
+</ul>
+</ol>
+<ol>
+<li><strong>State management en production</strong> — Persister l'état de l'agent :</li>
+<ul>
+<li>Redis pour sessions courtes et thread cache (TTL 24h)</li>
+<li>PostgreSQL pour historique de conversations et audit trail</li>
+<li>Pattern : <code>conversation_id</code> unique par session, stockage structuré des messages</li>
+<li>Ne jamais stocker l'état en mémoire d'instance (incompatible avec scaling horizontal)</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Health checks et readiness</strong> — Implémenter des probes robustes :</li>
+<ul>
+<li><code>/health</code> (liveness) : répond 200 si le processus est vivant</li>
+<li><code>/ready</code> (readiness) : vérifie connexion LLM API, Redis, base de données</li>
+<li>Graceful shutdown : terminer les requêtes en cours avant d'arrêter (SIGTERM handler)</li>
+<li>Timeouts Kubernetes : <code>initialDelaySeconds</code>, <code>periodSeconds</code>, <code>failureThreshold</code></li>
+</ul>
+</ol>
+<ol>
+<li><strong>Environnements</strong> — Gérer le cycle de vie dev → staging → prod :</li>
+<ul>
+<li>Feature flags (LaunchDarkly, Unleash) pour activer les nouveaux comportements progressivement</li>
+<li>A/B deployment : router X% du trafic vers la nouvelle version</li>
+<li>Canary release : déploiement progressif avec rollback automatique sur erreur</li>
+<li>Config par environnement via variables d'environnement, jamais en dur dans le code</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Secrets et config</strong> — Gestion sécurisée des credentials :</li>
+<ul>
+<li>AWS Secrets Manager / Azure Key Vault / GCP Secret Manager pour les clés API</li>
+<li>Rotation automatique des clés LLM (stratégie multi-clé avec failover)</li>
+<li><code>.env</code> uniquement en dev local, jamais en production</li>
+<li>Injecter via Kubernetes Secrets ou Docker secrets, pas en variable d'environnement plain text</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Rollback et recovery</strong> — Assurer la résilience :</li>
+<ul>
+<li>Versioning des déploiements (tags Docker immutables, pas <code>latest</code>)</li>
+<li>Rollback instantané : <code>kubectl rollout undo</code> ou équivalent cloud</li>
+<li>Circuit breaker (tenacity, pybreaker) : couper le trafic si le LLM API échoue</li>
+<li>Fallback behavior : réponse dégradée lisible si l'agent est indisponible</li>
+</ul>
+</ol>
+<h2>Règles</h2>
+<ul>
+<li>Fournis des exemples de code et configuration concrets adaptés au cloud provider de l'utilisateur (AWS, Azure, GCP).</li>
+<li>Priorise la sécurité et la fiabilité : ne jamais exposer de secrets, toujours implémenter des timeouts.</li>
+<li>Documente les pièges courants : cold starts, state en mémoire, timeouts LLM API, coûts de scaling.</li>
+<li>Impose le stateless design pour toutes les instances : toute l'état doit être externalisé.</li>
+<li>Inclure systématiquement les métriques de base (latence, erreurs, coût) dès le déploiement initial.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-load-balancer — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Distribution de charge entre sous-agents avec routing intelligent et optimization des ressources.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-load-balancer</h1>
+<p class="lead">Distribution de charge entre sous-agents avec routing intelligent et optimization des ressources.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-load-balancer</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">load balancer agent</span><span class="trigger">distribution charge</span><span class="trigger">agent load balancing</span><span class="trigger">répartir tâches</span><span class="trigger">agent routing</span><span class="trigger">balance agents</span><span class="trigger">parallel agents distribution</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/load-balancer ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/load-balancer" target="_blank">agent-skills/load-balancer</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Load Balancer</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utiliser ce skill lorsque plusieurs sous-agents doivent traiter des tâches en parallèle et qu'une distribution naïve (round-robin) ne suffit pas — par exemple quand les agents ont des capacités hétérogènes, des spécialisations différentes ou des coûts variables. Ce skill est essentiel dans les architectures à haute disponibilité où la charge doit être absorbée sans dégradation du service, et dans les systèmes sensibles aux coûts où le routing vers le modèle le moins cher capable de gérer la tâche est primordial.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Routing strategies</strong> — Choisir la stratégie adaptée au contexte : <code>round-robin</code> (distribution circulaire simple), <code>least-connections</code> (router vers l'agent le moins chargé), <code>weighted</code> (agents plus capables reçoivent plus de tâches), <code>capability-based</code> (router selon les compétences déclarées), <code>cost-based</code> (minimiser le coût par tâche).</li>
+</ol>
+<ol>
+<li><strong>Agent capability profiling</strong> — Construire un profil de performance pour chaque agent : types de tâches maîtrisées, historique de performance (latence moyenne, taux de succès), spécialisation déclarée, modèle LLM sous-jacent, limitations connues.</li>
+</ol>
+<ol>
+<li><strong>Load detection</strong> — Mesurer en temps réel la charge de chaque agent : profondeur de la file d'attente, temps de réponse moyen, taux d'erreur récent, consommation de tokens. Ces signaux alimentent les décisions de routing dynamique.</li>
+</ol>
+<ol>
+<li><strong>Dynamic routing</strong> — Adapter le routing en continu selon les métriques collectées. Un agent dont le temps de réponse augmente subitement reçoit moins de nouvelles tâches. Un agent qui vient d'être libéré remonte dans la priorité de sélection.</li>
+</ol>
+<ol>
+<li><strong>Priority queuing</strong> — Implémenter des niveaux de priorité : <code>urgent</code> (SLA strict, routing vers les agents les plus rapides disponibles), <code>normal</code> (distribution standard), <code>low</code> (traitement en différé, agents économiques). Éviter la famine des tâches basse priorité avec un aging mécanisme.</li>
+</ol>
+<ol>
+<li><strong>Affinity et sticky sessions</strong> — Certaines tâches bénéficient d'être traitées par le même agent (cohérence de contexte pour un même utilisateur, continuité d'une conversation). Implémenter l'affinité avec un TTL configurable pour éviter les sessions périmées.</li>
+</ol>
+<ol>
+<li><strong>Geographic / latency routing</strong> — Dans les architectures distribuées, router vers l'agent le plus proche géographiquement ou vers le endpoint de modèle avec la latence la plus faible. Utiliser des health probes actifs pour mesurer la latence réelle.</li>
+</ol>
+<ol>
+<li><strong>Cost-aware routing</strong> — Implémenter une hiérarchie de modèles : si la tâche peut être résolue par un modèle économique (Haiku, GPT-4o-mini), ne pas router vers un modèle premium. Définir des critères de qualification de la complexité de la tâche.</li>
+</ol>
+<ol>
+<li><strong>Health-based routing</strong> — Exclure automatiquement les agents unhealthy du pool de routing. Réintroduire progressivement un agent rétabli (canary release : 5% du trafic, puis 25%, puis 100%) pour éviter de le saturer immédiatement.</li>
+</ol>
+<ol>
+<li><strong>Métriques et optimisation</strong> — Exposer et analyser : distribution de latence (p50, p95, p99), distribution des coûts, débit global, déséquilibre de charge entre agents. Rebalancer le routage si un agent reçoit systématiquement 80% du trafic.</li>
+</ol>
+<pre><code class="lang-python"># Exemple d'implémentation Python — Agent Load Balancer
+import random
+import time
+from dataclasses import dataclass, field
+from typing import Optional
+from enum import Enum
+import statistics
+
+
+class RoutingStrategy(Enum):
+    ROUND_ROBIN = &quot;round_robin&quot;
+    LEAST_CONNECTIONS = &quot;least_connections&quot;
+    WEIGHTED = &quot;weighted&quot;
+    CAPABILITY_BASED = &quot;capability_based&quot;
+    COST_BASED = &quot;cost_based&quot;
+
+
+@dataclass
+class AgentProfile:
+    id: str
+    capabilities: list[str]           # ex: [&quot;code&quot;, &quot;research&quot;, &quot;summarize&quot;]
+    model: str                         # ex: &quot;claude-3-5-sonnet&quot;
+    cost_per_1k_tokens: float          # ex: 0.003
+    weight: float = 1.0               # pour weighted routing
+    active_tasks: int = 0
+    total_tasks: int = 0
+    error_count: int = 0
+    latencies: list[float] = field(default_factory=list)
+    healthy: bool = True
+    canary_traffic_pct: float = 100.0  # % du trafic reçu (pour réintroduction progressive)
+
+    @property
+    def avg_latency(self) -&gt; float:
+        return statistics.mean(self.latencies[-20:]) if self.latencies else 0.0
+
+    @property
+    def error_rate(self) -&gt; float:
+        return self.error_count / max(self.total_tasks, 1)
+
+    def record_task_start(self):
+        self.active_tasks += 1
+        self.total_tasks += 1
+
+    def record_task_end(self, latency: float, success: bool):
+        self.active_tasks = max(0, self.active_tasks - 1)
+        self.latencies.append(latency)
+        if not success:
+            self.error_count += 1
+
+
+class AgentLoadBalancer:
+    def __init__(self, strategy: RoutingStrategy = RoutingStrategy.LEAST_CONNECTIONS):
+        self.strategy = strategy
+        self.agents: list[AgentProfile] = []
+        self._rr_index: int = 0                # index pour round-robin
+        self._affinities: dict[str, str] = {}  # session_id → agent_id
+        self._affinity_ttl: int = 300          # secondes
+
+    def register(self, agent: AgentProfile):
+        self.agents.append(agent)
+
+    def _healthy_agents(self, capability: str = None) -&gt; list[AgentProfile]:
+        candidates = [a for a in self.agents if a.healthy]
+        if capability:
+            candidates = [a for a in candidates if capability in a.capabilities]
+        # Appliquer le traffic percentage (canary)
+        candidates = [
+            a for a in candidates
+            if random.random() * 100 &lt;= a.canary_traffic_pct
+        ]
+        return candidates
+
+    def route(
+        self,
+        task_type: str = None,
+        session_id: str = None,
+        priority: str = &quot;normal&quot;,
+        max_cost_per_1k: float = None,
+    ) -&gt; Optional[AgentProfile]:
+        &quot;&quot;&quot;Sélectionner l'agent optimal selon la stratégie configurée.&quot;&quot;&quot;
+        
+        # Sticky session (affinité)
+        if session_id and session_id in self._affinities:
+            agent_id = self._affinities[session_id]
+            agent = next((a for a in self.agents if a.id == agent_id and a.healthy), None)
+            if agent:
+                return agent
+
+        candidates = self._healthy_agents(capability=task_type)
+        
+        # Filtre coût
+        if max_cost_per_1k:
+            candidates = [a for a in candidates if a.cost_per_1k_tokens &lt;= max_cost_per_1k]
+
+        if not candidates:
+            return None
+
+        # Appliquer la stratégie
+        selected = self._apply_strategy(candidates, priority)
+
+        # Enregistrer l'affinité si session_id fourni
+        if session_id and selected:
+            self._affinities[session_id] = selected.id
+
+        return selected
+
+    def _apply_strategy(
+        self, candidates: list[AgentProfile], priority: str
+    ) -&gt; AgentProfile:
+        if self.strategy == RoutingStrategy.ROUND_ROBIN:
+            agent = candidates[self._rr_index % len(candidates)]
+            self._rr_index += 1
+            return agent
+
+        elif self.strategy == RoutingStrategy.LEAST_CONNECTIONS:
+            return min(candidates, key=lambda a: a.active_tasks)
+
+        elif self.strategy == RoutingStrategy.WEIGHTED:
+            total_weight = sum(a.weight for a in candidates)
+            r = random.uniform(0, total_weight)
+            cumulative = 0
+            for agent in candidates:
+                cumulative += agent.weight
+                if r &lt;= cumulative:
+                    return agent
+            return candidates[-1]
+
+        elif self.strategy == RoutingStrategy.CAPABILITY_BASED:
+            # Trier par taux de succès et latence
+            return min(
+                candidates,
+                key=lambda a: (a.error_rate, a.avg_latency)
+            )
+
+        elif self.strategy == RoutingStrategy.COST_BASED:
+            # Modèle le moins cher d'abord
+            if priority == &quot;urgent&quot;:
+                # Pour urgent : prioriser la latence, pas le coût
+                return min(candidates, key=lambda a: a.avg_latency)
+            return min(candidates, key=lambda a: a.cost_per_1k_tokens)
+
+        return random.choice(candidates)
+
+    def mark_unhealthy(self, agent_id: str, recovery_pct: float = 5.0):
+        &quot;&quot;&quot;Exclure un agent et préparer sa réintroduction progressive.&quot;&quot;&quot;
+        for agent in self.agents:
+            if agent.id == agent_id:
+                agent.healthy = False
+                agent.canary_traffic_pct = recovery_pct
+                print(f&quot;[LB] Agent {agent_id} marqué unhealthy&quot;)
+
+    def reintroduce(self, agent_id: str, target_pct: float = 100.0):
+        &quot;&quot;&quot;Réintroduire progressivement un agent rétabli.&quot;&quot;&quot;
+        for agent in self.agents:
+            if agent.id == agent_id:
+                agent.healthy = True
+                agent.canary_traffic_pct = target_pct
+                print(f&quot;[LB] Agent {agent_id} réintroduit à {target_pct}% du trafic&quot;)
+
+    def metrics(self) -&gt; list[dict]:
+        return [{
+            &quot;id&quot;: a.id,
+            &quot;model&quot;: a.model,
+            &quot;active_tasks&quot;: a.active_tasks,
+            &quot;avg_latency_s&quot;: round(a.avg_latency, 3),
+            &quot;error_rate&quot;: round(a.error_rate, 3),
+            &quot;cost_per_1k&quot;: a.cost_per_1k_tokens,
+            &quot;healthy&quot;: a.healthy,
+            &quot;traffic_pct&quot;: a.canary_traffic_pct,
+        } for a in self.agents]
+
+
+# Usage
+lb = AgentLoadBalancer(strategy=RoutingStrategy.COST_BASED)
+
+lb.register(AgentProfile(
+    id=&quot;agent-haiku-1&quot;,
+    capabilities=[&quot;summarize&quot;, &quot;classify&quot;, &quot;research&quot;],
+    model=&quot;claude-3-haiku&quot;,
+    cost_per_1k_tokens=0.00025,
+    weight=2.0,
+))
+lb.register(AgentProfile(
+    id=&quot;agent-sonnet-1&quot;,
+    capabilities=[&quot;code&quot;, &quot;research&quot;, &quot;analysis&quot;, &quot;summarize&quot;],
+    model=&quot;claude-3-5-sonnet&quot;,
+    cost_per_1k_tokens=0.003,
+    weight=1.0,
+))
+
+# Router une tâche de résumé (préférer le modèle le moins cher)
+agent = lb.route(task_type=&quot;summarize&quot;, max_cost_per_1k=0.001)
+print(f&quot;Tâche routée vers: {agent.id} ({agent.model})&quot;)
+
+# Tâche urgente de code (prioriser la performance)
+agent_urgent = lb.route(task_type=&quot;code&quot;, priority=&quot;urgent&quot;)
+print(f&quot;Tâche urgente routée vers: {agent_urgent.id}&quot;)</code></pre>
+<pre><code>Architecture — Agent Load Balancer
+
+  Tâches entrantes (priorité: urgent/normal/low)
+               │
+               ▼
+  ┌────────────────────────┐
+  │    Load Balancer       │
+  │  ┌──────────────────┐  │
+  │  │ Strategy Engine  │  │
+  │  │ round-robin      │  │
+  │  │ least-conn       │  │
+  │  │ weighted         │  │
+  │  │ capability       │  │
+  │  │ cost-based  ◄────┼──┼── max_cost_per_1k
+  │  └──────────────────┘  │
+  │  ┌──────────────────┐  │
+  │  │ Affinity Table   │  │ ← session_id → agent_id
+  │  └──────────────────┘  │
+  │  ┌──────────────────┐  │
+  │  │ Health Monitor   │  │
+  │  └──────────────────┘  │
+  └────────┬───────────────┘
+           │ route()
+    ┌──────┼──────────────┐
+    ▼      ▼              ▼
+ Agent A  Agent B      Agent C
+ haiku   sonnet       sonnet
+ cheap   powerful     canary(5%)
+ 2 tasks  1 task      0 tasks
+
+  Métriques → rebalancing automatique</code></pre>
+<p><strong>Comparaison LangGraph vs CrewAI vs Custom :</strong></p>
+<table><thead><tr><th>Critère</th><th>LangGraph</th><th>CrewAI</th><th>Custom Python</th></tr></thead><tbody><tr><td>Routing natif</td><td>Non (manuel)</td><td>Partiel (task routing)</td><td>Total contrôle</td></tr><tr><td>Weighted routing</td><td>Non</td><td>Non</td><td>Manuel</td></tr><tr><td>Cost-aware</td><td>Non</td><td>Non</td><td>Manuel</td></tr><tr><td>Sticky sessions</td><td>Non</td><td>Non</td><td>Manuel</td></tr><tr><td>Canary reintroduction</td><td>Non</td><td>Non</td><td>Manuel</td></tr></tbody></table>
+<h2>Anti-patterns</h2>
+<ul>
+<li><strong>Round-robin pour des agents de capacités différentes</strong> — Envoyer autant de tâches à un agent Haiku qu'à un agent Sonnet ignorant leurs différences de performance ; résultat : surcharge de l'agent puissant, sous-utilisation du simple.</li>
+<li><strong>Pas de health check</strong> — Continuer à router des tâches vers un agent unhealthy garantit des échecs en cascade. Un health check passif (observation des erreurs) ou actif (ping périodique) est indispensable.</li>
+<li><strong>Ignorer la latence</strong> — Router uniquement sur le coût peut concentrer les tâches sur le modèle le moins cher qui est aussi le plus lent ; pour les tâches urgentes, la latence doit primer.</li>
+<li><strong>Sticky sessions sans timeout</strong> — Une affinité qui ne expire jamais peut lier un utilisateur à un agent devenu unhealthy ou surchargé ; toujours associer un TTL aux sessions d'affinité.</li>
+</ul>
+<h2>Règles</h2>
+<ol>
+<li><strong>La stratégie de routing doit être configurable à l'exécution</strong> — ne pas hardcoder une seule stratégie ; permettre de basculer entre les stratégies selon le contexte (coût, performance, urgence).</li>
+<li><strong>Tout agent unhealthy doit être exclu immédiatement</strong> et réintroduit progressivement (canary release) pour éviter de saturer un agent fraîchement rétabli.</li>
+<li><strong>Implémenter le cost-aware routing par défaut</strong> — dans les systèmes multi-modèles, router automatiquement vers le modèle le moins cher capable de traiter la tâche réduit significativement les coûts.</li>
+<li><strong>Mesurer et exposer les métriques de distribution</strong> (p50, p95, p99 latency par agent, déséquilibre de charge) pour permettre le rebalancing et le dimensionnement du pool.</li>
+<li><strong>Les sticky sessions doivent avoir un TTL explicite</strong> — documenter la durée d'affinité et la stratégie de fallback quand l'agent affine devient indisponible.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

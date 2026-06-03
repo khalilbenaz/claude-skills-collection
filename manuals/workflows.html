@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>workflows — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Orchestration multi-agent déterministe avec le tool natif Workflow de Claude Code. Conçoit des scripts qui fan-out, vérifient et synthétisent sur de nombreux sous-agents (pipeline, parallel, adversarial verify, judge panel, loop-until-dry).">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">workflows</h1>
+<p class="lead">Orchestration multi-agent déterministe avec le tool natif Workflow de Claude Code. Conçoit des scripts qui fan-out, vérifient et synthétisent sur de nombreux sous-agents (pipeline, parallel, adversarial verify, judge panel, loop-until-dry).</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/workflows</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">workflow</span><span class="trigger">orchestrer des agents</span><span class="trigger">fan-out</span><span class="trigger">multi-agent</span><span class="trigger">paralléliser des sous-agents</span><span class="trigger">audit exhaustif</span><span class="trigger">vérification adversariale</span><span class="trigger">/workflows</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/workflows ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/workflows" target="_blank">agent-skills/workflows</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Workflows — Orchestration multi-agent native</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utilise ce skill quand une tâche dépasse ce qu'un seul contexte peut traiter et bénéficie d'une <strong>structure d'agents</strong> : couvrir en parallèle (décomposer un large périmètre), gagner en confiance (perspectives indépendantes + vérification adversariale avant de conclure), ou absorber une échelle qu'un contexte ne tient pas (migrations, audits, sweeps). Le tool <code>Workflow</code> exécute un script JavaScript qui orchestre des sous-agents de façon <strong>déterministe</strong> (boucles, conditions, fan-out) — contrairement à un agent unique piloté par le modèle.</p>
+<p><strong>Opt-in requis</strong> : ne lance un workflow que si l'utilisateur l'a explicitement demandé (mot-clé &quot;workflow&quot;, &quot;fan-out&quot;, &quot;orchestre avec des sous-agents&quot;, session ultracode, ou skill/commande qui l'impose). Sinon, propose-le brièvement avec une estimation de coût.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Scoper le travail d'abord (inline)</strong> — Avant d'orchestrer, découvre la work-list en ligne : liste les fichiers, trouve les cibles, scope le diff. Le hybride est souvent le bon move : scout inline → puis <code>Workflow</code> pour pipeliner sur la liste. Tu n'as pas besoin de connaître la forme avant la <em>tâche</em>, seulement avant l'*étape d'orchestration*.</li>
+</ol>
+<ol>
+<li><strong>Choisir la phase</strong> — Identifie une seule phase bien scopée par appel : <code>understand</code> (lecteurs parallèles → carte structurée), <code>design</code> (panel de juges sur N approches → synthèse scorée), <code>review</code> (dimensions → find → verify adversarial), <code>research</code> (sweep multi-modal → deep-read → synthèse), <code>migrate</code> (découvrir les sites → transformer chacun en worktree isolé → vérifier). Pour du multi-phase, enchaîne plusieurs workflows et lis chaque résultat avant de décider le suivant.</li>
+</ol>
+<ol>
+<li><strong>Écrire le bloc <code>meta</code></strong> — Tout script commence par <code>export const meta = {...}</code> en <strong>littéral pur</strong> (pas de variables, d'appels, de spreads). Champs requis : <code>name</code>, <code>description</code>. Optionnels : <code>whenToUse</code>, <code>phases</code> (un objet par <code>phase()</code> avec <code>title</code> exact). Exemple :</li>
+</ol>
+<p>   ```js    export const meta = {      name: 'review-changes',      description: 'Revue multi-dimension du diff, chaque finding vérifié',      phases: [{ title: 'Review' }, { title: 'Verify' }],    }    ```</p>
+<ol>
+<li><strong>Préférer <code>pipeline()</code> par défaut</strong> — <code>pipeline(items, stage1, stage2, ...)</code> fait passer chaque item par toutes les étapes <strong>sans barrière</strong> : l'item A peut être en stage 3 pendant que B est en stage 1. Wall-clock = chaîne la plus lente, pas somme-des-plus-lents-par-étape. Chaque callback reçoit <code>(prevResult, originalItem, index)</code>.</li>
+</ol>
+<p>   ```js    const results = await pipeline(      DIMENSIONS,      d =&gt; agent(d.prompt, {label: <code>review:${d.key}</code>, phase: 'Review', schema: FINDINGS}),      review =&gt; parallel(review.findings.map(f =&gt; () =&gt;        agent(<code>Vérifie de façon adversariale: ${f.title}</code>, {phase: 'Verify', schema: VERDICT})          .then(v =&gt; ({...f, verdict: v}))))    )    const confirmed = results.flat().filter(Boolean).filter(f =&gt; f.verdict?.isReal)    ```</p>
+<ol>
+<li><strong>N'utiliser <code>parallel()</code> (barrière) que si nécessaire</strong> — <code>parallel(thunks)</code> attend TOUS les résultats. Justifié uniquement quand l'étape N a besoin du set complet de l'étape N-1 : dedup/merge global, early-exit sur count zéro, ou prompt qui référence &quot;les autres findings&quot;. PAS justifié par &quot;je dois flatten/filter d'abord&quot; (fais-le dans une étape de pipeline) ni &quot;c'est plus propre&quot;. Un thunk qui throw → <code>null</code> dans le résultat ; <code>.filter(Boolean)</code> avant usage.</li>
+</ol>
+<ol>
+<li><strong>Sortie structurée via <code>schema</code></strong> — Sans schema, <code>agent()</code> renvoie son texte final (string). Avec <code>schema</code> (JSON Schema), le sous-agent est forcé d'appeler <code>StructuredOutput</code> et <code>agent()</code> renvoie l'objet validé — pas de parsing, retry automatique sur mismatch. Renvoie <code>null</code> si l'utilisateur skip l'agent → filtrer.</li>
+</ol>
+<ol>
+<li><strong>Patterns qualité</strong> — Compose selon la tâche :</li>
+<ul>
+<li><strong>Adversarial verify</strong> : N sceptiques indépendants par finding, chacun promptés pour <em>réfuter</em> ; on tue si majorité réfute.</li>
+<li><strong>Perspective-diverse verify</strong> : si un finding peut échouer de plusieurs façons, donne à chaque vérificateur une lentille distincte (correctness, security, perf, repro) plutôt que N réfuteurs identiques.</li>
+<li><strong>Judge panel</strong> : N tentatives sous angles différents (MVP-first, risk-first, user-first), scorées par juges parallèles, synthèse du gagnant + greffe des meilleures idées des autres.</li>
+<li><strong>Loop-until-dry</strong> : pour de la découverte de taille inconnue (bugs, edge cases), relance des finders jusqu'à K rounds consécutifs sans rien de neuf. Dedup contre <code>seen</code> (tout ce qui a été vu), PAS contre <code>confirmed</code> — sinon les findings rejetés réapparaissent et ça ne converge jamais.</li>
+<li><strong>Completeness critic</strong> : un agent final qui demande &quot;qu'est-ce qui manque — modalité non explorée, claim non vérifié, source non lue ?&quot;. Ce qu'il trouve devient le round suivant.</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Scaler au budget</strong> — <code>budget.total</code> (cible de tokens, <code>null</code> si non fixée), <code>budget.spent()</code>, <code>budget.remaining()</code>. Boucle dynamique avec garde sur <code>budget.total</code> (sinon <code>remaining()</code> vaut <code>Infinity</code> et tu cours jusqu'au cap de 1000 agents) :</li>
+</ol>
+<p>   ```js    while (budget.total &amp;&amp; budget.remaining() &gt; 50_000) {      const r = await agent(&quot;Trouve des bugs.&quot;, {schema: BUGS})      bugs.push(...r.bugs)      log(<code>${bugs.length} trouvés, ${Math.round(budget.remaining()/1000)}k restants</code>)    }    ```</p>
+<ol>
+<li><strong>Itérer &amp; resume</strong> — Chaque invocation persiste son script sous le dossier de session et renvoie le <code>scriptPath</code> + un <code>runId</code>. Pour itérer : édite le fichier et relance avec <code>{scriptPath}</code>. Pour reprendre après un kill/edit : <code>{scriptPath, resumeFromRunId}</code> — le plus long préfixe inchangé d'appels <code>agent()</code> renvoie en cache instantanément, le premier appel modifié et tout ce qui suit s'exécute en live.</li>
+</ol>
+<ol>
+<li><strong>Rester dans la boucle</strong> — <code>Workflow</code> tourne en arrière-plan et renvoie immédiatement un task ID ; une <code>&lt;task-notification&gt;</code> arrive à la fin. Suis la progression live via <code>/workflows</code>. Pour du travail large, enchaîne plusieurs workflows en séquence — lis chaque résultat avant de décider la phase suivante.</li>
+</ol>
+<h2>Règles</h2>
+<ul>
+<li><strong><code>pipeline()</code> par défaut, <code>parallel()</code> seulement en cas de dépendance cross-item réelle</strong> — une barrière injustifiée gaspille le wall-clock des agents rapides qui attendent le plus lent.</li>
+<li><strong><code>meta</code> est un littéral pur</strong> — pas de variables, d'appels de fonction, de spreads, ni d'interpolation de template, sinon parse error. Mêmes titres dans <code>meta.phases</code> que dans les <code>phase()</code>.</li>
+<li><strong>JavaScript, pas TypeScript</strong> — annotations de type (<code>: string[]</code>), interfaces et generics échouent au parse. Corps en contexte async : <code>await</code> direct.</li>
+<li><strong><code>Date.now()</code> / <code>Math.random()</code> / <code>new Date()</code> argless throw</strong> — ils casseraient le resume. Passe les timestamps via <code>args</code>, stampe après le retour, varie l'aléatoire par index.</li>
+<li><strong>Concurrence cappée</strong> à <code>min(16, cœurs-2)</code> simultanés par workflow ; le reste fait la queue. Cap de vie : 1000 agents (backstop anti-runaway).</li>
+<li><strong>Pas de cap silencieux</strong> — si le workflow borne la couverture (top-N, no-retry, sampling), <code>log()</code> ce qui est laissé de côté ; une troncature silencieuse se lit comme &quot;tout couvert&quot; alors que non.</li>
+<li><strong><code>opts.isolation: 'worktree'</code></strong> uniquement quand des agents mutent des fichiers en parallèle et entreraient en conflit (coûteux : ~200-500ms + disque par agent ; worktree auto-supprimé si inchangé).</li>
+<li><strong><code>opts.model</code> à omettre par défaut</strong> — l'agent hérite du modèle de la boucle principale, ce qui est presque toujours correct ; ne le force que si tu es très confiant qu'un autre tier convient.</li>
+<li><strong>Scaler à la demande</strong> — &quot;trouve les bugs&quot; → quelques finders, vote simple. &quot;audit exhaustif / sois complet&quot; → grand pool de finders, pass adversarial 3-5 votes, étape de synthèse.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

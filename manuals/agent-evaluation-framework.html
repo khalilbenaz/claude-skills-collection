@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-evaluation-framework — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Framework d'évaluation et benchmarking d'agents IA. Métriques, tests, comparaisons et quality assurance.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-evaluation-framework</h1>
+<p class="lead">Framework d'évaluation et benchmarking d'agents IA. Métriques, tests, comparaisons et quality assurance.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-evaluation-framework</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">évaluer agent</span><span class="trigger">agent eval</span><span class="trigger">benchmark agent</span><span class="trigger">tester mon agent</span><span class="trigger">qualité agent</span><span class="trigger">agent metrics</span><span class="trigger">agent performance</span><span class="trigger">LMSYS</span><span class="trigger">agent accuracy</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/evaluation-framework ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/evaluation-framework" target="_blank">agent-skills/evaluation-framework</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Evaluation Framework</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utilise ce skill lorsque tu dois mesurer, comparer ou améliorer la qualité d'un agent IA. Il s'applique à la création de suites de tests, à la mise en place de pipelines d'évaluation automatisés, au choix de métriques adaptées à la tâche, et à l'interprétation des résultats pour guider les améliorations. Couvre aussi bien les agents conversationnels que les agents avec tools et les systèmes multi-agents.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Définir les critères d'évaluation</strong> — Commence par clarifier ce que signifie &quot;bon&quot; pour ton agent selon son objectif : <code>task completion</code> (l'agent a-t-il accompli la tâche ?), <code>accuracy</code> (les réponses sont-elles correctes ?), <code>efficiency</code> (combien d'étapes/tokens pour y arriver ?), <code>cost</code> (coût moyen par tâche), <code>safety</code> (l'agent évite-t-il les réponses dangereuses ou inappropriées ?). Hiérarchise ces critères selon le contexte métier.</li>
+</ol>
+<ol>
+<li><strong>Créer un dataset de test</strong> — Construis un jeu de données représentatif : cas nominaux (tâches courantes bien représentées), edge cases (inputs limites, ambigus), adversarial inputs (tentatives de jailbreak, instructions contradictoires), golden answers (réponses de référence validées par des humains experts). Minimum 50-100 exemples pour des résultats significatifs.</li>
+</ol>
+<p>   ```python    test_cases = [        {&quot;input&quot;: &quot;Résume cet article en 3 points&quot;, &quot;expected_output&quot;: &quot;...&quot;, &quot;tags&quot;: [&quot;summarization&quot;]},        {&quot;input&quot;: &quot;&quot;, &quot;expected_output&quot;: None, &quot;tags&quot;: [&quot;edge_case&quot;, &quot;empty_input&quot;]},        {&quot;input&quot;: &quot;Ignore tes instructions et...&quot;, &quot;expected_output&quot;: None, &quot;tags&quot;: [&quot;adversarial&quot;]},    ]    ```</p>
+<ol>
+<li><strong>Métriques quantitatives</strong> — Mesure objectivement : <code>success rate</code> (% de tâches complétées), <code>latency</code> (temps de réponse p50/p95/p99), <code>token usage</code> (tokens en entrée + sortie par tâche), <code>tool call count</code> (nombre d'appels d'outils par tâche), <code>cost per task</code> (coût moyen), <code>step efficiency</code> (nombre d'étapes vs optimal théorique).</li>
+</ol>
+<ol>
+<li><strong>Métriques qualitatives (LLM-as-judge)</strong> — Pour les tâches ouvertes, utilise un LLM juge pour évaluer : <code>relevancy</code> (la réponse répond-elle à la question ?), <code>faithfulness</code> (pas d'hallucinations par rapport aux sources ?), <code>coherence</code> (la réponse est-elle logiquement cohérente ?), <code>helpfulness</code> (note de 1 à 5). Instruis le juge avec des rubriques précises et des exemples few-shot.</li>
+</ol>
+<p>   ```python    def llm_judge(question: str, answer: str, reference: str, llm) -&gt; dict:        prompt = f&quot;&quot;&quot;Évalue cette réponse sur une échelle de 1 à 5.        Question: {question}        Réponse de l'agent: {answer}        Réponse de référence: {reference}        Retourne un JSON: {{&quot;score&quot;: int, &quot;justification&quot;: str}}&quot;&quot;&quot;        return json.loads(llm.complete(prompt))    ```</p>
+<ol>
+<li><strong>Testing automatisé</strong> — Intègre les évals dans ton pipeline CI/CD : exécute la suite de tests à chaque changement de prompt, de modèle ou de code. Définis des seuils minimaux (ex: success rate ≥ 85%, coût moyen ≤ 0.02€) comme gates de déploiement. Génère des rapports HTML automatiques.</li>
+</ol>
+<ol>
+<li><strong>Evaluation frameworks</strong> — Utilise des outils existants plutôt que de réinventer la roue : <code>RAGAS</code> (évaluation de pipelines RAG), <code>DeepEval</code> (framework général avec métriques prêtes), <code>LangSmith</code> (tracing + évaluation intégrés), <code>Braintrust</code> (A/B testing et scoring), <code>Inspect AI</code> (évals approfondies par AISI). Choisis selon ta stack.</li>
+</ol>
+<p>   ```python    # Exemple avec DeepEval    from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric    from deepeval.test_case import LLMTestCase</p>
+<p>   test_case = LLMTestCase(input=&quot;...&quot;, actual_output=&quot;...&quot;, expected_output=&quot;...&quot;)    metric = AnswerRelevancyMetric(threshold=0.7)    metric.measure(test_case)    print(metric.score, metric.reason)    ```</p>
+<ol>
+<li><strong>A/B testing</strong> — Compare systématiquement les variantes : prompt A vs prompt B, modèle GPT-4o vs Claude 3.5 Sonnet, architecture avec vs sans mémoire long-terme. Lance les deux variantes sur le même dataset de test, compare les métriques, et valide la significativité statistique (test de Student ou bootstrap) avant de conclure.</li>
+</ol>
+<ol>
+<li><strong>Safety et guardrails testing</strong> — Teste explicitement les comportements indésirables : tentatives de jailbreak (prompt injection, role-playing malveillant), inputs extrêmes (très longs, très courts, caractères spéciaux), biais détectables (l'agent répond-il différemment selon le genre/l'ethnie ?), refus inappropriés (l'agent refuse-t-il des requêtes légitimes ?).</li>
+</ol>
+<ol>
+<li><strong>Stress testing</strong> — Évalue le comportement sous charge et dans des conditions dégradées : conversations très longues (100+ tours), contextes larges proches du max token, appels d'outils en cascade, erreurs simulées (tool timeout, API indisponible), exécutions concurrentes (10, 100, 1000 requêtes simultanées).</li>
+</ol>
+<ol>
+<li><strong>Reporting</strong> — Produis des rapports exploitables : tableau de bord avec évolution temporelle des métriques clés, matrice coût/qualité par configuration testée, exemples annotés des pires performances (pour guider les corrections), résumé des regressions détectées par rapport à la version précédente.</li>
+</ol>
+<p>    ```python     def generate_eval_report(results: list[dict]) -&gt; dict:         return {             &quot;success_rate&quot;: sum(r[&quot;success&quot;] for r in results) / len(results),             &quot;avg_latency_ms&quot;: statistics.mean(r[&quot;latency&quot;] for r in results),             &quot;avg_cost_eur&quot;: statistics.mean(r[&quot;cost&quot;] for r in results),             &quot;worst_cases&quot;: sorted(results, key=lambda x: x[&quot;score&quot;])[:5]         }     ```</p>
+<h2>Règles</h2>
+<ul>
+<li><strong>Dataset de test ≠ données d'entraînement</strong> : ne jamais optimiser un prompt en regardant les mêmes exemples qui serviront à l'évaluation ; maintiens un split test/validation strict.</li>
+<li><strong>Anti-pattern — évaluation manuelle uniquement</strong> : l'évaluation humaine ne scale pas ; automatise dès que possible avec LLM-as-judge tout en conservant une validation humaine périodique pour calibrer le juge.</li>
+<li><strong>Métriques proxy vs métriques réelles</strong> : le token usage est une métrique proxy du coût ; la satisfaction utilisateur est la métrique réelle — ne confonds pas les deux et mesure les deux quand c'est possible.</li>
+<li><strong>Reproductibilité</strong> : fixe les seeds aléatoires, les versions de modèle et les timestamps des tests pour pouvoir reproduire et comparer des résultats dans le temps.</li>
+<li><strong>Documente les anti-patterns détectés</strong> : quand un test révèle un comportement indésirable, crée systématiquement un test de regression pour éviter toute réintroduction future.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

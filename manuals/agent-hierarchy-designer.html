@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-hierarchy-designer — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Design de hiérarchies d'agents multi-niveaux (orchestrateur → managers → workers → sous-agents spécialisés).">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-hierarchy-designer</h1>
+<p class="lead">Design de hiérarchies d'agents multi-niveaux (orchestrateur → managers → workers → sous-agents spécialisés).</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-hierarchy-designer</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">hiérarchie agent</span><span class="trigger">agent hierarchy</span><span class="trigger">manager agent</span><span class="trigger">worker agent</span><span class="trigger">arbre d'agents</span><span class="trigger">organisation agents</span><span class="trigger">agent tree</span><span class="trigger">niveaux d'agents</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/hierarchy-designer ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/hierarchy-designer" target="_blank">agent-skills/hierarchy-designer</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Hierarchy Designer</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utiliser ce skill lorsqu'une tâche complexe nécessite plusieurs couches d'agents avec des responsabilités distinctes : stratégie, coordination et exécution. Il est particulièrement adapté quand le nombre d'agents devient trop grand pour être coordonné par un seul orchestrateur, ou quand les domaines d'exécution sont suffisamment distincts pour justifier des managers spécialisés.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Analyse de la complexité (besoin d'une hiérarchie ?)</strong></li>
+<ul>
+<li>Un seul agent suffit si la tâche est linéaire, sans parallélisme et sans spécialisation requise</li>
+<li>Une hiérarchie est justifiée si : nombre d'agents &gt; 5, domaines hétérogènes, ou charge variable</li>
+<li>Critères de décision : couplage des sous-tâches, diversité des outils, niveau d'autonomie requis</li>
+<li>Coût d'une hiérarchie : latence accrue, complexité de débogage, overhead de coordination</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Design des niveaux (architecture de la pyramide)</strong></li>
+<ul>
+<li><strong>Niveau 1 — Orchestrateur</strong> : vision globale, stratégie, décision finale, 1 seul agent</li>
+<li><strong>Niveau 2 — Managers</strong> : coordination d'un domaine (recherche, écriture, validation), 2-5 agents</li>
+<li><strong>Niveau 3 — Specialists</strong> : exécution experte dans une niche précise, 3-10 agents</li>
+<li><strong>Niveau 4 — Workers</strong> : tâches atomiques répétitives, pool dynamique</li>
+<li>Règle : ne jamais dépasser 4 niveaux pour garder le système déboguable</li>
+</ul>
+</ol>
+<p>   ```    Orchestrateur    ├── Manager Recherche    │   ├── Specialist Web    │   └── Specialist Base de données    ├── Manager Rédaction    │   ├── Worker Draft    │   └── Worker Révision    └── Manager Validation        └── Specialist Fact-checker    ```</p>
+<ol>
+<li><strong>Rôle et responsabilités de chaque niveau</strong></li>
+<ul>
+<li><code>Orchestrateur</code> : décompose la mission globale, assigne aux managers, agrège les résultats finaux</li>
+<li><code>Manager</code> : reçoit un objectif de domaine, le décompose en tâches pour ses specialists/workers</li>
+<li><code>Specialist</code> : expertise profonde dans un outil ou domaine, peut utiliser des APIs spécifiques</li>
+<li><code>Worker</code> : exécution d'une tâche atomique sans prise de décision complexe</li>
+</ul>
+</ol>
+<p>   ```python    class AgentRole:        ORCHESTRATOR = &quot;orchestrator&quot;   # Stratégie + agrégation finale        MANAGER = &quot;manager&quot;             # Coordination de domaine        SPECIALIST = &quot;specialist&quot;       # Expertise métier        WORKER = &quot;worker&quot;               # Exécution atomique    ```</p>
+<ol>
+<li><strong>Communication inter-niveaux</strong></li>
+<ul>
+<li><code>Top-down</code> : l'orchestrateur envoie des objectifs de haut niveau aux managers</li>
+<li><code>Bottom-up</code> : les workers remontent les résultats et erreurs vers leur manager</li>
+<li><code>Lateral</code> : coordination entre agents du même niveau (rare, encadrée par le manager)</li>
+<li>Protocole : messages structurés avec <code>sender_id</code>, <code>receiver_id</code>, <code>message_type</code>, <code>payload</code></li>
+</ul>
+</ol>
+<p>   ```python    class AgentMessage(BaseModel):        msg_id: str        sender_id: str        receiver_id: str        message_type: str  # &quot;task&quot; | &quot;result&quot; | &quot;error&quot; | &quot;status&quot;        payload: dict        timestamp: float        trace_id: str  # Pour suivre toute la chaîne    ```</p>
+<ol>
+<li><strong>Scope et autorité par niveau</strong></li>
+<ul>
+<li><code>Orchestrateur</code> : peut créer/détruire des managers, accès à toutes les ressources</li>
+<li><code>Manager</code> : peut créer des workers dans son domaine, budget limité de tokens/API calls</li>
+<li><code>Specialist</code> : peut utiliser ses outils dédiés, pas de création de sous-agents</li>
+<li><code>Worker</code> : scope minimal, outils restreints, durée de vie courte</li>
+<li>Définir explicitement ce que chaque niveau peut décider seul vs ce qu'il doit escalader</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Delegation rules (règles de délégation formalisées)</strong></li>
+<ul>
+<li>Un manager ne crée des sous-agents que si la tâche dépasse sa capacité individuelle</li>
+<li>Limite de profondeur : max 2 niveaux de délégation depuis un manager</li>
+<li>Budget token propagé depuis l'orchestrateur : chaque niveau reçoit une fraction du budget total</li>
+</ul>
+</ol>
+<p>   ```python    class DelegationBudget:        def __init__(self, total_tokens: int, max_depth: int = 3):            self.total = total_tokens            self.max_depth = max_depth</p>
+<p>       def allocate_to_child(self, parent_budget: int, num_children: int) -&gt; int:            # Réserver 20% pour le parent, distribuer 80% entre enfants            child_budget = int(parent_budget * 0.8 / num_children)            return max(child_budget, 1000)  # Minimum 1000 tokens par enfant    ```</p>
+<ol>
+<li><strong>Supervision pattern (contrôle de la hiérarchie)</strong></li>
+<ul>
+<li>Chaque manager supervise ses directs reports via health checks périodiques</li>
+<li>Performance monitoring : taux de succès, temps d'exécution, qualité des outputs</li>
+<li>Un manager peut remplacer un worker défaillant en instanciant un nouveau depuis le pool</li>
+</ul>
+</ol>
+<p>   ```python    class ManagerAgent:        async def supervise_workers(self):            while self.active:                for worker in self.workers:                    health = await worker.health_check()                    if not health.ok:                        await self.replace_worker(worker)                await asyncio.sleep(5)  # Check toutes les 5 secondes    ```</p>
+<ol>
+<li><strong>Dynamic hierarchy (adaptabilité de la structure)</strong></li>
+<ul>
+<li>Auto-scaling : ajouter des workers si la file d'attente dépasse un seuil</li>
+<li>Pruning : supprimer les agents inactifs depuis plus de X secondes pour économiser les ressources</li>
+<li>Promotion : un worker très performant peut être promu specialist si nécessaire</li>
+<li>Merge : fusionner deux managers sous-utilisés en un seul pour réduire l'overhead</li>
+</ul>
+</ol>
+<p>   ```python    class HierarchyScaler:        def scale_up(self, manager, task_queue_size: int):            if task_queue_size &gt; manager.worker_count * 3:                new_worker = manager.spawn_worker()                manager.workers.append(new_worker)</p>
+<p>       def scale_down(self, manager):            idle = [w for w in manager.workers if w.idle_since &gt; 30]            for worker in idle[:-1]:  # Garder au moins 1 worker                worker.terminate()    ```</p>
+<ol>
+<li><strong>Implémentation concrète</strong></li>
+<ul>
+<li><strong>LangGraph Supervisor</strong> : pattern natif pour orchestrer des sous-agents avec un nœud supervisor</li>
+<li><strong>CrewAI Hierarchical</strong> : <code>Process.hierarchical</code> avec <code>manager_llm</code> dédié</li>
+<li><strong>AutoGen Nested Chats</strong> : <code>GroupChatManager</code> imbriqués pour simuler les niveaux</li>
+</ul>
+</ol>
+<p>   ```python    # LangGraph supervisor pattern    from langgraph.prebuilt import create_react_agent    from langgraph_supervisor import create_supervisor</p>
+<p>   research_agent = create_react_agent(model, [search_tool], name=&quot;researcher&quot;)    writer_agent = create_react_agent(model, [write_tool], name=&quot;writer&quot;)</p>
+<p>   supervisor = create_supervisor(        agents=[research_agent, writer_agent],        model=model,        prompt=&quot;Coordonne la recherche et la rédaction.&quot;    )    ```</p>
+<p>   ```python    # CrewAI hierarchical    from crewai import Crew, Process</p>
+<p>   crew = Crew(        agents=[manager, researcher, writer, validator],        tasks=[task1, task2, task3],        process=Process.hierarchical,        manager_llm=ChatOpenAI(model=&quot;gpt-4o&quot;),        verbose=True    )    ```</p>
+<ol>
+<li><strong>Visualisation et debug de la hiérarchie</strong></li>
+<ul>
+<li>Générer une <code>hierarchy map</code> en DOT/Graphviz pour visualiser la structure</li>
+<li>Task flow visualization : tracer chaque message entre agents avec le <code>trace_id</code></li>
+<li>Bottleneck detection : identifier quel agent ou niveau ralentit l'ensemble</li>
+</ul>
+</ol>
+<p>    ```python     def generate_hierarchy_map(orchestrator) -&gt; str:         lines = [&quot;digraph G {&quot;]         def traverse(agent, parent=None):             if parent:                 lines.append(f'  &quot;{parent.id}&quot; -&gt; &quot;{agent.id}&quot;;')             for child in agent.children:                 traverse(child, agent)         traverse(orchestrator)         lines.append(&quot;}&quot;)         return &quot;\n&quot;.join(lines)     ```</p>
+<h2>Anti-patterns</h2>
+<ul>
+<li><strong>Trop de niveaux</strong> : une hiérarchie de 5+ niveaux multiplie la latence et rend le débogage cauchemardesque. Au-delà de 4 niveaux, refactoriser en aplatissant ou en regroupant des responsabilités.</li>
+<li><strong>Manager qui fait le travail des workers</strong> : un manager qui exécute des tâches atomiques lui-même crée un goulot d'étranglement et annule le bénéfice de la parallélisation. Les managers délèguent, ils n'exécutent pas.</li>
+<li><strong>Pas de feedback bottom-up</strong> : une hiérarchie sans remontée d'information est aveugle. L'orchestrateur doit toujours savoir l'état de progression de chaque niveau, même grossièrement.</li>
+<li><strong>Hiérarchie rigide sans adaptabilité</strong> : une structure figée ne peut pas absorber les pics de charge ou les pannes partielles. Prévoir le scaling horizontal des workers et la promotion/dégradation dynamique des agents.</li>
+</ul>
+<h2>Règles</h2>
+<ol>
+<li><strong>Maximum 4 niveaux</strong> dans toute hiérarchie d'agents pour garantir la maintenabilité et la lisibilité du système.</li>
+<li><strong>Chaque agent a un seul manager direct</strong> (pas de double hiérarchie) pour éviter les conflits d'instructions et les deadlocks.</li>
+<li><strong>Les communications respectent la hiérarchie</strong> : un worker ne contacte pas directement l'orchestrateur — il passe par son manager.</li>
+<li><strong>Chaque niveau dispose d'un budget explicite</strong> (tokens, API calls, temps) alloué par son parent pour prévenir les dépassements de coût.</li>
+<li><strong>La hiérarchie est documentée et versionnée</strong> : tout changement de structure (ajout d'un niveau, nouveau manager) fait l'objet d'un changelog pour faciliter le débogage en production.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

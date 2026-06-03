@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-context-manager — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Gestion avancée du contexte pour agents IA — fenêtre de contexte, compression, RAG dynamique.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-context-manager</h1>
+<p class="lead">Gestion avancée du contexte pour agents IA — fenêtre de contexte, compression, RAG dynamique.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/agent-context-manager</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">context window</span><span class="trigger">contexte agent</span><span class="trigger">token limit</span><span class="trigger">context management</span><span class="trigger">context overflow</span><span class="trigger">trop de contexte</span><span class="trigger">agent context</span><span class="trigger">context stuffing</span><span class="trigger">context compression</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/agent-skills/context-manager ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/context-manager" target="_blank">agent-skills/context-manager</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Agent Context Manager</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utilise ce skill lorsqu'un agent atteint les limites de sa fenêtre de contexte, lorsque tu dois optimiser les coûts liés aux tokens ou lorsque tu conçois une architecture agent devant gérer des conversations longues, des documents volumineux ou des sessions multi-tours persistantes.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Analyse du budget tokens</strong> — Cartographier l'allocation de la fenêtre de contexte du modèle cible (ex. 128k tokens pour GPT-4o, 200k pour Claude 3.5) : system prompt (fixe), descriptions d'outils (fixe), historique de conversation (dynamique), contexte RAG injecté (dynamique), réponse attendue (réservée). Calculer les budgets maximum par couche et définir les seuils d'alerte (ex. alerte à 80 %, compression obligatoire à 90 %).</li>
+</ol>
+<ol>
+<li><strong>Stratégie de contexte</strong> — Choisir la stratégie adaptée au cas d'usage : allocation fixe (proportions prédéfinies par couche), allocation dynamique (ajustement selon la nature de la requête), priority-based (prioriser selon l'importance calculée des segments), adaptive (apprentissage des patterns d'usage). Documenter la stratégie choisie et ses paramètres dans la configuration de l'agent.</li>
+</ol>
+<ol>
+<li><strong>Compression de contexte</strong> — Implémenter la compression pour réduire les parties moins critiques : résumé de l'historique ancien par LLM léger (ex. <code>gpt-4o-mini</code>), extraction des informations clés (entités, décisions, faits établis), distillation en bullet points structurés. Mesurer le taux de compression atteint et le taux de rétention de l'information critique.</li>
+</ol>
+<ol>
+<li><strong>Sliding window</strong> — Gérer l'historique de conversation avec une fenêtre glissante : conserver les N derniers échanges en verbatim, remplacer les échanges plus anciens par un résumé progressif (progressive summarization). Format recommandé : <code>[RÉSUMÉ DES ÉCHANGES PRÉCÉDENTS: ...]</code> + échanges récents complets. Recalculer le résumé à chaque dépassement de seuil.</li>
+</ol>
+<ol>
+<li><strong>Dynamic RAG</strong> — Injecter le contexte à la demande plutôt qu'en bloc : analyser la requête utilisateur pour identifier les besoins d'information, récupérer uniquement les chunks pertinents (top-k avec score de pertinence minimum), injecter juste avant la génération. Utiliser un reranker (Cohere Rerank, cross-encoder) pour maximiser la pertinence des chunks sélectionnés.</li>
+</ol>
+<ol>
+<li><strong>Priorisation du contexte</strong> — Implémenter un système de scoring pour chaque segment de contexte : score de récence (échanges récents &gt; anciens), score de pertinence sémantique à la requête courante, score d'importance déclaré (informations marquées comme critiques). Combiner les scores avec des poids configurables. En cas de contrainte, éliminer les segments avec le score le plus bas.</li>
+</ol>
+<ol>
+<li><strong>Assemblage multi-sources</strong> — Orchestrer l'assemblage final du contexte en respectant l'ordre optimal : system prompt → instructions d'outils → mémoire long terme → contexte RAG pertinent → historique récent → requête courante. Chaque source a un template et des délimiteurs explicites. Valider le total avant envoi et déclencher la compression si nécessaire.</li>
+</ol>
+<ol>
+<li><strong>Comptage et monitoring des tokens</strong> — Intégrer un comptage précis avec <code>tiktoken</code> (OpenAI) ou <code>anthropic.count_tokens()</code> (Anthropic) à chaque assemblage. Logger en temps réel : tokens utilisés par couche, pourcentage de la fenêtre consommée, coût estimé, événements de compression déclenchés. Exposer ces métriques dans le dashboard de monitoring.</li>
+</ol>
+<ol>
+<li><strong>Gestion des débordements</strong> — Définir des comportements de dégradation gracieuse : compression automatique des segments moins prioritaires, notification à l'utilisateur (&quot;Je résume les échanges précédents pour optimiser la réponse&quot;), truncation en dernier recours avec avertissement. Ne jamais laisser l'API retourner une erreur de contexte sans la gérer applicativement.</li>
+</ol>
+<ol>
+<li><strong>Optimisation des performances</strong> — Réduire la latence et les coûts : mettre en cache le contexte stable entre les tours (system prompt, descriptions d'outils, mémoire long terme invariante), utiliser le prompt caching natif d'Anthropic/OpenAI quand disponible, pré-calculer les embeddings RAG, effectuer les résumés de compression en arrière-plan après chaque tour.</li>
+</ol>
+<h2>Règles</h2>
+<ul>
+<li><strong>Budget tokens explicite</strong> : tout agent en production doit avoir un budget tokens documenté par couche. Un dépassement silencieux est une erreur de conception, pas un comportement acceptable.</li>
+<li><strong>Compression avec validation</strong> : après toute compression, vérifier que les informations critiques (instructions système, contraintes de sécurité, contexte utilisateur essentiel) ont bien été préservées via une liste de contrôle automatisée.</li>
+<li><strong>Transparence des compromis</strong> : informer l'utilisateur lorsqu'une compression de contexte a eu lieu et peut affecter la cohérence des réponses. Ne jamais simuler une mémoire parfaite qui n'existe pas.</li>
+<li><strong>Adapter la stratégie au modèle</strong> : les stratégies de contexte varient significativement selon le modèle (fenêtre disponible, coût par token, qualité de la compression). Recalibrer lors de tout changement de modèle.</li>
+<li><strong>Tester les cas de débordement</strong> : inclure des tests spécifiques pour les scénarios de near-overflow et overflow dans la suite de tests de l'agent. Ces cas sont souvent les plus difficiles à diagnostiquer en production.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>

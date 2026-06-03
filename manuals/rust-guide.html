@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rust-guide — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Guide Rust pour ownership, lifetimes et patterns systèmes.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">💻 Développement</span>
+<h1 class="skill-title">rust-guide</h1>
+<p class="lead">Guide Rust pour ownership, lifetimes et patterns systèmes.</p>
+
+<div class="panel">
+<h2>🚀 Comment l'utiliser</h2>
+<p style="margin-bottom:.6rem">Invocation directe dans Claude Code :</p>
+<div class="invoke">/rust-guide</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">Rust</span><span class="trigger">ownership</span><span class="trigger">borrow checker</span><span class="trigger">lifetime</span><span class="trigger">cargo</span><span class="trigger">traits</span><span class="trigger">async Rust</span><span class="trigger">systems programming</span><span class="trigger">memory safety</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation</h2>
+<div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git<br>cp -r claude-skills-collection/dev-skills/rust-guide ~/.claude/skills/</div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/dev-skills/rust-guide" target="_blank">dev-skills/rust-guide</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Rust Guide</h1>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Ownership et borrowing</strong> : Comprendre les trois règles d'ownership (une valeur = un owner, drop à la fin du scope, move sémantique), distinguer move (transfert) de clone (copie profonde), utiliser les références partagées <code>&amp;T</code> (lecture seule, multiples) et exclusives <code>&amp;mut T</code> (une seule), respecter les règles d'emprunt pour éviter les data races à la compilation.</li>
+</ol>
+<ol>
+<li><strong>Lifetimes</strong> : Comprendre que les lifetimes annotent les relations entre références (ne créent pas de durée de vie), appliquer l'élision de lifetime pour les cas simples, annoter explicitement quand le compilateur ne peut pas inférer (<code>fn longest&lt;'a&gt;(x: &amp;'a str, y: &amp;'a str) -&gt; &amp;'a str</code>), utiliser <code>'static</code> uniquement pour les données vivant toute la durée du programme, placer les lifetimes dans les structs contenant des références.</li>
+</ol>
+<ol>
+<li><strong>Error handling</strong> : Utiliser <code>Result&lt;T, E&gt;</code> pour les erreurs récupérables, <code>Option&lt;T&gt;</code> pour les valeurs absentes, l'opérateur <code>?</code> pour propager les erreurs élégamment, créer des erreurs custom avec <code>thiserror</code> (<code>#[derive(Error)]</code>), utiliser <code>anyhow</code> pour les applications (context riche), <code>thiserror</code> pour les bibliothèques (API publique stable).</li>
+</ol>
+<ol>
+<li><strong>Traits et generics</strong> : Définir des comportements abstraits avec les traits (<code>trait Display { fn fmt(...) }</code>), appliquer des trait bounds (<code>fn print&lt;T: Display&gt;(val: T)</code>), utiliser <code>impl Trait</code> en paramètre/retour pour la concision, <code>dyn Trait</code> pour le dispatch dynamique (runtime), les associated types pour les traits avec un seul type lié (<code>type Item</code>), les blanket implementations pour étendre des types tiers.</li>
+</ol>
+<ol>
+<li><strong>Patterns courants</strong> : Builder pattern avec méthodes chaînées et validation finale, newtype pattern (<code>struct Meters(f64)</code>) pour la type safety, typestate pattern pour les machines à état vérifiées à la compilation (<code>struct Connection&lt;S: State&gt;</code>), enum-based state machines pour la logique métier, le pattern <code>From</code>/<code>Into</code> pour les conversions idiomatiques.</li>
+</ol>
+<ol>
+<li><strong>Async Rust</strong> : Utiliser <code>tokio</code> comme runtime async principal (<code>#[tokio::main]</code>), comprendre que les <code>Future</code> sont paresseux (ne s'exécutent que si pollés), écrire des fonctions <code>async fn</code> et les <code>await</code>, utiliser <code>tokio::spawn</code> pour les tâches concurrentes, <code>tokio::select!</code> pour les races, les streams pour les séquences asynchrones, comprendre le pinning (<code>Pin&lt;Box&lt;dyn Future&gt;&gt;</code>) pour les self-referential types.</li>
+</ol>
+<ol>
+<li><strong>Unsafe et FFI</strong> : Utiliser <code>unsafe</code> uniquement quand les invariants sont vérifiés manuellement (raw pointers, appel FFI, implémentation de traits unsafe), documenter les invariants avec <code>// SAFETY:</code> comments, interagir avec C via <code>extern &quot;C&quot;</code> et <code>#[no_mangle]</code>, utiliser <code>bindgen</code> pour générer les bindings automatiquement, éviter <code>std::mem::transmute</code> sauf si absolument nécessaire avec justification.</li>
+</ol>
+<ol>
+<li><strong>Écosystème Cargo</strong> : Gérer les dépendances avec <code>Cargo.toml</code> (features, workspace), utiliser <code>cargo clippy</code> pour les lints idiomatiques, <code>cargo fmt</code> pour le formatage, <code>cargo test</code> pour les tests intégrés, <code>cargo bench</code> pour les benchmarks (criterion.rs), les crates essentielles : <code>serde</code>/<code>serde_json</code> (sérialisation), <code>clap</code> (CLI), <code>axum</code>/<code>actix-web</code> (web), <code>tokio</code> (async runtime), <code>rayon</code> (parallélisme).</li>
+</ol>
+<h2>Règles</h2>
+<ul>
+<li>Faire confiance au borrow checker : si le code ne compile pas, c'est souvent qu'il y a un vrai problème de concurrence ou de durée de vie ; refactoriser plutôt que contourner.</li>
+<li>Écrire du code idiomatique Rust : utiliser les itérateurs et méthodes fonctionnelles (<code>map</code>, <code>filter</code>, <code>fold</code>) plutôt que les boucles impératives quand c'est plus clair.</li>
+<li>Minimiser les clones : comprendre pourquoi le clone est nécessaire, considérer les références ou le refactoring si les clones prolifèrent dans le code critique.</li>
+<li>Utiliser les dernières éditions Rust (<code>edition = &quot;2021&quot;</code> dans <code>Cargo.toml</code>) pour bénéficier des améliorations du langage (imports, closures, etc.).</li>
+<li>Expliquer le modèle mémoire : chaque décision d'ownership, de lifetime ou d'unsafe mérite un commentaire expliquant pourquoi cette approche garantit la safety.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+</body>
+</html>
