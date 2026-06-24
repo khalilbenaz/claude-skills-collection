@@ -1,5 +1,5 @@
 ---
-name: agent-consensus-builder
+name: consensus-builder
 description: Mécanismes de consensus et de vote entre agents pour prendre des décisions collectives fiables. Se déclenche avec "consensus agent", "vote agents", "décision collective", "agent voting", "multi-agent decision", "majority vote", "agent debate", "agent deliberation".
 ---
 

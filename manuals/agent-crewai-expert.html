@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-crewai-expert — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Guide complet pour construire des systèmes multi-agents avec CrewAI. Création d'agents spécialisés, définition de tâches, orchestration de crews et intégration d'outils personnalisés.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-crewai-expert</h1>
+<p class="lead">Guide complet pour construire des systèmes multi-agents avec CrewAI. Création d'agents spécialisés, définition de tâches, orchestration de crews et intégration d'outils personnalisés.</p>
+
+
+
+<div class="panel">
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- agent-crewai-expert --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } agent-crewai-expert -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">claude &quot;/agent-crewai-expert&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/agent-crewai-expert</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">CrewAI</span><span class="trigger">crew</span><span class="trigger">multi-agent CrewAI</span><span class="trigger">agent CrewAI</span><span class="trigger">tâche CrewAI</span><span class="trigger">créer un crew</span><span class="trigger">équipe d'agents</span><span class="trigger">orchestration agents</span><span class="trigger">agents collaboratifs</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
+cp -r claude-skills-collection/skills/agent-crewai-expert ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Payload du plugin : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/skills/agent-crewai-expert" target="_blank">skills/agent-crewai-expert</a> · source éditable : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/crewai-expert" target="_blank">agent-skills/crewai-expert</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>CrewAI Expert — Systèmes Multi-Agents Collaboratifs</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utiliser ce skill quand l'utilisateur veut construire un système multi-agents collaboratifs avec CrewAI, où plusieurs agents IA spécialisés travaillent ensemble pour accomplir un objectif complexe. Typiquement : pipelines de recherche et rédaction, automatisation de workflows métier, systèmes d'analyse de données multi-étapes, ou tout projet nécessitant des agents avec des rôles distincts (researcher, writer, analyst, reviewer, etc.) qui se passent du contexte.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Installation et setup du projet</strong></li>
+<ul>
+<li>Installer les dépendances : <code>pip install crewai==0.80.0 crewai-tools==0.17.0</code></li>
+<li>Structure recommandée du projet :</li>
+</ul>
+</ol>
+<p>     ```      my_crew/      ├── main.py      ├── crew.py      ├── agents.py      ├── tasks.py      ├── tools/      │   └── custom_tool.py      └── .env  # OPENAI_API_KEY, SERPER_API_KEY      ```</p>
+<ul>
+<li>Configurer les variables d'environnement (<code>OPENAI_API_KEY</code>, <code>OPENAI_MODEL_NAME</code>)</li>
+</ul>
+<ol>
+<li><strong>Définition des agents</strong></li>
+<ul>
+<li>Chaque agent possède : <code>role</code> (titre), <code>goal</code> (objectif précis), <code>backstory</code> (contexte narratif qui influe sur le comportement)</li>
+<li>Paramètres avancés : <code>llm</code> (modèle LLM), <code>tools</code> (liste d'outils), <code>allow_delegation</code> (peut déléguer à d'autres agents), <code>verbose</code> (logging détaillé), <code>max_iter</code> (nombre max d'itérations), <code>memory</code> (activer la mémoire)</li>
+<li>Piège courant : un <code>backstory</code> trop vague produit des résultats génériques — soyez précis et donnez un contexte métier réaliste</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Création des outils custom</strong></li>
+<ul>
+<li>Méthode recommandée avec <code>@tool</code> decorator :</li>
+</ul>
+</ol>
+<p>     ```python      from crewai.tools import tool</p>
+<p>     @tool(&quot;Outil de recherche web&quot;)      def search_web(query: str) -&gt; str:          &quot;&quot;&quot;Effectue une recherche web et retourne les résultats.&quot;&quot;&quot;          # implémentation          return results      ```</p>
+<ul>
+<li>Méthode classe avec <code>BaseTool</code> pour plus de contrôle (validation Pydantic, gestion d'erreurs)</li>
+<li>Outils intégrés disponibles : <code>SerperDevTool</code>, <code>ScrapeWebsiteTool</code>, <code>FileReadTool</code>, <code>CSVSearchTool</code>, <code>PDFSearchTool</code></li>
+</ul>
+<ol>
+<li><strong>Définition des tâches (Task)</strong></li>
+<ul>
+<li>Paramètres clés : <code>description</code> (ce que l'agent doit faire, très détaillé), <code>expected_output</code> (format exact attendu), <code>agent</code> (agent assigné), <code>context</code> (liste de tâches dont dépend cette tâche)</li>
+<li>Le champ <code>context</code> crée des dépendances : la tâche attend la completion des tâches listées</li>
+<li>Utiliser <code>output_file</code> pour sauvegarder le résultat dans un fichier</li>
+<li><code>output_json</code> / <code>output_pydantic</code> pour forcer un format de sortie structuré</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Configuration du Crew</strong></li>
+<ul>
+<li><code>process=Process.sequential</code> : tâches exécutées dans l'ordre (défaut, le plus simple)</li>
+<li><code>process=Process.hierarchical</code> : un manager LLM orchestre et délègue dynamiquement (nécessite <code>manager_llm</code>)</li>
+<li>Paramètres : <code>verbose=True</code> pour le debug, <code>max_rpm</code> pour limiter les appels API, <code>share_crew=False</code></li>
+</ul>
+</ol>
+<ol>
+<li><strong>Gestion de la mémoire</strong></li>
+<ul>
+<li>Activer avec <code>memory=True</code> sur le Crew (utilise ChromaDB par défaut)</li>
+<li>Types : <code>short_term_memory</code> (contexte de session), <code>long_term_memory</code> (base de données persistante), <code>entity_memory</code> (extraction d'entités)</li>
+<li>Configurer l'embedder : <code>embedder={&quot;provider&quot;: &quot;openai&quot;, &quot;config&quot;: {&quot;model&quot;: &quot;text-embedding-3-small&quot;}}</code></li>
+<li>La mémoire améliore la cohérence sur des runs longs mais augmente les coûts</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Callbacks et monitoring</strong></li>
+<ul>
+<li><code>step_callback</code> : appelé après chaque action d'un agent (logging, UI updates)</li>
+<li><code>task_callback</code> : appelé après chaque tâche complétée</li>
+<li>Intégration avec Langfuse ou Langsmith via les callbacks pour le tracing</li>
+<li>Formater les outputs avec des templates Pydantic pour une meilleure observabilité</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Exécution et debug</strong></li>
+<ul>
+<li>Lancement : <code>result = crew.kickoff(inputs={&quot;topic&quot;: &quot;IA générative&quot;, &quot;year&quot;: &quot;2025&quot;})</code></li>
+<li>Variables d'input injectées dans les descriptions avec <code>{variable_name}</code></li>
+<li>Lancement asynchrone : <code>await crew.kickoff_async(inputs=...)</code></li>
+<li>Lancement sur une liste : <code>crew.kickoff_for_each(inputs=[{...}, {...}])</code></li>
+<li>Debug : activer <code>verbose=2</code>, vérifier les logs d'itération, inspecter <code>task.output</code></li>
+</ul>
+</ol>
+<ol>
+<li><strong>Patterns avancés</strong></li>
+<ul>
+<li><strong>Hierarchical crew</strong> : manager_llm délègue dynamiquement aux agents selon la tâche</li>
+<li><strong>Crew pipelines</strong> : <code>Pipeline(stages=[crew1, crew2])</code> pour chaîner plusieurs crews</li>
+<li><strong>Conditional tasks</strong> : utiliser des callbacks et des conditions dans les descriptions</li>
+<li><strong>Async execution</strong> : <code>kickoff_async</code> avec <code>asyncio.gather</code> pour parallélisme</li>
+<li><strong>Crew comme outil</strong> : un Crew peut être encapsulé comme outil d'un agent parent</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Déploiement en production</strong></li>
+<ul>
+<li><strong>CrewAI+</strong> : plateforme hébergée avec monitoring intégré</li>
+<li>Encapsuler dans une API FastAPI : <code>@app.post(&quot;/run&quot;) async def run_crew(request: CrewRequest)</code></li>
+<li>Scheduling avec Celery ou APScheduler pour l'exécution périodique</li>
+<li>Cost tracking : surveiller <code>usage_metrics</code> sur chaque agent après l'exécution</li>
+<li>Rate limiting : <code>max_rpm=10</code> sur le Crew pour éviter les erreurs 429</li>
+</ul>
+</ol>
+<h2>Exemples de code</h2>
+<h3>Crew de 3 agents : Recherche, Rédaction et Révision d'un article de blog</h3>
+<pre><code class="lang-python">import os
+from crewai import Agent, Task, Crew, Process
+from crewai.tools import tool
+from crewai_tools import SerperDevTool, ScrapeWebsiteTool
+from pydantic import BaseModel
+
+# Configuration
+os.environ[&quot;OPENAI_API_KEY&quot;] = &quot;votre-clé&quot;
+os.environ[&quot;SERPER_API_KEY&quot;] = &quot;votre-clé-serper&quot;
+
+# Outils
+search_tool = SerperDevTool()
+scrape_tool = ScrapeWebsiteTool()
+
+# --- Agents ---
+researcher = Agent(
+    role=&quot;Chercheur Expert en IA&quot;,
+    goal=&quot;Trouver des informations précises et récentes sur {topic}&quot;,
+    backstory=(
+        &quot;Vous êtes un chercheur senior spécialisé en intelligence artificielle, &quot;
+        &quot;avec 10 ans d'expérience dans l'analyse de tendances technologiques. &quot;
+        &quot;Vous savez identifier les sources fiables et synthétiser l'information.&quot;
+    ),
+    tools=[search_tool, scrape_tool],
+    llm=&quot;gpt-4o&quot;,
+    verbose=True,
+    allow_delegation=False,
+    max_iter=5,
+)
+
+writer = Agent(
+    role=&quot;Rédacteur Technique&quot;,
+    goal=&quot;Rédiger un article de blog engageant et informatif sur {topic}&quot;,
+    backstory=(
+        &quot;Vous êtes un rédacteur technique avec une expertise en IA et une &quot;
+        &quot;capacité à rendre des sujets complexes accessibles. Vous écrivez &quot;
+        &quot;pour un public de développeurs et de professionnels tech.&quot;
+    ),
+    llm=&quot;gpt-4o&quot;,
+    verbose=True,
+    allow_delegation=False,
+)
+
+reviewer = Agent(
+    role=&quot;Éditeur et Réviseur&quot;,
+    goal=&quot;Vérifier la qualité, l'exactitude et la clarté de l'article&quot;,
+    backstory=(
+        &quot;Vous êtes un éditeur expérimenté qui vérifie la structure narrative, &quot;
+        &quot;la cohérence technique et l'engagement du lecteur. Vous améliorez &quot;
+        &quot;sans réécrire complètement.&quot;
+    ),
+    llm=&quot;gpt-4o-mini&quot;,
+    verbose=True,
+    allow_delegation=False,
+)
+
+# --- Tâches ---
+research_task = Task(
+    description=(
+        &quot;Effectuez une recherche approfondie sur {topic}. &quot;
+        &quot;Identifiez les 5 tendances principales, les acteurs clés, &quot;
+        &quot;les chiffres importants et les cas d'usage concrets. &quot;
+        &quot;Citez vos sources avec les URLs.&quot;
+    ),
+    expected_output=(
+        &quot;Un rapport de recherche structuré avec : &quot;
+        &quot;1) Résumé exécutif (200 mots), &quot;
+        &quot;2) 5 tendances clés avec exemples, &quot;
+        &quot;3) Liste des acteurs principaux, &quot;
+        &quot;4) Données chiffrées pertinentes, &quot;
+        &quot;5) URLs des sources.&quot;
+    ),
+    agent=researcher,
+    output_file=&quot;research_report.md&quot;,
+)
+
+writing_task = Task(
+    description=(
+        &quot;Rédigez un article de blog de 800-1000 mots sur {topic} &quot;
+        &quot;basé sur les recherches fournies. &quot;
+        &quot;Structure : titre accrocheur, introduction, 3-4 sections avec H2, &quot;
+        &quot;conclusion avec call-to-action. Ton : professionnel mais accessible.&quot;
+    ),
+    expected_output=(
+        &quot;Un article de blog complet en Markdown avec : &quot;
+        &quot;titre H1, introduction percutante, sections H2 développées, &quot;
+        &quot;exemples concrets, conclusion et CTA. Entre 800 et 1000 mots.&quot;
+    ),
+    agent=writer,
+    context=[research_task],  # dépend de la recherche
+    output_file=&quot;draft_article.md&quot;,
+)
+
+review_task = Task(
+    description=(
+        &quot;Révisez l'article de blog rédigé. Vérifiez : &quot;
+        &quot;1) Exactitude technique, 2) Clarté et fluidité, &quot;
+        &quot;3) Structure et cohérence, 4) SEO (mots-clés présents). &quot;
+        &quot;Proposez des améliorations et produisez la version finale.&quot;
+    ),
+    expected_output=(
+        &quot;La version finale de l'article avec les corrections appliquées, &quot;
+        &quot;suivi d'un rapport de révision listant les changements effectués.&quot;
+    ),
+    agent=reviewer,
+    context=[writing_task],
+    output_file=&quot;final_article.md&quot;,
+)
+
+# --- Crew ---
+crew = Crew(
+    agents=[researcher, writer, reviewer],
+    tasks=[research_task, writing_task, review_task],
+    process=Process.sequential,
+    verbose=True,
+    memory=True,
+    embedder={
+        &quot;provider&quot;: &quot;openai&quot;,
+        &quot;config&quot;: {&quot;model&quot;: &quot;text-embedding-3-small&quot;},
+    },
+)
+
+# --- Exécution ---
+if __name__ == &quot;__main__&quot;:
+    result = crew.kickoff(inputs={&quot;topic&quot;: &quot;Les agents IA en 2025&quot;})
+    print(&quot;=== RÉSULTAT FINAL ===&quot;)
+    print(result.raw)
+    print(f&quot;\nTokens utilisés : {crew.usage_metrics}&quot;)</code></pre>
+<h3>Crew hiérarchique avec manager LLM</h3>
+<pre><code class="lang-python">from crewai import Agent, Task, Crew, Process
+
+manager_agent = Agent(
+    role=&quot;Chef de Projet IA&quot;,
+    goal=&quot;Orchestrer l'équipe pour livrer {deliverable} dans les délais&quot;,
+    backstory=&quot;Manager expérimenté qui délègue efficacement selon les compétences.&quot;,
+    llm=&quot;gpt-4o&quot;,
+    allow_delegation=True,
+)
+
+# Agents spécialisés...
+data_analyst = Agent(role=&quot;Analyste Data&quot;, goal=&quot;...&quot;, backstory=&quot;...&quot;, llm=&quot;gpt-4o-mini&quot;)
+strategist = Agent(role=&quot;Stratège&quot;, goal=&quot;...&quot;, backstory=&quot;...&quot;, llm=&quot;gpt-4o-mini&quot;)
+
+hierarchical_crew = Crew(
+    agents=[data_analyst, strategist],
+    tasks=[...],  # tâches sans agent assigné — le manager délègue
+    process=Process.hierarchical,
+    manager_agent=manager_agent,  # ou manager_llm=&quot;gpt-4o&quot;
+    verbose=True,
+)
+
+result = hierarchical_crew.kickoff(inputs={&quot;deliverable&quot;: &quot;rapport stratégique&quot;})</code></pre>
+<h2>Règles</h2>
+<ol>
+<li><strong>Toujours tester avec des agents simples d'abord</strong> — Commencez avec 2 agents et <code>verbose=True</code> avant d'ajouter de la complexité. Débuggez chaque agent individuellement avant d'assembler le Crew.</li>
+</ol>
+<ol>
+<li><strong>Rédiger des backstories précises et contextuelles</strong> — La qualité du <code>backstory</code> est le principal levier de performance. Un backstory vague = résultats génériques. Donnez un contexte métier réel, des années d'expérience, des spécialités précises.</li>
+</ol>
+<ol>
+<li><strong>Gérer les coûts avec <code>max_rpm</code> et <code>max_iter</code></strong> — En production, toujours définir <code>max_rpm</code> (requests per minute) et <code>max_iter</code> sur les agents pour éviter les boucles infinies et les dépassements de budget API.</li>
+</ol>
+<ol>
+<li><strong>Utiliser <code>output_pydantic</code> pour les sorties structurées</strong> — Quand l'output doit être parsé programmatiquement, définir un modèle Pydantic comme <code>output_pydantic=MonModele</code> sur la tâche pour garantir la structure.</li>
+</ol>
+<ol>
+<li><strong>Préférer <code>Process.sequential</code> pour débuter</strong> — Le process hiérarchique est puissant mais imprévisible. Utilisez <code>sequential</code> pour les workflows déterministes, <code>hierarchical</code> uniquement quand la délégation dynamique est vraiment nécessaire.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>

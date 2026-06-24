@@ -1,0 +1,37 @@
+name: Validate skills
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Valider les skills source
+        run: node scripts/check-skills.mjs
+
+      - name: Régénérer les artefacts (skills/ + manuals/)
+        run: |
+          node scripts/build-skills.mjs
+          node scripts/build-manuals.mjs
+
+      - name: Vérifier que les artefacts committés sont à jour
+        run: |
+          if ! git diff --quiet -- skills manuals; then
+            echo "::error::skills/ ou manuals/ ne sont pas synchronisés avec les sources."
+            echo "Lancez 'npm run build' puis committez le résultat."
+            git diff --stat -- skills manuals
+            exit 1
+          fi
+          echo "✓ Artefacts à jour."

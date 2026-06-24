@@ -1,10 +1,10 @@
 # 🧠 Claude Skills Collection
 
-La plus grande collection open-source de skills pour Claude — **348 skills** couvrant **32 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
+La plus grande collection open-source de skills pour Claude — **349 skills** couvrant **34 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
 
 > Un skill transforme Claude en assistant spécialisé avec un workflow structuré étape par étape.
 
-[![Skills](https://img.shields.io/badge/skills-348-blue)]()[![Categories](https://img.shields.io/badge/catégories-32-green)]()
+[![Skills](https://img.shields.io/badge/skills-349-blue)]()[![Categories](https://img.shields.io/badge/catégories-34-green)]()
 [![License](https://img.shields.io/badge/license-MIT-yellow)]()
 [![Language](https://img.shields.io/badge/langue-Français-red)]()
 
@@ -17,7 +17,7 @@ La plus grande collection open-source de skills pour Claude — **348 skills** c
 /plugin install claude-skills-collection
 ```
 
-Une fois installé, tous les 348 skills sont disponibles comme slash commands dans Claude Code. Par exemple :
+Une fois installé, tous les 349 skills sont disponibles comme slash commands dans Claude Code. Par exemple :
 
 ```
 /dev-docker-composer
@@ -32,11 +32,11 @@ Une fois installé, tous les 348 skills sont disponibles comme slash commands da
 
 | Catégorie | Skills | Description |
 |-----------|--------|-------------|
-| 🤖 [Agent Skills](./agent-skills) | 47 | Agents IA : frameworks, sous-agents, hiérarchies, délégation, communication, pipelines, déploiement, sécurité, **orchestrateur intelligent**, **workflows multi-agent** |
-| 💻 [Dev Skills](./dev-skills) | 93 | Développement complet : sécurité, architecture, DevOps, frontend, mobile, IA, langages, data, testing, UX/UI, blockchain, game dev, **.NET, gRPC, Prisma, RabbitMQ, OAuth2** |
-| 🔧 [DevOps Skills](./devops-skills) | 4 | **NOUVEAU** — Terraform, Helm, Prometheus/Grafana, Azure Cloud |
-| 📊 [Data Skills](./data-skills) | 3 | **NOUVEAU** — SQL avancé, modélisation dimensionnelle, qualité des données |
-| 🔒 [Security Skills](./security-skills) | 3 | **NOUVEAU** — Threat modeling, API hardening, audit de dépendances |
+| 🤖 [Agent Skills](./agent-skills) | 53 | Agents IA : frameworks, sous-agents, hiérarchies, délégation, communication, pipelines, déploiement, sécurité, **orchestrateur intelligent**, **workflows multi-agent** |
+| 💻 [Dev Skills](./dev-skills) | 112 | Développement complet : sécurité, architecture, DevOps, frontend, mobile, IA, langages, data, testing, UX/UI, blockchain, game dev, **.NET, gRPC, Prisma, RabbitMQ, OAuth2** |
+| 🔧 [DevOps Skills](./devops-skills) | 9 | Terraform, Helm, Prometheus/Grafana, Azure, GitHub Actions, GitLab CI, ArgoCD, Ansible, Docker Swarm |
+| 📊 [Data Skills](./data-skills) | 8 | SQL avancé, modélisation dimensionnelle, qualité des données, dbt, Kafka, Power BI, Tableau, gouvernance |
+| 🔒 [Security Skills](./security-skills) | 8 | Threat modeling, API hardening, audit de dépendances, conformité, zero-trust, réponse incident, SOC |
 | 🌐 [API Gateway Skills](./api-gateway-skills) | 3 | **NOUVEAU** — YARP, Kong, Ocelot |
 | 🏥 [Health Skills](./health-skills) | 16 | Suivi santé, analyses, consultations, douleurs, allergies |
 | 🧠 [Psy Skills](./psy-skills) | 12 | Santé mentale, émotions, thérapie, crise, burnout |
@@ -53,13 +53,13 @@ Une fois installé, tous les 348 skills sont disponibles comme slash commands da
 
 ---
 
-## 🤖 Agent Skills — 47 Skills en 10 sous-catégories
+## 🤖 Agent Skills — 53 Skills en 10 sous-catégories
 
 ### 🧭 Orchestration & Routing (2)
 | Skill | Déclencheur |
 |-------|-------------|
 | [skill-router](./agent-skills/skill-router) | _"quel skill utiliser", "aide-moi à choisir", "orchestrateur", "dispatch", "route"_ |
-| [workflows](./agent-skills/workflows) | _"workflow", "orchestrer des agents", "fan-out", "multi-agent", "paralléliser des sous-agents", "audit exhaustif", "vérification adversariale"_ |
+| [workflows](./meta-skills/workflows) | _"workflow", "orchestrer des agents", "fan-out", "multi-agent", "paralléliser des sous-agents", "audit exhaustif", "vérification adversariale"_ |
 
 ### 🔧 Frameworks (5)
 | Skill | Déclencheur |
@@ -74,19 +74,19 @@ Une fois installé, tous les 348 skills sont disponibles comme slash commands da
 | Skill | Déclencheur |
 |-------|-------------|
 | [multi-agent-orchestrator](./agent-skills/multi-agent-orchestrator) | _"multi-agent", "orchestration", "supervisor", "swarm"_ |
-| [agent-memory-designer](./agent-skills/agent-memory-designer) | _"mémoire agent", "long-term memory", "vector memory"_ |
+| [agent-memory-designer](./agent-skills/memory-designer) | _"mémoire agent", "long-term memory", "vector memory"_ |
 | [tool-calling-architect](./agent-skills/tool-calling-architect) | _"tool calling", "function calling", "MCP tool"_ |
-| [agent-evaluation-framework](./agent-skills/agent-evaluation-framework) | _"évaluer agent", "benchmark", "agent metrics"_ |
+| [agent-evaluation-framework](./agent-skills/evaluation-framework) | _"évaluer agent", "benchmark", "agent metrics"_ |
 | [human-in-the-loop-designer](./agent-skills/human-in-the-loop-designer) | _"human in the loop", "approbation humaine", "HITL"_ |
 
 ### 🏗️ Infrastructure (5)
 | Skill | Déclencheur |
 |-------|-------------|
 | [mcp-server-builder](./agent-skills/mcp-server-builder) | _"MCP", "Model Context Protocol", "serveur MCP"_ |
-| [agent-deployment-guide](./agent-skills/agent-deployment-guide) | _"déployer agent", "agent en production", "agent API"_ |
-| [agent-monitoring-setup](./agent-skills/agent-monitoring-setup) | _"monitoring agent", "LangSmith", "traces agent"_ |
-| [agent-cost-optimizer](./agent-skills/agent-cost-optimizer) | _"coût agent", "réduire les coûts IA", "token optimization"_ |
-| [agent-security-hardener](./agent-skills/agent-security-hardener) | _"sécurité agent", "prompt injection", "guardrails"_ |
+| [agent-deployment-guide](./agent-skills/deployment-guide) | _"déployer agent", "agent en production", "agent API"_ |
+| [agent-monitoring-setup](./agent-skills/monitoring-setup) | _"monitoring agent", "LangSmith", "traces agent"_ |
+| [agent-cost-optimizer](./agent-skills/cost-optimizer) | _"coût agent", "réduire les coûts IA", "token optimization"_ |
+| [agent-security-hardener](./agent-skills/security-hardener) | _"sécurité agent", "prompt injection", "guardrails"_ |
 
 ### 🎯 Use Cases (5)
 | Skill | Déclencheur |
@@ -100,20 +100,20 @@ Une fois installé, tous les 348 skills sont disponibles comme slash commands da
 ### 🚀 Avancé (5)
 | Skill | Déclencheur |
 |-------|-------------|
-| [agent-testing-framework](./agent-skills/agent-testing-framework) | _"tester agent", "agent testing", "agent CI/CD"_ |
-| [agent-prompt-tuner](./agent-skills/agent-prompt-tuner) | _"optimiser prompt agent", "prompt tuning", "calibrer agent"_ |
-| [agent-context-manager](./agent-skills/agent-context-manager) | _"context window", "token limit", "context overflow"_ |
+| [agent-testing-framework](./agent-skills/testing-framework) | _"tester agent", "agent testing", "agent CI/CD"_ |
+| [agent-prompt-tuner](./agent-skills/prompt-tuner) | _"optimiser prompt agent", "prompt tuning", "calibrer agent"_ |
+| [agent-context-manager](./agent-skills/context-manager) | _"context window", "token limit", "context overflow"_ |
 | [voice-agent-builder](./agent-skills/voice-agent-builder) | _"voice agent", "agent vocal", "Vapi", "LiveKit"_ |
-| [agent-marketplace-creator](./agent-skills/agent-marketplace-creator) | _"marketplace agent", "agent store", "agent registry"_ |
+| [agent-marketplace-creator](./agent-skills/marketplace-creator) | _"marketplace agent", "agent store", "agent registry"_ |
 
 ### 👨‍👦 Sous-Agents Core (5)
 | Skill | Déclencheur |
 |-------|-------------|
 | [subagent-delegator](./agent-skills/subagent-delegator) | _"sous-agent", "délégation", "agent parent", "dispatch"_ |
-| [agent-hierarchy-designer](./agent-skills/agent-hierarchy-designer) | _"hiérarchie agent", "manager agent", "worker agent", "arbre d'agents"_ |
-| [agent-task-decomposer](./agent-skills/agent-task-decomposer) | _"décomposer tâche", "sous-tâches", "work breakdown", "agent planner"_ |
-| [agent-result-aggregator](./agent-skills/agent-result-aggregator) | _"agréger résultats", "fusionner", "combiner outputs", "synthèse"_ |
-| [agent-supervisor-builder](./agent-skills/agent-supervisor-builder) | _"supervisor", "contrôler sous-agents", "agent oversight"_ |
+| [agent-hierarchy-designer](./agent-skills/hierarchy-designer) | _"hiérarchie agent", "manager agent", "worker agent", "arbre d'agents"_ |
+| [agent-task-decomposer](./agent-skills/task-decomposer) | _"décomposer tâche", "sous-tâches", "work breakdown", "agent planner"_ |
+| [agent-result-aggregator](./agent-skills/result-aggregator) | _"agréger résultats", "fusionner", "combiner outputs", "synthèse"_ |
+| [agent-supervisor-builder](./agent-skills/supervisor-builder) | _"supervisor", "contrôler sous-agents", "agent oversight"_ |
 
 ### 🔩 Sous-Agents Spécialisés (5)
 | Skill | Déclencheur |
@@ -127,20 +127,20 @@ Une fois installé, tous les 348 skills sont disponibles comme slash commands da
 ### 📡 Communication & Coordination (5)
 | Skill | Déclencheur |
 |-------|-------------|
-| [agent-message-protocol](./agent-skills/agent-message-protocol) | _"protocole agent", "message protocol", "inter-agent communication"_ |
-| [agent-handoff-designer](./agent-skills/agent-handoff-designer) | _"handoff", "transfert agent", "passer la main", "relay"_ |
-| [agent-consensus-builder](./agent-skills/agent-consensus-builder) | _"consensus", "vote agents", "décision collective", "agent debate"_ |
-| [agent-conflict-resolver](./agent-skills/agent-conflict-resolver) | _"conflit agent", "résultats contradictoires", "arbitrage"_ |
-| [agent-state-synchronizer](./agent-skills/agent-state-synchronizer) | _"synchronisation", "état partagé", "shared state", "concurrent agents"_ |
+| [agent-message-protocol](./agent-skills/message-protocol) | _"protocole agent", "message protocol", "inter-agent communication"_ |
+| [agent-handoff-designer](./agent-skills/handoff-designer) | _"handoff", "transfert agent", "passer la main", "relay"_ |
+| [agent-consensus-builder](./agent-skills/consensus-builder) | _"consensus", "vote agents", "décision collective", "agent debate"_ |
+| [agent-conflict-resolver](./agent-skills/conflict-resolver) | _"conflit agent", "résultats contradictoires", "arbitrage"_ |
+| [agent-state-synchronizer](./agent-skills/state-synchronizer) | _"synchronisation", "état partagé", "shared state", "concurrent agents"_ |
 
 ### ⚙️ Sous-Agents Avancés (5)
 | Skill | Déclencheur |
 |-------|-------------|
-| [agent-spawner](./agent-skills/agent-spawner) | _"spawner", "créer agent dynamiquement", "agent factory"_ |
-| [agent-pool-manager](./agent-skills/agent-pool-manager) | _"pool agent", "agent reuse", "warm agents", "worker pool"_ |
-| [agent-retry-strategist](./agent-skills/agent-retry-strategist) | _"retry agent", "fallback", "error recovery", "circuit breaker"_ |
-| [agent-load-balancer](./agent-skills/agent-load-balancer) | _"load balancer", "distribution charge", "répartir tâches"_ |
-| [agent-pipeline-composer](./agent-skills/agent-pipeline-composer) | _"pipeline agent", "chaîne d'agents", "agent DAG", "sequential"_ |
+| [agent-spawner](./agent-skills/spawner) | _"spawner", "créer agent dynamiquement", "agent factory"_ |
+| [agent-pool-manager](./agent-skills/pool-manager) | _"pool agent", "agent reuse", "warm agents", "worker pool"_ |
+| [agent-retry-strategist](./agent-skills/retry-strategist) | _"retry agent", "fallback", "error recovery", "circuit breaker"_ |
+| [agent-load-balancer](./agent-skills/load-balancer) | _"load balancer", "distribution charge", "répartir tâches"_ |
+| [agent-pipeline-composer](./agent-skills/pipeline-composer) | _"pipeline agent", "chaîne d'agents", "agent DAG", "sequential"_ |
 
 ---
 
@@ -334,7 +334,7 @@ Une fois installé, tous les 348 skills sont disponibles comme slash commands da
 |-------|-------------|
 | [sql-advanced-analytics](./data-skills/sql-advanced-analytics) | _"window function", "CTE récursive", "PARTITION BY", "ROW_NUMBER"_ |
 | [dimensional-modeling](./data-skills/dimensional-modeling) | _"schéma en étoile", "star schema", "table de faits", "SCD", "data warehouse"_ |
-| [data-quality-checker](./data-skills/data-quality-checker) | _"qualité données", "doublons", "validation données", "anomalie"_ |
+| [data-quality-checker](./data-skills/quality-checker) | _"qualité données", "doublons", "validation données", "anomalie"_ |
 
 ---
 
@@ -368,7 +368,7 @@ Une fois installé, tous les 348 skills sont disponibles comme slash commands da
 - **[langgraph-designer](./agent-skills/langgraph-designer)** — _"Agent workflow stateful"_ → graphes d'agents avec branchements et persistence
 - **[mcp-server-builder](./agent-skills/mcp-server-builder)** — _"Connecter Claude à mon API"_ → serveur MCP avec tools, resources et prompts
 - **[coding-agent-builder](./agent-skills/coding-agent-builder)** — _"Agent qui code"_ → coding agent autonome type Devin/SWE-agent
-- **[agent-security-hardener](./agent-skills/agent-security-hardener)** — _"Sécuriser mon agent"_ → protection contre injection, abus et fuites
+- **[agent-security-hardener](./agent-skills/security-hardener)** — _"Sécuriser mon agent"_ → protection contre injection, abus et fuites
 
 ### 💻 Développement
 - **[security-auditor](./dev-skills/security-auditor)** — _"Audit sécurité"_ → analyse complète 8 axes
@@ -378,7 +378,7 @@ Une fois installé, tous les 348 skills sont disponibles comme slash commands da
 - **[dotnet-aspire-guide](./dev-skills/dotnet-aspire-guide)** — _".NET Aspire"_ → orchestration cloud-native avec dashboard
 
 ### 🎯 Prompt Engineering
-- **[prompt-optimizer](./prompt-skills/prompt-optimizer)** — _"Améliore mon prompt"_ → analyse 7 critères + version optimisée
+- **[prompt-optimizer](./prompt-skills/optimizer)** — _"Améliore mon prompt"_ → analyse 7 critères + version optimisée
 - **[mega-prompt-builder](./prompt-skills/mega-prompt-builder)** — _"Crée un prompt pour X"_ → mega-prompt structuré complet
 - **[system-prompt-architect](./prompt-skills/system-prompt-architect)** — _"System prompt pour mon chatbot"_ → prompt système robuste
 
@@ -406,7 +406,7 @@ zip ../../crewai-expert.skill SKILL.md
 | Document | Contenu |
 |----------|---------|
 | [🚀 Getting Started](./docs/GETTING_STARTED.md) | Installation, utilisation, FAQ |
-| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 348 skills avec déclencheurs et livrables |
+| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 349 skills avec déclencheurs et livrables |
 | [🛠️ Creating Skills](./docs/CREATING_SKILLS.md) | Guide + template pour créer son propre skill |
 | [🧭 Design Principles](./docs/DESIGN_PRINCIPLES.md) | 8 principes de conception |
 | [🤝 Contributing](./docs/CONTRIBUTING.md) | Comment contribuer |
@@ -425,17 +425,19 @@ zip ../../crewai-expert.skill SKILL.md
 
 ---
 
-## ⚡ Règles de communication — Tous les skills
+## ⚡ Règles de communication — adaptées au domaine
 
-Chaque skill de cette collection applique un mode de **communication ultra-concis** :
+Chaque skill embarque un bloc de règles de communication, **ajouté automatiquement à la génération** selon son domaine :
+
+**Domaines techniques** (dev, cloud, data, sécurité, agents…) → mode **ultra-concis** :
 
 - **Outil d'abord, parler ensuite** — Agir avant d'expliquer
 - **Résultat d'abord** — Commencer par le résultat, pas le processus
-- **S'arrêter quand c'est fait** — Pas de résumé, pas de récap, pas de commentaire superflu
-- **Pas de remplissage** — Jamais de "avec plaisir", "bien sûr !", "bonne question", "je vais"
-- **Pas de formules de politesse** — Direct et franc
+- **S'arrêter quand c'est fait** — Pas de résumé ni de commentaire superflu
+- **Pas de remplissage ni de formules de politesse** — Direct et franc
 - **Minimum de mots** — Si un mot suffit, ne pas en utiliser dix
-- **Pas d'explications non sollicitées** — Le diff parle de lui-même
+
+**Domaines humains** (santé, bien-être, relations, parentalité, juridique) → mode **bienveillant** : clair et concis, mais chaleureux, sans jugement, avec rappel de consulter un professionnel qualifié quand la situation l'exige.
 
 ---
 
@@ -462,6 +464,6 @@ MIT — Libre d'utilisation, modification et redistribution.
 ---
 
 <p align="center">
-  <strong>348 skills • 32 catégories • 100% open-source</strong><br>
+  <strong>349 skills • 34 catégories • 100% open-source</strong><br>
   Fait avec 🤖💻🔒🧠🎨 par <a href="https://github.com/khalilbenaz">@khalilbenaz</a>
 </p>

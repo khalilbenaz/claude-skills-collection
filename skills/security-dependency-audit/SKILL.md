@@ -70,7 +70,7 @@ safety check -r requirements.txt
 ### GitHub Actions
 
 ```yaml
-name: security-dependency-audit
+name: Security Audit
 on:
   schedule:
     - cron: '0 8 * * 1'  # Chaque lundi à 8h

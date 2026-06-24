@@ -1,5 +1,5 @@
 ---
-name: agent-security-hardener
+name: security-hardener
 description: Sécurisation d'agents IA contre injections, abus et fuites de données. Se déclenche avec "sécurité agent", "agent security", "prompt injection", "jailbreak", "agent abuse", "guardrails", "safe agent", "sécuriser mon agent", "agent en production sécurisé".
 ---
 

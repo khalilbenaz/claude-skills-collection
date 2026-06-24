@@ -1,5 +1,5 @@
 ---
-name: data-quality-checker
+name: quality-checker
 description: Vérification de la qualité des données — complétude, cohérence, unicité, validité et fraîcheur. À utiliser quand l'utilisateur doit valider des données, détecter des anomalies ou mettre en place des contrôles qualité sur des pipelines de données. Se déclenche aussi avec "qualité des données", "data quality", "données manquantes", "doublons", "validation de données", "anomalie données", "contrôle qualité data".
 ---
 

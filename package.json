@@ -1,9 +1,15 @@
 {
   "name": "claude-skills-collection",
   "version": "1.0.0",
-  "description": "347 professional skills for Claude Code — dev, cloud, security, AI/ML, business, and more",
+  "description": "349 professional skills for Claude Code — dev, cloud, security, AI/ML, business, and more",
   "author": "Khalil BENAZZOU",
   "license": "MIT",
+  "scripts": {
+    "check": "node scripts/check-skills.mjs",
+    "build:skills": "node scripts/build-skills.mjs",
+    "build:manuals": "node scripts/build-manuals.mjs",
+    "build": "npm run check && npm run build:skills && npm run build:manuals"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/khalilbenaz/claude-skills-collection.git"

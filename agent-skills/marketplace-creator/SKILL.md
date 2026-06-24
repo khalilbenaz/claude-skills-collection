@@ -1,5 +1,5 @@
 ---
-name: agent-marketplace-creator
+name: marketplace-creator
 description: Création de marketplaces et registres d'agents IA réutilisables et partageables. Se déclenche avec "marketplace agent", "agent store", "agent registry", "partager agent", "distribuer agent", "agent template", "agent catalog", "agent as a service", "skill marketplace".
 ---
 

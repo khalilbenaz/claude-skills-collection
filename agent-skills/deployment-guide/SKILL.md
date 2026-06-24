@@ -1,5 +1,5 @@
 ---
-name: agent-deployment-guide
+name: deployment-guide
 description: Déploiement d'agents IA en production avec scalabilité et fiabilité. Se déclenche avec "déployer agent", "agent en production", "agent API", "hosting agent", "agent scaling", "agent infrastructure", "servir un agent", "agent cloud".
 ---
 

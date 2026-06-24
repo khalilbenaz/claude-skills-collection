@@ -6,7 +6,7 @@
  *
  * Usage : node scripts/build-manuals.mjs
  */
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 
 const ROOT = join(import.meta.dirname, '..');
@@ -53,7 +53,7 @@ const CATEGORY_META = {
 
 // Apps en ligne associées à certains skills
 const LIVE_APPS = {
-  'cv-builder': {
+  'career-cv-builder': {
     url: 'https://cv-builder-c9z.pages.dev/',
     label: 'CV Builder — Créez votre CV en ligne',
     desc: 'Application web gratuite : plusieurs styles de CV, photo de profil, export PDF. Aucune installation requise.',
@@ -168,7 +168,7 @@ const USE_CASES = [
     { icon: '⚖️', title: 'Gérer un litige locatif', goal: 'Droits, courriers et recours', steps: [
       ['tenant-rights-guide', 'Droits'], ['contract-reader', 'Lecture du bail'], ['complaint-letter-writer', 'Courriers'], ['small-claims-prep', 'Recours'] ] },
     { icon: '🤝', title: 'Préparer une conversation difficile', goal: 'Cadre, feedback et résolution', steps: [
-      ['difficult-conversation-prep', 'Préparation'], ['feedback-giver', 'Feedback'], ['conflict-resolver', 'Résolution'], ['boundary-setter', 'Limites'] ] },
+      ['difficult-conversation-prep', 'Préparation'], ['feedback-giver', 'Feedback'], ['social-conflict-resolver', 'Résolution'], ['boundary-setter', 'Limites'] ] },
   ]},
 ];
 
@@ -307,8 +307,10 @@ function summary(desc) {
 }
 
 // ---------- collect ----------
-const categories = readdirSync(ROOT).filter((d) => d.endsWith('-skills') && statSync(join(ROOT, d)).isDirectory());
-categories.push('docs'); // docs/adr-writer est aussi un skill
+// Source de vérité : <cat>-skills/, docs/, meta-skills/. Le nom public est PRÉFIXÉ
+// par la catégorie (identique au payload skills/ du plugin) pour éviter les collisions.
+const prefixOf = (cat) => (cat === 'docs' ? 'docs' : cat === 'meta-skills' ? '' : cat.replace(/-skills$/, ''));
+const categories = readdirSync(ROOT).filter((d) => (d.endsWith('-skills') || d === 'docs') && statSync(join(ROOT, d)).isDirectory());
 const skills = [];
 for (const cat of categories.sort()) {
   for (const dir of readdirSync(join(ROOT, cat)).sort()) {
@@ -316,10 +318,25 @@ for (const cat of categories.sort()) {
     if (!existsSync(skillPath)) continue;
     const raw = readFileSync(skillPath, 'utf8');
     const { meta, body } = parseFrontmatter(raw);
-    const name = meta.name || dir;
+    const prefix = prefixOf(cat);
+    const name = prefix ? `${prefix}-${dir}` : dir; // nom public préfixé
     const desc = meta.description || '';
-    skills.push({ name, dir, cat, desc, body, triggers: extractTriggers(desc), summary: summary(desc) });
+    skills.push({ name, dir, cat, prefix, desc, body, triggers: extractTriggers(desc), summary: summary(desc) });
   }
+}
+
+// Résolution des références de USE_CASES : un step peut citer le nom complet
+// (career-cv-builder) ou le nom court (cv-builder). Les collisions de nom court
+// doivent être levées en écrivant le nom complet dans USE_CASES.
+const byFull = new Set(skills.map((s) => s.name));
+const short2full = {};
+for (const s of skills) (short2full[s.dir] ||= []).push(s.name);
+function resolve(ref) {
+  if (byFull.has(ref)) return ref;
+  const m = short2full[ref];
+  if (m && m.length === 1) return m[0];
+  if (m && m.length > 1) throw new Error(`Référence USE_CASES ambiguë « ${ref} » : ${m.join(', ')} — utilisez le nom complet.`);
+  throw new Error(`Référence USE_CASES inconnue : ${ref}`);
 }
 
 // ---------- templates ----------
@@ -431,8 +448,8 @@ ${triggersHtml}
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>
-<div class="cmd-block"><div class="invoke">${escapeHtml(`git clone ${REPO}.git\ncp -r claude-skills-collection/${s.cat}/${s.dir} ~/.claude/skills/`)}</div><button class="copy-btn">Copier</button></div>
-<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Source : <a href="${REPO}/tree/main/${s.cat}/${s.dir}" target="_blank">${s.cat}/${s.dir}</a></p>
+<div class="cmd-block"><div class="invoke">${escapeHtml(`git clone ${REPO}.git\ncp -r claude-skills-collection/skills/${s.name} ~/.claude/skills/`)}</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Payload du plugin : <a href="${REPO}/tree/main/skills/${s.name}" target="_blank">skills/${s.name}</a> · source éditable : <a href="${REPO}/tree/main/${s.cat}/${s.dir}" target="_blank">${s.cat}/${s.dir}</a></p>
 </div>
 
 <article class="manual">
@@ -496,9 +513,8 @@ q.addEventListener('input',()=>{
 
 function usecasesPage() {
   // Validation : chaque skill référencé doit exister
-  const known = new Set(skills.map((s) => s.name));
-  const unknown = USE_CASES.flatMap((t) => t.cases.flatMap((c) => c.steps.map(([n]) => n))).filter((n) => !known.has(n));
-  if (unknown.length) throw new Error(`Skills inconnus dans USE_CASES : ${[...new Set(unknown)].join(', ')}`);
+  // Valide + résout chaque référence vers son nom complet (lève si inconnu/ambigu).
+  USE_CASES.forEach((t) => t.cases.forEach((c) => c.steps.forEach((step) => { step[0] = resolve(step[0]); })));
 
   const nbCases = USE_CASES.reduce((a, t) => a + t.cases.length, 0);
   const sections = USE_CASES.map((t) => {
@@ -567,10 +583,12 @@ document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=
 }
 
 // ---------- write ----------
+// manuals/ est un artefact : régénération intégrale (évite les fichiers obsolètes).
+rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 for (const s of skills) writeFileSync(join(OUT, `${s.name}.html`), skillPage(s));
 writeFileSync(join(OUT, 'index.html'), catalogPage());
 writeFileSync(join(OUT, 'usecases.html'), usecasesPage());
 // Index machine-lisible consommé par install.sh / install.ps1
-writeFileSync(join(OUT, 'skills.index'), skills.map((s) => `${s.name} ${s.cat}/${s.dir}`).join('\n') + '\n');
+writeFileSync(join(OUT, 'skills.index'), skills.map((s) => `${s.name} skills/${s.name}`).join('\n') + '\n');
 console.log(`✓ ${skills.length} manuels générés dans manuals/ (+ index.html, skills.index)`);

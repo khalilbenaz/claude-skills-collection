@@ -1,5 +1,5 @@
 ---
-name: prompt-debugger
+name: debugger
 description: Diagnostique pourquoi un prompt produit des résultats indésirables et propose des corrections. À utiliser quand le LLM hallucine, ignore des instructions, donne un mauvais format ou un résultat incohérent. Se déclenche aussi avec "mon prompt hallucine", "le LLM ignore mes instructions", "résultat incorrect", "format non respecté", ou tout problème avec un prompt.
 ---
 

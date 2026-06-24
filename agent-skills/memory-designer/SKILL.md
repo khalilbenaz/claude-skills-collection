@@ -1,5 +1,5 @@
 ---
-name: agent-memory-designer
+name: memory-designer
 description: Architecture de mémoire pour agents IA — short-term, long-term, episodic, semantic, working memory. Se déclenche avec "mémoire agent", "agent memory", "long-term memory", "context window", "vector memory", "conversation history", "agent qui se souvient", "persistent memory".
 ---
 

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>api-gateway-kong-api-gateway — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Configuration de Kong API Gateway — services, routes, plugins, rate limiting, authentification et monitoring.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🚪 API Gateway</span>
+<h1 class="skill-title">api-gateway-kong-api-gateway</h1>
+<p class="lead">Configuration de Kong API Gateway — services, routes, plugins, rate limiting, authentification et monitoring.</p>
+
+
+
+<div class="panel">
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- api-gateway-kong-api-gateway --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } api-gateway-kong-api-gateway -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">claude &quot;/api-gateway-kong-api-gateway&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/api-gateway-kong-api-gateway</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">Kong</span><span class="trigger">Kong Gateway</span><span class="trigger">Kong plugin</span><span class="trigger">Kong route</span><span class="trigger">API gateway Kong</span><span class="trigger">kong.yml</span><span class="trigger">Kong declarative</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
+cp -r claude-skills-collection/skills/api-gateway-kong-api-gateway ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Payload du plugin : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/skills/api-gateway-kong-api-gateway" target="_blank">skills/api-gateway-kong-api-gateway</a> · source éditable : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/api-gateway-skills/kong-api-gateway" target="_blank">api-gateway-skills/kong-api-gateway</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Kong API Gateway</h1>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Définir les services</strong> : backend APIs à exposer.</li>
+<li><strong>Configurer les routes</strong> : mapping des chemins/hosts vers les services.</li>
+<li><strong>Appliquer les plugins</strong> : sécurité, rate limiting, logging.</li>
+<li><strong>Monitorer</strong> : métriques, logs, health checks.</li>
+</ol>
+<h2>Configuration déclarative (kong.yml)</h2>
+<pre><code class="lang-yaml">_format_version: &quot;3.0&quot;
+
+services:
+  - name: payment-service
+    url: http://payment-api:8080
+    connect_timeout: 5000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 3
+    routes:
+      - name: payment-route
+        paths:
+          - /api/payments
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 100
+          policy: redis
+          redis_host: redis
+      - name: jwt
+        config:
+          claims_to_verify:
+            - exp
+
+  - name: order-service
+    url: http://order-api:8080
+    routes:
+      - name: order-route
+        paths:
+          - /api/orders
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 200
+      - name: cors
+        config:
+          origins:
+            - https://app.company.com
+          methods:
+            - GET
+            - POST
+          headers:
+            - Authorization
+            - Content-Type
+          max_age: 3600
+
+# Plugins globaux
+plugins:
+  - name: prometheus
+    config:
+      per_consumer: true
+  - name: file-log
+    config:
+      path: /var/log/kong/access.log
+      reopen: true
+  - name: correlation-id
+    config:
+      header_name: X-Request-ID
+      generator: uuid</code></pre>
+<h2>Plugins essentiels</h2>
+<table><thead><tr><th>Plugin</th><th>Usage</th><th>Scope</th></tr></thead><tbody><tr><td><strong>rate-limiting</strong></td><td>Limiter les requêtes</td><td>Par route/service/consumer</td></tr><tr><td><strong>jwt</strong> / <strong>oauth2</strong></td><td>Authentification</td><td>Par route/service</td></tr><tr><td><strong>cors</strong></td><td>Cross-Origin requests</td><td>Par route/service</td></tr><tr><td><strong>prometheus</strong></td><td>Métriques</td><td>Global</td></tr><tr><td><strong>file-log</strong> / <strong>http-log</strong></td><td>Logging</td><td>Global/par route</td></tr><tr><td><strong>correlation-id</strong></td><td>Traçabilité</td><td>Global</td></tr><tr><td><strong>request-transformer</strong></td><td>Modifier les requêtes</td><td>Par route</td></tr><tr><td><strong>response-transformer</strong></td><td>Modifier les réponses</td><td>Par route</td></tr><tr><td><strong>ip-restriction</strong></td><td>Whitelist/blacklist IP</td><td>Par route/service</td></tr><tr><td><strong>acl</strong></td><td>Contrôle d'accès par groupe</td><td>Par route</td></tr></tbody></table>
+<h2>Administration</h2>
+<pre><code class="lang-bash"># Vérifier la configuration
+kong config parse kong.yml
+
+# Appliquer la config déclarative
+kong config db_import kong.yml
+
+# Admin API
+curl http://localhost:8001/services           # Lister les services
+curl http://localhost:8001/routes             # Lister les routes
+curl http://localhost:8001/plugins            # Lister les plugins
+curl http://localhost:8001/status             # Santé de Kong</code></pre>
+<h2>Docker Compose</h2>
+<pre><code class="lang-yaml">services:
+  kong:
+    image: kong:3.6
+    environment:
+      KONG_DATABASE: &quot;off&quot;
+      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_LOG_LEVEL: info
+    ports:
+      - &quot;8000:8000&quot;   # Proxy
+      - &quot;8001:8001&quot;   # Admin API
+    volumes:
+      - ./kong.yml:/kong/kong.yml:ro</code></pre>
+<h2>Règles</h2>
+<ul>
+<li>Préférer le mode <strong>declarative</strong> (DB-less) pour les environnements immutables.</li>
+<li>Les plugins de sécurité (rate limiting, auth) doivent être configurés <strong>par route</strong>, pas globalement.</li>
+<li>Toujours activer le plugin <strong>correlation-id</strong> pour la traçabilité distribuée.</li>
+<li>Exposer l'Admin API uniquement sur un réseau interne, jamais publiquement.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>

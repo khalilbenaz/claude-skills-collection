@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dev-dotnet-aspire-guide — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Guide .NET Aspire pour l'orchestration d'applications cloud-native, le service discovery, la télémétrie et l'intégration de composants distribués.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">💻 Développement</span>
+<h1 class="skill-title">dev-dotnet-aspire-guide</h1>
+<p class="lead">Guide .NET Aspire pour l'orchestration d'applications cloud-native, le service discovery, la télémétrie et l'intégration de composants distribués.</p>
+
+
+
+<div class="panel">
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- dev-dotnet-aspire-guide --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } dev-dotnet-aspire-guide -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">claude &quot;/dev-dotnet-aspire-guide&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/dev-dotnet-aspire-guide</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">.NET Aspire</span><span class="trigger">Aspire</span><span class="trigger">AppHost</span><span class="trigger">service discovery .NET</span><span class="trigger">orchestration cloud-native</span><span class="trigger">Aspire dashboard</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
+cp -r claude-skills-collection/skills/dev-dotnet-aspire-guide ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Payload du plugin : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/skills/dev-dotnet-aspire-guide" target="_blank">skills/dev-dotnet-aspire-guide</a> · source éditable : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/dev-skills/dotnet-aspire-guide" target="_blank">dev-skills/dotnet-aspire-guide</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Guide .NET Aspire</h1>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Créer le projet AppHost</strong> : orchestrateur central des services et ressources.</li>
+<li><strong>Ajouter les composants</strong> : bases de données, caches, messaging.</li>
+<li><strong>Configurer le service discovery</strong> : références entre projets.</li>
+<li><strong>Observer</strong> : dashboard Aspire pour logs, traces et métriques.</li>
+</ol>
+<h2>Structure d'un projet Aspire</h2>
+<pre><code>MySolution/
+├── MySolution.AppHost/           # Orchestrateur
+│   └── Program.cs
+├── MySolution.ServiceDefaults/   # Configuration partagée
+│   └── Extensions.cs
+├── MySolution.ApiService/        # Service API
+├── MySolution.WorkerService/     # Worker background
+└── MySolution.Web/               # Frontend Blazor</code></pre>
+<h2>AppHost — Orchestration</h2>
+<pre><code class="lang-csharp">// MySolution.AppHost/Program.cs
+var builder = DistributedApplication.CreateBuilder(args);
+
+// Ressources d'infrastructure
+var postgres = builder.AddPostgres(&quot;postgres&quot;)
+    .WithDataVolume(&quot;postgres-data&quot;)
+    .WithPgAdmin();
+
+var orderDb = postgres.AddDatabase(&quot;orderdb&quot;);
+var userDb = postgres.AddDatabase(&quot;userdb&quot;);
+
+var redis = builder.AddRedis(&quot;cache&quot;)
+    .WithRedisCommander();
+
+var rabbitmq = builder.AddRabbitMQ(&quot;messaging&quot;)
+    .WithManagementPlugin();
+
+// Services applicatifs
+var apiService = builder.AddProject&lt;Projects.MySolution_ApiService&gt;(&quot;api-service&quot;)
+    .WithReference(orderDb)
+    .WithReference(redis)
+    .WithReference(rabbitmq)
+    .WithReplicas(3);
+
+var workerService = builder.AddProject&lt;Projects.MySolution_WorkerService&gt;(&quot;worker-service&quot;)
+    .WithReference(orderDb)
+    .WithReference(rabbitmq);
+
+// Frontend avec référence au service API
+builder.AddProject&lt;Projects.MySolution_Web&gt;(&quot;web-frontend&quot;)
+    .WithExternalHttpEndpoints()
+    .WithReference(apiService);
+
+builder.Build().Run();</code></pre>
+<h2>ServiceDefaults — Configuration partagée</h2>
+<pre><code class="lang-csharp">// MySolution.ServiceDefaults/Extensions.cs
+public static class Extensions
+{
+    public static IHostApplicationBuilder AddServiceDefaults(
+        this IHostApplicationBuilder builder)
+    {
+        // OpenTelemetry (traces, métriques, logs)
+        builder.ConfigureOpenTelemetry();
+
+        // Health checks par défaut
+        builder.AddDefaultHealthChecks();
+
+        // Service discovery
+        builder.Services.AddServiceDiscovery();
+        builder.Services.ConfigureHttpClientDefaults(http =&gt;
+        {
+            http.AddStandardResilienceHandler();
+            http.AddServiceDiscovery();
+        });
+
+        return builder;
+    }
+
+    public static IHostApplicationBuilder ConfigureOpenTelemetry(
+        this IHostApplicationBuilder builder)
+    {
+        builder.Logging.AddOpenTelemetry(logging =&gt;
+        {
+            logging.IncludeFormattedMessage = true;
+            logging.IncludeScopes = true;
+        });
+
+        builder.Services.AddOpenTelemetry()
+            .WithMetrics(metrics =&gt;
+            {
+                metrics
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation();
+            })
+            .WithTracing(tracing =&gt;
+            {
+                tracing
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddEntityFrameworkCoreInstrumentation();
+            });
+
+        builder.AddOpenTelemetryExporters();
+
+        return builder;
+    }
+}</code></pre>
+<h2>Composants Aspire disponibles</h2>
+<table><thead><tr><th>Composant</th><th>Package NuGet</th><th>Méthode</th></tr></thead><tbody><tr><td>PostgreSQL</td><td><code>Aspire.Npgsql</code></td><td><code>AddNpgsqlDataSource</code></td></tr><tr><td>SQL Server</td><td><code>Aspire.Microsoft.Data.SqlClient</code></td><td><code>AddSqlServerClient</code></td></tr><tr><td>Redis</td><td><code>Aspire.StackExchange.Redis</code></td><td><code>AddRedisClient</code></td></tr><tr><td>RabbitMQ</td><td><code>Aspire.RabbitMQ.Client</code></td><td><code>AddRabbitMQClient</code></td></tr><tr><td>MongoDB</td><td><code>Aspire.MongoDB.Driver</code></td><td><code>AddMongoDBClient</code></td></tr><tr><td>Azure Blob</td><td><code>Aspire.Azure.Storage.Blobs</code></td><td><code>AddAzureBlobClient</code></td></tr><tr><td>Azure Service Bus</td><td><code>Aspire.Azure.Messaging.ServiceBus</code></td><td><code>AddAzureServiceBusClient</code></td></tr></tbody></table>
+<h2>Service Discovery</h2>
+<pre><code class="lang-csharp">// Dans ApiService — appeler un autre service par son nom
+builder.Services.AddHttpClient&lt;IUserServiceClient&gt;(client =&gt;
+{
+    // &quot;https+http://user-service&quot; est résolu automatiquement par Aspire
+    client.BaseAddress = new Uri(&quot;https+http://user-service&quot;);
+});</code></pre>
+<h2>Dashboard Aspire</h2>
+<p>Le dashboard est automatiquement disponible en développement et affiche :</p>
+<table><thead><tr><th>Vue</th><th>Contenu</th></tr></thead><tbody><tr><td><strong>Resources</strong></td><td>État de tous les services et ressources</td></tr><tr><td><strong>Console Logs</strong></td><td>Logs en temps réel de chaque service</td></tr><tr><td><strong>Structured Logs</strong></td><td>Logs structurés avec filtrage</td></tr><tr><td><strong>Traces</strong></td><td>Traces distribuées entre services</td></tr><tr><td><strong>Metrics</strong></td><td>Métriques applicatives et runtime</td></tr></tbody></table>
+<h2>Déploiement</h2>
+<pre><code class="lang-bash"># Générer le manifeste pour Azure Container Apps
+azd init
+azd up
+
+# Ou générer un manifeste Kubernetes
+aspirate generate
+aspirate apply</code></pre>
+<h2>Règles</h2>
+<ul>
+<li>Toujours utiliser <code>ServiceDefaults</code> pour la configuration partagée (télémétrie, health checks).</li>
+<li>Le service discovery utilise les noms logiques définis dans l'AppHost.</li>
+<li>Les volumes de données doivent être nommés pour persister entre les redémarrages.</li>
+<li>En production, remplacer les conteneurs locaux par des services managés (Azure, AWS).</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>

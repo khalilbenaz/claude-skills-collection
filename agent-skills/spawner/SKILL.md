@@ -1,5 +1,5 @@
 ---
-name: agent-spawner
+name: spawner
 description: Création dynamique de sous-agents à la volée avec configuration, lifecycle management et resource allocation. Se déclenche avec "spawner", "créer agent dynamiquement", "spawn agent", "agent factory", "agent dynamique", "instancier agent", "agent à la volée", "dynamic agent creation".
 ---
 

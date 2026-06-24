@@ -1,5 +1,5 @@
 ---
-name: agent-cost-optimizer
+name: cost-optimizer
 description: Optimisation des coûts des agents IA — tokens, API calls, modèles, caching. Se déclenche avec "coût agent", "agent cher", "réduire les coûts IA", "token optimization", "optimiser les tokens", "budget agent", "agent cost", "économiser sur l'API".
 ---
 

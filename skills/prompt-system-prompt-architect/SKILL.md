@@ -20,7 +20,7 @@ Structure par défaut, longueur, style.
 ### Gestion des cas limites
 Utilisateur agressif, hors scope, info insuffisante, ambiguïté.
 ### Garde-fous
-S�curité, confidentialité, exactitude.
+S�curité, confidentialité, exactitude.
 
 ## Étape 3 — Rédaction
 System prompt complet structuré avec balises XML ou Markdown.

@@ -1,5 +1,5 @@
 ---
-name: agent-pipeline-composer
+name: pipeline-composer
 description: Composition de pipelines de sous-agents où la sortie d'un agent alimente l'entrée du suivant. Se déclenche avec "pipeline agent", "chaîne d'agents", "agent chain", "agent pipeline", "sequential agents", "workflow agents", "ETL agent", "agent DAG", "composer agents".
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: agent-message-protocol
+name: message-protocol
 description: Design de protocoles de communication entre agents et sous-agents — formats de messages, routing et delivery. Se déclenche avec "protocole agent", "message protocol", "communication agent", "agent messaging", "inter-agent communication", "message format agent", "agent API interne".
 ---
 

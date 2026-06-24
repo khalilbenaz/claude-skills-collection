@@ -1,5 +1,5 @@
 ---
-name: agent-result-aggregator
+name: result-aggregator
 description: Agrégation et synthèse des résultats de multiples sous-agents en un résultat cohérent. Se déclenche avec "agréger résultats", "fusionner résultats", "combiner outputs", "agent aggregator", "merge results", "synthèse multi-agent", "consolider résultats agents".
 ---
 

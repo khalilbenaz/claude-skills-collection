@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dev-openapi-contract-first — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Design d'API Contract-First avec OpenAPI/Swagger, génération de code, validation de contrats et documentation interactive.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">💻 Développement</span>
+<h1 class="skill-title">dev-openapi-contract-first</h1>
+<p class="lead">Design d'API Contract-First avec OpenAPI/Swagger, génération de code, validation de contrats et documentation interactive.</p>
+
+
+
+<div class="panel">
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- dev-openapi-contract-first --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } dev-openapi-contract-first -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">claude &quot;/dev-openapi-contract-first&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/dev-openapi-contract-first</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">OpenAPI</span><span class="trigger">Swagger</span><span class="trigger">contract first</span><span class="trigger">spécification API</span><span class="trigger">openapi.yaml</span><span class="trigger">swagger.json</span><span class="trigger">génération de code API</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
+cp -r claude-skills-collection/skills/dev-openapi-contract-first ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Payload du plugin : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/skills/dev-openapi-contract-first" target="_blank">skills/dev-openapi-contract-first</a> · source éditable : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/dev-skills/openapi-contract-first" target="_blank">dev-skills/openapi-contract-first</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Design API Contract-First avec OpenAPI</h1>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Définir le contrat</strong> : spécification OpenAPI (YAML/JSON) avec endpoints, schémas et exemples.</li>
+<li><strong>Valider</strong> : vérifier la conformité du contrat (linting, breaking changes).</li>
+<li><strong>Générer</strong> : code serveur et/ou client depuis la spec.</li>
+<li><strong>Documenter</strong> : interface interactive pour les consommateurs de l'API.</li>
+</ol>
+<h2>Structure d'une spécification OpenAPI</h2>
+<pre><code class="lang-yaml">openapi: 3.1.0
+info:
+  title: Payment API
+  version: 1.0.0
+  description: API de gestion des paiements
+  contact:
+    name: Équipe Paiements
+    email: payments@company.com
+
+servers:
+  - url: https://api.company.com/v1
+    description: Production
+  - url: https://api-staging.company.com/v1
+    description: Staging
+
+paths:
+  /payments:
+    post:
+      operationId: createPayment
+      summary: Créer un paiement
+      tags: [Payments]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+            example:
+              amount: 5000
+              currency: EUR
+              recipient_id: usr_abc123
+      responses:
+        '201':
+          description: Paiement créé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    get:
+      operationId: listPayments
+      summary: Lister les paiements
+      tags: [Payments]
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PaymentStatus'
+      responses:
+        '200':
+          description: Liste paginée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentList'
+
+components:
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      required: [amount, currency, recipient_id]
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+          description: Montant en centimes
+        currency:
+          type: string
+          enum: [EUR, USD, GBP]
+        recipient_id:
+          type: string
+          pattern: '^usr_[a-zA-Z0-9]+$'
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+        currency:
+          type: string
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        created_at:
+          type: string
+          format: date-time
+
+    PaymentStatus:
+      type: string
+      enum: [pending, processing, completed, failed]
+
+    PaymentList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+  responses:
+    BadRequest:
+      description: Requête invalide
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: Données non traitables
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []</code></pre>
+<h2>Génération de code</h2>
+<h3>.NET (NSwag)</h3>
+<pre><code class="lang-bash"># Générer le client C#
+nswag openapi2csclient /input:openapi.yaml /output:PaymentApiClient.cs \
+  /namespace:MyApp.ApiClients /className:PaymentApiClient
+
+# Générer le contrôleur serveur
+nswag openapi2cscontroller /input:openapi.yaml /output:PaymentController.cs \
+  /namespace:MyApp.Controllers</code></pre>
+<h3>TypeScript</h3>
+<pre><code class="lang-bash"># openapi-typescript
+npx openapi-typescript openapi.yaml -o ./src/api/schema.d.ts
+
+# openapi-generator
+npx @openapitools/openapi-generator-cli generate \
+  -i openapi.yaml -g typescript-fetch -o ./src/api/client</code></pre>
+<h2>Validation et linting</h2>
+<pre><code class="lang-bash"># Spectral (linting OpenAPI)
+npx @stoplight/spectral-cli lint openapi.yaml
+
+# oasdiff (détection de breaking changes)
+oasdiff breaking openapi-old.yaml openapi-new.yaml</code></pre>
+<h2>Bonnes pratiques</h2>
+<h3>Conception</h3>
+<ul>
+<li>Utiliser des <code>$ref</code> pour éviter la duplication de schémas</li>
+<li>Définir des <code>operationId</code> uniques pour la génération de code</li>
+<li>Inclure des <code>examples</code> dans les schémas pour la documentation</li>
+<li>Versionner l'API dans l'URL (<code>/v1/</code>, <code>/v2/</code>)</li>
+</ul>
+<h3>Schémas</h3>
+<ul>
+<li>Marquer les champs <code>required</code> explicitement</li>
+<li>Utiliser <code>pattern</code> pour les formats personnalisés</li>
+<li>Définir <code>minimum</code>/<code>maximum</code> pour les nombres</li>
+<li>Utiliser <code>enum</code> pour les valeurs limitées</li>
+</ul>
+<h3>Workflow Contract-First</h3>
+<ol>
+<li>Rédiger la spec OpenAPI <strong>avant</strong> le code</li>
+<li>Revue de la spec par les consommateurs de l'API</li>
+<li>Générer le code serveur/client depuis la spec</li>
+<li>Valider que l'implémentation est conforme au contrat</li>
+<li>Tester les breaking changes avant chaque modification</li>
+</ol>
+<h2>Règles</h2>
+<ul>
+<li>Le contrat OpenAPI est la source de vérité — pas le code.</li>
+<li>Chaque endpoint doit avoir un <code>operationId</code> unique.</li>
+<li>Les breaking changes doivent être validées avec un outil dédié avant merge.</li>
+<li>Les schémas partagés doivent être dans <code>components/schemas</code>, jamais inline.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>

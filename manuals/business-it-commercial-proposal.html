@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>business-it-commercial-proposal — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Génération d'offres commerciales professionnelles pour des projets ou services IT.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">💼 Business</span>
+<h1 class="skill-title">business-it-commercial-proposal</h1>
+<p class="lead">Génération d'offres commerciales professionnelles pour des projets ou services IT.</p>
+
+
+
+<div class="panel">
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- business-it-commercial-proposal --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } business-it-commercial-proposal -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">claude &quot;/business-it-commercial-proposal&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/business-it-commercial-proposal</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">offre commerciale</span><span class="trigger">proposition commerciale</span><span class="trigger">devis IT</span><span class="trigger">appel d'offres</span><span class="trigger">offre de service</span><span class="trigger">proposal IT</span><span class="trigger">réponse à AO</span><span class="trigger">offre technique et financière</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
+cp -r claude-skills-collection/skills/business-it-commercial-proposal ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Payload du plugin : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/skills/business-it-commercial-proposal" target="_blank">skills/business-it-commercial-proposal</a> · source éditable : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/business-skills/it-commercial-proposal" target="_blank">business-skills/it-commercial-proposal</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>IT Commercial Proposal Generator</h1>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Cadrer le besoin client</strong> : Identifier et reformuler le besoin exprimé : contexte métier, problème à résoudre, objectifs attendus, contraintes (budget, délais, stack technique). Si les informations sont incomplètes, générer une liste de questions de cadrage structurées. Un besoin mal cerné = une offre hors cible.</li>
+</ol>
+<ol>
+<li><strong>Structurer l'offre</strong> : Produire une offre organisée en sections claires :</li>
+<ul>
+<li><strong>Page de couverture</strong> : Nom du prestataire, nom du client, titre de la mission, date, version</li>
+<li><strong>Résumé exécutif</strong> (Executive Summary) : Vision synthétique de la valeur apportée en 5 à 10 lignes, à destination des décideurs non-techniques</li>
+<li><strong>Compréhension du besoin</strong> : Reformulation du contexte client et des enjeux business</li>
+<li><strong>Solution proposée</strong> : Description de l'approche technique et fonctionnelle, architecture cible, technologies utilisées</li>
+<li><strong>Méthodologie</strong> : Organisation du projet (Agile, cycle en V, approche hybride), livrables par phase, gouvernance</li>
+<li><strong>Planning</strong> : Phases et jalons, durée estimée par phase, critères de passage de phase</li>
+<li><strong>Équipe projet</strong> : Profils mobilisés, rôles et responsabilités, CV ou fiches de compétences si nécessaire</li>
+<li><strong>Chiffrage financier</strong> : Détail des coûts par profil/phase, prix total HT et TTC, conditions de facturation</li>
+<li><strong>Références</strong> : Projets similaires réalisés, retours clients</li>
+<li><strong>Conditions contractuelles</strong> : Modalités d'engagement, réversibilité, SLA si applicable</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Adapter le ton et le niveau technique</strong> : Calibrer le niveau de détail selon le destinataire. Pour un DSI ou CTO : privilégier les choix architecturaux, la performance, la maintenabilité. Pour un DG ou DAF : mettre en avant la valeur business, le ROI, la maîtrise des risques et du budget. Pour un chef de projet : détailler le planning, la méthodologie et les livrables.</li>
+</ol>
+<ol>
+<li><strong>Argumenter la valeur différenciante</strong> : Mettre en avant ce qui distingue l'offre de la concurrence : expertise sectorielle (ex. fintech, banque, santé), références similaires, équipe dédiée, rapidité de mise en œuvre, stack technologique moderne. Ne pas lister des fonctionnalités mais des bénéfices concrets pour le client.</li>
+</ol>
+<ol>
+<li><strong>Construire la grille tarifaire</strong> : Proposer un chiffrage transparent :</li>
+<ul>
+<li>Décomposer par profil (chef de projet, architecte, développeur senior, QA, etc.) et par phase</li>
+<li>Préciser le mode de facturation (forfait, régie, abonnement)</li>
+<li>Proposer des options ou variantes (MVP, version complète, maintenance)</li>
+<li>Indiquer les exclusions et conditions (voyages, licences, hébergement)</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Rédiger l'executive summary en dernier</strong> : Il synthétise tout le document en 3 à 5 paragraphes courts. Doit répondre à : Quel est le problème ? Quelle est la solution ? Pourquoi vous ? Quel est le ROI ou la valeur créée ? Quand et combien ?</li>
+</ol>
+<ol>
+<li><strong>Relire et qualifier l'offre</strong> : Vérifier la cohérence entre scope, planning et chiffrage. S'assurer que chaque engagement est réaliste et documenté. Adapter la mise en page pour que l'offre soit lisible, professionnelle et structurée. Utiliser des tableaux, des listes et des titres de section clairs.</li>
+</ol>
+<h2>Règles</h2>
+<ul>
+<li><strong>Résumé exécutif toujours en premier</strong> : C'est ce que lit le décideur. Il doit donner envie de lire la suite et convaincre à lui seul.</li>
+<li><strong>Différencier l'offre technique de l'offre financière</strong> : Certains appels d'offres demandent deux enveloppes séparées. Structurer en conséquence.</li>
+<li><strong>Reformuler le besoin avant de proposer</strong> : Montrer qu'on a compris le contexte crédibilise l'offre et rassure le client.</li>
+<li><strong>Proposer des variantes ou des options</strong> : Donner au client le choix entre un MVP et une version complète élargit les chances de signature.</li>
+<li><strong>Soigner la forme autant que le fond</strong> : Une offre bien présentée, sans fautes, avec des visuels clairs reflète le sérieux et le professionnalisme du prestataire.</li>
+<li><strong>Inclure une date de validité</strong> : Toute offre doit préciser sa durée de validité (ex. 30 ou 60 jours) pour créer une incitation à décider rapidement.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>

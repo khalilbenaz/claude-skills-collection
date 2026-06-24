@@ -36,7 +36,7 @@ mychart/
 
 ```yaml
 apiVersion: v2
-name: devops-helm-chart-builder
+name: payment-api
 description: API de gestion des paiements
 type: application
 version: 1.2.0        # Version du chart

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>agent-api-caller-subagent — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Sous-agent spécialisé dans les appels API REST/GraphQL avec retry, auth et transformation de données.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">🤖 Agents IA</span>
+<h1 class="skill-title">agent-api-caller-subagent</h1>
+<p class="lead">Sous-agent spécialisé dans les appels API REST/GraphQL avec retry, auth et transformation de données.</p>
+
+
+
+<div class="panel">
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- agent-api-caller-subagent --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } agent-api-caller-subagent -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">claude &quot;/agent-api-caller-subagent&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/agent-api-caller-subagent</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">sous-agent API</span><span class="trigger">API caller agent</span><span class="trigger">agent qui appelle une API</span><span class="trigger">REST agent</span><span class="trigger">HTTP agent</span><span class="trigger">API integration subagent</span><span class="trigger">external API agent</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
+cp -r claude-skills-collection/skills/agent-api-caller-subagent ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Payload du plugin : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/skills/agent-api-caller-subagent" target="_blank">skills/agent-api-caller-subagent</a> · source éditable : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/api-caller-subagent" target="_blank">agent-skills/api-caller-subagent</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>API Caller Sub-Agent</h1>
+<h2>Quand utiliser ce skill</h2>
+<p>Utiliser ce skill lorsqu'un agent parent doit déléguer des appels à des APIs externes (REST ou GraphQL) à un sous-agent autonome et robuste. Idéal pour orchestrer des intégrations multi-APIs dans un workflow agent, gérer automatiquement l'authentification et le rafraîchissement de tokens, paginer des résultats volumineux, ou normaliser des réponses hétérogènes dans un schéma unifié attendu par l'agent parent.</p>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Interface et validation des inputs</strong> — Recevoir depuis l'agent parent : <code>url</code> (endpoint cible), <code>method</code> (HTTP verb), <code>auth</code> (configuration d'authentification), <code>params</code> (query params, body, headers), <code>expected_schema</code> (schéma de transformation de la réponse). Valider l'URL (format, protocole HTTPS obligatoire), la méthode HTTP, et la présence des credentials requis avant toute requête.</li>
+</ol>
+<ol>
+<li><strong>Authentication handling</strong> — Résoudre et appliquer le schéma d'authentification configuré : <code>api_key</code> (header ou query param), <code>bearer</code> (Authorization: Bearer {token}), <code>oauth2</code> (client credentials flow, authorization code flow), <code>jwt</code> (génération et signature si secret fourni), <code>basic</code> (Base64 username:password). Gérer le rafraîchissement automatique des tokens expirés via <code>refresh_token</code> ou re-authentification.</li>
+</ol>
+<ol>
+<li><strong>Request construction</strong> — Assembler la requête HTTP complète : headers standards (<code>Content-Type</code>, <code>Accept</code>, <code>User-Agent</code>, <code>X-Request-ID</code> pour le tracing), paramètres de query string (encodage correct, arrays, nested objects), corps de requête (JSON, form-data, multipart, XML selon <code>Content-Type</code>). Pour GraphQL : wrapper la query/mutation dans <code>{&quot;query&quot;: ..., &quot;variables&quot;: ...}</code>.</li>
+</ol>
+<ol>
+<li><strong>Exécution avec retry</strong> — Exécuter la requête via <code>httpx</code> (async) ou <code>requests</code>. Implémenter le retry avec backoff exponentiel (délais : 1s, 2s, 4s, 8s) pour les erreurs transitoires (5xx, timeout, <code>ConnectionError</code>). Configurer un circuit breaker (ouvrir après 5 échecs consécutifs, demi-ouverture après 60s). Respecter un <code>timeout</code> global par requête (défaut : 30s).</li>
+</ol>
+<ol>
+<li><strong>Pagination handling</strong> — Détecter et gérer automatiquement les stratégies de pagination : <code>offset/limit</code> (paramètres classiques), <code>cursor-based</code> (champ <code>next_cursor</code> ou <code>after</code> dans la réponse), <code>page-based</code> (paramètre <code>page</code>), <code>Link header</code> (RFC 5988, <code>rel=&quot;next&quot;</code>). Agréger toutes les pages jusqu'à épuisement ou atteinte de <code>max_records</code>. Désactiver si <code>paginate: false</code>.</li>
+</ol>
+<ol>
+<li><strong>Response parsing</strong> — Détecter automatiquement le format de réponse via <code>Content-Type</code> : JSON (<code>application/json</code>), XML (<code>application/xml</code>, parser avec <code>lxml</code>), CSV (<code>text/csv</code>, parser avec <code>pandas</code>), texte brut. Valider la réponse contre <code>expected_schema</code> via <code>jsonschema</code>. Extraire le sous-objet pertinent si la réponse est enveloppée (<code>data</code>, <code>results</code>, <code>items</code>).</li>
+</ol>
+<ol>
+<li><strong>Rate limit respect</strong> — Lire les en-têtes de rate limiting standards : <code>X-RateLimit-Remaining</code>, <code>X-RateLimit-Reset</code>, <code>Retry-After</code>. Calculer proactivement les délais nécessaires entre requêtes. Implémenter un throttler adaptatif qui ralentit avant d'atteindre 0 requêtes restantes. Remonter les informations de quota à l'agent parent dans chaque réponse.</li>
+</ol>
+<ol>
+<li><strong>Error mapping</strong> — Transformer les codes HTTP en messages d'erreur sémantiques : 400 (requête malformée + détail du champ invalide), 401 (échec authentification), 403 (accès interdit, permissions insuffisantes), 404 (ressource introuvable), 429 (rate limit dépassé, attendre N secondes), 5xx (erreur serveur, retryable). Gérer les succès partiels (207 Multi-Status).</li>
+</ol>
+<ol>
+<li><strong>Caching</strong> — Implémenter le cache HTTP conditionnel : stocker <code>ETag</code> et <code>Last-Modified</code> des réponses. Envoyer <code>If-None-Match</code> / <code>If-Modified-Since</code> sur les requêtes suivantes. Respecter les directives <code>Cache-Control</code> (<code>max-age</code>, <code>no-cache</code>, <code>private</code>). Cache en mémoire (dict) ou persistant (SQLite) selon <code>cache_backend</code> configuré.</li>
+</ol>
+<ol>
+<li><strong>Data transformation</strong> — Appliquer les transformations de mapping définies dans <code>expected_schema</code> : renommer les champs, changer les types (string → int, ISO date → timestamp), filtrer les champs inutiles, enrichir avec des champs calculés, aplatir les structures imbriquées. Retourner les données au format exactement attendu par l'agent parent.</li>
+</ol>
+<h2>Interface du sous-agent</h2>
+<p><strong>Input schema :</strong></p>
+<pre><code class="lang-python">{
+  &quot;url&quot;: str,                     # Endpoint API (obligatoire, HTTPS recommandé)
+  &quot;method&quot;: str,                  # &quot;GET&quot; | &quot;POST&quot; | &quot;PUT&quot; | &quot;PATCH&quot; | &quot;DELETE&quot; | &quot;GRAPHQL&quot;
+  &quot;auth&quot;: {                       # Configuration authentification (optionnel)
+    &quot;type&quot;: str,                  # &quot;api_key&quot; | &quot;bearer&quot; | &quot;oauth2&quot; | &quot;jwt&quot; | &quot;basic&quot; | &quot;none&quot;
+    &quot;credentials&quot;: dict           # Credentials spécifiques au type (token, client_id, etc.)
+  },
+  &quot;params&quot;: {                     # Paramètres de la requête (optionnel)
+    &quot;query&quot;: dict,                # Query string parameters
+    &quot;body&quot;: dict,                 # Corps de la requête (POST/PUT/PATCH)
+    &quot;headers&quot;: dict               # Headers additionnels
+  },
+  &quot;expected_schema&quot;: dict,        # Schéma JSON de transformation de la réponse (optionnel)
+  &quot;paginate&quot;: bool,               # Activer la pagination automatique (défaut: False)
+  &quot;max_records&quot;: int,             # Limite d'enregistrements totaux (défaut: 1000)
+  &quot;timeout&quot;: int,                 # Timeout par requête en secondes (défaut: 30)
+  &quot;max_retries&quot;: int,             # Nombre maximum de retries (défaut: 3)
+  &quot;cache_ttl&quot;: int,               # TTL du cache en secondes (0 = désactivé, défaut: 0)
+  &quot;graphql_query&quot;: str            # Query/mutation GraphQL (si method = &quot;GRAPHQL&quot;)
+}</code></pre>
+<p><strong>Output schema :</strong></p>
+<pre><code class="lang-python">{
+  &quot;data&quot;: any,                    # Données parsées et transformées (list ou dict)
+  &quot;status&quot;: int,                  # Code HTTP de la dernière requête réussie
+  &quot;pagination&quot;: {                 # Informations de pagination
+    &quot;total_records&quot;: int,
+    &quot;pages_fetched&quot;: int,
+    &quot;has_more&quot;: bool,
+    &quot;next_cursor&quot;: str            # Curseur pour reprise si max_records atteint
+  },
+  &quot;errors&quot;: list[dict],           # [{&quot;attempt&quot;: int, &quot;status&quot;: int, &quot;message&quot;: str}]
+  &quot;rate_limit_info&quot;: dict,        # {&quot;remaining&quot;: int, &quot;reset_at&quot;: str, &quot;limit&quot;: int}
+  &quot;cached&quot;: bool,                 # True si servi depuis le cache
+  &quot;execution_time_s&quot;: float       # Durée totale en secondes
+}</code></pre>
+<p><strong>Librairies Python recommandées :</strong></p>
+<pre><code>httpx&gt;=0.25.0
+requests&gt;=2.31.0
+aiohttp&gt;=3.9.0
+tenacity&gt;=8.2.0
+jsonschema&gt;=4.20.0
+lxml&gt;=4.9.0
+pandas&gt;=2.0.0
+PyJWT&gt;=2.8.0</code></pre>
+<h2>Règles</h2>
+<ol>
+<li><strong>Interface contractuelle stricte</strong> — Le sous-agent valide exhaustivement le schéma d'entrée avant toute opération réseau. Une URL invalide, un type d'auth inconnu ou des credentials manquants doivent retourner immédiatement un output d'erreur formaté, jamais une exception non catchée. L'agent parent doit toujours recevoir un output conforme au schéma de sortie.</li>
+</ol>
+<ol>
+<li><strong>Sécurité des credentials</strong> — Les credentials (tokens, clés API, mots de passe) ne doivent jamais apparaître dans les logs, les messages d'erreur, ou le champ <code>errors</code> de l'output. Les masquer systématiquement (<code>Bearer sk-***...</code>). Ne jamais persister des credentials sur disque en clair. Utiliser des variables d'environnement ou un gestionnaire de secrets en production.</li>
+</ol>
+<ol>
+<li><strong>Robustesse et idempotence</strong> — Les requêtes <code>GET</code> doivent être retryables sans risque. Les requêtes mutatives (<code>POST</code>, <code>PUT</code>, <code>DELETE</code>) ne doivent être retryées qu'avec un mécanisme d'idempotence (header <code>Idempotency-Key</code>). Le circuit breaker doit protéger les APIs tierces contre les tempêtes de retry. En cas d'échec total, <code>data</code> retourne <code>null</code> et <code>errors</code> contient l'historique complet.</li>
+</ol>
+<ol>
+<li><strong>Réutilisabilité universelle</strong> — Le sous-agent doit fonctionner avec n'importe quelle API REST ou GraphQL publique sans modification de code. Toute spécificité d'une API (endpoint de refresh token, format de pagination non-standard) doit être configurable via le schéma d'entrée, jamais hardcodée.</li>
+</ol>
+<ol>
+<li><strong>Code Python fonctionnel fourni</strong> — Fournir une implémentation complète de la classe <code>APICallerSubAgent</code> avec méthodes <code>run(input_schema) -&gt; output_schema</code>, <code>_authenticate()</code>, <code>_execute_with_retry()</code>, <code>_paginate()</code>, <code>_transform_response()</code>, support async via <code>asyncio</code>, et un exemple d'orchestration multi-APIs par un agent parent.</li>
+</ol>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>

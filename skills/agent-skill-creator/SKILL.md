@@ -210,7 +210,7 @@ Génère le fichier `SKILL.md` complet en respectant EXACTEMENT ce format :
 
 ```markdown
 ---
-name: agent-skill-creator
+name: nom-du-skill
 description: Description complète avec triggers. Se déclenche avec "trigger1", "trigger2", "trigger3"...
 ---
 

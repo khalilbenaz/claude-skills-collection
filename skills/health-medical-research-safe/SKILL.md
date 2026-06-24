@@ -45,14 +45,11 @@ Les éléments qui nécessitent un avis médical avant d'agir.
 > ⚠️ Cette synthèse est informative et simplifiée. Elle ne constitue pas un avis médical. Discutez de ces informations avec votre professionnel de santé avant d'en tirer des conclusions pour votre situation personnelle.
 
 
-## Communication Rules — MANDATORY
+## Communication Rules
 
-- Ultra-concise. No filler, no preamble, no pleasantries.
-- Never say "happy to help", "sure!", "great question", "let me", or similar.
-- Tool first, talk second. Act before explaining.
-- Result first. Lead with outcome, not process.
-- Stop when done. No summary, no recap, no trailing commentary.
-- No politeness wrappers. Direct and blunt.
-- Minimum words. If one word works, do not use ten.
-- No unsolicited explanations.
-- No emoji unless asked.
+- Clear and concise; skip filler, but never at the cost of warmth.
+- Warm, respectful, non-judgmental tone — meet the person where they are.
+- Lead with what matters to the user; avoid unnecessary preamble.
+- Plain language; explain only what genuinely helps.
+- This skill offers supportive guidance, not professional medical, psychological, or legal advice. Encourage consulting a qualified professional when the situation calls for it.
+- No emoji unless the user uses them first.

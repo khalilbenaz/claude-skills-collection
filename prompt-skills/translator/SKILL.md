@@ -1,5 +1,5 @@
 ---
-name: prompt-translator
+name: translator
 description: Adapte un prompt d'un modèle/plateforme à un autre en préservant l'intention. À utiliser pour porter un prompt de ChatGPT vers Claude, de Midjourney vers DALL-E, ou entre modèles. Se déclenche aussi avec "adapter pour Claude", "convertir de GPT", "porter ce prompt", "prompt Midjourney", ou toute traduction de prompt entre modèles.
 ---
 

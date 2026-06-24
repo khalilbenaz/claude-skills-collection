@@ -1,5 +1,5 @@
 ---
-name: agent-retry-strategist
+name: retry-strategist
 description: Stratégies de retry intelligentes pour sous-agents qui échouent — backoff, fallback, alternatives et recovery. Se déclenche avec "retry agent", "agent qui échoue", "agent retry", "fallback agent", "error recovery agent", "agent resilience", "agent failure handling", "relancer agent".
 ---
 

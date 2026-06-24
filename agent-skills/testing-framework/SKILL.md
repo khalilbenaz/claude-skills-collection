@@ -1,5 +1,5 @@
 ---
-name: agent-testing-framework
+name: testing-framework
 description: Framework de test complet pour agents IA — tests unitaires, d'intégration, de bout en bout et adversariaux. Se déclenche avec "tester agent", "agent testing", "test agent IA", "agent CI/CD", "agent regression", "quality assurance agent", "agent test suite".
 ---
 

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dev-technical-writing-guide — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Rédaction technique claire pour documentation, ADR et RFC.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">💻 Développement</span>
+<h1 class="skill-title">dev-technical-writing-guide</h1>
+<p class="lead">Rédaction technique claire pour documentation, ADR et RFC.</p>
+
+
+
+<div class="panel">
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- dev-technical-writing-guide --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } dev-technical-writing-guide -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">claude &quot;/dev-technical-writing-guide&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/dev-technical-writing-guide</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">documentation technique</span><span class="trigger">technical writing</span><span class="trigger">rédiger une doc</span><span class="trigger">ADR</span><span class="trigger">RFC</span><span class="trigger">architecture decision record</span><span class="trigger">comment documenter</span><span class="trigger">README</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
+cp -r claude-skills-collection/skills/dev-technical-writing-guide ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Payload du plugin : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/skills/dev-technical-writing-guide" target="_blank">skills/dev-technical-writing-guide</a> · source éditable : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/dev-skills/technical-writing-guide" target="_blank">dev-skills/technical-writing-guide</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Technical Writing Guide</h1>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Identifier l'audience</strong> : Déterminer qui lira le document (développeurs, ops, management, utilisateurs finaux). Adapter le niveau de détail, le vocabulaire et la structure en conséquence. Un README pour devs peut être technique ; une doc pour utilisateurs finaux doit être simple et guidée.</li>
+</ol>
+<ol>
+<li><strong>Structurer le document</strong> : Appliquer une structure claire selon le type : titre explicite, contexte (pourquoi ce doc existe), problème adressé, solution proposée, alternatives envisagées, conséquences et décisions prises. Utiliser des titres hiérarchiques (H1 → H2 → H3).</li>
+</ol>
+<ol>
+<li><strong>Rédiger un README efficace</strong> : Inclure les badges (CI status, coverage, version), une description courte, les prérequis, les étapes d'installation pas-à-pas, des exemples d'usage concrets, la référence API, un guide de contribution (CONTRIBUTING.md) et la licence. Le README est la vitrine du projet.</li>
+</ol>
+<ol>
+<li><strong>Créer des Architecture Decision Records (ADR)</strong> : Format standard : titre numéroté (ADR-001), statut (proposed/accepted/deprecated/superseded), contexte (situation actuelle), décision prise, conséquences (avantages et inconvénients). Stocker dans <code>/docs/adr/</code>. Lier les ADR entre eux quand ils se succèdent.</li>
+</ol>
+<ol>
+<li><strong>Documenter les APIs</strong> : Couvrir chaque endpoint avec méthode HTTP, URL, paramètres (path, query, body), exemples de requête/réponse, codes d'erreur détaillés, mécanismes d'authentification et rate limits. Préférer OpenAPI/Swagger pour la génération automatique et la testabilité.</li>
+</ol>
+<ol>
+<li><strong>Intégrer des diagrammes</strong> : Utiliser le modèle C4 (Context, Containers, Components, Code) pour l'architecture. Ajouter des sequence diagrams pour les flux complexes, des flowcharts pour les algorithmes, des ERD pour les bases de données. Outils recommandés : Mermaid (intégré GitHub/GitLab), PlantUML, draw.io. Versionner les sources des diagrammes, pas seulement les images.</li>
+</ol>
+<ol>
+<li><strong>Garantir style et clarté</strong> : Phrases courtes (max 20 mots). Voix active (&quot;Le service envoie une requête&quot; vs &quot;Une requête est envoyée&quot;). Définir tout terme technique à sa première occurrence. Ajouter des exemples concrets et des cas d'usage réels. Éviter le jargon inutile. Relire à voix haute pour détecter les formulations lourdes.</li>
+</ol>
+<ol>
+<li><strong>Assurer la maintenance</strong> : Adopter docs-as-code (documentation dans le même repo que le code). Versionner avec le code. Ajouter des checks automatiques (liens cassés, orthographe, freshness). Définir un owner par document. Planifier des revues périodiques (tous les 3-6 mois). Marquer les docs obsolètes clairement avec une bannière et un lien vers la version à jour.</li>
+</ol>
+<h2>Règles</h2>
+<ul>
+<li><strong>Commencer par l'audience</strong> : Toujours demander &quot;Qui va lire ça ?&quot; avant d'écrire une ligne. La forme suit le lecteur cible.</li>
+<li><strong>Docs-as-code obligatoire</strong> : La documentation vit dans le même repo que le code, versionnée avec Git, reviewée en PR. Pas de wikis isolés sans lien au code.</li>
+<li><strong>Exemples avant tout</strong> : Chaque concept abstrait doit être illustré par un exemple concret. Les développeurs apprennent par l'exemple.</li>
+<li><strong>Un document = une responsabilité</strong> : Chaque doc a un owner nommé, responsable de sa maintenance et de sa fraîcheur. Sans owner, la doc se dégrade.</li>
+<li><strong>Templates prêts à l'emploi</strong> : Fournir des templates pour ADR, RFC, README, runbook et post-mortem pour standardiser la qualité sans effort.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>

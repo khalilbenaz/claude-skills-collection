@@ -1,5 +1,5 @@
 ---
-name: agent-pool-manager
+name: pool-manager
 description: Gestion de pools de sous-agents pré-instanciés pour performance et réutilisation. Se déclenche avec "pool agent", "agent pool", "pool de sous-agents", "pre-allocated agents", "agent reuse", "warm agents", "agent cache", "worker pool agents".
 ---
 

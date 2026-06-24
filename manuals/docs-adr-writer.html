@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>docs-adr-writer — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Rédaction d'Architecture Decision Records (ADR) pour documenter les choix d'architecture avec leur contexte, alternatives et conséquences.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">📄 Documentation</span>
+<h1 class="skill-title">docs-adr-writer</h1>
+<p class="lead">Rédaction d'Architecture Decision Records (ADR) pour documenter les choix d'architecture avec leur contexte, alternatives et conséquences.</p>
+
+
+
+<div class="panel">
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- docs-adr-writer --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } docs-adr-writer -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">claude &quot;/docs-adr-writer&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/docs-adr-writer</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">ADR</span><span class="trigger">architecture decision record</span><span class="trigger">décision d'architecture</span><span class="trigger">choix technique</span><span class="trigger">documenter une décision</span><span class="trigger">pourquoi ce choix</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
+cp -r claude-skills-collection/skills/docs-adr-writer ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Payload du plugin : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/skills/docs-adr-writer" target="_blank">skills/docs-adr-writer</a> · source éditable : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/docs/adr-writer" target="_blank">docs/adr-writer</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>Rédacteur d'ADR (Architecture Decision Records)</h1>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Identifier</strong> : une décision d'architecture significative a été prise ou doit l'être.</li>
+<li><strong>Contextualiser</strong> : décrire le problème et les contraintes.</li>
+<li><strong>Documenter les options</strong> : lister les alternatives avec avantages/inconvénients.</li>
+<li><strong>Rédiger l'ADR</strong> : format structuré, concis et pérenne.</li>
+</ol>
+<h2>Template ADR</h2>
+<pre><code class="lang-markdown"># ADR-XXXX : [Titre de la décision]
+
+**Date** : YYYY-MM-DD
+**Statut** : Proposé | Accepté | Déprécié | Remplacé par ADR-YYYY
+**Décideurs** : [Noms ou équipes]
+
+## Contexte
+
+[Quel est le problème ? Pourquoi devons-nous prendre cette décision maintenant ?
+Quelles sont les contraintes (techniques, métier, équipe, budget, délai) ?]
+
+## Décision
+
+[La décision prise, formulée clairement.]
+
+**Nous avons décidé de [choix] parce que [raison principale].**
+
+## Alternatives considérées
+
+### Option A : [Nom]
+- ✅ [Avantage 1]
+- ✅ [Avantage 2]
+- ❌ [Inconvénient 1]
+- ❌ [Inconvénient 2]
+
+### Option B : [Nom] ← **Retenue**
+- ✅ [Avantage 1]
+- ✅ [Avantage 2]
+- ❌ [Inconvénient 1]
+
+### Option C : [Nom]
+- ✅ [Avantage 1]
+- ❌ [Inconvénient 1]
+- ❌ [Inconvénient 2]
+
+## Conséquences
+
+### Positives
+- [Conséquence positive 1]
+- [Conséquence positive 2]
+
+### Négatives
+- [Trade-off accepté 1]
+- [Trade-off accepté 2]
+
+### Risques
+- [Risque identifié + mitigation]
+
+## Références
+- [Lien vers la discussion / ticket / RFC]
+- [Documentation technique pertinente]</code></pre>
+<h2>Exemple concret</h2>
+<pre><code class="lang-markdown"># ADR-0012 : Utiliser RabbitMQ comme message broker
+
+**Date** : 2025-10-15
+**Statut** : Accepté
+**Décideurs** : Équipe backend, Tech Lead
+
+## Contexte
+
+Notre architecture microservices a besoin d'un système de messaging
+asynchrone pour la communication inter-services. Le volume actuel est
+de ~50K messages/jour avec une projection à 500K/jour dans 12 mois.
+L'équipe a de l'expérience avec RabbitMQ mais pas avec Kafka.
+
+## Décision
+
+**Nous avons décidé d'utiliser RabbitMQ avec MassTransit parce que
+l'équipe le maîtrise déjà et que le volume projeté reste dans ses
+capacités.**
+
+## Alternatives considérées
+
+### Apache Kafka
+- ✅ Meilleur pour les très hauts volumes (&gt;1M msg/s)
+- ✅ Rétention durable des messages
+- ❌ Courbe d'apprentissage élevée pour l'équipe
+- ❌ Surdimensionné pour notre volume actuel
+- ❌ Infrastructure plus lourde (ZooKeeper/KRaft)
+
+### RabbitMQ + MassTransit ← **Retenu**
+- ✅ Équipe expérimentée
+- ✅ MassTransit simplifie les patterns (saga, outbox)
+- ✅ Adapté au volume actuel et projeté
+- ❌ Moins performant que Kafka au-delà de 1M msg/s
+
+### Azure Service Bus
+- ✅ Service managé, pas d'infra à gérer
+- ❌ Vendor lock-in Azure
+- ❌ Coût élevé à fort volume
+
+## Conséquences
+
+### Positives
+- Mise en production rapide (équipe déjà formée)
+- Patterns saga et outbox via MassTransit
+
+### Négatives
+- Migration vers Kafka nécessaire si &gt;1M msg/jour
+- Pas de replay de messages natif
+
+### Risques
+- Si le volume dépasse les projections, revoir cette décision (ADR à planifier)</code></pre>
+<h2>Organisation des ADRs</h2>
+<pre><code>docs/
+└── adr/
+    ├── README.md           # Index des ADRs
+    ├── 0001-use-csharp.md
+    ├── 0002-microservices-architecture.md
+    ├── 0012-use-rabbitmq.md
+    └── template.md         # Template vierge</code></pre>
+<h2>Quand écrire un ADR ?</h2>
+<table><thead><tr><th>Situation</th><th>ADR nécessaire ?</th></tr></thead><tbody><tr><td>Choix de framework/langage</td><td>Oui</td></tr><tr><td>Choix de base de données</td><td>Oui</td></tr><tr><td>Pattern d'architecture (CQRS, Event Sourcing)</td><td>Oui</td></tr><tr><td>Choix de librairie mineure</td><td>Non</td></tr><tr><td>Refactoring interne</td><td>Non (sauf si changement de pattern)</td></tr><tr><td>Migration d'infrastructure</td><td>Oui</td></tr></tbody></table>
+<h2>Règles</h2>
+<ul>
+<li>Un ADR documente <strong>une seule décision</strong>.</li>
+<li>Le statut doit être mis à jour quand une décision est remplacée.</li>
+<li>Inclure au moins <strong>2 alternatives</strong> pour montrer que le choix est réfléchi.</li>
+<li>Les ADRs ne sont <strong>jamais supprimés</strong> — ils sont marqués comme dépréciés/remplacés.</li>
+<li>Écrire l'ADR <strong>au moment de la décision</strong>, pas après coup.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>

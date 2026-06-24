@@ -1,5 +1,5 @@
 ---
-name: agent-conflict-resolver
+name: conflict-resolver
 description: Résolution de conflits entre agents ou sous-agents quand les résultats sont contradictoires. Se déclenche avec "conflit agent", "agent conflict", "résultats contradictoires", "agent disagreement", "contradiction agents", "arbitrage agent", "résoudre conflit agents".
 ---
 

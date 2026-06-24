@@ -1,5 +1,5 @@
 ---
-name: agent-load-balancer
+name: load-balancer
 description: Distribution de charge entre sous-agents avec routing intelligent et optimization des ressources. Se déclenche avec "load balancer agent", "distribution charge", "agent load balancing", "répartir tâches", "agent routing", "balance agents", "parallel agents distribution".
 ---
 

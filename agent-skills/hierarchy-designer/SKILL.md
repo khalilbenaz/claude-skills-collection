@@ -1,5 +1,5 @@
 ---
-name: agent-hierarchy-designer
+name: hierarchy-designer
 description: Design de hiérarchies d'agents multi-niveaux (orchestrateur → managers → workers → sous-agents spécialisés). Se déclenche avec "hiérarchie agent", "agent hierarchy", "manager agent", "worker agent", "arbre d'agents", "organisation agents", "agent tree", "niveaux d'agents".
 ---
 

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dev-llm-integration-guide — Manuel d'utilisation | Claude Skills Collection</title>
+<meta name="description" content="Intégration de LLMs dans des applications via API.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7}
+a{color:var(--accent-light)}
+nav{position:sticky;top:0;z-index:50;padding:1rem 2rem;background:rgba(10,10,15,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.nav-brand{font-weight:800;color:var(--text);text-decoration:none}.nav-brand span{color:var(--accent-light)}
+.nav-links{display:flex;gap:1.5rem;list-style:none;flex-wrap:wrap}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:.875rem;font-weight:500}.nav-links a:hover{color:var(--text)}
+main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.badge{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;padding:.25rem .7rem;border-radius:999px;border:1px solid var(--border);background:var(--bg-card);color:var(--text-muted)}
+h1.skill-title{font-size:2.2rem;font-weight:800;margin:.8rem 0 .4rem;font-family:'JetBrains Mono',monospace}
+.lead{color:var(--text-muted);font-size:1.05rem;margin-bottom:1.5rem}
+.panel{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.4rem 1.6rem;margin:1.2rem 0}
+.panel h2{font-size:1.05rem;margin-bottom:.8rem;color:var(--accent-light)}
+.triggers{display:flex;flex-wrap:wrap;gap:.5rem}
+.trigger{font-family:'JetBrains Mono',monospace;font-size:.78rem;padding:.3rem .65rem;border-radius:8px;background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.3);color:var(--accent-light)}
+.invoke{font-family:'JetBrains Mono',monospace;background:#0d0d14;border:1px solid var(--border);border-radius:10px;padding:.8rem 1rem;color:var(--green);font-size:.9rem;overflow-x:auto}
+article.manual{margin-top:2.5rem}
+article.manual h1{font-size:1.7rem;margin:2rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border)}
+article.manual h2{font-size:1.35rem;margin:2rem 0 .8rem;color:var(--accent-light)}
+article.manual h3{font-size:1.1rem;margin:1.5rem 0 .6rem}
+article.manual p{margin:.8rem 0;color:var(--text)}
+article.manual ul,article.manual ol{margin:.8rem 0 .8rem 1.5rem}
+article.manual li{margin:.3rem 0}
+article.manual code{font-family:'JetBrains Mono',monospace;font-size:.85em;background:rgba(124,92,252,.12);padding:.15em .4em;border-radius:5px;color:var(--accent-light)}
+article.manual pre{background:#0d0d14;border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.3rem;overflow-x:auto;margin:1rem 0}
+article.manual pre code{background:none;padding:0;color:#c8c8d8;font-size:.83rem;line-height:1.6}
+article.manual table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+article.manual th,article.manual td{border:1px solid var(--border);padding:.5rem .8rem;text-align:left}
+article.manual th{background:var(--bg-card);color:var(--accent-light)}
+article.manual blockquote{border-left:3px solid var(--accent);padding:.4rem 1rem;margin:1rem 0;color:var(--text-muted);background:var(--bg-card);border-radius:0 10px 10px 0}
+article.manual hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:var(--text-dim);font-size:.85rem}
+/* catalogue */
+.search{width:100%;padding:.9rem 1.2rem;border-radius:12px;border:1px solid var(--border);background:var(--bg-card);color:var(--text);font-size:1rem;margin:1.5rem 0;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-section{margin:2.2rem 0}
+.cat-title{font-size:1.2rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.cat-count{font-size:.78rem;color:var(--text-dim);font-weight:500}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.8rem}
+.card{display:block;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;text-decoration:none;transition:all .15s}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card .name{font-family:'JetBrains Mono',monospace;font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:.3rem}
+.card .desc{font-size:.8rem;color:var(--text-muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.hidden{display:none}
+/* copy blocks */
+.cmd-block{position:relative;margin:.6rem 0}
+.cmd-block .invoke{padding-right:5.2rem;white-space:pre-wrap;word-break:break-all}
+.cmd-label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);margin-bottom:.3rem}
+.copy-btn{position:absolute;top:.5rem;right:.5rem;background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:.72rem;font-weight:600;padding:.3rem .7rem;border-radius:7px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s}
+.copy-btn:hover{border-color:var(--accent);color:var(--text)}
+.copy-btn.ok{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<nav><a class="nav-brand" href="../index.html">Claude <span>Skills</span></a><ul class="nav-links"><li><a href="./index.html">Manuels</a></li><li><a href="./usecases.html">Cas d'usage</a></li><li><a href="../index.html">Accueil</a></li><li><a href="https://github.com/khalilbenaz/claude-skills-collection" target="_blank">GitHub</a></li></ul></nav>
+<main>
+<span class="badge">💻 Développement</span>
+<h1 class="skill-title">dev-llm-integration-guide</h1>
+<p class="lead">Intégration de LLMs dans des applications via API.</p>
+
+
+
+<div class="panel">
+<h2>⚡ Installation &amp; lancement en 1 commande</h2>
+<p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Copiez-collez dans votre terminal : le skill s'installe dans <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">~/.claude/skills</code> et Claude Code se lance directement dessus.</p>
+<div class="cmd-label">macOS / Linux</div>
+<div class="cmd-block"><div class="invoke">curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- dev-llm-integration-guide --launch</div><button class="copy-btn">Copier</button></div>
+<div class="cmd-label" style="margin-top:.8rem">Windows (PowerShell)</div>
+<div class="cmd-block"><div class="invoke">iex &quot;&amp; { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } dev-llm-integration-guide -Launch&quot;</div><button class="copy-btn">Copier</button></div>
+</div>
+
+<div class="panel">
+<h2>🚀 Déjà installé ?</h2>
+<div class="cmd-block"><div class="invoke">claude &quot;/dev-llm-integration-guide&quot;</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/dev-llm-integration-guide</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
+</div>
+
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">API OpenAI</span><span class="trigger">Claude API</span><span class="trigger">intégrer un LLM</span><span class="trigger">GPT dans mon app</span><span class="trigger">Ollama</span><span class="trigger">LLM local</span><span class="trigger">streaming</span><span class="trigger">embeddings</span><span class="trigger">fine-tuning</span><span class="trigger">token management</span></div></div>
+
+<div class="panel">
+<h2>📦 Installation manuelle</h2>
+<div class="cmd-block"><div class="invoke">git clone https://github.com/khalilbenaz/claude-skills-collection.git
+cp -r claude-skills-collection/skills/dev-llm-integration-guide ~/.claude/skills/</div><button class="copy-btn">Copier</button></div>
+<p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Payload du plugin : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/skills/dev-llm-integration-guide" target="_blank">skills/dev-llm-integration-guide</a> · source éditable : <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/dev-skills/llm-integration-guide" target="_blank">dev-skills/llm-integration-guide</a></p>
+</div>
+
+<article class="manual">
+<h1 style="margin-top:2.5rem">📖 Manuel</h1>
+<h1>LLM Integration Guide</h1>
+<h2>Workflow</h2>
+<ol>
+<li><strong>Choix du modèle</strong> — Évaluer selon 4 critères : <strong>Qualité</strong> (GPT-4o, Claude 3.5 Sonnet, Gemini 1.5 Pro pour les tâches complexes ; GPT-4o-mini, Claude 3 Haiku pour les tâches simples), <strong>Coût</strong> (de ~$0.10/1M tokens pour les petits modèles à ~$15/1M pour les premium), <strong>Latence</strong> (Groq &lt; 100ms, Mistral ~300ms, GPT-4 ~1-3s), <strong>Contexte</strong> (Gemini 1M tokens, Claude 200K, GPT-4 128K). Pour du cloud vs local : Ollama/vLLM si données sensibles ou budget contraint, API cloud si pas d'infra et besoin de qualité maximale.</li>
+</ol>
+<ol>
+<li><strong>Setup de l'API</strong> — Configurer les clients officiels avec des bonnes pratiques de sécurité : clés dans variables d'environnement, timeout, retry automatique.</li>
+</ol>
+<p>   ```python    # OpenAI    from openai import OpenAI    client = OpenAI(api_key=os.environ[&quot;OPENAI_API_KEY&quot;], timeout=30, max_retries=3)</p>
+<p>   # Anthropic    from anthropic import Anthropic    client = Anthropic(api_key=os.environ[&quot;ANTHROPIC_API_KEY&quot;])</p>
+<p>   # Ollama (local)    from ollama import Client    client = Client(host=&quot;http://localhost:11434&quot;)</p>
+<p>   # Azure OpenAI    from openai import AzureOpenAI    client = AzureOpenAI(azure_endpoint=os.environ[&quot;AZURE_ENDPOINT&quot;],                         api_key=os.environ[&quot;AZURE_API_KEY&quot;], api_version=&quot;2024-02-01&quot;)    ```</p>
+<ol>
+<li><strong>Gestion des tokens et coûts</strong> — Estimer les coûts avant déploiement avec <code>tiktoken</code> (OpenAI) ou <code>anthropic.count_tokens()</code>. Implémenter une <strong>truncation strategy</strong> pour les longs contextes : résumer les messages anciens, utiliser une sliding window, ou extraire les passages pertinents via RAG. Tracker les coûts par session/utilisateur pour éviter les surprises.</li>
+</ol>
+<p>   ```python    import tiktoken    enc = tiktoken.encoding_for_model(&quot;gpt-4o&quot;)</p>
+<p>   def count_tokens(messages: list) -&gt; int:        return sum(len(enc.encode(m[&quot;content&quot;])) for m in messages)</p>
+<p>   def trim_context(messages: list, max_tokens: int = 100_000) -&gt; list:        while count_tokens(messages) &gt; max_tokens and len(messages) &gt; 2:            messages.pop(1)  # Garder le system prompt        return messages</p>
+<p>   # Coût estimé    cost = count_tokens(messages) * 0.0000025  # GPT-4o: $2.50/1M    ```</p>
+<ol>
+<li><strong>Streaming responses</strong> — Implémenter le streaming pour améliorer l'UX perçue (premier token en ~300ms au lieu d'attendre 5-10s). Côté backend : SSE (Server-Sent Events) ou WebSocket. Côté frontend : afficher les chunks progressivement. Gérer la reconnexion automatique et l'annulation du stream.</li>
+</ol>
+<p>   ```python    # Backend FastAPI + streaming    from fastapi.responses import StreamingResponse</p>
+<p>   async def stream_llm(prompt: str):        async with client.messages.stream(            model=&quot;claude-3-5-sonnet-20241022&quot;, max_tokens=1024,            messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt}]        ) as stream:            async for text in stream.text_stream:                yield f&quot;data: {json.dumps({'text': text})}\n\n&quot;</p>
+<p>   @app.get(&quot;/stream&quot;)    async def endpoint(prompt: str):        return StreamingResponse(stream_llm(prompt), media_type=&quot;text/event-stream&quot;)    ```</p>
+<ol>
+<li><strong>Error handling et résilience</strong> — Gérer les erreurs spécifiques : <code>RateLimitError</code> (attendre et retry avec exponential backoff), <code>ContextLengthExceededError</code> (tronquer), <code>APITimeoutError</code> (retry + fallback), <code>InsufficientQuotaError</code> (alerter). Implémenter un <strong>circuit breaker</strong> et un modèle de <strong>fallback</strong> (GPT-4 → GPT-4o-mini si erreur).</li>
+</ol>
+<p>   ```python    import tenacity</p>
+<p>   @tenacity.retry(        wait=tenacity.wait_exponential(multiplier=1, min=4, max=60),        stop=tenacity.stop_after_attempt(3),        retry=tenacity.retry_if_exception_type(openai.RateLimitError)    )    async def call_with_retry(messages: list, model: str = &quot;gpt-4o&quot;):        try:            return await client.chat.completions.create(model=model, messages=messages)        except openai.ContextLengthExceededError:            return await client.chat.completions.create(                model=&quot;gpt-4o-mini&quot;, messages=trim_context(messages, 50_000)            )    ```</p>
+<ol>
+<li><strong>Caching et optimisation</strong> — <strong>Prompt caching</strong> : Anthropic et OpenAI permettent de cacher le prefixe du prompt (réduction de 90% des coûts sur le contenu caché). <strong>Semantic caching</strong> : GPTCache ou Redis + embeddings pour retourner des réponses cached pour des questions sémantiquement similaires. <strong>Batch API</strong> : OpenAI Batch API permet de traiter des milliers de requêtes async à -50% du coût. <strong>Response caching</strong> : pour les réponses déterministes (temperature=0), cacher en Redis avec TTL.</li>
+</ol>
+<p>   ```python    from gptcache import cache    from gptcache.adapter import openai    cache.init()  # Cache sémantique automatique</p>
+<p>   # Anthropic prompt caching    messages = [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: [        {&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: long_document,         &quot;cache_control&quot;: {&quot;type&quot;: &quot;ephemeral&quot;}},  # Cache ce bloc        {&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: question}    ]}]    ```</p>
+<ol>
+<li><strong>Embeddings et similarity search</strong> — Générer des embeddings avec <code>text-embedding-3-small</code> (OpenAI, 1536 dims, $0.02/1M tokens) ou <code>sentence-transformers/all-MiniLM-L6-v2</code> (local, gratuit). Calculer la similarité cosinus pour le retrieval. Indexer avec FAISS (local) ou pgvector (PostgreSQL) pour la recherche à grande échelle.</li>
+</ol>
+<p>   ```python    from openai import OpenAI    import numpy as np</p>
+<p>   def get_embedding(text: str) -&gt; list[float]:        response = client.embeddings.create(            input=text, model=&quot;text-embedding-3-small&quot;        )        return response.data[0].embedding</p>
+<p>   def cosine_similarity(a: list, b: list) -&gt; float:        a, b = np.array(a), np.array(b)        return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))    ```</p>
+<ol>
+<li><strong>Fine-tuning et adaptation</strong> — Choisir entre <strong>Prompt engineering</strong> (gratuit, rapide, essayer en premier), <strong>RAG</strong> (données dynamiques, knowledge base &gt; 100 docs), <strong>Fine-tuning</strong> (style spécifique, données propriétaires, tâches très répétitives). Pour fine-tuner : préparer 50-500 exemples JSONL (input/output), lancer via <code>openai api fine_tuning.jobs.create</code>, évaluer sur un test set holdout. Coût fine-tuning GPT-4o-mini : ~$0.003/1K tokens de training, puis ~2x le coût d'inférence du modèle de base.</li>
+</ol>
+<p>   ```python    # Préparer les données fine-tuning (JSONL)    training_data = [        {&quot;messages&quot;: [            {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;Tu es un expert en support client.&quot;},            {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Mon abonnement ne fonctionne pas&quot;},            {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;Je comprends votre frustration...&quot;}        ]}    ]    # Uploader et lancer    file = client.files.create(file=open(&quot;train.jsonl&quot;, &quot;rb&quot;), purpose=&quot;fine-tune&quot;)    job = client.fine_tuning.jobs.create(training_file=file.id, model=&quot;gpt-4o-mini&quot;)    ```</p>
+<h2>Règles</h2>
+<ul>
+<li><strong>Ne jamais hardcoder une clé API</strong> : utiliser des variables d'environnement (<code>.env</code> + <code>python-dotenv</code>) ou un secret manager (AWS Secrets Manager, HashiCorp Vault) — une clé exposée peut générer des milliers d'euros de coûts en quelques heures.</li>
+<li><strong>Implémenter le streaming par défaut</strong> : l'UX perçue avec streaming est bien meilleure qu'une attente silencieuse — le premier token en 300ms vaut mieux qu'une réponse complète en 8s.</li>
+<li><strong>Toujours avoir un fallback</strong> : si le modèle premium échoue, fallback sur un modèle moins cher/plus disponible — la résilience est non-négociable en production.</li>
+<li><strong>Tracker les coûts dès le début</strong> : implémenter un compteur de tokens par session/utilisateur avant le lancement — les coûts LLM peuvent exploser sans monitoring.</li>
+<li><strong>Tester avec <code>temperature=0</code></strong> pour les tâches déterministes (extraction, classification) et <code>temperature=0.7-1.0</code> pour la génération créative — ne pas utiliser les defaults sans réflexion.</li>
+</ul>
+</article>
+</main>
+<footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>b.addEventListener('click',()=>{
+  navigator.clipboard.writeText(b.previousElementSibling.textContent).then(()=>{
+    b.textContent='Copié ✓';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copier';b.classList.remove('ok')},1800);
+  });
+}));
+</script>
+</body>
+</html>
