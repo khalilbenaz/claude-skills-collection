@@ -26,6 +26,23 @@ Une fois installé, tous les 349 skills sont disponibles comme slash commands da
 /security-threat-modeling
 ```
 
+> 📖 **Catalogue & manuels en ligne** : [khalilbenaz.github.io/claude-skills-collection/manuals](https://khalilbenaz.github.io/claude-skills-collection/manuals/) — un manuel détaillé par skill, recherche instantanée, et installation en 1 commande.
+
+---
+
+## 🏗️ Architecture & build
+
+- **Source de vérité unique** : les dossiers `<catégorie>-skills/`, `docs/` et `meta-skills/` (noms courts, `kebab-case`). C'est là qu'on édite les skills.
+- **`skills/`** (payload du plugin) et **`manuals/`** (site) sont **générés** — ne jamais les éditer à la main. Chaque skill du plugin est **préfixé par sa catégorie** (`dev-skills/docker-composer` → `dev-docker-composer`) pour éviter les collisions de slash-commands.
+- Un bloc **Communication Rules** adapté au domaine est ajouté à la génération (concis pour le technique, bienveillant + disclaimer pour les domaines humains).
+
+```bash
+npm run check      # valide le frontmatter et les collisions
+npm run build      # check + régénère skills/ et manuals/
+```
+
+La CI ([`validate.yml`](./.github/workflows/validate.yml)) échoue si les artefacts ne sont pas régénérés. Détails : [CONTRIBUTING](./docs/CONTRIBUTING.md).
+
 ---
 
 ## 📦 Catégories
