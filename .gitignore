@@ -3,3 +3,6 @@
 *.skill
 __pycache__/
 .env
+
+# fichiers temporaires de travail
+scratch-*
