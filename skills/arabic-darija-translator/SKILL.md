@@ -1,25 +1,130 @@
 ---
 name: arabic-darija-translator
-description: Traduction et adaptation entre français/anglais et darija marocaine, avec prise en compte du contexte culturel et des variantes régionales. Se déclenche avec "darija", "الدارجة", "marocain", "traduire en darija", "dialecte marocain".
+description: Traduction et adaptation entre français/anglais et darija marocaine, avec prise en compte du contexte culturel, des variantes régionales et du registre. Se déclenche avec "darija", "الدارجة", "marocain", "traduire en darija", "dialecte marocain".
 ---
 
 # Darija Translator
 
-## Workflow
-1. **Identification de la direction** — Déterminer le sens de traduction : français vers darija, anglais vers darija, darija vers français, ou darija vers anglais.
-2. **Analyse du contexte** — Identifier le registre souhaité : formel (administration, travail), courant (conversation quotidienne), familier (entre amis), ou technique (domaine spécifique).
-3. **Translittération** — Proposer la traduction en deux formats : écriture arabe (الدارجة) et translittération latine (derija) avec les conventions courantes (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ).
-4. **Adaptation culturelle** — Adapter les expressions idiomatiques et les références culturelles plutôt que de traduire mot à mot. Proposer les équivalents culturels marocains.
-5. **Variantes régionales** — Signaler les différences régionales quand elles existent (Casablanca, Fès, Marrakech, Nord/Rif, Souss) et proposer la variante la plus courante.
-6. **Exemples d'usage** — Fournir des exemples de phrases en contexte pour chaque traduction, avec la prononciation approximative si demandé.
-7. **Vérification** — Valider avec l'utilisateur que la traduction correspond à l'intention et au ton souhaités.
+## Workflow en étapes
 
-## Règles
-- La darija n'a pas de grammaire standardisée : proposer les formes les plus couramment utilisées.
-- Toujours fournir la translittération latine en plus de l'écriture arabe pour faciliter la lecture.
-- Signaler quand un mot ou une expression est spécifique à une région du Maroc.
-- Respecter le contexte culturel et religieux dans les traductions.
-- Ne pas confondre darija marocaine avec l'arabe standard ou les dialectes d'autres pays du Maghreb.
+### 1. Identifier la direction et le registre
+
+| Direction | Exemples déclencheurs |
+|---|---|
+| FR/EN → Darija | "comment dit-on X en darija ?", "traduis en marocain" |
+| Darija → FR/EN | "qu'est-ce que ça veut dire X", "c'est quoi X en français" |
+| Darija → Darija | normalisation registre, correction |
+
+**Registre à demander ou inférer du contexte :**
+- `formel` — courriers admin, prise de parole officielle
+- `courant` — conversation quotidienne, WhatsApp famille/collègues
+- `familier` — entre amis proches, jeunes, code-switching FR+darija
+- `technique` — métier (santé, droit, informatique, finance)
+
+### 2. Conventions de translittération (système numérique marocain)
+
+| Lettre arabe | Code Latin | Exemple |
+|---|---|---|
+| ع | 3 | 3andek = عندك (tu as) |
+| ح | 7 | 7it = حيت (parce que) |
+| خ | 5 ou kh | 5obz / khobz = خبز (pain) |
+| ق | 9 | 9al = قال (il a dit) |
+| غ | 8 ou gh | 8alyan / ghalyan = غالي (cher) |
+| ش | ch | chkon = شكون (qui) |
+| ج | j | juj = جوج (deux) |
+
+> Les deux conventions (5/kh, 8/gh) coexistent — préciser ou utiliser la plus lisible selon l'audience.
+
+### 3. Format de sortie systématique
+
+Pour chaque traduction, fournir **les trois lignes** :
+
+```
+[Écriture arabe]  : كيداير؟
+[Translittération]: Ki dayr?
+[Prononciation]   : /ki dɛr/   ← si demandé ou ambiguïté
+[FR/EN]          : Comment tu vas ? (familier)
+```
+
+Exemple complet — "Bonjour, comment allez-vous ?" (formel) :
+
+```
+الدارجة (arabe)  : لباس عليكم؟
+Translittération : L-bas 3likoum?
+Français         : Vous allez bien ? / Bonjour, comment allez-vous ?
+Note             : formule polie, variante féminine inchangée
+```
+
+### 4. Adaptation culturelle (pas de traduction mot à mot)
+
+Critères de décision :
+- L'expression source a-t-elle un **équivalent idiomatique** en darija ? → utiliser cet équivalent, pas une calque littérale.
+- Y a-t-il une **connotation religieuse** implicite ? → intégrer naturellement (inchallah, hamdullah, bslama…) si le registre le permet.
+- Le contexte est-il **code-switching** FR+darija ? → reproduire le même mélange dans la sortie.
+
+Exemples :
+
+| Source | Mauvais (littéral) | Correct (idiomatique) |
+|---|---|---|
+| "Il pleut des cordes" | كيتيح الحبال | الله كيصب |
+| "Casser les pieds" | كسر الرجلين | دير في الراس |
+| "Bonne chance" | شانس مزيان | الله يعاون |
+
+### 5. Signaler les variantes régionales
+
+Mentionner la variante quand elle diffère notablement :
+
+```
+Mot : "voiture"
+- Standard/Casa : tomobil / ṭomobil (طوموبيل)
+- Fès/Meknès   : karossa (كاروصة) [vieilli]
+- Commun écrit : سيارة (arabe standard, compris partout)
+Recommandation : utiliser "tomobil" sauf contexte formel.
+```
+
+Régions à distinguer : **Casa/Rabat** (darija de référence), **Fès/Meknès**, **Marrakech/Sud**, **Nord/Rif** (influence rifaine), **Souss** (influence amazighe forte).
+
+### 6. Gestion du code-switching FR/Darija
+
+La darija urbaine mélange fréquemment français et arabe. Reproduire le registre :
+
+```
+Source (FR)     : "On se retrouve au bureau à 9h ?"
+Darija familier : "Ntlaqa f-bureau m3ak f-tis3a ?"
+                   نتلاقاو فالبيرو معاك فتسعة؟
+Note            : "bureau", "neuf" souvent gardés en français à l'oral.
+```
+
+### 7. Validation et itération
+
+- Proposer 2 niveaux de registre quand le contexte est ambigu (ex. : courant + familier).
+- Signaler explicitement quand une expression n'a pas d'équivalent direct → donner la périphrase la plus naturelle.
+- Demander confirmation si le sens est potentiellement sensible (humour, ironie, argot fort).
+
+---
+
+## Garde-fous et anti-patterns
+
+### Ne pas confondre avec
+- **Arabe standard (MSA/فصحى)** — darija ≠ MSA ; ne pas produire du MSA quand darija est demandée.
+- **Dialectes voisins** — algérien (dz), tunisien, égyptien : similaires mais distincts. Signaler toute confusion possible.
+- **Amazigh/Tamazight** — distinct ; certains mots darija en sont empruntés (ex. : "azul" = bonjour en amazigh, parfois utilisé au Maroc mais pas darija native).
+
+### Pièges courants
+
+| Piège | Exemple | Correction |
+|---|---|---|
+| Translittération incohérente | mélanger 5 et kh dans le même texte | choisir une convention et la tenir |
+| Calque syntaxique du français | "je suis allé à" → ana mchit l (correct) vs *"ana kont rayer l"* | vérifier l'ordre VSO/SVO darija |
+| Oublier l'accord de genre | "mzyan" (masc.) vs "mzyana" (fém.) | accorder systématiquement |
+| Ignorer la négation double | pas de "ne" isolé → "ma-kaydirch" pas "*la kaydير*" | toujours ma-…-ch |
+| Écriture arabe sans harakat | ambiguïté de lecture pour les non-natifs | ajouter la translittération latine systématiquement |
+
+### Bonnes pratiques 2026
+- Pour un usage **UI/app** : privilégier la translittération latine (meilleure compatibilité clavier), proposer l'arabe en secondaire.
+- Pour un usage **contenu social/marketing** : écriture arabe en priorité, translittération en sous-titre.
+- Pour **chatbots/NLP** : indiquer que les modèles traitant le darija sont encore limités ; conseiller de normaliser vers l'arabe ou le français avant tout pipeline NLP.
+- Toujours mentionner si un terme est **emprunté au français** (très fréquent : "l-fridge", "le portable", "le bureau") vs terme arabe natif — le choix dépend du registre cible.
 
 
 ## Communication Rules — MANDATORY

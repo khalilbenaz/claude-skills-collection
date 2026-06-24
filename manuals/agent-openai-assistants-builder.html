@@ -96,375 +96,210 @@ cp -r claude-skills-collection/skills/agent-openai-assistants-builder ~/.claude/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>OpenAI Assistants Builder — API Assistants v2</h1>
-<h2>Quand utiliser ce skill</h2>
-<p>Utiliser ce skill quand l'utilisateur veut créer un assistant hébergé directement par OpenAI, sans infrastructure à gérer. L'API Assistants v2 est idéale pour : chatbots avec mémoire de conversation persistante, assistants capables d'analyser des fichiers (PDF, Excel, code), outils d'analyse de données avec exécution de code Python, ou assistants qui combinent recherche dans des documents et appels de fonctions métier. C'est la solution la plus rapide pour un MVP d'assistant IA sans backend complexe.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Setup et initialisation du client</strong></li>
-<ul>
-<li>Installer : <code>pip install openai==1.57.0</code></li>
-<li>Initialiser le client :</li>
-</ul>
-</ol>
-<p>     ```python      from openai import OpenAI      import os</p>
-<p>     client = OpenAI(api_key=os.environ[&quot;OPENAI_API_KEY&quot;])      # Pour Azure OpenAI :      # from openai import AzureOpenAI      # client = AzureOpenAI(azure_endpoint=..., api_version=&quot;2024-05-01-preview&quot;)      ```</p>
-<ul>
-<li>Les assistants sont persistants — un assistant créé une fois peut être réutilisé indéfiniment via son <code>assistant_id</code></li>
-</ul>
-<ol>
-<li><strong>Création de l'assistant</strong></li>
-<ul>
-<li>Paramètres clés : <code>model</code>, <code>name</code>, <code>instructions</code> (system prompt), <code>tools</code>, <code>tool_resources</code>, <code>response_format</code></li>
-<li><code>instructions</code> : le system prompt permanent de l'assistant (jusqu'à 256 000 tokens)</li>
-<li><code>response_format</code> : <code>&quot;auto&quot;</code>, <code>{&quot;type&quot;: &quot;json_object&quot;}</code>, ou JSON Schema pour outputs structurés</li>
-<li>Bonne pratique : créer l'assistant une seule fois et stocker son ID, ne pas le recréer à chaque session</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Tools intégrés</strong></li>
-<ul>
-<li><strong><code>file_search</code></strong> : recherche sémantique dans des fichiers attachés (PDF, DOCX, TXT, code, etc.)</li>
-<li><strong><code>code_interpreter</code></strong> : exécute du code Python dans un sandbox sécurisé (analyse de données, graphiques, calculs)</li>
-<li><strong><code>function</code></strong> : function calling classique pour intégrer des APIs et logique métier externe</li>
-<li>Activer dans <code>tools</code> : <code>[{&quot;type&quot;: &quot;file_search&quot;}, {&quot;type&quot;: &quot;code_interpreter&quot;}]</code></li>
-<li>Piège : <code>code_interpreter</code> et <code>file_search</code> ont un coût par session — surveiller l'usage</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Vector Stores pour file_search</strong></li>
-<ul>
-<li>Le vector store indexe et stocke les embeddings des fichiers pour la recherche sémantique :</li>
-</ul>
-</ol>
-<p>     ```python      # Créer un vector store      vector_store = client.beta.vector_stores.create(name=&quot;Base documentaire&quot;)</p>
-<p>     # Uploader des fichiers dans le vector store      file_paths = [&quot;rapport_annuel.pdf&quot;, &quot;guide_produit.pdf&quot;]      file_streams = [open(path, &quot;rb&quot;) for path in file_paths]</p>
-<p>     file_batch = client.beta.vector_stores.file_batches.upload_and_poll(          vector_store_id=vector_store.id,          files=file_streams,      )      print(f&quot;Statut : {file_batch.status}, Fichiers : {file_batch.file_counts}&quot;)</p>
-<p>     # Attacher le vector store à l'assistant      assistant = client.beta.assistants.update(          assistant_id=assistant.id,          tool_resources={&quot;file_search&quot;: {&quot;vector_store_ids&quot;: [vector_store.id]}},      )      ```</p>
-<ul>
-<li>Les vector stores ont un coût de stockage (environ $0.10/GB/jour)</li>
-<li><code>expiration_policy</code> : configurer pour supprimer automatiquement les stores inactifs</li>
-</ul>
-<ol>
-<li><strong>Threads et messages</strong></li>
-<ul>
-<li>Un <code>Thread</code> représente une conversation — il persiste tous les messages automatiquement</li>
-<li>Créer un thread : <code>thread = client.beta.threads.create()</code></li>
-<li>Ajouter un message :</li>
-</ul>
-</ol>
-<p>     ```python      message = client.beta.threads.messages.create(          thread_id=thread.id,          role=&quot;user&quot;,          content=&quot;Quels sont les revenus du Q3 selon le rapport ?&quot;,          # Attacher des fichiers spécifiques à ce message (pour code_interpreter)          attachments=[{              &quot;file_id&quot;: file_id,              &quot;tools&quot;: [{&quot;type&quot;: &quot;code_interpreter&quot;}],          }],      )      ```</p>
-<ul>
-<li><code>metadata</code> : dict key-value pour stocker des infos custom (user_id, session_id)</li>
-</ul>
-<ol>
-<li><strong>Runs — exécution de l'assistant</strong></li>
-<ul>
-<li>Un <code>Run</code> représente une invocation de l'assistant sur un thread</li>
-<li><strong>Polling</strong> (simple mais bloquant) :</li>
-</ul>
-</ol>
-<p>     ```python      run = client.beta.threads.runs.create_and_poll(          thread_id=thread.id,          assistant_id=assistant.id,          instructions=&quot;Répondez toujours en français avec des citations précises.&quot;,      )      if run.status == &quot;completed&quot;:          messages = client.beta.threads.messages.list(thread_id=thread.id)          print(messages.data[0].content[0].text.value)      ```</p>
-<ul>
-<li>Statuts possibles : <code>queued</code> → <code>in_progress</code> → <code>completed</code> | <code>requires_action</code> | <code>failed</code> | <code>expired</code></li>
-<li>Un run expire après 10 minutes d'inactivité</li>
-</ul>
-<ol>
-<li><strong>Function calling — intégration d'APIs externes</strong></li>
-<ul>
-<li>Définir les fonctions dans <code>tools</code> lors de la création de l'assistant</li>
-<li>Gérer le statut <code>requires_action</code> :</li>
-</ul>
-</ol>
-<p>     ```python      if run.status == &quot;requires_action&quot;:          tool_outputs = []          for tool_call in run.required_action.submit_tool_outputs.tool_calls:              name = tool_call.function.name              args = json.loads(tool_call.function.arguments)              result = dispatch_function(name, args)  # votre logique              tool_outputs.append({                  &quot;tool_call_id&quot;: tool_call.id,                  &quot;output&quot;: json.dumps(result),              })          run = client.beta.threads.runs.submit_tool_outputs_and_poll(              thread_id=thread.id,              run_id=run.id,              tool_outputs=tool_outputs,          )      ```</p>
-<ul>
-<li>Délai maximum pour soumettre les tool outputs : 10 minutes (sinon le run expire)</li>
-</ul>
-<ol>
-<li><strong>Streaming — réponses progressives</strong></li>
-<ul>
-<li>L'API supporte le streaming natif via des Server-Sent Events :</li>
-</ul>
-</ol>
-<p>     ```python      from openai import AssistantEventHandler      from typing_extensions import override</p>
-<p>     class MyEventHandler(AssistantEventHandler):          @override          def on_text_delta(self, delta, snapshot):              print(delta.value, end=&quot;&quot;, flush=True)</p>
-<p>         @override          def on_tool_call_created(self, tool_call):              print(f&quot;\n[Outil activé : {tool_call.type}]&quot;)</p>
-<p>         @override          def on_run_step_delta(self, delta, snapshot):              if delta.step_details.type == &quot;tool_calls&quot;:                  for call in delta.step_details.tool_calls or []:                      if hasattr(call, &quot;code_interpreter&quot;):                          print(call.code_interpreter.input or &quot;&quot;, end=&quot;&quot;)</p>
-<p>     with client.beta.threads.runs.stream(          thread_id=thread.id,          assistant_id=assistant.id,          event_handler=MyEventHandler(),      ) as stream:          stream.until_done()      ```</p>
-<ol>
-<li><strong>Gestion des fichiers et annotations</strong></li>
-<ul>
-<li>Uploader un fichier : <code>file = client.files.create(file=open(&quot;data.csv&quot;, &quot;rb&quot;), purpose=&quot;assistants&quot;)</code></li>
-<li><code>purpose=&quot;assistants&quot;</code> pour les deux tools ; les fichiers sont globaux au compte</li>
-<li><strong>Annotations</strong> dans les réponses : références aux fichiers sources à extraire et formatter :</li>
-</ul>
-</ol>
-<p>     ```python      for content_block in message.content:          text_value = content_block.text.value          for annotation in content_block.text.annotations:              if annotation.type == &quot;file_citation&quot;:                  cited_file = client.files.retrieve(annotation.file_citation.file_id)                  text_value = text_value.replace(                      annotation.text, f&quot;[{cited_file.filename}]&quot;                  )      ```</p>
-<ul>
-<li>Nettoyer les fichiers non utilisés : <code>client.files.delete(file_id)</code> (facturation continue sinon)</li>
-</ul>
-<ol>
-<li><strong>Production — robustesse et gestion des coûts</strong></li>
-<ul>
-<li><strong>Rate limits</strong> : l'API a des limites par minute — implémenter un retry avec backoff exponentiel</li>
-<li><strong>Gestion des threads</strong> : stocker le <code>thread_id</code> par utilisateur en base de données, ne pas créer un thread par message</li>
-<li><strong>Nettoyage</strong> : supprimer les threads inactifs &gt; 30 jours, limiter la taille des threads avec <code>truncation_strategy</code></li>
-<li><strong>Cost tracking</strong> : surveiller <code>run.usage</code> (prompt_tokens, completion_tokens) après chaque run</li>
-<li><strong>Error handling</strong> : gérer <code>openai.APIStatusError</code>, <code>openai.APITimeoutError</code>, <code>openai.RateLimitError</code></li>
-</ul>
-</ol>
-<h2>Exemples de code</h2>
-<h3>Assistant complet avec file_search, code_interpreter et function calling</h3>
-<pre><code class="lang-python">import os
-import json
-import time
-from openai import OpenAI
+<h2>Critères de décision : Assistants API vs Chat Completions</h2>
+<table><thead><tr><th>Besoin</th><th>Assistants API</th><th>Chat Completions</th></tr></thead><tbody><tr><td>Mémoire de conversation persistante</td><td>✅ Threads gérés par OpenAI</td><td>❌ À gérer soi-même</td></tr><tr><td>Recherche sémantique dans des fichiers</td><td>✅ file_search natif</td><td>❌ RAG custom requis</td></tr><tr><td>Exécution de code Python</td><td>✅ code_interpreter sandbox</td><td>❌ Sandbox custom requis</td></tr><tr><td>Latence minimale (&lt; 500ms)</td><td>❌ Overhead run lifecycle</td><td>✅ Réponse directe</td></tr><tr><td>Contrôle total du contexte</td><td>❌ Géré par OpenAI</td><td>✅ Contrôle complet</td></tr><tr><td>Coût optimisé (volume élevé)</td><td>❌ + coût tools/storage</td><td>✅ Tokens seuls</td></tr></tbody></table>
+<p><strong>Choisir Assistants API</strong> pour les MVP avec RAG ou analyse de données sans backend complexe.   <strong>Choisir Chat Completions</strong> quand la latence, le coût, ou le contrôle du contexte sont prioritaires.</p>
+<h2>Workflow en 10 étapes</h2>
+<h3>1. Installation et initialisation</h3>
+<pre><code class="lang-bash">pip install openai&gt;=1.57.0 tenacity</code></pre>
+<pre><code class="lang-python">from openai import OpenAI
+import os
 
 client = OpenAI(api_key=os.environ[&quot;OPENAI_API_KEY&quot;])
 
-# ===== CONFIGURATION DES FONCTIONS EXTERNES =====
-def get_product_price(product_id: str) -&gt; dict:
-    &quot;&quot;&quot;Simule une requête base de données.&quot;&quot;&quot;
-    prices = {&quot;PROD001&quot;: 49.99, &quot;PROD002&quot;: 129.99, &quot;PROD003&quot;: 9.99}
-    price = prices.get(product_id)
-    if price:
-        return {&quot;product_id&quot;: product_id, &quot;price&quot;: price, &quot;currency&quot;: &quot;EUR&quot;}
-    return {&quot;error&quot;: f&quot;Produit {product_id} introuvable&quot;}
-
-def dispatch_tool(name: str, args: dict) -&gt; str:
-    &quot;&quot;&quot;Route les appels de fonctions.&quot;&quot;&quot;
-    if name == &quot;get_product_price&quot;:
-        return json.dumps(get_product_price(**args))
-    return json.dumps({&quot;error&quot;: f&quot;Fonction inconnue: {name}&quot;})
-
-# ===== CRÉATION DE L'ASSISTANT =====
-def create_or_load_assistant(assistant_id: str = None):
-    &quot;&quot;&quot;Crée un nouvel assistant ou charge un assistant existant.&quot;&quot;&quot;
-    if assistant_id:
-        return client.beta.assistants.retrieve(assistant_id)
-
-    return client.beta.assistants.create(
-        name=&quot;Assistant Commercial&quot;,
-        model=&quot;gpt-4o&quot;,
-        instructions=(
-            &quot;Vous êtes un assistant commercial expert. &quot;
-            &quot;Vous aidez les clients à comprendre nos produits, analysez des données &quot;
-            &quot;avec du code Python, et consultez notre catalogue en temps réel. &quot;
-            &quot;Répondez toujours en français de manière professionnelle et concise. &quot;
-            &quot;Citez vos sources quand vous utilisez des documents.&quot;
-        ),
-        tools=[
-            {&quot;type&quot;: &quot;file_search&quot;},
-            {&quot;type&quot;: &quot;code_interpreter&quot;},
-            {
-                &quot;type&quot;: &quot;function&quot;,
-                &quot;function&quot;: {
-                    &quot;name&quot;: &quot;get_product_price&quot;,
-                    &quot;description&quot;: &quot;Consulte le prix actuel d'un produit dans notre catalogue&quot;,
-                    &quot;parameters&quot;: {
-                        &quot;type&quot;: &quot;object&quot;,
-                        &quot;properties&quot;: {
-                            &quot;product_id&quot;: {
-                                &quot;type&quot;: &quot;string&quot;,
-                                &quot;description&quot;: &quot;L'identifiant du produit (ex: PROD001)&quot;,
-                            }
-                        },
-                        &quot;required&quot;: [&quot;product_id&quot;],
+# Azure OpenAI (optionnel) :
+# from openai import AzureOpenAI
+# client = AzureOpenAI(
+#     azure_endpoint=os.environ[&quot;AZURE_OPENAI_ENDPOINT&quot;],
+#     api_key=os.environ[&quot;AZURE_OPENAI_KEY&quot;],
+#     api_version=&quot;2024-05-01-preview&quot;,
+# )</code></pre>
+<h3>2. Création de l'assistant (une seule fois)</h3>
+<pre><code class="lang-python">assistant = client.beta.assistants.create(
+    name=&quot;Assistant Commercial&quot;,
+    model=&quot;gpt-4o&quot;,                        # ou gpt-4o-mini pour réduire les coûts
+    instructions=(
+        &quot;Vous êtes un assistant commercial expert. &quot;
+        &quot;Répondez en français, citez vos sources documentaires. &quot;
+        &quot;Soyez concis et professionnel.&quot;
+    ),
+    tools=[
+        {&quot;type&quot;: &quot;file_search&quot;},
+        {&quot;type&quot;: &quot;code_interpreter&quot;},
+        {
+            &quot;type&quot;: &quot;function&quot;,
+            &quot;function&quot;: {
+                &quot;name&quot;: &quot;get_product_price&quot;,
+                &quot;description&quot;: &quot;Consulte le prix d'un produit dans le catalogue&quot;,
+                &quot;parameters&quot;: {
+                    &quot;type&quot;: &quot;object&quot;,
+                    &quot;properties&quot;: {
+                        &quot;product_id&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;description&quot;: &quot;ID produit (ex: PROD001)&quot;}
                     },
+                    &quot;required&quot;: [&quot;product_id&quot;],
                 },
             },
-        ],
+        },
+    ],
+    temperature=0.2,                       # Réduire pour des réponses plus déterministes
+    response_format=&quot;auto&quot;,                # ou {&quot;type&quot;:&quot;json_object&quot;} pour JSON structuré
+)
+
+# IMPORTANT : stocker cet ID — ne jamais recréer l'assistant à chaque appel
+print(f&quot;ASSISTANT_ID={assistant.id}&quot;)      # Persister dans .env ou config</code></pre>
+<h3>3. Vector store pour file_search</h3>
+<pre><code class="lang-python"># Créer le vector store une seule fois, le réutiliser ensuite
+vector_store = client.beta.vector_stores.create(
+    name=&quot;Base documentaire&quot;,
+    expires_after={&quot;anchor&quot;: &quot;last_active_at&quot;, &quot;days&quot;: 30},  # Nettoyage auto
+)
+
+# Upload batch (files + poll jusqu'à indexation complète)
+file_paths = [&quot;rapport_q3.pdf&quot;, &quot;guide_produit.pdf&quot;, &quot;faq.docx&quot;]
+with client.beta.vector_stores.file_batches.upload_and_poll(
+    vector_store_id=vector_store.id,
+    files=[open(p, &quot;rb&quot;) for p in file_paths],
+) as batch:
+    print(f&quot;Indexés : {batch.file_counts.completed}/{batch.file_counts.total}&quot;)
+
+# Attacher à l'assistant
+client.beta.assistants.update(
+    assistant_id=assistant.id,
+    tool_resources={&quot;file_search&quot;: {&quot;vector_store_ids&quot;: [vector_store.id]}},
+)</code></pre>
+<p><strong>Formats supportés</strong> : PDF, DOCX, TXT, MD, HTML, JSON, CSV, Python, JS/TS, C/C++, Java, etc.   <strong>Taille max par fichier</strong> : 512 MB, 5 000 000 tokens après parsing.   <strong>Coût de stockage</strong> : ~$0.10/GB/jour — configurer <code>expires_after</code> systématiquement.</p>
+<h3>4. Threads : une session par utilisateur</h3>
+<pre><code class="lang-python"># Créer un thread et stocker thread_id par user_id en base de données
+thread = client.beta.threads.create(
+    metadata={&quot;user_id&quot;: &quot;u-001&quot;, &quot;channel&quot;: &quot;web&quot;},
+)
+# Stocker : db.set(f&quot;thread:{user_id}&quot;, thread.id)
+
+# Récupérer un thread existant
+# thread_id = db.get(f&quot;thread:{user_id}&quot;)</code></pre>
+<h3>5. Ajout de messages</h3>
+<pre><code class="lang-python">client.beta.threads.messages.create(
+    thread_id=thread.id,
+    role=&quot;user&quot;,
+    content=&quot;Quels sont les revenus du Q3 selon le rapport ?&quot;,
+    # Attacher un fichier au message pour code_interpreter :
+    # attachments=[{&quot;file_id&quot;: file_id, &quot;tools&quot;: [{&quot;type&quot;: &quot;code_interpreter&quot;}]}],
+)</code></pre>
+<h3>6. Exécution : polling (simple, scripts/CLI)</h3>
+<pre><code class="lang-python">import json
+
+def run_with_tool_calls(thread_id: str, assistant_id: str) -&gt; str:
+    run = client.beta.threads.runs.create_and_poll(
+        thread_id=thread_id,
+        assistant_id=assistant_id,
+        truncation_strategy={&quot;type&quot;: &quot;last_messages&quot;, &quot;last_messages&quot;: 20},
     )
 
-# ===== GESTION DES RUNS =====
-def process_run(thread_id: str, assistant_id: str, user_instructions: str = None) -&gt; str:
-    &quot;&quot;&quot;Lance un run, gère les tool calls, et retourne la réponse finale.&quot;&quot;&quot;
-    run_params = {
-        &quot;thread_id&quot;: thread_id,
-        &quot;assistant_id&quot;: assistant_id,
-    }
-    if user_instructions:
-        run_params[&quot;additional_instructions&quot;] = user_instructions
-
-    run = client.beta.threads.runs.create(**run_params)
-
-    # Polling avec gestion des tool calls
-    while run.status in [&quot;queued&quot;, &quot;in_progress&quot;, &quot;requires_action&quot;]:
-        time.sleep(0.5)
-        run = client.beta.threads.runs.retrieve(
-            thread_id=thread_id, run_id=run.id
+    # Boucle tool calls
+    while run.status == &quot;requires_action&quot;:
+        tool_outputs = []
+        for tc in run.required_action.submit_tool_outputs.tool_calls:
+            args = json.loads(tc.function.arguments)
+            result = dispatch_function(tc.function.name, args)
+            tool_outputs.append({&quot;tool_call_id&quot;: tc.id, &quot;output&quot;: json.dumps(result)})
+        run = client.beta.threads.runs.submit_tool_outputs_and_poll(
+            thread_id=thread_id, run_id=run.id, tool_outputs=tool_outputs,
         )
-
-        if run.status == &quot;requires_action&quot;:
-            tool_outputs = []
-            for tool_call in run.required_action.submit_tool_outputs.tool_calls:
-                args = json.loads(tool_call.function.arguments)
-                output = dispatch_tool(tool_call.function.name, args)
-                print(f&quot;  [Tool] {tool_call.function.name}({args}) → {output}&quot;)
-                tool_outputs.append({
-                    &quot;tool_call_id&quot;: tool_call.id,
-                    &quot;output&quot;: output,
-                })
-            run = client.beta.threads.runs.submit_tool_outputs(
-                thread_id=thread_id,
-                run_id=run.id,
-                tool_outputs=tool_outputs,
-            )
 
     if run.status != &quot;completed&quot;:
-        raise RuntimeError(f&quot;Run échoué : {run.status} — {run.last_error}&quot;)
+        raise RuntimeError(f&quot;Run {run.status}: {run.last_error}&quot;)
 
-    # Récupérer le dernier message de l'assistant
-    messages = client.beta.threads.messages.list(
-        thread_id=thread_id, order=&quot;desc&quot;, limit=1
-    )
-    last_message = messages.data[0]
+    print(f&quot;Tokens: {run.usage.total_tokens}&quot;)  # Tracking coût
 
-    # Traiter les annotations (citations)
-    response_text = &quot;&quot;
-    for content_block in last_message.content:
-        if content_block.type == &quot;text&quot;:
-            text_value = content_block.text.value
-            for annotation in content_block.text.annotations:
-                if annotation.type == &quot;file_citation&quot;:
-                    cited_file = client.files.retrieve(annotation.file_citation.file_id)
-                    text_value = text_value.replace(
-                        annotation.text, f&quot; [Source: {cited_file.filename}]&quot;
-                    )
-            response_text += text_value
-
-    return response_text
-
-# ===== SESSION DE CHAT =====
-def run_chat_session():
-    # Créer ou charger l'assistant
-    # En production : stocker et réutiliser l'assistant_id
-    assistant = create_or_load_assistant()
-    print(f&quot;Assistant prêt : {assistant.id}&quot;)
-
-    # Créer un thread de conversation
-    thread = client.beta.threads.create(
-        metadata={&quot;user_id&quot;: &quot;user-demo-001&quot;, &quot;session&quot;: &quot;2025-01&quot;},
-    )
-    print(f&quot;Thread créé : {thread.id}\n&quot;)
-
-    print(&quot;=== Assistant Commercial IA ===&quot;)
-    print(&quot;(Tapez 'quit' pour terminer)\n&quot;)
-
-    while True:
-        user_input = input(&quot;Vous : &quot;).strip()
-        if user_input.lower() == &quot;quit&quot;:
-            break
-        if not user_input:
+    msgs = client.beta.threads.messages.list(thread_id=thread_id, order=&quot;desc&quot;, limit=1)
+    return extract_text_with_citations(msgs.data[0])</code></pre>
+<h3>7. Extraction du texte et annotations (citations)</h3>
+<pre><code class="lang-python">def extract_text_with_citations(message) -&gt; str:
+    result = &quot;&quot;
+    for block in message.content:
+        if block.type != &quot;text&quot;:
             continue
-
-        # Ajouter le message au thread
-        client.beta.threads.messages.create(
-            thread_id=thread.id,
-            role=&quot;user&quot;,
-            content=user_input,
-        )
-
-        print(&quot;Assistant : &quot;, end=&quot;&quot;)
-        try:
-            response = process_run(thread.id, assistant.id)
-            print(response)
-        except RuntimeError as e:
-            print(f&quot;Erreur : {e}&quot;)
-        print()
-
-    # Nettoyage optionnel
-    print(f&quot;\nSession terminée. Thread ID sauvegardé : {thread.id}&quot;)
-    print(&quot;Tokens utilisés dans le dernier run :&quot;)
-    # (récupérer via run.usage après le dernier run)
-
-if __name__ == &quot;__main__&quot;:
-    run_chat_session()</code></pre>
-<h3>Streaming avec EventHandler pour interface web</h3>
-<pre><code class="lang-python">import os
-from openai import OpenAI, AssistantEventHandler
+        text = block.text.value
+        for ann in block.text.annotations:
+            if ann.type == &quot;file_citation&quot;:
+                fname = client.files.retrieve(ann.file_citation.file_id).filename
+                text = text.replace(ann.text, f&quot; [{fname}]&quot;)
+            elif ann.type == &quot;file_path&quot;:
+                text = text.replace(ann.text, f&quot; [fichier généré: {ann.file_path.file_id}]&quot;)
+        result += text
+    return result</code></pre>
+<h3>8. Streaming (interfaces web, UX réactive)</h3>
+<pre><code class="lang-python">from openai import AssistantEventHandler
 from typing_extensions import override
 
-client = OpenAI(api_key=os.environ[&quot;OPENAI_API_KEY&quot;])
-
-class StreamingEventHandler(AssistantEventHandler):
-    &quot;&quot;&quot;Handler pour streaming progressif dans une interface web.&quot;&quot;&quot;
-
-    def __init__(self, on_token=None, on_tool_start=None, on_complete=None):
+class StreamHandler(AssistantEventHandler):
+    def __init__(self, on_token=None):
         super().__init__()
         self.on_token = on_token or (lambda t: print(t, end=&quot;&quot;, flush=True))
-        self.on_tool_start = on_tool_start or (lambda t: print(f&quot;\n[Outil: {t}]&quot;))
-        self.on_complete = on_complete or (lambda: print(&quot;\n[Terminé]&quot;))
-        self.full_response = &quot;&quot;
+        self.full_text = &quot;&quot;
 
     @override
     def on_text_delta(self, delta, snapshot):
         if delta.value:
-            self.full_response += delta.value
+            self.full_text += delta.value
             self.on_token(delta.value)
 
     @override
     def on_tool_call_created(self, tool_call):
-        self.on_tool_start(tool_call.type)
+        print(f&quot;\n[{tool_call.type} activé...]&quot;, flush=True)
 
-    @override
-    def on_run_step_done(self, run_step):
-        if run_step.status == &quot;completed&quot;:
-            pass
+# Utilisation
+handler = StreamHandler()
+with client.beta.threads.runs.stream(
+    thread_id=thread.id,
+    assistant_id=assistant.id,
+    event_handler=handler,
+) as stream:
+    stream.until_done()
+print(f&quot;\nRéponse complète : {len(handler.full_text)} caractères&quot;)</code></pre>
+<h3>9. Retry robuste pour les rate limits</h3>
+<pre><code class="lang-python">from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+import openai
 
-    @override
-    def on_end(self):
-        self.on_complete()
+@retry(
+    retry=retry_if_exception_type((openai.RateLimitError, openai.APITimeoutError)),
+    wait=wait_exponential(multiplier=1, min=1, max=60),
+    stop=stop_after_attempt(5),
+)
+def safe_create_run(thread_id, assistant_id):
+    return client.beta.threads.runs.create_and_poll(
+        thread_id=thread_id, assistant_id=assistant_id
+    )</code></pre>
+<h3>10. Nettoyage et contrôle des coûts</h3>
+<pre><code class="lang-python">import datetime
 
-def stream_response(thread_id: str, assistant_id: str, user_message: str):
-    &quot;&quot;&quot;Envoie un message et streame la réponse.&quot;&quot;&quot;
-    client.beta.threads.messages.create(
-        thread_id=thread_id,
-        role=&quot;user&quot;,
-        content=user_message,
-    )
+def cleanup_old_threads(db, days=30):
+    &quot;&quot;&quot;Supprime les threads inactifs &gt; N jours.&quot;&quot;&quot;
+    cutoff = datetime.datetime.now() - datetime.timedelta(days=days)
+    for user_id, thread_id, last_active in db.get_inactive_threads(cutoff):
+        try:
+            client.beta.threads.delete(thread_id)
+            db.remove_thread(user_id)
+        except openai.NotFoundError:
+            db.remove_thread(user_id)  # Déjà supprimé
 
-    handler = StreamingEventHandler()
-
-    with client.beta.threads.runs.stream(
-        thread_id=thread_id,
-        assistant_id=assistant_id,
-        event_handler=handler,
-    ) as stream:
-        stream.until_done()
-
-    return handler.full_response
-
-# Exemple d'utilisation avec FastAPI (pour une API web)
-# from fastapi import FastAPI
-# from fastapi.responses import StreamingResponse
-# import asyncio
-#
-# app = FastAPI()
-#
-# @app.post(&quot;/chat/stream&quot;)
-# async def chat_stream(thread_id: str, assistant_id: str, message: str):
-#     async def generate():
-#         # Dans un contexte réel, utiliser la version async du client
-#         for token in [&quot;Implémentation&quot;, &quot; SSE&quot;, &quot; ici&quot;]:
-#             yield f&quot;data: {token}\n\n&quot;
-#             await asyncio.sleep(0.05)
-#     return StreamingResponse(generate(), media_type=&quot;text/event-stream&quot;)</code></pre>
-<h2>Règles</h2>
-<ol>
-<li><strong>Stocker les IDs (assistant_id, thread_id) en base de données</strong> — Ne jamais recréer un assistant à chaque appel. Un assistant coûte rien à stocker, mais recréer inutilement gaspille du temps et désorganise le compte. Stocker <code>assistant_id</code> dans la config et <code>thread_id</code> par utilisateur en base.</li>
-</ol>
-<ol>
-<li><strong>Toujours gérer le statut <code>requires_action</code> dans la boucle de polling</strong> — Le function calling exige de soumettre les <code>tool_outputs</code> dans les 10 minutes. Une application qui ignore ce statut restera bloquée indéfiniment. Vérifier ce cas dans toute boucle de polling ou handler de streaming.</li>
-</ol>
-<ol>
-<li><strong>Nettoyer les fichiers et vector stores inutilisés</strong> — Les fichiers uploadés et les vector stores génèrent des coûts de stockage continus. Implémenter une tâche de nettoyage périodique : supprimer les fichiers non attachés, configurer <code>expiration_policy</code> sur les vector stores, et supprimer les threads inactifs après 30 jours.</li>
-</ol>
-<ol>
-<li><strong>Utiliser <code>truncation_strategy</code> sur les threads longs</strong> — Par défaut, tous les messages d'un thread sont envoyés au LLM (coût croissant). Configurer <code>truncation_strategy={&quot;type&quot;: &quot;last_messages&quot;, &quot;last_messages&quot;: 20}</code> sur les runs pour contrôler les coûts en production.</li>
-</ol>
-<ol>
-<li><strong>Implémenter un retry avec backoff exponentiel pour les rate limits</strong> — L'API OpenAI retourne des <code>RateLimitError</code> (429) lors de pics de charge. Toujours encapsuler les appels API dans un retry avec délai exponentiel (1s, 2s, 4s, max 60s) et alerter si le retry échoue après 5 tentatives.</li>
-</ol>
+def cleanup_orphan_files(active_file_ids: set):
+    &quot;&quot;&quot;Supprime les fichiers non attachés à un assistant ou thread.&quot;&quot;&quot;
+    for f in client.files.list(purpose=&quot;assistants&quot;):
+        if f.id not in active_file_ids:
+            client.files.delete(f.id)
+            print(f&quot;Fichier supprimé : {f.id} ({f.filename})&quot;)</code></pre>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Impact</th><th>Correction</th></tr></thead><tbody><tr><td>Recréer l'assistant à chaque requête</td><td>Coût + désorganisation du compte</td><td>Stocker <code>assistant_id</code> dans la config</td></tr><tr><td>Un thread par message (pas par user)</td><td>Perte de contexte + coût explosif</td><td>Un thread persistant par session utilisateur</td></tr><tr><td>Ignorer <code>requires_action</code> dans le polling</td><td>Run bloqué indéfiniment</td><td>Toujours gérer le cas dans la boucle</td></tr><tr><td>Pas de <code>truncation_strategy</code> en prod</td><td>Coût croissant avec la longueur du thread</td><td><code>last_messages: 20</code> par défaut</td></tr><tr><td>Files et vector stores jamais supprimés</td><td>Facture de stockage continue</td><td><code>expires_after</code> + job de nettoyage périodique</td></tr><tr><td>Pas de retry sur les appels API</td><td>Crash sur RateLimitError en prod</td><td><code>tenacity</code> avec backoff exponentiel</td></tr><tr><td><code>code_interpreter</code> activé sans nécessité</td><td>+$0.03/session inutile</td><td>N'activer que les tools nécessaires par assistant</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Modèle</strong> : <code>gpt-4o-mini</code> pour les cas simples (file_search Q&amp;A), <code>gpt-4o</code> pour le raisonnement complexe ou le code.</li>
+<li><strong>run.usage</strong> : logguer <code>prompt_tokens</code> et <code>completion_tokens</code> après chaque run pour alerter sur les dérives de coût.</li>
+<li><strong>Structured outputs</strong> : utiliser <code>response_format={&quot;type&quot;: &quot;json_schema&quot;, &quot;json_schema&quot;: {...}}</code> pour des réponses avec schéma strict (Pydantic compatible).</li>
+<li><strong>Parallel tool calls</strong> : l'assistant peut appeler plusieurs fonctions en parallèle — <code>dispatch_function</code> doit être thread-safe.</li>
+<li><strong>Async</strong> : utiliser <code>AsyncOpenAI</code> en environnement FastAPI/asyncio pour ne pas bloquer l'event loop.</li>
+<li><strong>Observabilité</strong> : logger <code>run_id</code>, <code>thread_id</code>, <code>assistant_id</code> et <code>usage</code> pour tracer chaque interaction en production.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

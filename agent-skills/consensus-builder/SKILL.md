@@ -6,13 +6,66 @@ description: Mécanismes de consensus et de vote entre agents pour prendre des d
 # Agent Consensus Builder
 
 ## Quand utiliser ce skill
-Utilise ce skill lorsqu'une décision critique ne peut pas être prise de façon fiable par un seul agent, notamment lorsque l'incertitude est élevée, que plusieurs perspectives sont nécessaires (analyse de risque, évaluation qualitative) ou que les conséquences d'une erreur sont significatives. Le consensus multi-agents augmente la robustesse en réduisant les biais d'un seul LLM. N'utilise pas le consensus pour les faits vérifiables : cherche simplement la réponse.
 
-## Workflow
+| Critère | Utilise le consensus | N'utilise PAS le consensus |
+|---|---|---|
+| Nature de la question | Incertaine, subjective, multicritère | Factuelle, vérifiable, calculable |
+| Conséquences d'erreur | Irréversibles ou coûteuses | Faibles, corrigeables facilement |
+| Perspectives | Plusieurs angles utiles (risque, UX, technique) | Un seul expert suffit |
+| Latence | Acceptable (>2s) | Critique (<500ms) |
+| Budget tokens | Disponible (N × appels) | Contraint |
 
-1. **Décider quand utiliser le consensus** — Le consensus est justifié si : la décision est **critique** (conséquences irréversibles ou coûteuses), il existe une **incertitude élevée** (pas de réponse factuellement vérifiable), **plusieurs perspectives** enrichissent l'analyse (technique, business, éthique), ou le système a déjà produit des **réponses contradictoires** sur des questions similaires. Ne pas utiliser pour : les faits (dates, calculs, données vérifiables), les décisions triviales, les situations où la latence est critique.
+**Règle rapide** : si `grep -r "answer" knowledge_base` trouve la réponse, pas besoin de consensus. Si la décision dépend de valeurs ou de jugement, le consensus ajoute de la valeur.
 
-2. **Choisir la méthode de vote** — Selon la nature de la décision : **majority vote** (≥50%+1, décisions binaires simples), **supermajority** (≥66%, décisions risquées), **weighted vote** (chaque agent a un poids selon son expertise ou son historique de performance), **ranked choice voting** (Instant-Runoff, pour choisir entre N options), **approval voting** (chaque agent approuve toutes les options acceptables, prend l'option avec le plus d'approbations), **Borda count** (chaque agent classe les options, points attribués selon le rang).
+---
+
+## Workflow en 10 étapes
+
+### 1. Qualifier la décision
+
+Avant de lancer quoi que ce soit, score la décision sur 3 axes (0–3 chacun) :
+
+```python
+def consensus_necessity_score(decision: dict) -> int:
+    score = 0
+    if decision["is_reversible"] is False: score += 2
+    if decision["uncertainty"] == "high": score += 2
+    if decision["perspectives_needed"] > 1: score += 1
+    # score >= 3 → consensus justifié
+    # score < 3 → agent unique suffisant
+    return score
+```
+
+### 2. Définir la question et les options AVANT de lancer les agents
+
+Format standard à passer à chaque agent :
+
+```python
+CONSENSUS_PROMPT_TEMPLATE = """
+Tu es un agent spécialisé en {role}.
+Question : {question}
+Options disponibles : {options}
+Contexte : {context}
+
+Réponds en JSON :
+{{
+  "choice": "<une des options>",
+  "confidence": <float 0.0-1.0>,
+  "rationale": "<explication concise>",
+  "risks": ["<risque 1>", "<risque 2>"]
+}}
+"""
+```
+
+### 3. Choisir la méthode de vote
+
+| Méthode | Usage | Quand | Seuil typique |
+|---|---|---|---|
+| Majority vote | Binaire simple | Décision oui/non | >50% |
+| Supermajority | Décision risquée | Rollback, suppression de données | ≥66% |
+| Weighted vote | Agents spécialisés | Agent expert > généraliste | Poids définis a priori |
+| Confidence-weighted | Agents incertains | Analyse de sentiments, prévisions | Score agrégé |
+| Borda count | N > 2 options | Choix d'architecture, priorisation | Premier rang |
 
 ```python
 from collections import Counter
@@ -23,13 +76,18 @@ def majority_vote(votes: list[str]) -> str:
     winner, count = counts.most_common(1)[0]
     return winner if count > len(votes) / 2 else "no_consensus"
 
-def weighted_vote(votes: list[tuple[str, float]]) -> str:
+def confidence_weighted_consensus(votes: list[dict[str, Any]]) -> dict:
+    # votes = [{"choice": "A", "confidence": 0.8}, ...]
     scores: dict[str, float] = {}
-    for option, weight in votes:
-        scores[option] = scores.get(option, 0) + weight
-    return max(scores, key=scores.get)
+    for v in votes:
+        scores[v["choice"]] = scores.get(v["choice"], 0) + v["confidence"]
+    total = sum(scores.values())
+    normalized = {k: round(v / total, 3) for k, v in scores.items()}
+    winner = max(normalized, key=normalized.get)
+    return {"winner": winner, "scores": normalized, "strength": normalized[winner]}
 
 def borda_count(rankings: list[list[str]]) -> str:
+    # rankings = [["A","B","C"], ["B","A","C"], ...]
     n = len(rankings[0])
     scores: dict[str, int] = {}
     for ranking in rankings:
@@ -38,95 +96,179 @@ def borda_count(rankings: list[list[str]]) -> str:
     return max(scores, key=scores.get)
 ```
 
-3. **Organiser le débat entre agents** — Le pattern de débat structuré en 3 rounds : **(a) Argumentation initiale** : chaque agent formule sa position et ses arguments (prompt distinct, réponses parallèles), **(b) Cross-examination** : chaque agent reçoit les arguments des autres et peut les critiquer ou nuancer sa position, **(c) Rebuttal et vote final** : chaque agent formule sa position finale après avoir entendu les contre-arguments. Un modérateur (agent supplémentaire ou règle déterministe) synthétise et appelle au vote.
+### 4. Assurer la diversité d'opinion (critique)
+
+Sans diversité, le consensus amplifie les biais. Minimum 2 axes de différenciation :
+
+```python
+AGENT_CONFIGS = [
+    {"role": "risk_analyst",   "temperature": 0.2, "framing": "Quels sont les risques ?"},
+    {"role": "optimist",       "temperature": 0.7, "framing": "Quels sont les gains potentiels ?"},
+    {"role": "devils_advocate","temperature": 0.5, "framing": "Pourquoi cette option échouerait-elle ?"},
+    {"role": "neutral_analyst","temperature": 0.3, "framing": "Évalue objectivement chaque option."},
+]
+# Règle : jamais 2 agents avec le même role + temperature + framing
+```
+
+### 5. Lancer les agents en parallèle (Round 1)
 
 ```python
 import asyncio
 
+async def run_vote(agents: list, question: str, options: list[str]) -> list[dict]:
+    tasks = [agent.vote(question, options) for agent in agents]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    # Filtrer les erreurs sans bloquer le vote
+    valid = [r for r in results if isinstance(r, dict)]
+    if len(valid) < len(agents) // 2 + 1:
+        raise RuntimeError("Trop d'agents en échec pour un consensus fiable")
+    return valid
+```
+
+### 6. Débat structuré (si no_consensus au Round 1)
+
+3 rounds maximum. Au-delà, pas de valeur ajoutée.
+
+```python
 async def run_debate(agents: list, question: str, options: list[str]) -> dict:
-    # Round 1 : positions initiales
-    initial_positions = await asyncio.gather(*[
-        agent.argue(question, options, round=1) for agent in agents
-    ])
-    # Round 2 : cross-examination
+    # Round 1 : positions initiales (parallèle)
+    positions = await run_vote(agents, question, options)
+
+    # Round 2 : cross-examination (chaque agent voit les autres)
     critiques = await asyncio.gather(*[
-        agent.critique(question, initial_positions, own_position=initial_positions[i])
+        agent.critique(question, positions, own_idx=i)
         for i, agent in enumerate(agents)
     ])
-    # Round 3 : vote final
+
+    # Round 3 : vote final avec toutes les informations
     final_votes = await asyncio.gather(*[
-        agent.final_vote(question, options, initial_positions, critiques)
+        agent.final_vote(question, options, positions, critiques)
         for agent in agents
     ])
-    return {"votes": final_votes, "positions": initial_positions, "critiques": critiques}
+    return {"votes": final_votes, "positions": positions, "critiques": critiques}
 ```
 
-4. **Implémenter le vote pondéré par confiance** — Chaque agent vote en fournissant non seulement son choix mais aussi un **score de confiance** (0.0–1.0). Le résultat final est calculé par **weighted aggregation** : `score(option) = Σ(confidence_i * vote_i_for_option)`. Un agent très incertain (confiance 0.3) influence moins le résultat qu'un agent certain (confiance 0.9). Normalise les scores de confiance si nécessaire.
+### 7. Résoudre les deadlocks
+
+Priorité décroissante :
+
+1. **Tiebreaker déterministe** : option la plus conservatrice/sûre gagne (pas de hasard)
+2. **Moderator agent** : agent supplémentaire invoqué avec le dossier complet (temperature=0.0)
+3. **Escalation humaine** : présenter les options avec pro/contra à un humain
+4. **Random + logging explicite** : dernier recours, jamais silencieux
 
 ```python
-def confidence_weighted_consensus(
-    votes: list[dict[str, Any]]  # [{"choice": "A", "confidence": 0.8}, ...]
-) -> dict:
-    option_scores: dict[str, float] = {}
-    for vote in votes:
-        choice = vote["choice"]
-        confidence = vote["confidence"]
-        option_scores[choice] = option_scores.get(choice, 0) + confidence
-    total = sum(option_scores.values())
-    normalized = {k: v / total for k, v in option_scores.items()}
-    winner = max(normalized, key=normalized.get)
-    return {"winner": winner, "scores": normalized, "confidence": normalized[winner]}
+def resolve_deadlock(votes: list[str], options: list[str], safety_order: list[str]) -> str:
+    """safety_order = options classées de la plus sûre à la plus risquée"""
+    counts = Counter(votes)
+    max_count = max(counts.values())
+    tied = [o for o, c in counts.items() if c == max_count]
+    # Préférer l'option la plus sûre parmi les ex-aequo
+    for safe_option in safety_order:
+        if safe_option in tied:
+            return safe_option
+    return tied[0]  # fallback
 ```
 
-5. **Assurer la diversité d'opinion** — Pour que le consensus soit utile, les agents doivent avoir des perspectives différentes. Techniques : **prompts différents** (chaque agent reçoit un framing distinct : optimiste, pessimiste, technique, business), **températures différentes** (0.3 pour l'agent conservateur, 0.9 pour l'agent créatif), **rôles distincts** (avocat du diable, avocat de la proposition, analyste neutre), **données d'entrée partielles** (chaque agent voit un sous-ensemble différent du contexte). Sans diversité, le consensus amplifie les biais plutôt que de les corriger.
+**Prévention** : utilise toujours un nombre **impair** d'agents votants (3, 5, 7).
 
-6. **Résoudre les deadlocks** — En cas d'égalité parfaite : **(a) tiebreaker par règle** : l'option la plus conservatrice/sûre gagne, **(b) moderator agent** : un agent supplémentaire est invoqué avec le dossier complet pour trancher, **(c) escalation humaine** : le choix est présenté à un humain avec les arguments pro/contra de chaque option, **(d) random avec logging** : dernier recours, documenté explicitement. Évite les deadlocks en choisissant un nombre impair d'agents votants.
-
-7. **Valider le consensus et gérer la minorité** — Après le vote : vérifier la **cohérence interne** (le résultat est-il compatible avec les faits connus ?), générer un **minority report** (documenter les arguments de la minorité perdante), **logger les dissenting opinions** (elles peuvent être précieuses pour le debugging futur), et calculer un **consensus strength score** (ratio de votes pour le gagnant / total votes).
+### 8. Valider le consensus et générer le minority report
 
 ```python
-def validate_consensus(votes: list[str], winner: str) -> dict:
+def validate_consensus(votes: list[dict], winner: str) -> dict:
     total = len(votes)
-    winner_count = votes.count(winner)
-    minority = [v for v in set(votes) if v != winner]
+    winner_votes = [v for v in votes if v["choice"] == winner]
+    minority_votes = [v for v in votes if v["choice"] != winner]
+    strength = len(winner_votes) / total
+
     return {
         "winner": winner,
-        "consensus_strength": winner_count / total,
-        "is_strong": winner_count / total >= 0.66,
-        "minority_options": minority,
-        "minority_count": total - winner_count,
-        "requires_review": winner_count / total < 0.51
+        "consensus_strength": round(strength, 3),
+        "is_strong": strength >= 0.66,
+        "requires_human_review": strength < 0.51,
+        "minority_report": {
+            "options": list({v["choice"] for v in minority_votes}),
+            "rationales": [v.get("rationale") for v in minority_votes],
+            "risks_raised": [r for v in minority_votes for r in v.get("risks", [])],
+        },
     }
 ```
 
-8. **Implémenter techniquement** — Calls LLM parallèles avec `asyncio.gather` pour minimiser la latence. Chaque agent est un prompt distinct avec un rôle clair. Agrège les résultats avec les fonctions de vote ci-dessus. Pour les agents avec des prompts différents, utilise une factory : `create_agent(role="pessimist", temperature=0.3)`. Framework : LangGraph (nodes parallèles + aggregation node), LangChain (LCEL parallel branches), AutoGen (GroupChat avec prompts distincts).
-
-9. **Optimiser les coûts** — Le consensus est coûteux (N appels LLM). Stratégies d'optimisation : **progressive escalation** (commencer avec 2 agents, escalader à 5 seulement si désaccord), **lightweight preliminary vote** (premier vote avec un modèle petit/rapide, débat complet seulement si pas de consensus), **caching** (si la même question a déjà obtenu un consensus fort, réutiliser), **scoring de nécessité** (déclencher le consensus complet uniquement si `uncertainty_score > 0.6`).
+### 9. Optimiser les coûts avec l'escalade progressive
 
 ```python
 async def adaptive_consensus(agents_pool: list, question: str, options: list) -> dict:
-    # D'abord essayer avec 2 agents
-    quick_result = await run_vote(agents_pool[:2], question, options)
-    if quick_result["consensus_strength"] >= 0.9:
-        return {**quick_result, "method": "quick_consensus"}
-    # Escalade à N agents si pas de consensus fort
-    full_result = await run_debate(agents_pool, question, options)
-    return {**full_result, "method": "full_debate"}
+    # Étape 1 : vote rapide avec 2 agents (modèle léger possible)
+    quick_votes = await run_vote(agents_pool[:2], question, options)
+    result = confidence_weighted_consensus(quick_votes)
+    if result["strength"] >= 0.85:
+        return {**result, "method": "quick_vote", "agents_used": 2}
+
+    # Étape 2 : vote étendu si pas de consensus fort
+    full_votes = await run_vote(agents_pool, question, options)
+    result = confidence_weighted_consensus(full_votes)
+    if result["strength"] >= 0.66:
+        return {**result, "method": "full_vote", "agents_used": len(agents_pool)}
+
+    # Étape 3 : débat structuré si toujours pas de consensus
+    debate_result = await run_debate(agents_pool, question, options)
+    final = confidence_weighted_consensus(debate_result["votes"])
+    return {**final, "method": "full_debate", "agents_used": len(agents_pool)}
 ```
 
-10. **Maintenir un audit trail** — Chaque session de consensus doit produire un log structuré : `question`, `options`, `agents` (avec leurs rôles et configurations), `rounds` (arguments et votes à chaque round), `final_result` (gagnant, scores, méthode), `dissenting_opinions` (arguments de la minorité), `consensus_strength`, `timestamp`, `duration_ms`. Stocke ces logs pour analyse des patterns de désaccord et amélioration des prompts.
+### 10. Audit trail obligatoire
 
-## Anti-patterns
+```python
+import time
 
-- **Utiliser le consensus pour des faits vérifiables** — Si la question a une réponse factuelle (date, calcul, donnée de référence), le consensus ne fait qu'amplifier les hallucinations collectives. Cherche simplement la réponse avec les bons outils.
-- **Tous les agents avec le même prompt** — Un consensus entre agents identiques ne produit pas de diversité d'opinion, juste de la redondance coûteuse. Chaque agent doit avoir un rôle, un framing ou une température distincts.
-- **Ignorer les opinions minoritaires** — Les arguments de la minorité contiennent souvent des risques ou des nuances importants. Log toujours les dissenting opinions et présente-les dans le résultat.
-- **Trop de rounds de délibération** — Un débat de plus de 3 rounds converge rarement vers de nouvelles informations et augmente exponentiellement les coûts. Limite à 2–3 rounds maximum.
+def build_audit_log(session_id: str, question: str, options: list,
+                    agents_config: list, result: dict, duration_ms: int) -> dict:
+    return {
+        "session_id": session_id,
+        "timestamp": time.time(),
+        "question": question,
+        "options": options,
+        "agents": agents_config,           # roles, temperatures, framings
+        "method": result["method"],
+        "winner": result["winner"],
+        "consensus_strength": result["strength"],
+        "minority_report": result.get("minority_report"),
+        "duration_ms": duration_ms,
+    }
+# Stocke en base ou fichier JSON — indispensable pour débugger les désaccords récurrents
+```
 
-## Règles
+---
 
-1. **Diversité obligatoire** — Un consensus multi-agents n'est valide que si les agents ont des perspectives distinctes (prompts, températures, rôles ou données d'entrée différents). Sinon, utilise un seul agent.
-2. **Toujours produire un minority report** — Même quand le consensus est fort, documenter les arguments perdants. Ils peuvent révéler des risques non pris en compte par la majorité.
-3. **Définir le seuil de consensus avant le vote** — Décide a priori si le gagnant doit atteindre 51%, 66% ou 100% des votes. Ne pas ajuster le seuil après avoir vu les résultats.
-4. **Documente le trade-off coût/fiabilité** — Chaque agent supplémentaire réduit la variance mais multiplie les coûts. Justifie explicitement le nombre d'agents choisi dans la documentation de l'architecture.
-5. **Adapte au framework** — LangGraph : nodes parallèles + conditional aggregation. AutoGen : GroupChat avec `speaker_selection="round_robin"`. CrewAI : crew avec agents aux rôles distincts. Custom : `asyncio.gather` + fonctions d'agrégation.
+## Intégration par framework
+
+| Framework | Pattern recommandé |
+|---|---|
+| **LangGraph** | Nodes parallèles (`fan-out`) → nœud d'agrégation conditionnel |
+| **AutoGen** | `GroupChat` avec `speaker_selection="round_robin"`, `GroupChatManager` comme modérateur |
+| **CrewAI** | `Crew` avec agents aux rôles distincts, `Process.hierarchical` pour le modérateur |
+| **Custom asyncio** | `asyncio.gather` + fonctions d'agrégation ci-dessus |
+
+---
+
+## Anti-patterns et pièges
+
+| Anti-pattern | Pourquoi c'est un problème | Correctif |
+|---|---|---|
+| Agents identiques (même prompt+temp) | Redondance, pas de diversité, amplifie les biais | Différencier rôle, température, framing |
+| Consensus sur faits vérifiables | Hallucinations collectives amplifiées | Chercher la réponse avec des outils |
+| Ignorer le minority report | Risques critiques souvent portés par la minorité | Logger et présenter les dissenting opinions |
+| >3 rounds de débat | Convergence nulle, coûts exponentiels | Limite stricte à 3 rounds |
+| Ajuster le seuil après le vote | Biais de confirmation, résultat non fiable | Définir le seuil avant de lancer |
+| Nombre pair d'agents | Deadlock structurel fréquent | Toujours 3, 5 ou 7 agents |
+| Agents tous avec confidence=1.0 | Le weighted vote perd tout intérêt | Forcer les agents à exprimer leur incertitude |
+
+---
+
+## Règles non négociables
+
+1. **Diversité obligatoire** — Minimum 2 axes de différenciation entre agents (rôle, température, framing, contexte partiel). Sans ça, n'utilise qu'un seul agent.
+2. **Seuil défini avant le vote** — Jamais rétroactivement. Documente-le dans l'audit trail.
+3. **Minority report toujours produit** — Même si le consensus est fort à 90%.
+4. **Nombre impair d'agents** — 3 minimum pour un vote significatif, 5 pour les décisions critiques.
+5. **Coût justifié** — Chaque agent supplémentaire = N × coût. Commence par 2 agents, escalade seulement si nécessaire.

@@ -97,45 +97,194 @@ cp -r claude-skills-collection/skills/agent-marketplace-creator ~/.claude/skills
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent Marketplace Creator</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill lorsque tu dois créer une plateforme de distribution d'agents IA — qu'il s'agisse d'un registre interne d'entreprise, d'un marketplace public, d'une bibliothèque de templates réutilisables ou d'une place de marché avec monétisation. Il couvre l'architecture technique, la gouvernance, la découverte et la distribution des agents.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Architecture du marketplace</strong> — Concevoir les composants fondamentaux : Registry (base de données des agents avec métadonnées), Versioning (gestion des versions et compatibilité), Discovery (moteur de recherche et recommandation), Deployment (infrastructure d'exécution des agents), Billing (facturation et quotas). Choisir entre architecture centralisée (contrôle total, déploiement simplifié) ou fédérée (agents hébergés chez leurs créateurs, marketplace comme couche de découverte).</li>
-</ol>
-<ol>
-<li><strong>Packaging des agents</strong> — Définir un format de packaging standardisé pour tous les agents du marketplace. Structure minimale : <code>agent.yaml</code> (métadonnées, version, dépendances), <code>system_prompt.md</code> (instructions de l'agent), <code>tools.json</code> (outils requis et leurs configs), <code>config.schema.json</code> (paramètres configurables), <code>README.md</code> (documentation utilisateur), <code>tests/</code> (suite de tests fournie par le créateur). Publier un SDK pour faciliter la création de packages conformes.</li>
-</ol>
-<ol>
-<li><strong>Découverte des agents</strong> — Implémenter un moteur de découverte multi-dimensionnel : recherche full-text sur nom, description et tags, filtres par catégorie (productivité, données, communication, code, etc.), tri par popularité/rating/date, recommandations personnalisées basées sur l'historique d'usage, agents similaires (&quot;voir aussi&quot;). Indexer les agents avec un moteur comme Elasticsearch ou Typesense pour des recherches rapides et pertinentes.</li>
-</ol>
-<ol>
-<li><strong>Versionnage et compatibilité</strong> — Appliquer le semantic versioning (MAJOR.MINOR.PATCH) : MAJOR pour les changements d'API incompatibles, MINOR pour les nouvelles fonctionnalités rétrocompatibles, PATCH pour les corrections. Maintenir des guides de migration entre versions majeures. Définir une politique de deprecation (annonce 90 jours avant, support 6 mois après). Tester la compatibilité ascendante automatiquement dans la CI du marketplace.</li>
-</ol>
-<ol>
-<li><strong>Configuration et customisation</strong> — Permettre aux utilisateurs de personnaliser les agents via un schéma de configuration validé : paramètres déclarés dans <code>config.schema.json</code> (type, valeurs par défaut, description, validation), secrets gérés séparément via un vault, sélection du modèle LLM (si l'agent supporte plusieurs modèles), tuning comportemental (niveau de verbosité, langue, ton). Fournir une UI de configuration avec validation temps réel.</li>
-</ol>
-<ol>
-<li><strong>Options de déploiement</strong> — Offrir plusieurs modes d'accès selon les besoins : Managed (le marketplace héberge et exécute l'agent, zero-ops pour l'utilisateur), Self-hosted (package exportable pour déploiement dans l'infrastructure utilisateur), API endpoint (l'agent est exposé comme une API REST/streaming), Embedded (SDK pour intégrer l'agent dans une application existante). Documenter clairement les trade-offs de chaque option.</li>
-</ol>
-<ol>
-<li><strong>Authentification et autorisation</strong> — Implémenter un système d'accès robuste : API keys pour l'accès programmatique, OAuth2 pour l'intégration dans des applications tierces, gestion des tiers d'usage (free, pro, enterprise) avec rate limiting par tier, contrôle d'accès aux agents privés ou en beta, audit log de tous les accès. Séparer clairement l'authentification du créateur d'agent (publication) de celle de l'utilisateur final (consommation).</li>
-</ol>
-<ol>
-<li><strong>Facturation et monétisation</strong> — Proposer des modèles économiques flexibles : Pay-per-use (facturation à l'appel ou au token), Subscription (accès illimité mensuel/annuel), Freemium (quota gratuit + limite payante), Revenue sharing (créateurs perçoivent un % des revenus générés par leurs agents). Intégrer Stripe pour la facturation, implémenter des webhooks pour les événements de facturation, fournir des tableaux de bord de revenus aux créateurs.</li>
-</ol>
-<ol>
-<li><strong>Assurance qualité</strong> — Définir un processus de validation avant publication : review automatique (lint du package, validation du schema, tests fournis passants, scan de sécurité des prompts), review manuelle pour les agents avec accès aux données sensibles ou niveaux de permission élevés, benchmarks de performance obligatoires (latence, précision sur dataset standard), security audit pour les agents en accès entreprise. Maintenir un score de qualité public par agent.</li>
-</ol>
-<ol>
-<li><strong>Communauté</strong> — Construire l'écosystème autour du marketplace : système de notation et reviews utilisateurs (1-5 étoiles, commentaires), issues et bug reports publics ou privés selon la politique du créateur, fork d'agents existants pour créer des variantes, documentation collaborative (wiki), programme de certification pour les agents de haute qualité, leaderboard des créateurs les plus actifs. Animer la communauté via des newsletters, webinaires et hackathons.</li>
-</ol>
-<h2>Règles</h2>
+<p>Utilise ce skill pour concevoir une plateforme de distribution d'agents IA : registre interne d'entreprise, marketplace public, bibliothèque de templates réutilisables ou place de marché avec monétisation. Il couvre l'architecture, le packaging, la gouvernance et la distribution.</p>
+<hr>
+<h2>Étape 1 — Choisir l'architecture cible</h2>
+<p><strong>Critère de décision :</strong></p>
+<table><thead><tr><th>Besoin</th><th>Architecture</th></tr></thead><tbody><tr><td>Contrôle total, déploiement simplifié</td><td>Centralisée (registry + runtime hébergés)</td></tr><tr><td>Agents hébergés chez leurs créateurs</td><td>Fédérée (marketplace = couche discovery)</td></tr><tr><td>Usage interne entreprise uniquement</td><td>Registry privé (Artifact Hub, Harbor, custom)</td></tr><tr><td>Monétisation publique</td><td>SaaS centralisé avec billing intégré</td></tr></tbody></table>
+<p><strong>Composants obligatoires :</strong></p>
 <ul>
-<li><strong>Standardisation non négociable</strong> : tout agent publié doit strictement respecter le format de packaging défini. Aucune exception pour les cas particuliers — préférer enrichir le standard plutôt que de créer des dérogations qui fragilisent l'écosystème.</li>
-<li><strong>Sécurité par défaut</strong> : tous les agents du marketplace sont exécutés dans des sandboxes isolées. Les accès aux ressources externes (internet, fichiers, APIs tierces) doivent être déclarés explicitement dans le manifeste et approuvés par l'utilisateur.</li>
-<li><strong>Transparence des coûts</strong> : afficher clairement le coût estimé par appel (ou par usage typique) pour chaque agent, en incluant les coûts LLM sous-jacents. Les utilisateurs ne doivent jamais avoir de surprise sur leur facture.</li>
-<li><strong>Propriété intellectuelle claire</strong> : la licence de chaque agent doit être déclarée explicitement (MIT, Apache 2.0, commercial, propriétaire). Le marketplace doit vérifier que les agents ne réutilisent pas du code ou des prompts sans autorisation appropriée.</li>
-<li><strong>Observabilité pour les créateurs</strong> : fournir aux créateurs d'agents des métriques détaillées sur l'usage de leurs agents (appels, erreurs, latence, satisfaction) pour leur permettre d'améliorer continuellement leurs créations. Sans données, il n'y a pas d'amélioration possible.</li>
+<li><strong>Registry</strong> : base de données des agents + métadonnées indexées</li>
+<li><strong>Versioning</strong> : semantic versioning strict, compatibilité ascendante</li>
+<li><strong>Discovery</strong> : search full-text + filtres + recommandations</li>
+<li><strong>Runtime</strong> : sandbox isolée par agent, ressources déclarées</li>
+<li><strong>IAM</strong> : auth créateur (publication) séparée de auth utilisateur (consommation)</li>
+</ul>
+<hr>
+<h2>Étape 2 — Format de packaging standardisé</h2>
+<p>Structure minimale d'un agent publiable :</p>
+<pre><code>my-agent/
+├── agent.yaml          # manifeste principal
+├── system_prompt.md    # instructions de l'agent
+├── tools.json          # outils requis et configs
+├── config.schema.json  # paramètres configurables (JSON Schema)
+├── README.md           # documentation utilisateur
+└── tests/
+    ├── fixtures/       # inputs de test
+    └── expected/       # outputs attendus</code></pre>
+<p><strong><code>agent.yaml</code> minimal :</strong></p>
+<pre><code class="lang-yaml">name: my-data-analyst
+version: 1.2.0
+description: Analyse des fichiers CSV et génère des rapports visuels.
+author: k.benazzouz@b3gtech.com
+license: MIT
+category: data
+tags: [csv, analysis, reporting]
+runtime:
+  model: claude-sonnet-4-6
+  max_tokens: 4096
+permissions:
+  network: false
+  filesystem: read-only
+  tools: [code_execution, file_read]
+dependencies:
+  agents: []
+  mcp_servers: []</code></pre>
+<p><strong><code>config.schema.json</code> exemple :</strong></p>
+<pre><code class="lang-json">{
+  &quot;$schema&quot;: &quot;http://json-schema.org/draft-07/schema#&quot;,
+  &quot;properties&quot;: {
+    &quot;language&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;enum&quot;: [&quot;fr&quot;, &quot;en&quot;, &quot;ar&quot;],
+      &quot;default&quot;: &quot;fr&quot;,
+      &quot;description&quot;: &quot;Langue des rapports générés&quot;
+    },
+    &quot;chart_style&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;enum&quot;: [&quot;minimal&quot;, &quot;detailed&quot;],
+      &quot;default&quot;: &quot;minimal&quot;
+    }
+  }
+}</code></pre>
+<p><strong>Publier un SDK CLI :</strong></p>
+<pre><code class="lang-bash"># Initialiser un nouveau package agent
+agent-sdk init my-agent --template data-analyst
+
+# Valider le package avant publication
+agent-sdk validate ./my-agent
+
+# Publier sur le registry
+agent-sdk publish ./my-agent --registry https://registry.monentreprise.com</code></pre>
+<hr>
+<h2>Étape 3 — Discovery et indexation</h2>
+<p>Utiliser <strong>Typesense</strong> (léger) ou <strong>Elasticsearch</strong> (scalable) pour l'index.</p>
+<p><strong>Champs à indexer :</strong> <code>name</code>, <code>description</code>, <code>tags[]</code>, <code>category</code>, <code>author</code>, <code>downloads_count</code>, <code>rating_avg</code>, <code>updated_at</code>.</p>
+<p><strong>Filtres clés à exposer :</strong></p>
+<ul>
+<li>Catégorie (data, code, communication, productivité, sécurité)</li>
+<li>Modèle requis (claude, gpt-4, gemini…)</li>
+<li>Permissions réseau (réseau autorisé / sandbox strict)</li>
+<li>Licence (open-source / commercial)</li>
+<li>Tier (gratuit / pro)</li>
+</ul>
+<p><strong>API search minimale :</strong></p>
+<pre><code class="lang-http">GET /api/v1/agents?q=csv+analysis&amp;category=data&amp;license=open&amp;sort=downloads</code></pre>
+<hr>
+<h2>Étape 4 — Versionnage et cycle de vie</h2>
+<p>Appliquer <strong>SemVer strict</strong> (MAJOR.MINOR.PATCH) :</p>
+<table><thead><tr><th>Changement</th><th>Version</th></tr></thead><tbody><tr><td>Breaking change prompt/API</td><td>MAJOR</td></tr><tr><td>Nouvelle fonctionnalité rétrocompat</td><td>MINOR</td></tr><tr><td>Bugfix, correction de prompt</td><td>PATCH</td></tr></tbody></table>
+<p><strong>Politique de dépréciation :</strong></p>
+<ul>
+<li>Annonce 90 jours avant la fin de support d'une version MAJOR</li>
+<li>Tag <code>deprecated</code> dans le registry, bannière dans la UI</li>
+<li>Support de la version précédente pendant 6 mois minimum</li>
+<li>Guide de migration fourni obligatoirement pour tout changement MAJOR</li>
+</ul>
+<p><strong>CI du registry — vérifications automatiques à chaque push :</strong></p>
+<pre><code class="lang-yaml"># .github/workflows/agent-ci.yml
+steps:
+  - name: Validate schema
+    run: agent-sdk validate .
+  - name: Run tests
+    run: agent-sdk test . --fixture tests/fixtures/
+  - name: Security scan
+    run: agent-sdk scan . --check prompt-injection,data-leak
+  - name: Compat check
+    run: agent-sdk compat-check . --against-previous</code></pre>
+<hr>
+<h2>Étape 5 — Authentification et accès</h2>
+<p><strong>Séparation des rôles :</strong></p>
+<table><thead><tr><th>Rôle</th><th>Auth</th><th>Permissions</th></tr></thead><tbody><tr><td>Créateur</td><td>API key longue durée + 2FA</td><td>Publish, update, delete ses propres agents</td></tr><tr><td>Utilisateur</td><td>OAuth2 / API key</td><td>Install, invoke, rate</td></tr><tr><td>Admin</td><td>RBAC interne</td><td>Approve, ban, override</td></tr></tbody></table>
+<p><strong>Rate limiting par tier (exemple Nginx/Kong) :</strong></p>
+<pre><code class="lang-yaml"># Kong rate-limit plugin
+config:
+  minute: 60      # free tier
+  hour: 1000
+  policy: local</code></pre>
+<hr>
+<h2>Étape 6 — Déploiement des agents — 4 modes</h2>
+<table><thead><tr><th>Mode</th><th>Description</th><th>Idéal pour</th></tr></thead><tbody><tr><td><strong>Managed</strong></td><td>Marketplace héberge et exécute</td><td>Zero-ops, usage ponctuel</td></tr><tr><td><strong>Self-hosted</strong></td><td>Package exporté, runtime interne</td><td>Données sensibles, air-gapped</td></tr><tr><td><strong>API endpoint</strong></td><td>Agent exposé en REST/streaming</td><td>Intégration applicative</td></tr><tr><td><strong>Embedded SDK</strong></td><td>Bibliothèque à intégrer</td><td>Produit SaaS tiers</td></tr></tbody></table>
+<p><strong>Endpoint API standard :</strong></p>
+<pre><code class="lang-http">POST /api/v1/agents/{agent_id}/invoke
+Authorization: Bearer &lt;api_key&gt;
+Content-Type: application/json
+
+{
+  &quot;input&quot;: &quot;Analyse ce fichier CSV...&quot;,
+  &quot;config&quot;: { &quot;language&quot;: &quot;fr&quot; },
+  &quot;stream&quot;: true
+}</code></pre>
+<hr>
+<h2>Étape 7 — Facturation et monétisation</h2>
+<p><strong>Modèles disponibles :</strong></p>
+<ul>
+<li><strong>Pay-per-use</strong> : facturation au token ou à l'invocation</li>
+<li><strong>Subscription</strong> : accès illimité mensuel/annuel</li>
+<li><strong>Freemium</strong> : quota gratuit (ex : 100 invocations/mois) + payant</li>
+<li><strong>Revenue sharing</strong> : créateurs touchent 70 % des revenus générés</li>
+</ul>
+<p><strong>Intégration Stripe :</strong></p>
+<pre><code class="lang-python"># Webhook Stripe pour crediter le créateur
+@app.post(&quot;/webhooks/stripe&quot;)
+async def stripe_webhook(event: StripeEvent):
+    if event.type == &quot;invoice.payment_succeeded&quot;:
+        agent_id = event.metadata[&quot;agent_id&quot;]
+        creator_id = get_agent_creator(agent_id)
+        amount = event.amount_paid * 0.70  # 70% pour le créateur
+        credit_creator_wallet(creator_id, amount)</code></pre>
+<p>Afficher <strong>coût estimé par invocation</strong> sur la fiche agent (inclure coût LLM sous-jacent + frais marketplace).</p>
+<hr>
+<h2>Étape 8 — Assurance qualité et validation</h2>
+<p><strong>Pipeline de review à deux niveaux :</strong></p>
+<ol>
+<li><strong>Automatique (bloquant) :</strong></li>
+<ul>
+<li>Validation du schema <code>agent.yaml</code> + <code>config.schema.json</code></li>
+<li>Tests fournis passants à 100 %</li>
+<li>Scan injection de prompt (<code>agent-sdk scan</code>)</li>
+<li>Taille du system prompt &lt; 50 000 tokens</li>
+<li>Permissions déclarées cohérentes avec les outils utilisés</li>
+</ul>
+</ol>
+<ol>
+<li><strong>Manuelle (pour agents sensibles) :</strong></li>
+<ul>
+<li>Accès à des données utilisateurs</li>
+<li>Permissions réseau + filesystem write</li>
+<li>Niveau de permission <code>enterprise</code></li>
+</ul>
+</ol>
+<p><strong>Score de qualité public (0–100) :</strong></p>
+<pre><code>score = (test_coverage * 0.3) + (rating_avg/5 * 0.3) + (doc_completeness * 0.2) + (uptime * 0.2)</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<ul>
+<li><strong>Ne jamais publier un agent sans sandbox</strong> : exécuter des agents en environnement non isolé expose l'infrastructure hôte à des injections de prompt qui déclenchent des commandes système.</li>
+<li><strong>Éviter les configurations &quot;tout-en-un&quot;</strong> : un agent qui fait trop de choses est impossible à tester, versionner et monitorer correctement. Préférer la composition d'agents spécialisés.</li>
+<li><strong>Ne pas négliger la migration</strong> : un MAJOR sans guide de migration force les utilisateurs à rester bloqués sur l'ancienne version — cela fragmente l'écosystème.</li>
+<li><strong>Éviter les secrets dans <code>agent.yaml</code></strong> : toujours passer les credentials via un vault (AWS Secrets Manager, HashiCorp Vault, Doppler) référencé par nom, jamais en clair dans le manifeste.</li>
+<li><strong>Ne pas mélanger auth créateur et auth utilisateur</strong> : deux surfaces d'attaque distinctes, deux rotations de clés distinctes, deux audit logs distincts.</li>
+<li><strong>Pas de rate limiting absent</strong> : sans limite, un seul agent malveillant ou bogué peut consommer tout le budget LLM du marketplace en quelques minutes.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Observabilité créateur</strong> : exposer via dashboard les métriques par agent — invocations, taux d'erreur, latence p50/p99, satisfaction (thumbs up/down). Sans données, pas d'amélioration.</li>
+<li><strong>Licence explicite obligatoire</strong> : MIT, Apache 2.0, BSL, commercial ou propriétaire — refuser toute publication sans déclaration de licence.</li>
+<li><strong>Interopérabilité MCP</strong> : exposer les agents comme serveurs MCP pour permettre leur consommation directe depuis Claude Code et d'autres clients compatibles.</li>
+<li><strong>Tests de non-régression comportementale</strong> : les benchmarks de réponse sur un dataset golden set doivent être exécutés à chaque nouvelle version pour détecter les dérives de comportement liées aux mises à jour de modèle.</li>
+<li><strong>Changelog public automatique</strong> : générer le changelog depuis les commits Git (Conventional Commits) et le publier automatiquement sur la fiche marketplace à chaque release.</li>
 </ul>
 </article>
 </main>

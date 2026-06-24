@@ -96,24 +96,178 @@ cp -r claude-skills-collection/skills/database-dynamodb-guide ~/.claude/skills/<
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>DynamoDB Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identifier les access patterns</strong> — Lister exhaustivement tous les patterns d'accès de l'application (queries, scans, gets). Documenter chaque pattern avec ses paramètres de filtrage, tri et projection. Prioriser par fréquence et criticité.</li>
-<li><strong>Concevoir le single-table design</strong> — Modéliser toutes les entités dans une seule table en utilisant des clés génériques (PK, SK). Définir les préfixes d'entité (ex: <code>USER#</code>, <code>ORDER#</code>, <code>PRODUCT#</code>). Mapper chaque access pattern sur une combinaison PK/SK.</li>
-<li><strong>Définir les index secondaires</strong> — Créer des GSI (Global Secondary Index) pour les access patterns qui ne correspondent pas à la clé primaire. Utiliser des LSI (Local Secondary Index) quand un tri alternatif est nécessaire sur la même partition. Limiter le nombre de GSI (max 20).</li>
-<li><strong>Choisir le mode de capacité</strong> — Sélectionner entre On-Demand (trafic imprévisible, démarrage) et Provisioned (trafic stable, coût optimisé). Configurer l'auto-scaling avec des seuils de target utilization à 70% pour le mode provisionné.</li>
-<li><strong>Implémenter les opérations</strong> — Utiliser <code>Query</code> plutôt que <code>Scan</code> systématiquement. Implémenter la pagination avec <code>ExclusiveStartKey</code>. Utiliser <code>TransactWriteItems</code> pour les écritures atomiques multi-items. Appliquer des condition expressions pour l'optimistic locking.</li>
-<li><strong>Configurer DynamoDB Streams</strong> — Activer les streams pour le CDC (Change Data Capture). Connecter à Lambda pour les projections, la synchronisation vers Elasticsearch/OpenSearch ou l'invalidation de cache. Choisir le view type approprié (NEW_IMAGE, OLD_IMAGE, BOTH).</li>
-<li><strong>Optimiser les coûts et performances</strong> — Compresser les attributs volumineux. Utiliser le DAX (DynamoDB Accelerator) pour les lectures intensives. Implémenter le TTL pour l'expiration automatique des données. Surveiller les throttled requests et les hot partitions.</li>
-<li><strong>Tester et valider</strong> — Utiliser DynamoDB Local pour les tests unitaires. Valider chaque access pattern avec NoSQL Workbench. Simuler la charge avec des scripts de load testing pour vérifier la distribution des partitions.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Identifier les access patterns (obligatoire en premier)</h2>
+<p>Avant tout schéma, lister <strong>chaque pattern</strong> : entité cible, clés de filtrage, tri, cardinalité, fréquence.</p>
+<table><thead><tr><th>Pattern</th><th>PK</th><th>SK</th><th>Index</th></tr></thead><tbody><tr><td>Récupérer user par ID</td><td><code>USER#&lt;userId&gt;</code></td><td><code>#PROFILE</code></td><td>table</td></tr><tr><td>Commandes d'un user (par date)</td><td><code>USER#&lt;userId&gt;</code></td><td><code>ORDER#&lt;isoDate&gt;</code></td><td>table</td></tr><tr><td>Commandes par statut</td><td><code>STATUS#&lt;status&gt;</code></td><td><code>&lt;isoDate&gt;</code></td><td>GSI1</td></tr><tr><td>Produits par catégorie</td><td><code>CAT#&lt;categoryId&gt;</code></td><td><code>PRODUCT#&lt;productId&gt;</code></td><td>GSI2</td></tr></tbody></table>
+<p>Règle : <strong>ne jamais commencer par le modèle relationnel</strong> ; partir exclusivement des patterns de lecture.</p>
+<hr>
+<h2>2. Concevoir le single-table design</h2>
+<pre><code>Table: MyApp
+PK (partition key): string
+SK (sort key):      string
+GSI1PK / GSI1SK:   attributs surchargés pour GSI1
+entity_type:        &quot;USER&quot; | &quot;ORDER&quot; | &quot;PRODUCT&quot; (facilite les projections)
+ttl:                epoch unix (optionnel, activation TTL côté table)</code></pre>
+<p>Préfixes d'entité conseillés : <code>USER#</code>, <code>ORDER#</code>, <code>PRODUCT#</code>, <code>SESSION#</code>, <code>STATUS#</code>.</p>
+<p>Modèle overloaded key (un item = plusieurs types) :</p>
+<pre><code class="lang-python"># Python (boto3) — créer un user
+table.put_item(Item={
+    &quot;PK&quot;: f&quot;USER#{user_id}&quot;,
+    &quot;SK&quot;: &quot;#PROFILE&quot;,
+    &quot;entity_type&quot;: &quot;USER&quot;,
+    &quot;email&quot;: email,
+    &quot;created_at&quot;: iso_now,
+})
+
+# Créer une commande liée à ce user
+table.put_item(Item={
+    &quot;PK&quot;: f&quot;USER#{user_id}&quot;,
+    &quot;SK&quot;: f&quot;ORDER#{order_date}#{order_id}&quot;,
+    &quot;entity_type&quot;: &quot;ORDER&quot;,
+    &quot;GSI1PK&quot;: f&quot;STATUS#{status}&quot;,
+    &quot;GSI1SK&quot;: order_date,
+    &quot;amount&quot;: Decimal(&quot;99.90&quot;),
+})</code></pre>
+<hr>
+<h2>3. Définir les index secondaires</h2>
+<p><strong>GSI (Global Secondary Index)</strong> — clé de partition différente de la table principale, bonne pour les lookups cross-partition.</p>
+<pre><code class="lang-bash"># Créer un GSI via AWS CLI
+aws dynamodb update-table \
+  --table-name MyApp \
+  --attribute-definitions AttributeName=GSI1PK,AttributeType=S AttributeName=GSI1SK,AttributeType=S \
+  --global-secondary-index-updates '[{
+    &quot;Create&quot;: {
+      &quot;IndexName&quot;: &quot;GSI1&quot;,
+      &quot;KeySchema&quot;: [
+        {&quot;AttributeName&quot;:&quot;GSI1PK&quot;,&quot;KeyType&quot;:&quot;HASH&quot;},
+        {&quot;AttributeName&quot;:&quot;GSI1SK&quot;,&quot;KeyType&quot;:&quot;RANGE&quot;}
+      ],
+      &quot;Projection&quot;: {&quot;ProjectionType&quot;:&quot;ALL&quot;},
+      &quot;BillingMode&quot;: &quot;PAY_PER_REQUEST&quot;
+    }
+  }]'</code></pre>
+<p><strong>LSI (Local Secondary Index)</strong> — même PK que la table, SK alternatif. Doit être déclaré <strong>à la création</strong> de la table, impossible d'en ajouter après.</p>
+<p>Critères de choix :</p>
+<table><thead><tr><th>Besoin</th><th>Choix</th></tr></thead><tbody><tr><td>Tri alternatif dans la même partition</td><td>LSI</td></tr><tr><td>Lookup sur une entité différente</td><td>GSI</td></tr><tr><td>Accès fortement cohérent</td><td>LSI (cohérence forte possible)</td></tr><tr><td>Scalabilité indépendante</td><td>GSI</td></tr></tbody></table>
+<p>Limite : max 20 GSI par table, max 5 LSI par table.</p>
+<hr>
+<h2>4. Choisir le mode de capacité</h2>
+<table><thead><tr><th>Critère</th><th>On-Demand</th><th>Provisioned + Auto-scaling</th></tr></thead><tbody><tr><td>Trafic imprévisible / startup</td><td>✅</td><td>risque throttling</td></tr><tr><td>Charge stable et prévisible</td><td>trop cher</td><td>✅</td></tr><tr><td>Burst soudain</td><td>✅</td><td>configurer burst capacity</td></tr><tr><td>Contrôle budgétaire strict</td><td>difficile</td><td>✅</td></tr></tbody></table>
+<pre><code class="lang-bash"># Passer en provisioned avec auto-scaling (target 70%)
+aws application-autoscaling register-scalable-target \
+  --service-namespace dynamodb \
+  --resource-id &quot;table/MyApp&quot; \
+  --scalable-dimension &quot;dynamodb:table:ReadCapacityUnits&quot; \
+  --min-capacity 5 --max-capacity 1000
+
+aws application-autoscaling put-scaling-policy \
+  --policy-name &quot;DynamoDBReadScaling&quot; \
+  --service-namespace dynamodb \
+  --resource-id &quot;table/MyApp&quot; \
+  --scalable-dimension &quot;dynamodb:table:ReadCapacityUnits&quot; \
+  --policy-type TargetTrackingScaling \
+  --target-tracking-scaling-policy-configuration \
+    '{&quot;TargetValue&quot;:70.0,&quot;PredefinedMetricSpecification&quot;:{&quot;PredefinedMetricType&quot;:&quot;DynamoDBReadCapacityUtilization&quot;}}'</code></pre>
+<hr>
+<h2>5. Implémenter les opérations CRUD</h2>
+<pre><code class="lang-python">import boto3
+from boto3.dynamodb.conditions import Key, Attr
+
+dynamodb = boto3.resource(&quot;dynamodb&quot;)
+table = dynamodb.Table(&quot;MyApp&quot;)
+
+# Query (toujours préférer à Scan)
+resp = table.query(
+    KeyConditionExpression=Key(&quot;PK&quot;).eq(f&quot;USER#{user_id}&quot;) &amp; Key(&quot;SK&quot;).begins_with(&quot;ORDER#&quot;),
+    ScanIndexForward=False,   # tri DESC
+    Limit=20,
+    ExclusiveStartKey=last_key,  # pagination
+)
+items, next_key = resp[&quot;Items&quot;], resp.get(&quot;LastEvaluatedKey&quot;)
+
+# Query sur GSI
+resp = table.query(
+    IndexName=&quot;GSI1&quot;,
+    KeyConditionExpression=Key(&quot;GSI1PK&quot;).eq(f&quot;STATUS#PENDING&quot;),
+)
+
+# Écriture conditionnelle (optimistic locking)
+table.put_item(
+    Item={...},
+    ConditionExpression=Attr(&quot;PK&quot;).not_exists(),  # insert only
+)
+
+# Transaction atomique (jusqu'à 100 items, 4 MB)
+dynamodb.meta.client.transact_write(Items=[
+    {&quot;Put&quot;: {&quot;TableName&quot;: &quot;MyApp&quot;, &quot;Item&quot;: {...}}},
+    {&quot;Update&quot;: {&quot;TableName&quot;: &quot;MyApp&quot;, &quot;Key&quot;: {...},
+                &quot;UpdateExpression&quot;: &quot;SET balance = balance - :amount&quot;,
+                &quot;ConditionExpression&quot;: &quot;balance &gt;= :amount&quot;,
+                &quot;ExpressionAttributeValues&quot;: {&quot;:amount&quot;: Decimal(&quot;50&quot;)}}},
+])</code></pre>
+<hr>
+<h2>6. Configurer DynamoDB Streams</h2>
+<pre><code class="lang-bash"># Activer le stream NEW_AND_OLD_IMAGES
+aws dynamodb update-table \
+  --table-name MyApp \
+  --stream-specification StreamEnabled=true,StreamViewType=NEW_AND_OLD_IMAGES</code></pre>
+<p>Cas d'usage courants :</p>
 <ul>
-<li>Toujours concevoir le modèle de données à partir des access patterns et jamais à partir du modèle relationnel existant pour éviter les anti-patterns.</li>
-<li>Ne jamais utiliser <code>Scan</code> en production pour des tables volumineuses ; toujours préférer <code>Query</code> avec une clé de partition bien définie.</li>
-<li>Distribuer uniformément les écritures sur les partitions en choisissant des partition keys à haute cardinalité pour éviter les hot partitions.</li>
-<li>Toujours activer le Point-in-Time Recovery (PITR) et les backups automatiques pour la protection des données en production.</li>
-<li>Limiter la taille des items à moins de 100 KB (max 400 KB) en externalisant les données volumineuses vers S3 avec une référence dans DynamoDB.</li>
+<li><strong>CDC → OpenSearch</strong> : indexer les champs full-text via Lambda trigger</li>
+<li><strong>Invalidation de cache</strong> : purger DAX/Redis sur modification</li>
+<li><strong>Audit log</strong> : persister OLD_IMAGE dans S3/Glacier</li>
+<li><strong>Event sourcing</strong> : publier dans EventBridge depuis Lambda</li>
+</ul>
+<p>View types : <code>KEYS_ONLY</code> (minimal) | <code>NEW_IMAGE</code> | <code>OLD_IMAGE</code> | <code>NEW_AND_OLD_IMAGES</code> (audit complet).</p>
+<hr>
+<h2>7. Optimiser les coûts et performances</h2>
+<pre><code class="lang-python"># DAX (DynamoDB Accelerator) — microseconde latency, drop-in replacement
+import amazondax
+dax = amazondax.AmazonDaxClient(endpoints=[&quot;my-dax.xxx.dax-clusters.amazonaws.com:8111&quot;])
+table = dax.Table(&quot;MyApp&quot;)
+
+# TTL — expiration automatique (epoch unix)
+table.put_item(Item={
+    &quot;PK&quot;: f&quot;SESSION#{session_id}&quot;,
+    &quot;SK&quot;: &quot;#DATA&quot;,
+    &quot;ttl&quot;: int(time.time()) + 3600,  # expire dans 1h
+    ...
+})</code></pre>
+<p>Autres leviers :</p>
+<ul>
+<li><strong>Compression</strong> : gzip les blobs JSON &gt; 1 KB avant stockage, référencer les fichiers &gt; 100 KB dans S3.</li>
+<li><strong>Batch operations</strong> : <code>batch_get_item</code> (jusqu'à 100 items) et <code>batch_write_item</code> (25 items) réduisent les roundtrips.</li>
+<li><strong>Projection GSI</strong> : préférer <code>INCLUDE</code> avec les attributs nécessaires plutôt que <code>ALL</code> pour réduire la RCU/WCU.</li>
+</ul>
+<hr>
+<h2>8. Tester et valider</h2>
+<pre><code class="lang-bash"># DynamoDB Local (Docker)
+docker run -p 8000:8000 amazon/dynamodb-local
+
+# Pointer boto3 sur local
+boto3.resource(&quot;dynamodb&quot;, endpoint_url=&quot;http://localhost:8000&quot;)
+
+# NoSQL Workbench — visualiser le modèle et simuler les queries (GUI)
+# Téléchargement : https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/workbench.settingup.html</code></pre>
+<p>Checklist de validation :</p>
+<ul>
+<li>[ ] Chaque access pattern résolu par <code>Query</code> (pas <code>Scan</code>)</li>
+<li>[ ] Distribution des PK vérifiée (pas de hot partition)</li>
+<li>[ ] PITR activé en production</li>
+<li>[ ] Alarmes CloudWatch sur <code>ThrottledRequests</code> et <code>SystemErrors</code></li>
+</ul>
+<hr>
+<h2>Garde-fous / anti-patterns / pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Remède</th></tr></thead><tbody><tr><td><code>Scan</code> en production</td><td>Full table read, coûts explosifs</td><td>Remodéliser avec GSI</td></tr><tr><td>PK à faible cardinalité (ex: <code>status</code>)</td><td>Hot partition, throttling</td><td>Ajouter un suffixe de sharding <code>STATUS#&lt;hash%10&gt;</code></td></tr><tr><td>Modéliser comme une BDD relationnelle</td><td>Jointures impossibles, Scans</td><td>Partir des access patterns</td></tr><tr><td>Item &gt; 400 KB</td><td>Erreur <code>ItemSizeTooLarge</code></td><td>Externaliser vers S3</td></tr><tr><td>Trop de GSI (&gt; 5-6)</td><td>Coûts WCU doublés, complexité</td><td>Fusionner via attributs surchargés</td></tr><tr><td>Lectures fortement cohérentes partout</td><td>2x le coût en RCU</td><td>Utiliser eventual consistency sauf besoin strict</td></tr><tr><td>Ignorer <code>LastEvaluatedKey</code></td><td>Résultats tronqués silencieux</td><td>Toujours paginer jusqu'à <code>null</code></td></tr><tr><td>Transactions &gt; 25 items (ancien quota)</td><td>Erreur — nouveau quota 100 items 4 MB</td><td>Vérifier version SDK et quota région</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Single-table design par défaut</strong> sauf si équipes séparées ou domaines totalement indépendants.</li>
+<li><strong><code>entity_type</code> attribute</strong> sur chaque item : facilite le filtering, les projections Lambda, et le debugging.</li>
+<li><strong>Zero-ETL integration</strong> : DynamoDB → Aurora/Redshift zero-ETL disponible dans la plupart des régions, éviter les pipelines custom.</li>
+<li><strong>DynamoDB import/export S3</strong> : utiliser pour les migrations et les seeds de données en masse (pas de WCU consommées pour l'import).</li>
+<li><strong>Resource-based policies</strong> (2024+) : préférer aux VPC endpoints seuls pour le contrôle d'accès inter-comptes.</li>
+<li><strong>PartiQL</strong> : acceptable pour les requêtes ad-hoc et migrations, pas pour le code applicatif critique (moins performant que l'API native).</li>
 </ul>
 </article>
 </main>

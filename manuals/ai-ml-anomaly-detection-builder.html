@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ai-ml-anomaly-detection-builder — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Conception de systèmes de détection d'anomalies (statistique, ML, deep learning)">
+<meta name="description" content="Conception de systèmes de détection d'anomalies (statistique, ML, deep learning) — arbre de décision, snippets copiables, anti-patterns, déploiement production">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🧠 AI / ML</span>
 <h1 class="skill-title">ai-ml-anomaly-detection-builder</h1>
-<p class="lead">Conception de systèmes de détection d'anomalies (statistique, ML, deep learning)</p>
+<p class="lead">Conception de systèmes de détection d'anomalies (statistique, ML, deep learning) — arbre de décision, snippets copiables, anti-patterns, déploiement production</p>
 
 
 
@@ -96,118 +96,186 @@ cp -r claude-skills-collection/skills/ai-ml-anomaly-detection-builder ~/.claude/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Anomaly Detection Builder</h1>
-<p>Guide complet pour la conception et l'implémentation de systèmes de détection d'anomalies, des approches statistiques classiques aux techniques de deep learning.</p>
-<h2>Workflow</h2>
-<h3>1. Caractériser le problème et les données</h3>
+<h2>1. Caractériser le problème</h2>
+<p><strong>Questions clés avant de coder quoi que ce soit :</strong></p>
+<table><thead><tr><th>Dimension</th><th>Options</th><th>Impact sur le choix technique</th></tr></thead><tbody><tr><td>Type d'anomalie</td><td>Ponctuelle / Contextuelle / Collective</td><td>Contextuelle → features temporelles obligatoires</td></tr><tr><td>Disponibilité des labels</td><td>Supervisé / Semi-supervisé / Non-supervisé</td><td>Labels → classifier classique suffit souvent</td></tr><tr><td>Ratio d'anomalies</td><td>&lt; 0.1 % / 0.1–5 % / &gt; 5 %</td><td>&lt; 0.1 % → isolation/reconstruction ; &gt; 5 % → SMOTE + classifier</td></tr><tr><td>Contrainte de latence</td><td>Temps réel (&lt; 100 ms) / Batch (minutes)</td><td>Temps réel → éviter DBSCAN, LOF sur grands datasets</td></tr><tr><td>Coût faux négatif vs faux positif</td><td>Fraude / Qualité / Infra</td><td>Calibre le seuil, pas le modèle</td></tr></tbody></table>
+<hr>
+<h2>2. Arbre de décision : choisir la méthode</h2>
+<pre><code>Données labellisées suffisantes ?
+├─ OUI → XGBoost / LightGBM avec class_weight + seuil F1-optimal
+│         (baseline solide, explicable, rapide)
+└─ NON
+    ├─ Données tabulaires basses dimensions (&lt; 50 features) ?
+    │   └─ Isolation Forest  (2–5 M lignes sans GPU)
+    │       si résultats insuffisants → One-Class SVM (kernel RBF)
+    ├─ Séries temporelles ?
+    │   ├─ Courte fenêtre (&lt; 1 h) → SARIMA residuals ou STL decomposition
+    │   └─ Longue séquence → LSTM Autoencoder ou Transformer (TadGAN, Anomaly Transformer)
+    ├─ Images / texte ?
+    │   └─ Autoencoder convolutif ou VAE + seuil sur reconstruction error
+    └─ Logs / événements discrets ?
+        └─ Drain3 (log parsing) → Isolation Forest sur vecteurs TF-IDF</code></pre>
+<hr>
+<h2>3. Préparer les données</h2>
+<pre><code class="lang-python">import pandas as pd
+from sklearn.preprocessing import RobustScaler
+
+df = pd.read_parquet(&quot;data/raw.parquet&quot;)
+
+# 1. Statistiques glissantes (features temporelles)
+for w in [5, 30, 60]:  # minutes
+    df[f&quot;mean_{w}m&quot;] = df[&quot;value&quot;].rolling(w).mean()
+    df[f&quot;std_{w}m&quot;]  = df[&quot;value&quot;].rolling(w).std()
+
+# 2. Ratios / deltas — souvent plus discriminants que la valeur brute
+df[&quot;pct_change&quot;] = df[&quot;value&quot;].pct_change()
+df[&quot;z_score&quot;]    = (df[&quot;value&quot;] - df[&quot;value&quot;].rolling(60).mean()) / df[&quot;value&quot;].rolling(60).std()
+
+# 3. Normalisation robuste (insensible aux outliers existants)
+scaler = RobustScaler()
+X = scaler.fit_transform(df[features].dropna())</code></pre>
+<p><strong>Pièges fréquents en préparation :</strong></p>
 <ul>
-<li>Définir le type d'anomalie recherché : ponctuelle, contextuelle ou collective</li>
-<li>Identifier le domaine d'application : fraude financière, maintenance prédictive, cybersécurité, contrôle qualité</li>
-<li>Analyser la nature des données : séries temporelles, données tabulaires, images, logs</li>
-<li>Évaluer la disponibilité des labels : supervisé (anomalies connues), semi-supervisé (seulement des données normales), non supervisé</li>
-<li>Déterminer le ratio d'anomalies attendu (typiquement 0.1% à 5%)</li>
-<li>Définir les contraintes opérationnelles : temps réel vs batch, tolérance aux faux positifs/négatifs</li>
+<li>Scaler fitté sur l'ensemble train+test → fuite de données, résultats faussement bons.</li>
+<li>Imputer les NaN par la moyenne globale sur une série temporelle → détruire les pics réels.</li>
+<li>Oublier de supprimer les anomalies connues du set d'entraînement (semi-supervisé).</li>
 </ul>
-<h3>2. Explorer et préparer les données</h3>
+<hr>
+<h2>4. Implémenter le détecteur</h2>
+<h3>Isolation Forest (point de départ universel)</h3>
+<pre><code class="lang-python">from sklearn.ensemble import IsolationForest
+
+model = IsolationForest(
+    n_estimators=200,       # 100 suffit rarement sur &gt; 100k lignes
+    contamination=0.01,     # estimation du ratio d'anomalies attendu
+    max_samples=&quot;auto&quot;,
+    random_state=42,
+    n_jobs=-1,
+)
+model.fit(X_train)
+
+scores = -model.score_samples(X_test)  # plus élevé = plus anormal</code></pre>
+<h3>LSTM Autoencoder (séries temporelles)</h3>
+<pre><code class="lang-python">import torch, torch.nn as nn
+
+class LSTMAutoencoder(nn.Module):
+    def __init__(self, n_features, hidden=64, latent=16):
+        super().__init__()
+        self.encoder = nn.LSTM(n_features, hidden, batch_first=True)
+        self.bottleneck = nn.Linear(hidden, latent)
+        self.expand     = nn.Linear(latent, hidden)
+        self.decoder    = nn.LSTM(hidden, n_features, batch_first=True)
+
+    def forward(self, x):
+        enc_out, _ = self.encoder(x)
+        h = torch.relu(self.bottleneck(enc_out))
+        h = torch.relu(self.expand(h))
+        dec_out, _ = self.decoder(h)
+        return dec_out
+
+# Score = MSE de reconstruction par séquence
+recon_error = ((x_test - model(x_test)) ** 2).mean(dim=(1, 2))</code></pre>
+<h3>Baseline statistique (toujours comparer)</h3>
+<pre><code class="lang-python"># Z-score sur fenêtre glissante — souvent suffisant pour séries univariées
+def zscore_anomaly(series, window=60, threshold=3.0):
+    mu  = series.rolling(window).mean()
+    std = series.rolling(window).std()
+    z   = (series - mu) / (std + 1e-9)
+    return z.abs() &gt; threshold</code></pre>
+<hr>
+<h2>5. Calibrer le seuil</h2>
+<p>Le seuil est aussi critique que le modèle.</p>
+<pre><code class="lang-python">from sklearn.metrics import precision_recall_curve, f1_score
+import numpy as np
+
+# Si labels disponibles : maximiser F1 ou recall à precision minimale acceptable
+precision, recall, thresholds = precision_recall_curve(y_true, scores)
+min_precision = 0.30  # tolérance aux faux positifs
+mask = precision[:-1] &gt;= min_precision
+best_threshold = thresholds[mask][recall[:-1][mask].argmax()]
+
+# Si pas de labels : percentile métier
+threshold = np.percentile(scores, 99)   # top 1 % des scores</code></pre>
+<p><strong>Tableau d'aide au choix de stratégie :</strong></p>
+<table><thead><tr><th>Contrainte métier</th><th>Stratégie recommandée</th></tr></thead><tbody><tr><td>Aucune fausse alerte tolérée</td><td>Maximize precision à recall ≥ 0.5</td></tr><tr><td>Aucune anomalie manquée (fraude, sécurité)</td><td>Maximize recall à precision ≥ 0.2</td></tr><tr><td>Équilibre opérationnel</td><td>Maximize F1 ou F-beta (beta &gt; 1 pour recall)</td></tr><tr><td>Pas de labels</td><td>Percentile ou sigma-rule, ajuster via feedback</td></tr></tbody></table>
+<hr>
+<h2>6. Évaluer correctement</h2>
+<pre><code class="lang-python">from sklearn.metrics import (
+    classification_report, average_precision_score, roc_auc_score
+)
+
+y_pred = (scores &gt;= best_threshold).astype(int)
+
+print(classification_report(y_true, y_pred))
+print(&quot;AUC-PR :&quot;, average_precision_score(y_true, scores))
+print(&quot;AUC-ROC:&quot;, roc_auc_score(y_true, scores))</code></pre>
+<p><strong>Métriques indispensables :</strong></p>
 <ul>
-<li>Réaliser une analyse exploratoire approfondie (distributions, corrélations, tendances)</li>
-<li>Visualiser les données pour identifier visuellement les anomalies évidentes (scatter plots, box plots, histogrammes)</li>
-<li>Nettoyer les données : gestion des valeurs manquantes, normalisation, encodage des catégories</li>
-<li>Détecter et documenter les anomalies déjà connues pour constituer un ground truth</li>
-<li>Pour les séries temporelles : analyser la saisonnalité, la tendance et la stationnarité</li>
-<li>Créer des features pertinentes : statistiques glissantes, ratios, distances, embeddings</li>
+<li>AUC-PR (Average Precision) — principale métrique sur données déséquilibrées.</li>
+<li>Recall à precision fixe (ex : recall@P30).</li>
+<li>Time-to-detect : délai médian entre occurrence et détection.</li>
 </ul>
-<h3>3. Choisir la méthode de détection adaptée</h3>
+<p><strong>Ne jamais utiliser l'accuracy seule.</strong> Avec 1 % d'anomalies, prédire &quot;normal&quot; partout donne 99 % d'accuracy.</p>
+<hr>
+<h2>7. Déployer en production</h2>
+<pre><code class="lang-python"># Inférence temps réel via une file (ex : Kafka consumer)
+import joblib, json
+from kafka import KafkaConsumer
+
+model   = joblib.load(&quot;isolation_forest.pkl&quot;)
+scaler  = joblib.load(&quot;scaler.pkl&quot;)
+
+consumer = KafkaConsumer(&quot;events&quot;, bootstrap_servers=&quot;broker:9092&quot;,
+                         value_deserializer=lambda m: json.loads(m.decode()))
+
+for msg in consumer:
+    x       = scaler.transform([extract_features(msg.value)])
+    score   = -model.score_samples(x)[0]
+    if score &gt; THRESHOLD:
+        send_alert(severity=&quot;critical&quot; if score &gt; THRESHOLD * 1.5 else &quot;warning&quot;,
+                   payload=msg.value, score=score)</code></pre>
+<p><strong>Checklist déploiement :</strong></p>
 <ul>
-<li>Approches statistiques (données simples, interprétabilité maximale) :</li>
+<li>[ ] Seuil stocké hors du code (variable d'environnement ou config store).</li>
+<li>[ ] Suppression de doublons : ne pas ré-alerter la même anomalie toutes les 5 s.</li>
+<li>[ ] Circuit-breaker : si le taux d'alertes dépasse 10× la normale, suspendre et alerter l'équipe.</li>
+<li>[ ] Feedback loop : interface pour que les analystes valident/invalident → enrichit le dataset.</li>
+<li>[ ] Data drift : surveiller la distribution des scores hebdomadairement (PSI, KL-divergence).</li>
+</ul>
+<hr>
+<h2>8. Monitorer et itérer</h2>
+<pre><code class="lang-python"># Calculer le Population Stability Index (PSI) pour détecter le drift
+def psi(expected, actual, buckets=10):
+    def scale(x):
+        counts, _ = np.histogram(x, bins=buckets)
+        return (counts + 1e-9) / len(x)  # éviter division par 0
+    e, a = scale(expected), scale(actual)
+    return np.sum((a - e) * np.log(a / e))
+
+psi_score = psi(scores_train, scores_production_last_week)
+# PSI &gt; 0.2 → recalibration urgente ; 0.1–0.2 → surveiller</code></pre>
+<p><strong>Fréquence de recalibration recommandée :</strong></p>
 <ul>
-<li>Z-score, IQR pour les anomalies univariées</li>
-<li>Mahalanobis distance pour les données multivariées</li>
-<li>Tests de Grubbs, ESD pour les outliers</li>
+<li>Fraude financière : hebdomadaire.</li>
+<li>Supervision infrastructure : mensuelle.</li>
+<li>Contrôle qualité industriel : à chaque changement de lot/process.</li>
 </ul>
-<li>Approches ML classiques (données tabulaires, performances robustes) :</li>
+<hr>
+<h2>Anti-patterns et garde-fous</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Scaler fitté sur tout le dataset</td><td>Data leakage, faux bons résultats</td><td>Fit scaler uniquement sur train</td></tr><tr><td>Contamination Isolation Forest = 0.5 par défaut</td><td>Trop d'anomalies détectées</td><td>Estimer le vrai ratio ou utiliser <code>score_samples</code> + seuil manuel</td></tr><tr><td>Évaluer uniquement sur accuracy</td><td>Ignorer toutes les vraies anomalies</td><td>AUC-PR obligatoire</td></tr><tr><td>Threshold codé en dur sans monitoring</td><td>Dérive silencieuse en prod</td><td>PSI + recalibration périodique</td></tr><tr><td>Un seul détecteur en production</td><td>Point de défaillance unique</td><td>Ensemble : vote majoritaire sur 2-3 détecteurs</td></tr><tr><td>Entraîner avec anomalies dans le set (semi-supervisé)</td><td>Modèle apprend à ne pas les détecter</td><td>Nettoyer le train set des anomalies connues</td></tr><tr><td>Négliger l'heure/jour comme feature</td><td>Faux positifs sur trafic nuit/weekend</td><td>Ajouter features calendaires systématiquement</td></tr></tbody></table>
+<hr>
+<h2>Bibliothèques clés (2026)</h2>
+<pre><code class="lang-bash">pip install scikit-learn pyod river           # classiques + streaming
+pip install torch torchmetrics               # deep learning
+pip install alibi-detect                     # drift + outlier + adversarial
+pip install stumpy                           # matrix profile (séries temporelles)
+pip install drain3                           # parsing de logs</code></pre>
 <ul>
-<li>Isolation Forest : efficace, scalable, peu de paramètres</li>
-<li>One-Class SVM : bon pour les petits datasets à haute dimension</li>
-<li>Local Outlier Factor (LOF) : détecte les anomalies locales basées sur la densité</li>
-<li>DBSCAN : clustering avec détection de bruit</li>
+<li><strong>PyOD</strong> : 40+ algorithmes unifiés, API sklearn-compatible.</li>
+<li><strong>Alibi-Detect</strong> : drift detection + outlier, prêt production.</li>
+<li><strong>River</strong> : détection en ligne (streaming), mise à jour incrémentale.</li>
+<li><strong>Stumpy</strong> : Matrix Profile, excellent pour motifs répétitifs dans les séries temporelles.</li>
 </ul>
-<li>Approches deep learning (données complexes, haute dimension) :</li>
-<ul>
-<li>Autoencoders : détection par erreur de reconstruction</li>
-<li>Variational Autoencoders (VAE) : modélisation de la distribution normale</li>
-<li>GAN (GANomaly) : génération adversariale pour la détection</li>
-<li>Transformer-based : pour les séries temporelles longues</li>
-</ul>
-</ul>
-<h3>4. Implémenter et entraîner le modèle</h3>
-<ul>
-<li>Entraîner uniquement sur les données normales pour les approches semi-supervisées</li>
-<li>Configurer les hyperparamètres clés selon la méthode choisie :</li>
-<ul>
-<li>Isolation Forest : n_estimators, contamination, max_samples</li>
-<li>Autoencoder : architecture (dimension du bottleneck), loss (MSE, MAE), epochs</li>
-<li>One-Class SVM : kernel, nu, gamma</li>
-</ul>
-<li>Implémenter la validation croisée adaptée (TimeSeriesSplit pour les données temporelles)</li>
-<li>Gérer le déséquilibre extrême des classes si approche supervisée (SMOTE, class weights, focal loss)</li>
-<li>Logger les métriques et les paramètres pour chaque expérience</li>
-</ul>
-<h3>5. Définir les seuils de détection</h3>
-<ul>
-<li>Analyser la distribution des scores d'anomalie sur les données de validation</li>
-<li>Choisir la méthode de seuillage :</li>
-<ul>
-<li>Percentile fixe (ex: top 1% des scores)</li>
-<li>Seuil statistique (moyenne + k * écart-type)</li>
-<li>Optimisation sur la courbe precision-recall si labels disponibles</li>
-<li>Seuil adaptatif basé sur une fenêtre glissante</li>
-</ul>
-<li>Calibrer le seuil selon le coût métier des faux positifs vs faux négatifs</li>
-<li>Implémenter des niveaux d'alerte multiples (warning, critical) si pertinent</li>
-<li>Documenter la justification du seuil choisi</li>
-</ul>
-<h3>6. Évaluer les performances</h3>
-<ul>
-<li>Calculer les métriques adaptées au déséquilibre : precision, recall, F1, AUC-PR (pas uniquement accuracy)</li>
-<li>Tracer la courbe precision-recall et la courbe ROC</li>
-<li>Calculer le taux de faux positifs à différents seuils de rappel</li>
-<li>Évaluer la latence de détection : temps entre l'occurrence de l'anomalie et sa détection</li>
-<li>Tester sur des anomalies synthétiques injectées pour valider la sensibilité</li>
-<li>Comparer avec des baselines simples (seuil statistique, règles métier)</li>
-</ul>
-<h3>7. Déployer et monitorer en production</h3>
-<ul>
-<li>Implémenter le pipeline d'inférence avec gestion du streaming si temps réel</li>
-<li>Configurer le système d'alerting (niveaux de sévérité, canaux de notification, suppression de doublons)</li>
-<li>Mettre en place un feedback loop : les analystes valident/invalident les alertes</li>
-<li>Monitorer le data drift pour détecter quand le modèle doit être recalibré</li>
-<li>Recalculer périodiquement les seuils sur les données récentes</li>
-<li>Maintenir un dashboard de suivi (taux de faux positifs, volume d'alertes, temps de résolution)</li>
-</ul>
-<h3>8. Itérer et améliorer</h3>
-<ul>
-<li>Analyser systématiquement les faux positifs et faux négatifs en production</li>
-<li>Enrichir le dataset avec les anomalies confirmées pour améliorer le modèle</li>
-<li>Explorer les approches d'ensemble (combiner plusieurs détecteurs pour réduire les faux positifs)</li>
-<li>Adapter les features et le modèle à l'évolution des patterns d'anomalie</li>
-<li>Documenter les types d'anomalies détectés et manqués pour guider l'amélioration</li>
-</ul>
-<h2>Rules</h2>
-<ol>
-<li><strong>Privilégier le recall sur la precision pour les anomalies critiques</strong> : En détection de fraude ou en maintenance prédictive, manquer une anomalie réelle (faux négatif) coûte généralement beaucoup plus cher qu'une fausse alerte (faux positif). Calibrer les seuils en conséquence.</li>
-</ol>
-<ol>
-<li><strong>Ne jamais utiliser l'accuracy comme métrique principale</strong> : Avec 1% d'anomalies, un modèle qui prédit toujours &quot;normal&quot; obtient 99% d'accuracy. Utiliser systématiquement la precision, le recall, le F1-score et l'AUC-PR.</li>
-</ol>
-<ol>
-<li><strong>Commencer par les méthodes simples</strong> : Isolation Forest ou un seuil statistique bien calibré surpasse souvent un autoencoder complexe. Implémenter d'abord une baseline simple, puis complexifier uniquement si les performances sont insuffisantes.</li>
-</ol>
-<ol>
-<li><strong>Le seuil est aussi important que le modèle</strong> : Un excellent modèle avec un seuil mal calibré est inutile. Investir autant de temps dans le calibrage du seuil que dans l'entraînement du modèle, et recalibrer régulièrement en production.</li>
-</ol>
-<ol>
-<li><strong>Prévoir la dérive des données</strong> : Les patterns normaux et anormaux évoluent dans le temps. Mettre en place un monitoring du data drift et un processus de réentraînement périodique pour maintenir la pertinence du système.</li>
-</ol>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

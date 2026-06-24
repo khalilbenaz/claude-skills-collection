@@ -1,91 +1,238 @@
 ---
 name: code-review-subagent
-description: Sous-agent spécialisé dans la revue de code automatisée, déclenchable par un agent parent pour analyser du code. Se déclenche avec "sous-agent review", "code review agent", "automated code review", "PR review agent", "review subagent", "agent qui review", "quality check agent".
+description: Sous-agent spécialisé dans la revue de code automatisée, déclenchable par un agent parent pour analyser du code, un diff ou une PR. Produit un rapport structuré avec findings classés par sévérité, corrections copiables et score qualité. Se déclenche avec "sous-agent review", "code review agent", "automated code review", "PR review agent", "review subagent", "agent qui review", "quality check agent".
 ---
 
 # Code Review Sub-Agent
 
-## Quand utiliser ce skill
+## Rôle et périmètre
 
-Utiliser ce skill lorsqu'un agent parent doit déléguer l'analyse qualité d'un code source, d'un diff de pull request, ou d'une soumission de patch à un sous-agent spécialisé. Pertinent pour les pipelines CI/CD intégrant une revue automatisée, les workflows de validation avant merge, ou les assistants de développement qui doivent fournir un feedback structuré sur du code soumis par un utilisateur.
+Sous-agent invocable depuis un agent parent ou un pipeline CI. Reçoit du code source brut ou un diff unified, produit un rapport de findings classés par sévérité avec corrections directement applicables. Supporte Python, JavaScript, TypeScript, Java, Go, Rust, C#.
 
-## Workflow
+---
 
-1. **Interface et validation des inputs** — Recevoir depuis l'agent parent : `code` (code source brut ou diff), `language` (langage de programmation), `context` (description fonctionnelle optionnelle), `severity_threshold` (niveau minimal à reporter). Valider que le code n'est pas vide, que le langage est supporté, et normaliser le diff si nécessaire (format unified diff).
+## Workflow en 10 étapes
 
-2. **Analyse statique** — Exécuter les outils d'analyse statique adaptés au langage : `pylint`/`flake8`/`ruff` pour Python, `eslint` pour JavaScript/TypeScript, `checkstyle` pour Java, `staticcheck` pour Go. Détecter les anti-patterns (god object, code mort, duplication excessive via `jscpd`), mesurer la complexité cyclomatique (seuil > 10 = alerte).
+### Étape 1 — Validation des inputs
 
-3. **Security scan** — Analyser les vulnérabilités de sécurité avec `bandit` (Python), `semgrep` (multi-langage), ou `eslint-plugin-security`. Détecter : injections SQL/NoSQL/command, secrets hardcodés (regex sur API keys, passwords, tokens), désérialisation non sécurisée, dépendances vulnérables (OWASP Top 10). Classifier selon le score CVSS.
+Vérifier avant toute analyse :
+- `code` non vide, longueur raisonnable (< 10 000 lignes → OK ; > 10 000 lignes → tronquer et signaler)
+- `language` supporté ; si absent, détecter via heuristique (tokens + shebang + extension dans le contexte)
+- `severity_threshold` valide parmi `critical | high | medium | low | info`
 
-4. **Performance analysis** — Identifier les problèmes de performance : complexité algorithmique O(n²) ou pire (boucles imbriquées sur grandes structures), requêtes N+1 en ORM, allocations mémoire inutiles dans les boucles, absence de lazy loading, re-computation de valeurs constantes. Proposer des alternatives plus efficaces avec estimation de gain.
+Si validation KO → retourner immédiatement `{"findings": [], "score": null, "summary": "<raison>"}` sans lancer l'analyse.
 
-5. **Style et conventions** — Vérifier la conformité aux conventions du langage (PEP 8, Google Style Guide, Airbnb) et aux standards du projet si fournis. Évaluer la cohérence du nommage (variables, fonctions, classes), la longueur des fonctions (> 50 lignes = refactoring suggéré), et la qualité des commentaires (présents, pertinents, à jour).
+### Étape 2 — Analyse statique
 
-6. **Logic review** — Analyser la logique métier : conditions aux limites non gérées (off-by-one, valeurs nulles, listes vides), gestion des erreurs (exceptions swallées, erreurs non propagées), race conditions dans le code concurrent, null safety et vérifications de type. Simuler mentalement les cas d'utilisation extrêmes.
+Lancer l'outil adapté au langage :
 
-7. **Test coverage assessment** — Évaluer si les changements sont couverts par des tests. Identifier les fonctions critiques sans tests unitaires. Suggérer des cas de test manquants (happy path, edge cases, erreurs). Vérifier la qualité des assertions existantes (éviter `assertTrue(result is not None)` seul). Calculer un score de couverture estimé.
+| Langage | Outil principal | Fallback |
+|---|---|---|
+| Python | `ruff check --output-format json` | `flake8 --format json` |
+| JS/TS | `eslint --format json` | - |
+| Java | `checkstyle -f json` | `pmd -f json` |
+| Go | `staticcheck -f json` | `go vet` |
+| Rust | `cargo clippy --message-format json` | - |
+| C# | `dotnet-format --report json` | Roslyn analyzers |
 
-8. **Findings prioritization** — Classer tous les findings selon 5 niveaux : `critical` (failles de sécurité exploitables, données corrompues), `high` (bugs fonctionnels, vulnérabilités importantes), `medium` (mauvaises pratiques, performance dégradée), `low` (style, lisibilité), `info` (suggestions d'amélioration). Filtrer selon `severity_threshold`.
+Seuil de complexité cyclomatique : > 10 → finding `medium` ; > 20 → finding `high`.
 
-9. **Suggestion generation** — Pour chaque finding, générer : une explication claire du problème, un extrait de code corrigé (diff format), une ou plusieurs approches alternatives si pertinentes, des liens vers la documentation ou les best practices. Les suggestions de code doivent être syntaxiquement correctes et directement applicables.
+```bash
+# Python — mesurer la complexité avec radon
+radon cc -j -s src/
+# Go — staticcheck JSON
+staticcheck -f json ./...
+# JS — eslint JSON
+npx eslint --format json src/ > eslint-report.json
+```
 
-10. **Report formatting** — Produire le rapport final dans le format demandé : JSON structuré pour consommation par l'agent parent (avec `findings`, `score`, `summary`), ou Markdown lisible par un humain avec sections organisées par sévérité. Inclure un score global de 0 à 100 basé sur la densité et sévérité des findings.
+### Étape 3 — Security scan
 
-## Interface du sous-agent
+Priorité absolue. Utiliser `semgrep` en mode multi-langage + outil natif :
 
-**Input schema :**
+```bash
+semgrep --config=p/default --json --quiet .
+bandit -r src/ -f json -o bandit-report.json   # Python
+```
+
+Patterns à détecter systématiquement :
+- **Injections** : SQL (`f"SELECT … {user_input}"`), command (`subprocess.call(input, shell=True)`)
+- **Secrets hardcodés** : regex `(api_key|password|token|secret)\s*=\s*['"][^'"]{8,}` sur tout le diff
+- **Désérialisation** : `pickle.loads`, `yaml.load(…)` sans `Loader=yaml.SafeLoader`
+- **Cryptographie faible** : MD5, SHA1 pour hachage de mots de passe, ECB mode
+- **IDOR / autorisation manquante** : endpoint qui utilise un ID sans vérifier `current_user`
+
+Classifier chaque finding avec score CVSS estimé → `critical` si CVSS ≥ 9, `high` si ≥ 7.
+
+### Étape 4 — Analyse de performance
+
+Patterns à signaler :
+
 ```python
+# Anti-pattern N+1 (Django ORM)
+for order in Order.objects.all():
+    print(order.user.name)   # → HIGH : N requêtes
+# Fix
+for order in Order.objects.select_related("user"):
+    print(order.user.name)
+
+# Concatenation en boucle O(n²)
+result = ""
+for item in items:
+    result += item          # → MEDIUM
+# Fix
+result = "".join(items)
+```
+
+Signaler aussi : re-computation de constantes dans des boucles, absence de cache sur appels réseau répétés, allocations inutiles dans des hot paths.
+
+### Étape 5 — Style et conventions
+
+Vérifier selon `style_guide` fourni (PEP 8, Google, Airbnb). À défaut, appliquer les conventions standard du langage. Signaler en `low` uniquement :
+- Nommage incohérent (camelCase vs snake_case dans le même module)
+- Fonctions > 50 lignes sans justification
+- Commentaires obsolètes (`# TODO(2021): fix this`)
+
+Ne jamais lever un finding de style si `severity_threshold = high` ou plus.
+
+### Étape 6 — Logic review
+
+Analyser mentalement les cas limites :
+- **Null safety** : paramètre pouvant être `None` utilisé sans garde
+- **Off-by-one** : index de boucle (`< len` vs `<= len`)
+- **Exceptions swallées** : `except Exception: pass` sans log
+- **Race conditions** : accès concurrent à une variable partagée sans lock
+
+```python
+# Anti-pattern exception avalée
+try:
+    result = db.query(sql)
+except Exception:
+    pass    # → HIGH : erreur silencieuse, impossible à déboguer
+
+# Fix
+except Exception as exc:
+    logger.error("db.query failed: %s", exc, exc_info=True)
+    raise
+```
+
+### Étape 7 — Évaluation de la couverture de tests
+
+Si des tests sont présents dans le diff :
+- Vérifier que chaque chemin fonctionnel modifié a au moins un test
+- Détecter les assertions faibles : `assert result is not None` seul, `assert True`
+- Signaler les cas manquants : entrée vide, valeur maximale, erreur réseau simulée
+
+Si aucun test dans le diff et que le code modifie de la logique métier → finding `medium` systématique.
+
+```python
+# Assertion faible → INFO
+assert result is not None
+# Fix — tester la valeur réelle
+assert result == {"status": "ok", "id": 42}
+```
+
+### Étape 8 — Classement des findings
+
+Cinq niveaux, filtrés selon `severity_threshold` :
+
+| Niveau | Critère | `code_fix` obligatoire |
+|---|---|---|
+| `critical` | Faille exploitable, corruption de données | Oui |
+| `high` | Bug fonctionnel, vulnérabilité importante | Oui |
+| `medium` | Mauvaise pratique, dégradation notable | Non (suggestion prose) |
+| `low` | Style, lisibilité | Non |
+| `info` | Suggestion d'amélioration | Non |
+
+### Étape 9 — Génération des suggestions
+
+Pour chaque finding `critical` ou `high`, produire un diff minimal :
+
+```diff
+- user_input = request.args.get("id")
+- query = f"SELECT * FROM users WHERE id = {user_input}"
++ user_id = int(request.args.get("id", 0))  # validation de type
++ query = "SELECT * FROM users WHERE id = ?"
++ cursor.execute(query, (user_id,))
+```
+
+Les suggestions doivent être syntaxiquement correctes et directement copiables sans modification.
+
+### Étape 10 — Production du rapport
+
+Format JSON pour l'agent parent :
+
+```json
 {
-  "code": str,                    # Code source brut ou diff unified (obligatoire)
-  "language": str,                # "python" | "javascript" | "typescript" | "java" | "go" | "rust" | ...
-  "context": str,                 # Description fonctionnelle du code (optionnel)
-  "severity_threshold": str,      # "critical" | "high" | "medium" | "low" | "info" (défaut: "low")
-  "output_format": str,           # "json" | "markdown" (défaut: "json")
-  "check_security": bool,         # Activer le scan sécurité (défaut: True)
-  "check_performance": bool,      # Activer l'analyse performance (défaut: True)
-  "check_tests": bool,            # Évaluer la couverture de tests (défaut: True)
-  "style_guide": str              # "pep8" | "google" | "airbnb" | None (défaut: None)
+  "findings": [
+    {
+      "severity": "critical",
+      "category": "security",
+      "line": 42,
+      "issue": "Injection SQL via f-string non échappée",
+      "suggestion": "Utiliser des requêtes paramétrées",
+      "code_fix": "cursor.execute('SELECT … WHERE id = ?', (user_id,))"
+    }
+  ],
+  "score": 67,
+  "summary": "3 findings critiques (injections SQL). Refactoring urgent avant merge.",
+  "stats": {"total": 8, "critical": 3, "high": 2, "medium": 2, "low": 1, "info": 0},
+  "execution_time_s": 4.2
 }
 ```
 
-**Output schema :**
+Calcul du score :
+```
+score = 100
+       - (critical × 20)
+       - (high × 10)
+       - (medium × 3)
+       - (low × 1)
+score = max(0, score)
+```
+
+---
+
+## Interface contractuelle
+
+**Input :**
 ```python
 {
-  "findings": list[dict],         # Liste des findings détectés
-  # Chaque finding :
-  # {
-  #   "severity": str,            # "critical" | "high" | "medium" | "low" | "info"
-  #   "category": str,            # "security" | "performance" | "style" | "logic" | "test"
-  #   "line": int,                # Numéro de ligne (None si global)
-  #   "issue": str,               # Description claire du problème
-  #   "suggestion": str,          # Correction proposée en prose
-  #   "code_fix": str             # Extrait de code corrigé (optionnel)
-  # }
-  "score": int,                   # Score qualité global 0–100
-  "summary": str,                 # Résumé exécutif en 2–3 phrases
-  "stats": dict,                  # {"total": int, "critical": int, "high": int, ...}
-  "execution_time_s": float       # Durée d'analyse en secondes
+  "code": str,                 # Code source ou diff unified (obligatoire)
+  "language": str,             # "python"|"javascript"|"typescript"|"java"|"go"|"rust"|"csharp"
+  "context": str,              # Description fonctionnelle (optionnel)
+  "severity_threshold": str,   # défaut: "low"
+  "output_format": str,        # "json"|"markdown" — défaut: "json"
+  "check_security": bool,      # défaut: True
+  "check_performance": bool,   # défaut: True
+  "check_tests": bool,         # défaut: True
+  "style_guide": str           # "pep8"|"google"|"airbnb"|None
 }
 ```
 
-**Librairies Python recommandées :**
-```
-pylint>=3.0.0
-flake8>=6.0.0
-ruff>=0.1.0
-bandit>=1.7.0
-semgrep>=1.50.0
-radon>=6.0.0
-```
+---
 
-## Règles
+## Garde-fous et anti-patterns
 
-1. **Interface contractuelle stricte** — Le sous-agent accepte uniquement le schéma d'entrée défini. Si `code` est vide ou `language` non supporté, retourner immédiatement un output avec `findings: []`, `score: null`, et un message d'erreur clair dans `summary`. Ne jamais lever d'exception non catchée vers l'agent parent.
+**Ne jamais faire :**
+- Lever une exception non catchée vers l'agent parent (toujours retourner l'output schema)
+- Proposer une réécriture complète sans justification précise par finding
+- Reporter un finding de style si `severity_threshold >= high`
+- Inventer un numéro de ligne si le diff n'en fournit pas (`"line": null` est correct)
+- Mélanger des findings subjectifs avec des findings basés sur des règles citables
 
-2. **Objectivité et non-destructivité** — Les findings doivent être factuels, basés sur des règles définies, jamais sur des préférences subjectives non documentées. Toujours justifier chaque finding avec une règle ou standard cité (ex: "PEP 8 E501 - ligne trop longue"). Ne jamais suggérer de réécriture complète sans justification précise.
+**Erreurs fréquentes à éviter :**
+- Oublier de filtrer les findings selon `severity_threshold` avant la sortie
+- Produire un `code_fix` syntaxiquement invalide (toujours valider mentalement)
+- Classer une erreur de style en `high` parce qu'elle est répandue dans le fichier
+- Compter plusieurs occurrences du même pattern comme findings indépendants → grouper avec `occurrences: N`
 
-3. **Priorisation actionnable** — Chaque finding `critical` ou `high` doit obligatoirement inclure un `code_fix`. Les findings `medium` doivent inclure au minimum une `suggestion` textuelle détaillée. Ne jamais rapporter un problème sans au moins une piste de résolution concrète.
+---
 
-4. **Réutilisabilité multi-langage** — Le sous-agent doit supporter au minimum Python, JavaScript, TypeScript, Java et Go. La détection automatique du langage (si `language` non fourni) doit être tentée via analyse heuristique des tokens et extensions. Dégradation gracieuse si l'outil statique spécifique n'est pas disponible.
+## Bonnes pratiques 2026
 
-5. **Code Python fonctionnel fourni** — Fournir une implémentation complète de la classe `CodeReviewSubAgent` avec méthodes `run(input_schema) -> output_schema`, `_run_static_analysis()`, `_run_security_scan()`, `_compute_score()`, et un exemple d'intégration dans un pipeline CI/CD agent-based.
+- **Semgrep rules-as-code** : versionner les règles semgrep dans le dépôt (`semgrep.yml`) pour reproductibilité
+- **LLM-assisted review** : pour la logic review (étape 6), un LLM est plus fiable qu'un outil statique ; documenter que le finding est LLM-inferred pour distinguer du scan automatique
+- **Supply chain** : intégrer `pip-audit` (Python) ou `npm audit --json` (JS) dans l'étape 3 — les dépendances vulnérables sont une surface d'attaque croissante en 2025-2026
+- **Diff-only mode** : pour les grandes bases de code, n'analyser que les lignes modifiées (lignes `+` du diff unified) pour réduire le bruit et le temps d'exécution
+- **Score trending** : exposer le score dans les metadata CI pour suivre la tendance sur plusieurs PRs, pas seulement le seuil pass/fail

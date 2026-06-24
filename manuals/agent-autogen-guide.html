@@ -96,251 +96,238 @@ cp -r claude-skills-collection/skills/agent-autogen-guide ~/.claude/skills/</div
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>AutoGen Guide — Agents Conversationnels Microsoft</h1>
-<h2>Quand utiliser ce skill</h2>
-<p>Utiliser ce skill quand l'utilisateur veut construire des agents qui conversent entre eux pour résoudre des problèmes complexes, notamment pour des systèmes de coding agents (génération et exécution de code automatique), des workflows de résolution de problèmes par discussion multi-agents, ou des pipelines où des agents spécialisés débattent et collaborent. AutoGen excelle pour les cas d'usage impliquant l'écriture et l'exécution de code Python dans une boucle.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Installation et configuration initiale</strong></li>
-<ul>
-<li>Installer : <code>pip install pyautogen==0.3.2</code> (ou <code>autogen-agentchat~=0.2</code> pour la v0.2 stable)</li>
-<li>Pour AutoGen v0.4+ (nouvelle API) : <code>pip install autogen-agentchat autogen-ext[openai]</code></li>
-<li>Configurer les modèles via <code>OAI_CONFIG_LIST</code> (fichier JSON) ou dict Python :</li>
-</ul>
-</ol>
-<p>     ```python      config_list = [          {&quot;model&quot;: &quot;gpt-4o&quot;, &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]},          {&quot;model&quot;: &quot;gpt-4o-mini&quot;, &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]},      ]      ```</p>
-<ul>
-<li>Variables d'env : <code>OPENAI_API_KEY</code>, optionnellement <code>OAI_CONFIG_LIST</code> (chemin fichier)</li>
-</ul>
-<ol>
-<li><strong>Agents de base</strong></li>
-<ul>
-<li><code>AssistantAgent</code> : agent LLM qui génère des réponses et du code, ne l'exécute pas</li>
-<li><code>UserProxyAgent</code> : agent qui peut exécuter du code, simuler l'humain, orchestrer</li>
-<li><code>ConversableAgent</code> : classe de base, tous les agents en héritent</li>
-<li>Paramètres clés : <code>name</code>, <code>system_message</code>, <code>llm_config</code>, <code>human_input_mode</code>, <code>max_consecutive_auto_reply</code></li>
-</ul>
-</ol>
-<ol>
-<li><strong>Configuration des LLMs (llm_config)</strong></li>
-<ul>
-<li>Structure <code>llm_config</code> : <code>{&quot;config_list&quot;: [...], &quot;temperature&quot;: 0, &quot;cache_seed&quot;: 42}</code></li>
-<li><code>cache_seed</code> : met en cache les réponses LLM pour reproduire les résultats (mettre à <code>None</code> en prod)</li>
-<li>Model routing : lister plusieurs modèles dans <code>config_list</code> — AutoGen essaie dans l'ordre en cas d'échec</li>
-<li><code>llm_config=False</code> sur <code>UserProxyAgent</code> pour désactiver le LLM (proxy pur)</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Group Chat — conversation multi-agents</strong></li>
-<ul>
-<li><code>GroupChat</code> : définit les agents participants, <code>max_round</code>, <code>speaker_selection_method</code></li>
-<li><code>GroupChatManager</code> : orchestre le GroupChat, nécessite son propre <code>llm_config</code></li>
-<li>Méthodes de sélection du speaker : <code>&quot;auto&quot;</code> (LLM choisit), <code>&quot;round_robin&quot;</code>, <code>&quot;random&quot;</code>, ou une fonction custom</li>
-<li>Contraindre les transitions : <code>allowed_or_disallowed_speaker_transitions</code> pour un flow déterministe</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Exécution de code (code_execution_config)</strong></li>
-<ul>
-<li>Configuration sur <code>UserProxyAgent</code> :</li>
-</ul>
-</ol>
-<p>     ```python      code_execution_config={          &quot;executor&quot;: LocalCommandLineCodeExecutor(work_dir=&quot;coding&quot;),          &quot;last_n_messages&quot;: 3,      }      ```</p>
-<ul>
-<li><code>LocalCommandLineCodeExecutor</code> : exécute localement (attention à la sécurité !)</li>
-<li><code>DockerCommandLineCodeExecutor</code> : exécution isolée dans Docker (recommandé en prod)</li>
-<li>Désactiver l'exécution : <code>code_execution_config=False</code></li>
-</ul>
-<ol>
-<li><strong>Tool use — appels de fonctions</strong></li>
-<ul>
-<li>Définir les fonctions et les enregistrer :</li>
-</ul>
-</ol>
-<p>     ```python      from autogen import register_function</p>
-<p>     def get_weather(city: str) -&gt; str:          &quot;&quot;&quot;Retourne la météo pour une ville.&quot;&quot;&quot;          return f&quot;Météo pour {city}: ensoleillé, 22°C&quot;</p>
-<p>     register_function(          get_weather,          caller=assistant,    # agent qui appelle l'outil          executor=user_proxy, # agent qui exécute l'outil          name=&quot;get_weather&quot;,          description=&quot;Obtenir la météo actuelle d'une ville&quot;,      )      ```</p>
-<ul>
-<li>Les tools sont définis comme JSON Schema dans <code>llm_config[&quot;tools&quot;]</code></li>
-</ul>
-<ol>
-<li><strong>Human-in-the-loop</strong></li>
-<ul>
-<li><code>human_input_mode=&quot;ALWAYS&quot;</code> : demande input humain à chaque tour</li>
-<li><code>human_input_mode=&quot;NEVER&quot;</code> : entièrement automatique (défaut pour automation)</li>
-<li><code>human_input_mode=&quot;TERMINATE&quot;</code> : demande input seulement quand l'agent veut terminer</li>
-<li><code>is_termination_msg</code> : fonction lambda pour détecter le message de fin (ex: <code>lambda x: &quot;TERMINATE&quot; in x.get(&quot;content&quot;, &quot;&quot;)</code>)</li>
-<li><code>max_consecutive_auto_reply=10</code> : stoppe automatiquement après N tours sans input humain</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Patterns avancés</strong></li>
-<ul>
-<li><strong>Nested chats</strong> : un agent peut initier une sous-conversation et en récupérer le résultat comme un seul message</li>
-<li><strong>Teachable agents</strong> : <code>TeachableAgent</code> — mémorise les enseignements de l'utilisateur via une base de données</li>
-<li><strong>RAG agents</strong> : <code>RetrieveAssistantAgent</code> + <code>RetrieveUserProxyAgent</code> pour la retrieval-augmented generation</li>
-<li><strong>Society of Mind</strong> : pattern où plusieurs chats indépendants alimentent un agent synthétiseur</li>
-<li><strong>Swarm</strong> (v0.4+) : orchestration légère avec <code>RoundRobinGroupChat</code>, <code>SelectorGroupChat</code></li>
-</ul>
-</ol>
-<ol>
-<li><strong>Gestion de l'état et historique</strong></li>
-<ul>
-<li>Accéder à l'historique : <code>agent.chat_messages</code> (dict par agent interlocuteur)</li>
-<li>Résumer la conversation : utiliser un agent dédié à la synthèse</li>
-<li>Checkpointing : sauvegarder <code>chat_messages</code> en JSON pour reprendre une session</li>
-<li>Resumabilité : réinitialiser avec <code>agent.reset()</code> ou injecter l'historique manuellement</li>
-</ul>
-</ol>
-<ol>
-<li><strong>AutoGen Studio et déploiement</strong></li>
-<ul>
-<li><code>pip install autogenstudio</code> — interface GUI no-code pour créer des workflows</li>
-<li>Lancement : <code>autogenstudio ui --port 8080</code></li>
-<li>API REST : AutoGen Studio expose un endpoint pour déclencher des workflows via HTTP</li>
-<li>En production : wrapper FastAPI + gestion des sessions avec UUID de conversation</li>
-<li>Monitoring : intégration OpenTelemetry disponible dans AutoGen v0.4+</li>
-</ul>
-</ol>
-<h2>Exemples de code</h2>
-<h3>Système de coding agents : résolution automatique de problèmes Python</h3>
+<h2>Quand utiliser AutoGen</h2>
+<table><thead><tr><th>Cas d'usage</th><th>AutoGen adapté ?</th></tr></thead><tbody><tr><td>Résolution itérative de code (écrire → tester → corriger)</td><td>Oui — c'est le point fort</td></tr><tr><td>Workflow multi-agents avec rôles spécialisés (PM, Dev, Reviewer)</td><td>Oui</td></tr><tr><td>Pipeline linéaire simple sans feedback loop</td><td>Non — préférer LangChain Chains ou CrewAI</td></tr><tr><td>RAG statique sans agent qui décide</td><td>Non — préférer LlamaIndex</td></tr><tr><td>Orchestration déterministe sans LLM entre les étapes</td><td>Non — préférer Temporal ou Prefect</td></tr></tbody></table>
+<p><strong>Critère de décision clé :</strong> AutoGen brille quand les agents doivent <em>débattre, itérer et se corriger mutuellement</em>. Si le flow est linéaire et prévisible, c'est sur-dimensionné.</p>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Installation</h3>
+<pre><code class="lang-bash"># AutoGen v0.2 stable (API historique, la plus documentée)
+pip install pyautogen==0.2.38
+
+# AutoGen v0.4+ (nouvelle API agentchat — recommandée pour nouveaux projets 2026)
+pip install autogen-agentchat autogen-ext[openai,docker]
+
+# Interface no-code AutoGen Studio
+pip install autogenstudio</code></pre>
+<p>Vérifier : <code>python -c &quot;import autogen; print(autogen.__version__)&quot;</code></p>
+<hr>
+<h3>2. Configuration du LLM</h3>
 <pre><code class="lang-python">import os
-import autogen
-from autogen.coding import LocalCommandLineCodeExecutor
 
-# Configuration LLM
-config_list = [{&quot;model&quot;: &quot;gpt-4o&quot;, &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]}]
-llm_config = {&quot;config_list&quot;: config_list, &quot;temperature&quot;: 0, &quot;cache_seed&quot;: None}
+# Option 1 : dict inline
+config_list = [
+    {&quot;model&quot;: &quot;gpt-4o&quot;,      &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]},
+    {&quot;model&quot;: &quot;gpt-4o-mini&quot;, &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]},  # fallback
+]
 
-# Assistant : génère le code
+# Option 2 : depuis fichier JSON (recommandé pour multi-env)
+# config_list = autogen.config_list_from_json(&quot;OAI_CONFIG_LIST&quot;)
+
+llm_config = {
+    &quot;config_list&quot;: config_list,
+    &quot;temperature&quot;: 0,
+    &quot;cache_seed&quot;: None,  # None en prod, un entier (42) en dev pour reproductibilité
+    &quot;timeout&quot;: 120,
+}</code></pre>
+<p><strong>Azure OpenAI :</strong></p>
+<pre><code class="lang-python">config_list = [{
+    &quot;model&quot;: &quot;gpt-4o&quot;,
+    &quot;api_type&quot;: &quot;azure&quot;,
+    &quot;api_key&quot;: os.environ[&quot;AZURE_OPENAI_KEY&quot;],
+    &quot;base_url&quot;: &quot;https://&lt;resource&gt;.openai.azure.com/&quot;,
+    &quot;api_version&quot;: &quot;2024-08-01-preview&quot;,
+}]</code></pre>
+<hr>
+<h3>3. Agents de base — choisir le bon type</h3>
+<table><thead><tr><th>Type</th><th>LLM</th><th>Exécute du code</th><th>Usage typique</th></tr></thead><tbody><tr><td><code>AssistantAgent</code></td><td>Oui</td><td>Non</td><td>Génération de code, raisonnement, synthèse</td></tr><tr><td><code>UserProxyAgent</code></td><td>Optionnel</td><td>Oui</td><td>Exécution de code, point d'entrée humain</td></tr><tr><td><code>ConversableAgent</code></td><td>Configurable</td><td>Configurable</td><td>Classe de base — hériter pour cas custom</td></tr></tbody></table>
+<pre><code class="lang-python">import autogen
+
 assistant = autogen.AssistantAgent(
     name=&quot;assistant&quot;,
     system_message=(
-        &quot;Vous êtes un expert Python. Quand on vous pose un problème, &quot;
-        &quot;écrivez du code Python pour le résoudre. &quot;
-        &quot;Vérifiez toujours les résultats. &quot;
-        &quot;Répondez TERMINATE quand le problème est résolu.&quot;
+        &quot;Expert Python. Écris du code pour résoudre le problème. &quot;
+        &quot;Vérifie les résultats. Dis TERMINATE quand terminé.&quot;
     ),
     llm_config=llm_config,
 )
 
-# UserProxy : exécute le code généré
+user_proxy = autogen.UserProxyAgent(
+    name=&quot;user_proxy&quot;,
+    human_input_mode=&quot;NEVER&quot;,             # &quot;ALWAYS&quot; | &quot;NEVER&quot; | &quot;TERMINATE&quot;
+    max_consecutive_auto_reply=10,        # filet de sécurité anti-boucle
+    is_termination_msg=lambda x: x.get(&quot;content&quot;, &quot;&quot;).rstrip().endswith(&quot;TERMINATE&quot;),
+    code_execution_config=False,          # désactivé ici, voir étape 4 pour l'activer
+)</code></pre>
+<hr>
+<h3>4. Exécution de code — choisir l'executor</h3>
+<pre><code class="lang-python">from autogen.coding import LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor
+
+# DEV uniquement — risque sécurité (exécution arbitraire sur la machine hôte)
+executor_dev = LocalCommandLineCodeExecutor(
+    work_dir=&quot;./workspace&quot;,
+    timeout=60,
+)
+
+# PRODUCTION — exécution isolée dans un container Docker
+executor_prod = DockerCommandLineCodeExecutor(
+    image=&quot;python:3.12-slim&quot;,
+    work_dir=&quot;./workspace&quot;,
+    timeout=120,
+)
+
+# Injecter dans UserProxyAgent
 user_proxy = autogen.UserProxyAgent(
     name=&quot;user_proxy&quot;,
     human_input_mode=&quot;NEVER&quot;,
-    max_consecutive_auto_reply=10,
-    is_termination_msg=lambda x: x.get(&quot;content&quot;, &quot;&quot;).rstrip().endswith(&quot;TERMINATE&quot;),
-    code_execution_config={
-        &quot;executor&quot;: LocalCommandLineCodeExecutor(
-            work_dir=&quot;./coding_workspace&quot;,
-            timeout=60,
-        ),
-    },
-    system_message=&quot;Executor de code. Exécute le code et rapporte les résultats.&quot;,
-)
-
-# Lancement de la conversation
-if __name__ == &quot;__main__&quot;:
-    result = user_proxy.initiate_chat(
-        assistant,
-        message=(
-            &quot;Téléchargez les données de cours d'Apple (AAPL) pour les 30 derniers jours &quot;
-            &quot;et tracez un graphique avec matplotlib. Sauvegardez le graphique en PNG.&quot;
-        ),
-    )
-    print(f&quot;Résumé : {result.summary}&quot;)</code></pre>
-<h3>Group Chat multi-agents avec rôles spécialisés</h3>
-<pre><code class="lang-python">import os
-import autogen
-
-config_list = [{&quot;model&quot;: &quot;gpt-4o&quot;, &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]}]
-llm_config = {&quot;config_list&quot;: config_list, &quot;temperature&quot;: 0.1}
-
-# Définition des agents spécialisés
-product_manager = autogen.AssistantAgent(
-    name=&quot;ProductManager&quot;,
-    system_message=(
-        &quot;Vous êtes un Product Manager. Vous analysez les besoins, &quot;
-        &quot;définissez les spécifications et coordonnez l'équipe. &quot;
-        &quot;Répondez TERMINATE quand le livrable est complet.&quot;
-    ),
-    llm_config=llm_config,
-)
-
-developer = autogen.AssistantAgent(
-    name=&quot;Developer&quot;,
-    system_message=(
-        &quot;Vous êtes un développeur senior Python/FastAPI. &quot;
-        &quot;Vous implémentez les fonctionnalités demandées avec du code propre et testé.&quot;
-    ),
-    llm_config=llm_config,
-)
-
-security_expert = autogen.AssistantAgent(
-    name=&quot;SecurityExpert&quot;,
-    system_message=(
-        &quot;Vous êtes un expert en cybersécurité. &quot;
-        &quot;Vous vérifiez le code pour les vulnérabilités OWASP Top 10 &quot;
-        &quot;et proposez des correctifs.&quot;
-    ),
-    llm_config=llm_config,
-)
-
-# UserProxy qui n'exécute pas de code dans cet exemple
-user_proxy = autogen.UserProxyAgent(
-    name=&quot;UserProxy&quot;,
-    human_input_mode=&quot;NEVER&quot;,
-    max_consecutive_auto_reply=0,
-    is_termination_msg=lambda x: &quot;TERMINATE&quot; in x.get(&quot;content&quot;, &quot;&quot;),
-    code_execution_config=False,
-)
-
-# Configuration du Group Chat
-groupchat = autogen.GroupChat(
-    agents=[user_proxy, product_manager, developer, security_expert],
+    code_execution_config={&quot;executor&quot;: executor_prod},
+)</code></pre>
+<hr>
+<h3>5. Group Chat — plusieurs agents qui collaborent</h3>
+<pre><code class="lang-python">groupchat = autogen.GroupChat(
+    agents=[user_proxy, agent_a, agent_b, agent_c],
     messages=[],
-    max_round=15,
-    speaker_selection_method=&quot;auto&quot;,
-    # Transitions autorisées pour un flow structuré
+    max_round=20,
+    speaker_selection_method=&quot;auto&quot;,  # LLM choisit le prochain speaker
+    # Optionnel : contraindre les transitions pour un flow déterministe
     allowed_or_disallowed_speaker_transitions={
-        user_proxy: [product_manager],
-        product_manager: [developer, security_expert],
-        developer: [security_expert, product_manager],
-        security_expert: [developer, product_manager],
+        user_proxy:  [agent_a],
+        agent_a:     [agent_b],
+        agent_b:     [agent_c, agent_a],
+        agent_c:     [agent_a, user_proxy],
     },
     speaker_transitions_type=&quot;allowed&quot;,
 )
 
 manager = autogen.GroupChatManager(
     groupchat=groupchat,
+    llm_config=llm_config,  # le manager a besoin de son propre LLM pour choisir le speaker
+)
+
+user_proxy.initiate_chat(manager, message=&quot;Construis une API REST sécurisée FastAPI...&quot;)</code></pre>
+<p><strong><code>speaker_selection_method</code> :</strong></p>
+<ul>
+<li><code>&quot;auto&quot;</code> — LLM choisit (flexible, coûteux en tokens)</li>
+<li><code>&quot;round_robin&quot;</code> — tour à tour (déterministe, prévisible)</li>
+<li><code>&quot;random&quot;</code> — aléatoire (rarement utile)</li>
+<li><code>lambda agents, msgs, groupchat: agents[idx]</code> — fonction custom</li>
+</ul>
+<hr>
+<h3>6. Tool use (function calling)</h3>
+<pre><code class="lang-python">from autogen import register_function
+
+def search_docs(query: str, top_k: int = 5) -&gt; list[dict]:
+    &quot;&quot;&quot;Recherche dans la base de docs interne.&quot;&quot;&quot;
+    # ... logique de recherche
+    return [{&quot;title&quot;: &quot;...&quot;, &quot;content&quot;: &quot;...&quot;}]
+
+register_function(
+    search_docs,
+    caller=assistant,     # agent LLM qui décide d'appeler l'outil
+    executor=user_proxy,  # agent qui exécute réellement la fonction
+    name=&quot;search_docs&quot;,
+    description=&quot;Recherche des documents internes par requête sémantique.&quot;,
+)</code></pre>
+<hr>
+<h3>7. Nested chats — sous-conversations encapsulées</h3>
+<pre><code class="lang-python"># Un agent peut déléguer une sous-tâche à une autre paire d'agents
+# et récupérer le résultat comme un seul message dans la conversation principale
+
+assistant.register_nested_chats(
+    [
+        {
+            &quot;recipient&quot;: critic_agent,
+            &quot;message&quot;: lambda recipient, messages, sender, config: (
+                f&quot;Critique ce code :\n{messages[-1]['content']}&quot;
+            ),
+            &quot;max_turns&quot;: 3,
+            &quot;summary_method&quot;: &quot;last_msg&quot;,
+        }
+    ],
+    trigger=user_proxy,  # déclenché quand user_proxy envoie un message à assistant
+)</code></pre>
+<hr>
+<h3>8. AutoGen v0.4+ — nouvelle API agentchat</h3>
+<pre><code class="lang-python">from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
+from autogen_agentchat.teams import RoundRobinGroupChat, SelectorGroupChat
+from autogen_ext.models.openai import OpenAIChatCompletionClient
+import asyncio
+
+model_client = OpenAIChatCompletionClient(model=&quot;gpt-4o&quot;)
+
+writer = AssistantAgent(&quot;writer&quot;, model_client=model_client,
+    system_message=&quot;Tu rédiges du contenu clair et concis.&quot;)
+reviewer = AssistantAgent(&quot;reviewer&quot;, model_client=model_client,
+    system_message=&quot;Tu révises et corriges le texte. Dis APPROVE si c'est bon.&quot;)
+
+team = RoundRobinGroupChat([writer, reviewer], max_turns=6)
+
+async def main():
+    result = await team.run(task=&quot;Rédige un README pour une librairie Python de cache Redis.&quot;)
+    print(result.messages[-1].content)
+
+asyncio.run(main())</code></pre>
+<hr>
+<h2>Exemple complet — Coding Agent</h2>
+<pre><code class="lang-python">import os
+import autogen
+from autogen.coding import DockerCommandLineCodeExecutor
+
+config_list = [{&quot;model&quot;: &quot;gpt-4o&quot;, &quot;api_key&quot;: os.environ[&quot;OPENAI_API_KEY&quot;]}]
+llm_config = {&quot;config_list&quot;: config_list, &quot;temperature&quot;: 0, &quot;cache_seed&quot;: None}
+
+assistant = autogen.AssistantAgent(
+    name=&quot;assistant&quot;,
+    system_message=(
+        &quot;Expert Python. Pour chaque problème : écris le code, &quot;
+        &quot;analyse les erreurs d'exécution et corrige. &quot;
+        &quot;Dis TERMINATE uniquement quand le résultat est vérifié.&quot;
+    ),
     llm_config=llm_config,
 )
 
-# Démarrer la conversation
+user_proxy = autogen.UserProxyAgent(
+    name=&quot;user_proxy&quot;,
+    human_input_mode=&quot;NEVER&quot;,
+    max_consecutive_auto_reply=12,
+    is_termination_msg=lambda x: x.get(&quot;content&quot;, &quot;&quot;).rstrip().endswith(&quot;TERMINATE&quot;),
+    code_execution_config={
+        &quot;executor&quot;: DockerCommandLineCodeExecutor(
+            image=&quot;python:3.12-slim&quot;,
+            work_dir=&quot;./workspace&quot;,
+            timeout=90,
+        )
+    },
+)
+
 if __name__ == &quot;__main__&quot;:
-    user_proxy.initiate_chat(
-        manager,
+    result = user_proxy.initiate_chat(
+        assistant,
         message=(
-            &quot;Créez une API REST FastAPI sécurisée avec un endpoint POST /login &quot;
-            &quot;qui accepte email/password, valide les entrées et retourne un JWT. &quot;
-            &quot;Assurez-vous qu'elle résiste aux injections et brute-force.&quot;
+            &quot;Télécharge les données AAPL via yfinance pour les 30 derniers jours, &quot;
+            &quot;calcule la moyenne mobile 7j et 21j, trace le graphique avec matplotlib, &quot;
+            &quot;sauvegarde en PNG et affiche le chemin du fichier.&quot;
         ),
     )</code></pre>
-<h2>Règles</h2>
-<ol>
-<li><strong>Toujours définir <code>is_termination_msg</code></strong> — Sans condition de terminaison, les conversations peuvent boucler indéfiniment. Utilisez une convention claire comme le mot &quot;TERMINATE&quot; dans le <code>system_message</code> de chaque agent, et détectez-le avec une lambda.</li>
-</ol>
-<ol>
-<li><strong>Utiliser Docker pour l'exécution de code en production</strong> — <code>LocalCommandLineCodeExecutor</code> présente des risques de sécurité (exécution arbitraire). Toujours utiliser <code>DockerCommandLineCodeExecutor</code> en environnement de production ou partagé.</li>
-</ol>
-<ol>
-<li><strong>Mettre <code>cache_seed=None</code> en production</strong> — Le cache basé sur <code>cache_seed</code> est utile pour le développement (reproductibilité, économie de tokens) mais doit être désactivé en production pour obtenir des réponses fraîches.</li>
-</ol>
-<ol>
-<li><strong>Dimensionner <code>max_consecutive_auto_reply</code> et <code>max_round</code></strong> — Ces deux limites sont vos filets de sécurité contre les boucles infinies et les coûts incontrôlés. Commencez bas (5-10) et augmentez selon les besoins.</li>
-</ol>
-<ol>
-<li><strong>Séparer les rôles clairement dans <code>system_message</code></strong> — La qualité d'un Group Chat dépend directement de la clarté des <code>system_message</code>. Chaque agent doit avoir un rôle unique, non ambigu, avec des instructions sur quand intervenir et quand passer la parole.</li>
-</ol>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<h3>Pièges fréquents</h3>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Correctif</th></tr></thead><tbody><tr><td>Pas de <code>is_termination_msg</code></td><td>Boucle infinie, coûts explosifs</td><td>Toujours définir la lambda + mot-clé dans le <code>system_message</code></td></tr><tr><td><code>cache_seed</code> non-nul en prod</td><td>Réponses figées, résultats obsolètes</td><td><code>cache_seed=None</code> en production</td></tr><tr><td><code>LocalCommandLineCodeExecutor</code> en prod</td><td>Exécution arbitraire sur le serveur</td><td><code>DockerCommandLineCodeExecutor</code> obligatoire</td></tr><tr><td><code>max_round</code> trop élevé</td><td>Conversations qui dérivent, tokens gaspillés</td><td>Commencer à 10-15, augmenter au besoin</td></tr><tr><td><code>system_message</code> vagues</td><td>Agents qui s'interrompent, responsabilités floues</td><td>1 rôle = 1 agent, instructions précises sur quand intervenir</td></tr><tr><td>Trop d'agents dans le GroupChat</td><td>Sélection de speaker chaotique, latence</td><td>≤5 agents par GroupChat, décomposer en sous-groupes si nécessaire</td></tr><tr><td>Oublier le LLM du GroupChatManager</td><td><code>AttributeError</code> ou sélection impossible</td><td><code>GroupChatManager</code> a toujours son propre <code>llm_config</code></td></tr></tbody></table>
+<h3>Anti-patterns à éviter</h3>
+<ul>
+<li><strong>Ne pas mettre un agent LLM pour chaque micro-tâche</strong> : si une tâche est déterministe (appel API, requête SQL), utiliser un tool ou une fonction Python, pas un agent entier.</li>
+<li><strong>Ne pas ignorer <code>chat_result.cost</code></strong> : surveiller le coût total via <code>result.cost</code> après chaque <code>initiate_chat</code>.</li>
+<li><strong>Ne pas mixer v0.2 et v0.4 dans le même projet</strong> : les deux API sont incompatibles, choisir l'une ou l'autre.</li>
+<li><strong>Ne pas exposer <code>LocalCommandLineCodeExecutor</code> via une API web publique</strong> : injection de commandes garantie.</li>
+</ul>
+<h3>Bonnes pratiques 2026</h3>
+<ul>
+<li>Utiliser <strong>AutoGen v0.4+</strong> pour les nouveaux projets (API async, meilleure testabilité, support Swarm).</li>
+<li>Activer <strong>OpenTelemetry</strong> pour tracer les conversations en production : <code>autogen.runtime_logging.start(logger_type=&quot;file&quot;, config={&quot;filename&quot;: &quot;run.log&quot;})</code>.</li>
+<li>Tester les agents en isolation avant le GroupChat : <code>agent.generate_reply(messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;...&quot;}])</code>.</li>
+<li>Définir des <strong>timeouts réseau</strong> dans <code>llm_config</code> (<code>&quot;timeout&quot;: 60</code>) pour éviter les blocages silencieux.</li>
+<li>Utiliser <strong><code>summary_method=&quot;reflection_with_llm&quot;</code></strong> sur <code>initiate_chat</code> pour obtenir un résumé exploitable de la conversation.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

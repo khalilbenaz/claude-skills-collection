@@ -97,48 +97,197 @@ cp -r claude-skills-collection/skills/agent-data-analyst-agent ~/.claude/skills/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Data Analyst Agent</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill pour construire un agent capable d'analyser des données de manière autonome : se connecter à une source de données (SQL, CSV, API), explorer le schéma, générer des requêtes ou des opérations pandas en langage naturel, produire des visualisations et rédiger un rapport narratif avec les insights clés. Idéal pour des tableaux de bord conversationnels, des assistants BI ou des pipelines d'analyse automatisée.</p>
+<p>Pour construire un agent capable d'analyser des données de manière autonome : connexion à une source (SQL, CSV, API), exploration du schéma, génération de requêtes en langage naturel, visualisations, rapport narratif avec insights actionnables.</p>
+<p><strong>Cas d'usage typiques</strong> : tableaux de bord conversationnels, assistants BI no-code, pipelines d'analyse automatisée, audit qualité de données.</p>
+<p><strong>Critères de choix d'architecture</strong> :</p>
+<table><thead><tr><th>Besoin</th><th>Architecture</th></tr></thead><tbody><tr><td>Questions ponctuelles en temps réel</td><td>Event-driven (question → réponse)</td></tr><tr><td>Analyse récurrente planifiée</td><td>Pipeline batch avec scheduler</td></tr><tr><td>Dataset &gt; 10 GB</td><td>Pousser le compute vers la DB (SQL-first)</td></tr><tr><td>Dataset &lt; 500 MB</td><td>Pandas in-memory</td></tr></tbody></table>
+<hr>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Architecture générale</strong> — Définis les quatre modules : (a) interface langage naturel (LLM + prompt engineering), (b) data connectors (SQL, fichiers, APIs), (c) code interpreter / kernel d'exécution (pandas, SQL engine), (d) moteur de visualisation et de reporting. Choisis entre architecture event-driven (questions ponctuelles) ou pipeline batch (analyse automatisée récurrente).</li>
-</ol>
-<ol>
-<li><strong>Data connectors</strong> — Implémente des connecteurs pour les sources principales : bases SQL (SQLAlchemy pour PostgreSQL, MySQL, SQLite, BigQuery), fichiers CSV/Excel (<code>pandas.read_csv</code>, <code>openpyxl</code>), APIs REST (avec authentification OAuth/API key), cloud storage (S3, GCS via <code>boto3</code>/<code>google-cloud-storage</code>). Valide le schéma à la connexion et génère un metadata store.</li>
-</ol>
-<p>   ```python    from sqlalchemy import create_engine, inspect    engine = create_engine(&quot;postgresql://user:pass@host/db&quot;)    inspector = inspect(engine)    tables = inspector.get_table_names()    columns = {t: inspector.get_columns(t) for t in tables}    ```</p>
-<ol>
-<li><strong>Exploration automatique (data profiling)</strong> — À la connexion, l'agent exécute automatiquement : comptage de lignes/colonnes, types de données, valeurs manquantes (%), statistiques descriptives (mean, std, min, max, quartiles), distributions, valeurs uniques pour les catégorielles, et corrélations entre variables numériques. Génère un profil de données JSON enrichi.</li>
-</ol>
-<ol>
-<li><strong>Query generation (NL → SQL / Pandas)</strong> — Traduit les questions en langage naturel en code exécutable. Pour SQL : utilise un prompt avec le schéma injecté, génère la requête, l'explique en français, l'exécute. Pour pandas : génère des opérations chainées avec commentaires. Implémente une validation syntaxique avant exécution et une limite de lignes retournées (max 10k).</li>
-</ol>
-<p>   ```python    # Exemple de prompt NL→SQL    prompt = f&quot;&quot;&quot;Schéma de la base : {schema_json}    Question : {user_question}    Génère une requête SQL PostgreSQL valide et explique-la en une phrase.&quot;&quot;&quot;    ```</p>
-<ol>
-<li><strong>Visualisation intelligente</strong> — Sélectionne automatiquement le type de graphique selon la nature des données : barplot pour les comparaisons catégorielles, lineplot pour les séries temporelles, scatter pour les corrélations, heatmap pour les matrices de corrélation, histogram pour les distributions. Génère les visualisations avec <code>matplotlib</code>/<code>seaborn</code> ou <code>plotly</code> (interactif). Titre, axes et légendes automatiques en français.</li>
-</ol>
-<ol>
-<li><strong>Génération d'insights</strong> — Au-delà des chiffres, l'agent produit une analyse narrative : détection de tendances (régressions linéaires simples, moving averages), détection d'anomalies (z-score, IQR method), tests de significativité statistique (t-test, chi-carré), identification des top/bottom performers. Classe les insights par importance estimée.</li>
-</ol>
-<p>   ```python    import numpy as np    from scipy import stats    # Détection d'anomalies par z-score    z_scores = np.abs(stats.zscore(df[numeric_col]))    anomalies = df[z_scores &gt; 3]    ```</p>
-<ol>
-<li><strong>Analyse itérative et drill-down</strong> — L'agent maintient un contexte de session : chaque réponse peut être suivie d'une question de suivi (&quot;pourquoi ?&quot;, &quot;détaille pour la région X&quot;, &quot;compare avec l'année dernière&quot;). Implémente un mécanisme de mémoire de session avec les dernières requêtes exécutées et les résultats. Propose proactivement des questions de suivi pertinentes.</li>
-</ol>
-<ol>
-<li><strong>Génération de rapport automatique</strong> — Produit un rapport structuré : (a) executive summary (3-5 bullet points des insights majeurs), (b) méthodologie (données utilisées, période, transformations), (c) findings détaillés avec visualisations intégrées, (d) recommandations actionnables, (e) limites et caveats. Exporte en Markdown, HTML ou PPTX selon le besoin.</li>
-</ol>
-<ol>
-<li><strong>Sécurité et gouvernance des données</strong> — Implémente des contrôles : authentification et gestion des droits d'accès par source de données, détection et masquage des PII (emails, téléphones, numéros de carte), sandboxing des requêtes SQL (no DDL/DML, read-only mode), limitation du volume de données extractibles, audit log de toutes les requêtes. Conforme RGPD.</li>
-</ol>
-<ol>
-<li><strong>Tools et frameworks recommandés</strong> — Pour l'exécution de code : <a href="https://e2b.dev/" target="_blank" rel="noopener">E2B Code Interpreter</a>, OpenAI Code Interpreter, Jupyter kernel via <code>jupyter_client</code>. Pour l'orchestration : <a href="https://python.langchain.com/" target="_blank" rel="noopener">LangChain SQL Agent</a>, <a href="https://llamaindex.ai/" target="_blank" rel="noopener">LlamaIndex</a>. Pour les dashboards : <a href="https://streamlit.io/" target="_blank" rel="noopener">Streamlit</a>, <a href="https://gradio.app/" target="_blank" rel="noopener">Gradio</a>. Pour le profiling : <code>ydata-profiling</code> (ex-pandas-profiling).</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Définir les modules de l'agent</h3>
+<p>Quatre modules obligatoires :</p>
 <ul>
-<li><strong>Toujours expliquer le code généré</strong> : chaque requête SQL ou opération pandas produite par l'agent doit être accompagnée d'une explication en français compréhensible par un non-technicien.</li>
-<li><strong>Valider avant d'exécuter</strong> : toute requête générée doit passer une validation syntaxique et sémantique (vérification que les tables/colonnes référencées existent) avant exécution pour éviter les erreurs inutiles.</li>
-<li><strong>Limiter l'exposition des données</strong> : en production, n'affiche jamais de données brutes en masse dans les réponses. Agrège, anonymise, ou limite à des échantillons représentatifs (max 50 lignes affichées).</li>
-<li><strong>Contextualiser les métriques</strong> : ne pas présenter un chiffre isolé sans contexte. Toujours accompagner d'une comparaison (vs. période précédente, vs. moyenne, vs. cible), d'une tendance et d'une interprétation.</li>
-<li><strong>Fiabilité des insights</strong> : indiquer systématiquement le niveau de confiance statistique des insights générés (taille de l'échantillon, p-value si test statistique, biais potentiels des données source). Évite les conclusions hâtives sur de petits échantillons.</li>
+<li><strong>NL Interface</strong> : LLM + prompt engineering (question → intent → code)</li>
+<li><strong>Data Connectors</strong> : SQL, fichiers, APIs, cloud storage</li>
+<li><strong>Code Kernel</strong> : exécution sécurisée pandas/SQL</li>
+<li><strong>Reporting</strong> : visualisation + rapport narratif</li>
+</ul>
+<h3>2. Implémenter les connecteurs de données</h3>
+<pre><code class="lang-python"># SQL — SQLAlchemy (PostgreSQL, MySQL, SQLite, BigQuery, MSSQL)
+from sqlalchemy import create_engine, inspect, text
+
+engine = create_engine(&quot;postgresql://user:pass@host/db&quot;)
+inspector = inspect(engine)
+
+# Générer le metadata store à la connexion
+schema = {
+    table: {
+        &quot;columns&quot;: inspector.get_columns(table),
+        &quot;pk&quot;: inspector.get_pk_constraint(table),
+        &quot;fk&quot;: inspector.get_foreign_keys(table),
+    }
+    for table in inspector.get_table_names()
+}
+
+# Read-only : toujours ouvrir en mode lecture
+with engine.connect() as conn:
+    conn.execute(text(&quot;SET TRANSACTION READ ONLY&quot;))</code></pre>
+<pre><code class="lang-python"># Fichiers
+import pandas as pd
+df = pd.read_csv(&quot;data.csv&quot;, parse_dates=True, low_memory=False)
+df = pd.read_excel(&quot;data.xlsx&quot;, sheet_name=0)
+
+# API REST
+import httpx
+resp = httpx.get(&quot;https://api.example.com/data&quot;, headers={&quot;Authorization&quot;: f&quot;Bearer {token}&quot;})
+df = pd.DataFrame(resp.json()[&quot;data&quot;])</code></pre>
+<h3>3. Data profiling automatique à la connexion</h3>
+<p>Exécuter immédiatement après la connexion — sortie JSON, jamais de données brutes.</p>
+<pre><code class="lang-python">def profile_dataframe(df: pd.DataFrame) -&gt; dict:
+    return {
+        &quot;shape&quot;: df.shape,
+        &quot;dtypes&quot;: df.dtypes.astype(str).to_dict(),
+        &quot;missing_pct&quot;: (df.isnull().mean() * 100).round(2).to_dict(),
+        &quot;nunique&quot;: df.nunique().to_dict(),
+        &quot;stats&quot;: df.describe(include=&quot;all&quot;).round(3).to_dict(),
+        &quot;sample&quot;: df.head(5).to_dict(orient=&quot;records&quot;),
+    }</code></pre>
+<p>Seuils d'alerte automatiques :</p>
+<ul>
+<li>Colonnes avec &gt; 20 % de valeurs manquantes → signaler</li>
+<li>Colonnes avec une seule valeur unique → inutiles, mentionner</li>
+<li>Lignes dupliquées &gt; 1 % → avertir avant toute agrégation</li>
+</ul>
+<h3>4. Génération NL → SQL / Pandas</h3>
+<p><strong>SQL</strong> : injecter le schéma complet dans le prompt, jamais de schéma partiel.</p>
+<pre><code class="lang-python">system_prompt = f&quot;&quot;&quot;
+Tu es un analyste SQL expert. Schéma de la base :
+{json.dumps(schema, ensure_ascii=False, indent=2)}
+
+Règles :
+- Génère UNIQUEMENT des SELECT (pas de DML/DDL)
+- Limite toujours à LIMIT 10000
+- Explique la requête en une phrase simple en français
+- Si la question est ambiguë, demande une clarification avant de générer
+&quot;&quot;&quot;</code></pre>
+<p><strong>Pandas</strong> : fournir df.dtypes et df.head(3) dans le prompt.</p>
+<pre><code class="lang-python">pandas_prompt = f&quot;&quot;&quot;
+DataFrame disponible (df) :
+Colonnes : {df.dtypes.to_dict()}
+Aperçu :
+{df.head(3).to_string()}
+
+Génère le code pandas pour : {user_question}
+Utilise uniquement les colonnes existantes. Termine par print(result).
+&quot;&quot;&quot;</code></pre>
+<p><strong>Validation avant exécution</strong> :</p>
+<ol>
+<li>Parse syntaxique (sqlparse pour SQL, ast.parse() pour Python)</li>
+<li>Vérification des noms de tables/colonnes contre le schéma</li>
+<li>Blocage des mots-clés DDL/DML (DROP, INSERT, UPDATE, DELETE, ALTER)</li>
+</ol>
+<h3>5. Choix automatique du type de visualisation</h3>
+<pre><code class="lang-python">def select_chart_type(df: pd.DataFrame, x: str, y: str) -&gt; str:
+    if pd.api.types.is_datetime64_any_dtype(df[x]):
+        return &quot;lineplot&quot;      # série temporelle
+    if df[x].nunique() &lt;= 15:
+        return &quot;barplot&quot;       # catégorielle basse cardinalité
+    if pd.api.types.is_numeric_dtype(df[x]) and pd.api.types.is_numeric_dtype(df[y]):
+        return &quot;scatter&quot;       # corrélation numérique
+    return &quot;histogram&quot;         # distribution par défaut</code></pre>
+<p>Librairies recommandées :</p>
+<ul>
+<li><strong>Plotly Express</strong> (interactif, web) — préféré en 2026</li>
+<li><strong>Seaborn / Matplotlib</strong> (statique, rapports PDF)</li>
+<li><strong>Altair</strong> (déclaratif, idéal pour petits datasets)</li>
+</ul>
+<pre><code class="lang-python">import plotly.express as px
+fig = px.bar(df, x=&quot;categorie&quot;, y=&quot;ventes&quot;, title=&quot;Ventes par catégorie&quot;,
+             labels={&quot;ventes&quot;: &quot;Ventes (€)&quot;, &quot;categorie&quot;: &quot;Catégorie&quot;})
+fig.write_html(&quot;chart.html&quot;)</code></pre>
+<h3>6. Génération d'insights statistiques</h3>
+<pre><code class="lang-python">import numpy as np
+from scipy import stats
+
+# Détection d'anomalies — z-score
+def detect_anomalies_zscore(df, col, threshold=3.0):
+    z = np.abs(stats.zscore(df[col].dropna()))
+    return df[z &gt; threshold]
+
+# Tendance sur série temporelle — régression linéaire
+from sklearn.linear_model import LinearRegression
+def compute_trend(df, date_col, value_col):
+    df = df.sort_values(date_col)
+    X = np.arange(len(df)).reshape(-1, 1)
+    y = df[value_col].values
+    model = LinearRegression().fit(X, y)
+    return {&quot;slope&quot;: model.coef_[0], &quot;r2&quot;: model.score(X, y)}
+
+# Corrélation avec significativité
+def correlate(df, col_a, col_b):
+    r, p = stats.pearsonr(df[col_a].dropna(), df[col_b].dropna())
+    return {&quot;r&quot;: round(r, 3), &quot;p_value&quot;: round(p, 4), &quot;significant&quot;: p &lt; 0.05}</code></pre>
+<p>Tout insight doit mentionner : taille de l'échantillon, p-value si test statistique, biais potentiel.</p>
+<h3>7. Mémoire de session et drill-down</h3>
+<pre><code class="lang-python">session = {
+    &quot;history&quot;: [],       # [(question, sql_or_code, result_summary)]
+    &quot;last_df&quot;: None,     # dernier DataFrame résultat
+    &quot;filters_active&quot;: {},# filtres appliqués
+}
+
+# Après chaque réponse, proposer 2-3 questions de suivi pertinentes
+followup_prompt = f&quot;&quot;&quot;
+L'utilisateur vient de demander : {question}
+Résultat : {summary}
+Propose 3 questions de suivi pertinentes, courtes, en français.
+&quot;&quot;&quot;</code></pre>
+<h3>8. Rapport final structuré</h3>
+<p>Structure obligatoire :</p>
+<pre><code>1. Executive Summary (3-5 bullets, chiffres clés)
+2. Méthodologie (source, période, transformations appliquées, exclusions)
+3. Findings (insights classés par impact estimé, graphiques intégrés)
+4. Recommandations actionnables (formulées en verbes d'action)
+5. Limites et caveats (qualité des données, biais, lacunes)</code></pre>
+<p>Export :</p>
+<pre><code class="lang-python"># Markdown
+report.to_markdown(&quot;report.md&quot;)
+# HTML standalone avec graphiques Plotly intégrés
+report.to_html(&quot;report.html&quot;, include_plotlyjs=&quot;cdn&quot;)</code></pre>
+<h3>9. Sécurité et gouvernance</h3>
+<ul>
+<li><strong>Read-only strict</strong> : engine sans droits DML, transactions READ ONLY</li>
+<li><strong>Masquage PII</strong> : regex sur emails, téléphones, IBAN avant tout affichage</li>
+<li><strong>Sandboxing</strong> : exécuter le code généré dans E2B ou un subprocess limité (<code>timeout=30s</code>, <code>max_memory=512MB</code>)</li>
+<li><strong>Audit log</strong> : chaque requête horodatée avec user_id, requête, nb lignes retournées</li>
+<li><strong>Limite d'extraction</strong> : jamais plus de 10 000 lignes retournées à l'agent ; agrégation côté DB</li>
+</ul>
+<pre><code class="lang-python">import re
+def mask_pii(text: str) -&gt; str:
+    text = re.sub(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', '[EMAIL]', text)
+    text = re.sub(r'\b(\+?216|0)[0-9]{8}\b', '[PHONE]', text)
+    return text</code></pre>
+<h3>10. Stack recommandée (2026)</h3>
+<table><thead><tr><th>Couche</th><th>Outils recommandés</th></tr></thead><tbody><tr><td>Orchestration agent</td><td>LangChain SQL Agent, LlamaIndex, Pydantic AI</td></tr><tr><td>Exécution code sécurisée</td><td>E2B Code Interpreter, Daytona sandboxes</td></tr><tr><td>Profiling automatique</td><td><code>ydata-profiling</code>, <code>great_expectations</code></td></tr><tr><td>Visualisation</td><td>Plotly Express, Evidence.dev</td></tr><tr><td>Dashboard conversationnel</td><td>Streamlit, Gradio, Chainlit</td></tr><tr><td>Monitoring qualité données</td><td>Great Expectations, Soda Core</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<ul>
+<li><strong>Injecter trop de données dans le prompt</strong> : passer uniquement le schéma et un aperçu (head 3), jamais le DataFrame complet.</li>
+<li><strong>Exécuter sans validation</strong> : toujours parser et vérifier les noms de colonnes/tables avant d'exécuter — une erreur d'exécution coupe la session.</li>
+<li><strong>Présenter un chiffre sans contexte</strong> : tout KPI doit avoir une comparaison (période précédente, benchmark, cible).</li>
+<li><strong>Confondre corrélation et causalité</strong> : signaler explicitement quand une corrélation est détectée sans relation causale établie.</li>
+<li><strong>Ignorer la cardinalité des clés de jointure</strong> : toujours vérifier les doublons avant un JOIN — explosion silencieuse de lignes possible.</li>
+<li><strong>Conclusions sur petits échantillons</strong> : bloquer les tests statistiques si n &lt; 30, avertir si n &lt; 100.</li>
+<li><strong>Oublier les fuseaux horaires</strong> : normaliser toutes les dates en UTC dès le chargement.</li>
+</ul>
+<pre><code class="lang-python"># Normalisation UTC obligatoire
+df[&quot;created_at&quot;] = pd.to_datetime(df[&quot;created_at&quot;], utc=True)</code></pre>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Utiliser <strong>Pydantic</strong> pour valider la sortie structurée de l'agent (schéma JSON de l'insight) avant de l'afficher.</li>
+<li>Implémenter un <strong>fallback gracieux</strong> : si la requête générée échoue, retourner l'erreur et demander une reformulation, ne pas planter.</li>
+<li><strong>Versionner le schéma de données</strong> : stocker le metadata store daté — permet de détecter les breaking changes de schéma.</li>
+<li>Pour les LLMs en 2026 : préférer des modèles avec <strong>function calling natif</strong> pour la génération SQL/Pandas (moins d'hallucinations de colonnes).</li>
+<li>Monitorer le <strong>token usage</strong> par session : les schémas lourds peuvent saturer la context window — compresser le schéma si &gt; 100 tables.</li>
 </ul>
 </article>
 </main>

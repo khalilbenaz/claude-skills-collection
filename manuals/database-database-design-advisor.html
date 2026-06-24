@@ -97,23 +97,117 @@ cp -r claude-skills-collection/skills/database-database-design-advisor ~/.claude
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Database Design Advisor</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Recueillir les exigences</strong> — Identifier les entités métier, les attributs, les contraintes, les volumes de données attendus et les cas d'utilisation principaux (lecture intensive, écriture intensive, mixte).</li>
-<li><strong>Créer le modèle conceptuel</strong> — Construire un diagramme entité-relation (ERD) avec les entités, les attributs clés et les cardinalités (1:1, 1:N, N:M) en utilisant la notation appropriée.</li>
-<li><strong>Appliquer la normalisation</strong> — Normaliser le schéma jusqu'à la 3NF (ou BCNF) pour éliminer les redondances, les dépendances transitives et les anomalies de mise à jour.</li>
-<li><strong>Évaluer la dénormalisation</strong> — Identifier les cas où la dénormalisation contrôlée améliore les performances de lecture sans compromettre l'intégrité, en documentant chaque décision.</li>
-<li><strong>Définir les contraintes d'intégrité</strong> — Spécifier les clés primaires, clés étrangères, contraintes UNIQUE, CHECK, NOT NULL et les valeurs par défaut pour garantir la cohérence des données.</li>
-<li><strong>Appliquer les design patterns</strong> — Utiliser les patterns adaptés au contexte : héritage (TPH, TPT, TPC), polymorphisme, historisation (SCD Type 1/2/3), soft delete, multi-tenant.</li>
-<li><strong>Optimiser pour la performance</strong> — Pré-identifier les index nécessaires, les vues matérialisées et les stratégies de partitionnement en fonction des requêtes anticipées.</li>
-<li><strong>Valider et documenter</strong> — Revoir le schéma avec les parties prenantes, documenter les décisions de conception et produire le DDL final avec commentaires.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Recueillir les exigences</h3>
+<p>Questions à poser systématiquement :</p>
 <ul>
-<li>Toujours commencer par un modèle conceptuel avant de passer au modèle logique puis physique ; ne jamais sauter directement au DDL.</li>
-<li>Chaque table doit avoir une clé primaire clairement définie ; préférer les clés de substitution (surrogate keys) aux clés naturelles composites.</li>
-<li>Documenter systématiquement les raisons de chaque dénormalisation avec l'impact attendu sur les performances et la stratégie de maintien de cohérence.</li>
-<li>Nommer les tables, colonnes et contraintes de manière cohérente en suivant une convention de nommage explicite (snake_case recommandé).</li>
-<li>Toujours prévoir l'évolutivité du schéma en anticipant les besoins futurs sans sur-ingénierie.</li>
+<li>Quelles sont les entités métier principales ? (ex. : Commande, Client, Produit)</li>
+<li>Quels sont les volumes estimés ? (lignes/table, croissance annuelle)</li>
+<li>Profil de charge : read-heavy, write-heavy, ou mixte ?</li>
+<li>Contraintes de latence ? (OLTP &lt; 10 ms vs OLAP analytique)</li>
+<li>Multitenancy ? Soft delete ? Audit trail ?</li>
+</ul>
+<h3>2. Construire le modèle conceptuel (ERD)</h3>
+<p>Notation Crow's Foot recommandée. Identifier :</p>
+<ul>
+<li>Entités fortes vs entités faibles</li>
+<li>Cardinalités : 1:1, 1:N, N:M</li>
+<li>Attributs multivalués → table séparée obligatoire</li>
+<li>Agréger les associations N:M en entité d'association avec ses propres attributs</li>
+</ul>
+<pre><code>Client (1) ──────&lt; (N) Commande (N) &gt;──────&lt; (N) Produit
+                            |
+                     LigneCommande (entité d'association)
+                       quantite, prix_unitaire</code></pre>
+<h3>3. Normalisation — critères de décision</h3>
+<table><thead><tr><th>Forme Normale</th><th>Ce qu'elle élimine</th><th>S'arrêter ici si…</th></tr></thead><tbody><tr><td>1NF</td><td>Groupes répétés, attributs multivalués</td><td>Jamais en dessous</td></tr><tr><td>2NF</td><td>Dépendances partielles (clés composites)</td><td>Table sans clé composite</td></tr><tr><td>3NF</td><td>Dépendances transitives (A→B→C)</td><td><strong>Cible par défaut</strong></td></tr><tr><td>BCNF</td><td>Déterminants non-clés</td><td>Données très structurées</td></tr><tr><td>4NF/5NF</td><td>Dépendances multi-valuées</td><td>Rarement nécessaire</td></tr></tbody></table>
+<p><strong>Règle pratique</strong> : viser 3NF par défaut ; BCNF si les anomalies persistent avec des clés candidates multiples.</p>
+<h3>4. DDL — squelette opérationnel</h3>
+<pre><code class="lang-sql">-- Convention : snake_case, PK surrogate, timestamps audit
+CREATE TABLE client (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    code_client VARCHAR(20)  NOT NULL UNIQUE,
+    nom         VARCHAR(100) NOT NULL,
+    email       VARCHAR(255) NOT NULL UNIQUE,
+    actif       BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE TABLE commande (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    client_id   BIGINT       NOT NULL REFERENCES client(id),
+    statut      VARCHAR(20)  NOT NULL CHECK (statut IN ('BROUILLON','VALIDEE','LIVREE','ANNULEE')),
+    total_ht    NUMERIC(14,4) NOT NULL CHECK (total_ht &gt;= 0),
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_commande_client ON commande(client_id);
+CREATE INDEX idx_commande_statut ON commande(statut) WHERE statut NOT IN ('LIVREE','ANNULEE');</code></pre>
+<h3>5. Patterns courants — quand les appliquer</h3>
+<p><strong>Héritage</strong> (entité Personne → Employe / Client) :</p>
+<table><thead><tr><th>Pattern</th><th>Avantage</th><th>Inconvénient</th><th>Choisir si</th></tr></thead><tbody><tr><td>TPH (Table Per Hierarchy)</td><td>1 seule table</td><td>Nombreuses colonnes NULL</td><td>Peu de sous-types</td></tr><tr><td>TPT (Table Per Type)</td><td>Pas de NULL</td><td>Jointures obligatoires</td><td>Attributs très différents</td></tr><tr><td>TPC (Table Per Concrete)</td><td>Requêtes simples</td><td>Duplication de colonnes</td><td>Pas de requête polymorphe</td></tr></tbody></table>
+<p><strong>Historisation SCD</strong> :</p>
+<ul>
+<li>Type 1 : écrasement → pas de trace (accepté pour données de référence)</li>
+<li>Type 2 : nouvelle ligne + <code>date_debut</code>/<code>date_fin</code> + <code>is_current</code> → audit complet</li>
+<li>Type 6 : combinaison 1+2+3 → complexe, réserver aux Data Warehouses</li>
+</ul>
+<p><strong>Soft delete</strong> :</p>
+<pre><code class="lang-sql">-- Ajouter à chaque table concernée
+deleted_at TIMESTAMPTZ,
+deleted_by BIGINT REFERENCES utilisateur(id)
+-- Index partiel pour exclure les supprimés des requêtes courantes
+CREATE INDEX idx_client_actif ON client(code_client) WHERE deleted_at IS NULL;</code></pre>
+<p><strong>Multi-tenant</strong> :</p>
+<pre><code class="lang-sql">-- Approche shared schema (recommandée pour &lt; 1000 tenants)
+tenant_id BIGINT NOT NULL REFERENCES tenant(id)
+-- Index composite : (tenant_id, clé_métier)
+CREATE INDEX idx_commande_tenant ON commande(tenant_id, id);
+-- RLS PostgreSQL
+ALTER TABLE commande ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON commande
+    USING (tenant_id = current_setting('app.tenant_id')::BIGINT);</code></pre>
+<h3>6. Indexation — règles de décision</h3>
+<pre><code>Créer un index si :
+  - Colonne dans WHERE fréquent ET cardinalité &gt; 10 valeurs distinctes
+  - Clé étrangère non couverte (jointure sans index = seq scan)
+  - ORDER BY / GROUP BY sur grande table
+
+Éviter si :
+  - Table &lt; 10 000 lignes (seq scan souvent plus rapide)
+  - Colonne avec &lt; 5 valeurs distinctes (booléen, statut à 2 états)
+  - Table à insert massif (chaque index ralentit les writes)
+
+Index partiel pour tables à soft delete ou statuts actifs :
+  CREATE INDEX idx_cmd_en_cours ON commande(client_id)
+      WHERE statut IN ('BROUILLON','VALIDEE');</code></pre>
+<h3>7. Dénormalisation contrôlée</h3>
+<p>Toujours documenter via un commentaire ou ADR :</p>
+<pre><code class="lang-sql">-- DÉNORM: total_commande stocké en cache dans client.total_commandes_ytd
+-- Raison: requête tableau de bord T+500ms → T+5ms
+-- Cohérence: trigger AFTER INSERT/UPDATE/DELETE sur commande
+-- Revu le: 2026-01-15 — acceptable jusqu'à 5M commandes
+ALTER TABLE client ADD COLUMN total_commandes_ytd NUMERIC(16,4) NOT NULL DEFAULT 0;</code></pre>
+<h3>8. Validation finale — checklist</h3>
+<ul>
+<li>[ ] Chaque table a une PK surrogate (BIGINT ou UUID selon besoin de distribution)</li>
+<li>[ ] Toutes les FK ont un index couvrant</li>
+<li>[ ] Pas de colonnes <code>valeur1</code>, <code>valeur2</code>, <code>valeur3</code> → tableau ou table séparée</li>
+<li>[ ] Pas de stockage de listes CSV dans une colonne TEXT</li>
+<li>[ ] Contraintes CHECK sur les colonnes avec domaine fini (statuts, types)</li>
+<li>[ ] Colonnes <code>created_at</code> / <code>updated_at</code> présentes sur les tables métier</li>
+<li>[ ] DDL testé sur un jeu de données représentatif (INSERT + requêtes critiques)</li>
+</ul>
+<hr>
+<h2>Anti-patterns / Pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>EAV (Entity-Attribute-Value)</td><td>Table <code>(id, attribut, valeur)</code> générique</td><td>JSONB ou colonnes typées selon cas</td></tr><tr><td>Clé naturelle composite</td><td><code>PRIMARY KEY (pays, code_postal, rue)</code></td><td>Surrogate key + contrainte UNIQUE</td></tr><tr><td>NULL ambigus</td><td>NULL = &quot;inconnu&quot; ET NULL = &quot;non applicable&quot;</td><td>Colonnes séparées ou CHECK explicite</td></tr><tr><td>Table fourre-tout</td><td>&gt;50 colonnes, beaucoup de NULL</td><td>Décomposer en sous-entités 3NF</td></tr><tr><td>Index sur tout</td><td>&gt;5 index par table sur OLTP</td><td>Profiler d'abord, indexer ensuite</td></tr><tr><td>ON DELETE CASCADE en cascade profonde</td><td>Suppression accidentelle en chaîne</td><td>ON DELETE RESTRICT + soft delete</td></tr><tr><td>UUID v4 comme PK sur MySQL/InnoDB</td><td>Fragmentation du B-tree → perf write</td><td>UUID v7 (monotone) ou ULID</td></tr><tr><td>Pas de partitionnement sur tables &gt; 100M lignes</td><td>Vacuum/index rebuild trop longs</td><td>PARTITION BY RANGE(created_at)</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>UUID v7 / ULID</strong> : préférer aux UUID v4 pour les PKs distribuées — ordonnés dans le temps, compatibles B-tree.</li>
+<li><strong>JSONB avec schéma partiel</strong> : stocker les attributs variables en JSONB + index GIN, mais extraire en colonne les champs interrogés fréquemment.</li>
+<li><strong>Generated columns</strong> : calculer des colonnes dérivées côté SGBD plutôt qu'en applicatif.</li>
+<li><strong>Temporal tables</strong> (SQL:2011, supporté PostgreSQL 16+, SQL Server 2016+) : privilégier aux patterns SCD 2 manuels pour l'historisation native.</li>
+<li><strong>Schema versioning</strong> : versionner les migrations avec Flyway ou Liquibase dès le premier jour — jamais de DDL appliqué manuellement en prod.</li>
 </ul>
 </article>
 </main>

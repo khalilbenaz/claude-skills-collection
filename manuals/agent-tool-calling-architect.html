@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>agent-tool-calling-architect — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Design et implémentation de systèmes de tool calling pour agents IA. Function calling, API wrapping, schema design.">
+<meta name="description" content="Design et implémentation de systèmes de tool calling pour agents IA. Function calling, API wrapping, schema design, MCP server, parallel calls, sécurité et monitoring.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🤖 Agents IA</span>
 <h1 class="skill-title">agent-tool-calling-architect</h1>
-<p class="lead">Design et implémentation de systèmes de tool calling pour agents IA. Function calling, API wrapping, schema design.</p>
+<p class="lead">Design et implémentation de systèmes de tool calling pour agents IA. Function calling, API wrapping, schema design, MCP server, parallel calls, sécurité et monitoring.</p>
 
 
 
@@ -96,58 +96,287 @@ cp -r claude-skills-collection/skills/agent-tool-calling-architect ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Tool Calling Architect</h1>
-<h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill lorsque tu dois concevoir, implémenter ou améliorer les outils (tools/functions) d'un agent IA. Il couvre la création d'outils depuis zéro, le wrapping d'APIs existantes, la conception de schémas JSON pour le function calling, et la mise en place du protocole MCP. S'applique aussi bien aux outils simples (recherche web, calcul) qu'aux pipelines complexes de tool chaining.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Design de l'outil</strong> — Avant d'écrire du code, définis précisément : un nom en snake_case explicite (<code>search_web</code>, <code>create_calendar_event</code>), une description en langage naturel que le LLM comprend sans ambiguïté, des paramètres typés et nommés clairement, et le schéma de retour. La qualité de la description détermine si le LLM saura quand et comment utiliser l'outil.</li>
-</ol>
-<ol>
-<li><strong>JSON Schema pour function calling</strong> — Rédige le schéma OpenAI-compatible avec <code>name</code>, <code>description</code>, <code>parameters</code> (JSON Schema). Chaque paramètre doit avoir <code>type</code>, <code>description</code> et, si applicable, <code>enum</code> ou <code>default</code>. Liste explicitement les paramètres <code>required</code>.</li>
-</ol>
-<p>   ```python    tool_schema = {        &quot;name&quot;: &quot;search_web&quot;,        &quot;description&quot;: &quot;Recherche des informations actuelles sur le web. Utilise cet outil quand tu as besoin d'informations récentes ou factuelles.&quot;,        &quot;parameters&quot;: {            &quot;type&quot;: &quot;object&quot;,            &quot;properties&quot;: {                &quot;query&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;description&quot;: &quot;La requête de recherche en langage naturel&quot;},                &quot;max_results&quot;: {&quot;type&quot;: &quot;integer&quot;, &quot;description&quot;: &quot;Nombre max de résultats&quot;, &quot;default&quot;: 5}            },            &quot;required&quot;: [&quot;query&quot;]        }    }    ```</p>
-<ol>
-<li><strong>Implémentation du tool</strong> — Wrape chaque outil dans une fonction Python avec validation des inputs (Pydantic recommandé), gestion des erreurs explicite, timeout, et retour d'un format standardisé. Ne laisse jamais une exception non catchée remonter au LLM.</li>
-</ol>
-<p>   ```python    from pydantic import BaseModel    import httpx</p>
-<p>   class SearchInput(BaseModel):        query: str        max_results: int = 5</p>
-<p>   async def search_web(query: str, max_results: int = 5) -&gt; dict:        try:            validated = SearchInput(query=query, max_results=max_results)            async with httpx.AsyncClient(timeout=10) as client:                resp = await client.get(SEARCH_API_URL, params=validated.dict())                resp.raise_for_status()                return {&quot;status&quot;: &quot;success&quot;, &quot;results&quot;: resp.json()[&quot;items&quot;][:max_results]}        except Exception as e:            return {&quot;status&quot;: &quot;error&quot;, &quot;message&quot;: str(e)}    ```</p>
-<ol>
-<li><strong>Tool discovery et sélection</strong> — Filtre les outils disponibles selon le contexte pour réduire le bruit dans le prompt : dynamic tool loading (charge uniquement les outils pertinents à la tâche), tool filtering par tags/catégories, <code>tool_choice</code> API parameter pour forcer ou exclure des outils. Évite de passer 20+ outils simultanément.</li>
-</ol>
-<ol>
-<li><strong>Parallel tool calling</strong> — Exploite le parallel tool calling natif des APIs modernes (OpenAI, Anthropic) : le LLM retourne plusieurs tool calls en un seul tour, exécute-les en parallèle avec <code>asyncio.gather</code>, puis retourne tous les résultats en un seul message. Réduit significativement la latence.</li>
-</ol>
-<p>   ```python    tool_calls = response.tool_calls  # plusieurs calls retournés    results = await asyncio.gather(*[dispatch_tool(tc) for tc in tool_calls])    ```</p>
-<ol>
-<li><strong>Tool chaining</strong> — Conçois des pipelines où l'output d'un outil devient l'input d'un autre : soit via l'agent lui-même (le LLM décide de la chaîne), soit via un pipeline déterministe pour les workflows prévisibles. Documente les types d'entrée/sortie pour faciliter la composition.</li>
-</ol>
-<ol>
-<li><strong>MCP (Model Context Protocol)</strong> — Pour exposer des outils via MCP : implémente un MCP server (Python SDK <code>mcp</code>), définis les <code>tools</code> (équivalent function calling), les <code>resources</code> (données exposées en lecture), et les <code>prompts</code> (templates réutilisables). Choisis le transport approprié : <code>stdio</code> (local), <code>HTTP+SSE</code> (distant).</li>
-</ol>
-<p>   ```python    from mcp.server import Server    from mcp.server.stdio import stdio_server</p>
-<p>   app = Server(&quot;mon-serveur&quot;)</p>
-<p>   @app.list_tools()    async def list_tools():        return [Tool(name=&quot;search_web&quot;, description=&quot;...&quot;, inputSchema={...})]</p>
-<p>   @app.call_tool()    async def call_tool(name: str, arguments: dict):        if name == &quot;search_web&quot;:            return await search_web(**arguments)    ```</p>
-<ol>
-<li><strong>Sécurité</strong> — Applique systématiquement : validation/sanitisation des inputs (rejette les injections), sandboxing pour les outils d'exécution de code (Docker, subprocess limité), rate limiting par outil et par utilisateur, permission scoping (l'agent ne peut appeler que les outils autorisés pour la session), limites de coût (budget par outil, par session).</li>
-</ol>
-<ol>
-<li><strong>Testing des tools</strong> — Teste chaque outil en isolation : unit tests avec inputs valides/invalides/edge cases, integration tests contre les vrais endpoints (ou mocks fidèles), tests de timeout et de comportement en cas d'erreur. Vérifie que le schéma JSON est correct et que le LLM l'interprète comme prévu.</li>
-</ol>
-<p>   ```python    async def test_search_web():        result = await search_web(query=&quot;test&quot;, max_results=3)        assert result[&quot;status&quot;] == &quot;success&quot;        assert len(result[&quot;results&quot;]) &lt;= 3</p>
-<p>   async def test_search_web_error():        result = await search_web(query=&quot;&quot;)        assert result[&quot;status&quot;] == &quot;error&quot;    ```</p>
-<ol>
-<li><strong>Monitoring</strong> — Instrumente chaque appel d'outil : usage stats (quels outils sont appelés le plus), latence par outil, taux d'erreur, coût par appel (APIs payantes), détection des appels inutiles (outil appelé mais résultat ignoré). Mets en place des logs structurés avec tool_name, inputs, outputs, durée.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de décision : quel pattern choisir ?</h2>
+<table><thead><tr><th>Situation</th><th>Pattern recommandé</th></tr></thead><tbody><tr><td>Outil ponctuel dans un seul agent</td><td>Function calling inline (JSON schema dans le prompt)</td></tr><tr><td>Outil partagé entre plusieurs agents</td><td>MCP Server (stdio ou HTTP+SSE)</td></tr><tr><td>Enchaînement prévisible de 3+ étapes</td><td>Pipeline déterministe, pas tool chaining LLM</td></tr><tr><td>Actions parallèles indépendantes</td><td>Parallel tool calling natif (OpenAI/Anthropic)</td></tr><tr><td>Outil exposé à des LLMs tiers/clients</td><td>MCP Server avec authentification</td></tr><tr><td>Wrapping d'API REST existante</td><td>Tool = thin wrapper + validation Pydantic</td></tr></tbody></table>
+<hr>
+<h2>Workflow en 10 étapes</h2>
+<h3>1. Définir le contrat de l'outil</h3>
+<p>Avant d'écrire du code, complète cette fiche :</p>
 <ul>
-<li><strong>Description d'outil = documentation LLM</strong> : une description vague produit des appels incorrects ; sois aussi précis que si tu documentais une API publique pour un développeur humain.</li>
-<li><strong>Anti-pattern — outil fourre-tout</strong> : un outil qui fait &quot;plusieurs choses selon les paramètres&quot; confuse le LLM ; crée plusieurs outils spécialisés plutôt qu'un seul outil générique.</li>
-<li><strong>Retours standardisés</strong> : tous tes outils doivent retourner le même format de base (<code>status</code>, <code>data</code>/<code>error</code>) pour simplifier la gestion côté agent.</li>
-<li><strong>Idempotence où possible</strong> : les outils de lecture sont naturellement idempotents ; pour les outils d'écriture, implémente des guards contre les doubles appels (idempotency keys).</li>
-<li><strong>Framework-agnostic d'abord</strong> : implémente la logique métier de l'outil indépendamment du framework agent (LangChain, LlamaIndex, etc.) pour faciliter la migration et les tests.</li>
+<li><strong>Nom</strong> : snake_case explicite (<code>get_invoice_by_id</code>, pas <code>get_data</code>)</li>
+<li><strong>Description</strong> : une phrase claire sur CE QUE l'outil fait + QUAND l'utiliser (le LLM lit cette phrase pour décider d'appeler ou non)</li>
+<li><strong>Inputs</strong> : chaque paramètre typé, obligatoire ou optionnel, avec valeurs autorisées si <code>enum</code></li>
+<li><strong>Output</strong> : format de retour standardisé (<code>status</code>, <code>data</code> ou <code>error</code>)</li>
+<li><strong>Effets de bord</strong> : lecture seule ? écriture ? irréversible ?</li>
 </ul>
+<blockquote>Règle : si la description de l'outil est ambiguë pour un développeur humain, elle le sera aussi pour le LLM.</blockquote>
+<hr>
+<h3>2. Rédiger le JSON Schema</h3>
+<p>Format OpenAI-compatible (compatible Anthropic, Gemini, Mistral) :</p>
+<pre><code class="lang-python">SEARCH_WEB_SCHEMA = {
+    &quot;name&quot;: &quot;search_web&quot;,
+    &quot;description&quot;: (
+        &quot;Recherche des informations récentes sur le web. &quot;
+        &quot;Utilise cet outil uniquement quand tu as besoin d'informations &quot;
+        &quot;publiées après ta date de coupure ou de données factuelles précises.&quot;
+    ),
+    &quot;parameters&quot;: {
+        &quot;type&quot;: &quot;object&quot;,
+        &quot;properties&quot;: {
+            &quot;query&quot;: {
+                &quot;type&quot;: &quot;string&quot;,
+                &quot;description&quot;: &quot;Requête en langage naturel, la plus spécifique possible&quot;
+            },
+            &quot;max_results&quot;: {
+                &quot;type&quot;: &quot;integer&quot;,
+                &quot;description&quot;: &quot;Nombre max de résultats retournés (1-10)&quot;,
+                &quot;default&quot;: 5
+            },
+            &quot;language&quot;: {
+                &quot;type&quot;: &quot;string&quot;,
+                &quot;enum&quot;: [&quot;fr&quot;, &quot;en&quot;, &quot;ar&quot;],
+                &quot;description&quot;: &quot;Langue des résultats&quot;,
+                &quot;default&quot;: &quot;fr&quot;
+            }
+        },
+        &quot;required&quot;: [&quot;query&quot;],
+        &quot;additionalProperties&quot;: False   # bloque les paramètres inconnus
+    }
+}</code></pre>
+<p><strong>Pièges courants dans les schémas :</strong></p>
+<ul>
+<li>Oublier <code>&quot;additionalProperties&quot;: False</code> → le LLM invente des champs</li>
+<li>Description trop courte → appels au mauvais moment</li>
+<li>Trop de paramètres optionnels → le LLM les omet aléatoirement</li>
+</ul>
+<hr>
+<h3>3. Implémenter le tool (Python)</h3>
+<pre><code class="lang-python">from pydantic import BaseModel, Field, field_validator
+import httpx
+
+class SearchInput(BaseModel):
+    query: str = Field(..., min_length=1, max_length=500)
+    max_results: int = Field(5, ge=1, le=10)
+    language: str = Field(&quot;fr&quot;, pattern=&quot;^(fr|en|ar)$&quot;)
+
+    @field_validator(&quot;query&quot;)
+    @classmethod
+    def no_injection(cls, v: str) -&gt; str:
+        forbidden = [&quot;&lt;script&quot;, &quot;DROP TABLE&quot;, &quot;--&quot;]
+        if any(f in v for f in forbidden):
+            raise ValueError(&quot;Requête invalide&quot;)
+        return v.strip()
+
+
+async def search_web(query: str, max_results: int = 5, language: str = &quot;fr&quot;) -&gt; dict:
+    try:
+        inp = SearchInput(query=query, max_results=max_results, language=language)
+    except Exception as e:
+        return {&quot;status&quot;: &quot;error&quot;, &quot;code&quot;: &quot;INVALID_INPUT&quot;, &quot;message&quot;: str(e)}
+
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            resp = await client.get(
+                &quot;https://search-api/v1/search&quot;,
+                params=inp.model_dump(),
+                headers={&quot;Authorization&quot;: f&quot;Bearer {SEARCH_API_KEY}&quot;}
+            )
+            resp.raise_for_status()
+            items = resp.json().get(&quot;items&quot;, [])[:inp.max_results]
+            return {&quot;status&quot;: &quot;success&quot;, &quot;data&quot;: items}
+    except httpx.TimeoutException:
+        return {&quot;status&quot;: &quot;error&quot;, &quot;code&quot;: &quot;TIMEOUT&quot;, &quot;message&quot;: &quot;Search API timeout after 8s&quot;}
+    except httpx.HTTPStatusError as e:
+        return {&quot;status&quot;: &quot;error&quot;, &quot;code&quot;: f&quot;HTTP_{e.response.status_code}&quot;, &quot;message&quot;: str(e)}
+    except Exception as e:
+        return {&quot;status&quot;: &quot;error&quot;, &quot;code&quot;: &quot;UNKNOWN&quot;, &quot;message&quot;: str(e)}</code></pre>
+<hr>
+<h3>4. Dynamic tool loading</h3>
+<p>Ne passe jamais 20+ outils dans chaque prompt. Charge uniquement les outils pertinents :</p>
+<pre><code class="lang-python">TOOL_REGISTRY = {
+    &quot;search&quot;: {&quot;schema&quot;: SEARCH_WEB_SCHEMA, &quot;fn&quot;: search_web, &quot;tags&quot;: [&quot;read&quot;, &quot;web&quot;]},
+    &quot;send_email&quot;: {&quot;schema&quot;: SEND_EMAIL_SCHEMA, &quot;fn&quot;: send_email, &quot;tags&quot;: [&quot;write&quot;, &quot;email&quot;]},
+    &quot;query_db&quot;: {&quot;schema&quot;: QUERY_DB_SCHEMA, &quot;fn&quot;: query_db, &quot;tags&quot;: [&quot;read&quot;, &quot;db&quot;]},
+}
+
+def get_tools_for_task(tags: list[str]) -&gt; list[dict]:
+    return [
+        t[&quot;schema&quot;] for t in TOOL_REGISTRY.values()
+        if any(tag in t[&quot;tags&quot;] for tag in tags)
+    ]
+
+# Utilisation
+tools = get_tools_for_task([&quot;read&quot;, &quot;web&quot;])</code></pre>
+<p><strong>Seuils pratiques :</strong></p>
+<ul>
+<li>1–5 outils : pas de filtrage nécessaire</li>
+<li>6–15 outils : filtrer par catégorie selon le contexte</li>
+<li>16+ outils : filtrage sémantique (embeddings) ou multi-agent avec spécialisation</li>
+</ul>
+<hr>
+<h3>5. Parallel tool calling</h3>
+<p>Les LLMs modernes (GPT-4o, Claude 3.5+, Gemini 1.5+) retournent plusieurs <code>tool_calls</code> en un seul tour. Exécute-les en parallèle :</p>
+<pre><code class="lang-python">import asyncio
+
+async def dispatch_tool(tool_call) -&gt; dict:
+    name = tool_call.function.name
+    args = json.loads(tool_call.function.arguments)
+    fn = TOOL_REGISTRY[name][&quot;fn&quot;]
+    result = await fn(**args)
+    return {
+        &quot;tool_call_id&quot;: tool_call.id,
+        &quot;role&quot;: &quot;tool&quot;,
+        &quot;content&quot;: json.dumps(result)
+    }
+
+# Dans la boucle agent
+if response.tool_calls:
+    results = await asyncio.gather(
+        *[dispatch_tool(tc) for tc in response.tool_calls],
+        return_exceptions=True  # une erreur n'annule pas les autres
+    )
+    messages.extend(results)</code></pre>
+<hr>
+<h3>6. Tool chaining — quand laisser le LLM décider vs. pipeline déterministe</h3>
+<pre><code>LLM-driven chaining → quand les étapes sont imprévisibles (exploration, recherche)
+Pipeline déterministe → quand l'ordre est toujours le même (ETL, workflow métier)</code></pre>
+<p>Pipeline déterministe (exemple) :</p>
+<pre><code class="lang-python">async def invoice_pipeline(invoice_id: str) -&gt; dict:
+    raw = await get_invoice_by_id(invoice_id)           # step 1
+    if raw[&quot;status&quot;] == &quot;error&quot;: return raw
+    enriched = await enrich_with_client_data(raw[&quot;data&quot;])  # step 2
+    return await generate_pdf(enriched[&quot;data&quot;])            # step 3</code></pre>
+<p>Expose ce pipeline comme <strong>un seul tool</strong> à l'agent. L'agent n'a pas à orchestrer les 3 étapes.</p>
+<hr>
+<h3>7. MCP Server (partage inter-agents)</h3>
+<pre><code class="lang-python">from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent
+
+app = Server(&quot;mon-mcp-server&quot;)
+
+@app.list_tools()
+async def list_tools():
+    return [
+        Tool(
+            name=&quot;search_web&quot;,
+            description=&quot;Recherche des infos récentes. Utiliser pour toute question post-2024.&quot;,
+            inputSchema={
+                &quot;type&quot;: &quot;object&quot;,
+                &quot;properties&quot;: {
+                    &quot;query&quot;: {&quot;type&quot;: &quot;string&quot;},
+                    &quot;max_results&quot;: {&quot;type&quot;: &quot;integer&quot;, &quot;default&quot;: 5}
+                },
+                &quot;required&quot;: [&quot;query&quot;]
+            }
+        )
+    ]
+
+@app.call_tool()
+async def call_tool(name: str, arguments: dict):
+    if name == &quot;search_web&quot;:
+        result = await search_web(**arguments)
+        return [TextContent(type=&quot;text&quot;, text=json.dumps(result))]
+    raise ValueError(f&quot;Outil inconnu : {name}&quot;)
+
+# Lancement stdio
+async def main():
+    async with stdio_server() as (r, w):
+        await app.run(r, w, app.create_initialization_options())</code></pre>
+<p><strong>Choisir le transport :</strong></p>
+<ul>
+<li><code>stdio</code> → usage local (Claude Desktop, Claude Code, scripts)</li>
+<li><code>HTTP+SSE</code> (FastMCP) → usage distant, multi-clients, auth OAuth2</li>
+</ul>
+<hr>
+<h3>8. Sécurité</h3>
+<p>Checklist à appliquer sur chaque outil :</p>
+<ul>
+<li>[ ] <strong>Validation input</strong> — Pydantic avec contraintes strictes (<code>min_length</code>, <code>pattern</code>, <code>enum</code>)</li>
+<li>[ ] <strong>Sanitisation</strong> — rejette les injections SQL, prompt injection, path traversal (<code>../</code>)</li>
+<li>[ ] <strong>Sandboxing</strong> — outils d'exécution de code dans Docker ou subprocess avec timeout</li>
+<li>[ ] <strong>Rate limiting</strong> — par outil ET par session (ex. max 10 calls/min pour <code>send_email</code>)</li>
+<li>[ ] <strong>Permission scoping</strong> — l'agent reçoit uniquement les outils autorisés pour la session</li>
+<li>[ ] <strong>Budget par outil</strong> — coût max par appel pour les APIs payantes (éviter les loops infinis)</li>
+<li>[ ] <strong>Audit log</strong> — chaque appel loggé avec tool_name, user_id, timestamp, inputs (sans secrets)</li>
+</ul>
+<pre><code class="lang-python"># Exemple rate limiting simple
+from collections import defaultdict
+import time
+
+call_counts: dict[str, list[float]] = defaultdict(list)
+
+def check_rate_limit(tool_name: str, user_id: str, max_calls: int = 10, window: int = 60):
+    key = f&quot;{tool_name}:{user_id}&quot;
+    now = time.time()
+    call_counts[key] = [t for t in call_counts[key] if now - t &lt; window]
+    if len(call_counts[key]) &gt;= max_calls:
+        raise PermissionError(f&quot;Rate limit: {max_calls} appels/{window}s pour {tool_name}&quot;)
+    call_counts[key].append(now)</code></pre>
+<hr>
+<h3>9. Testing des tools</h3>
+<pre><code class="lang-python">import pytest
+
+@pytest.mark.asyncio
+async def test_search_web_valid():
+    result = await search_web(query=&quot;Python asyncio tutorial&quot;, max_results=3)
+    assert result[&quot;status&quot;] == &quot;success&quot;
+    assert len(result[&quot;data&quot;]) &lt;= 3
+
+@pytest.mark.asyncio
+async def test_search_web_empty_query():
+    result = await search_web(query=&quot;&quot;)
+    assert result[&quot;status&quot;] == &quot;error&quot;
+    assert result[&quot;code&quot;] == &quot;INVALID_INPUT&quot;
+
+@pytest.mark.asyncio
+async def test_search_web_timeout(monkeypatch):
+    async def slow_get(*args, **kwargs):
+        raise httpx.TimeoutException(&quot;timeout&quot;)
+    monkeypatch.setattr(httpx.AsyncClient, &quot;get&quot;, slow_get)
+    result = await search_web(query=&quot;test&quot;)
+    assert result[&quot;code&quot;] == &quot;TIMEOUT&quot;</code></pre>
+<p><strong>Matrice de test pour chaque outil :</strong></p>
+<ol>
+<li>Input valide nominal → succès attendu</li>
+<li>Input invalide (type, longueur, enum) → erreur <code>INVALID_INPUT</code></li>
+<li>API downstream en erreur (4xx, 5xx) → erreur propre (pas d'exception non catchée)</li>
+<li>Timeout → erreur <code>TIMEOUT</code></li>
+<li>Parallel calls (si supporté) → pas de race condition</li>
+</ol>
+<hr>
+<h3>10. Monitoring</h3>
+<pre><code class="lang-python">import structlog
+import time
+
+log = structlog.get_logger()
+
+async def instrumented_dispatch(tool_call) -&gt; dict:
+    name = tool_call.function.name
+    args = json.loads(tool_call.function.arguments)
+    start = time.perf_counter()
+    result = await TOOL_REGISTRY[name][&quot;fn&quot;](**args)
+    duration_ms = (time.perf_counter() - start) * 1000
+
+    log.info(
+        &quot;tool_call&quot;,
+        tool=name,
+        duration_ms=round(duration_ms, 1),
+        status=result.get(&quot;status&quot;),
+        error_code=result.get(&quot;code&quot;),
+        # NE PAS logger les inputs complets (secrets potentiels)
+    )
+    return result</code></pre>
+<p><strong>Métriques à suivre :</strong></p>
+<ul>
+<li>Taux d'erreur par outil (cible &lt; 2%)</li>
+<li>Latence p95 par outil</li>
+<li>Top 5 outils les plus appelés (détecte les loops)</li>
+<li>Taux d'appels sans résultat utilisé (outil appelé, LLM ignore la réponse → symptôme de description floue)</li>
+</ul>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Outil fourre-tout</td><td>LLM appelle avec les mauvais params</td><td>Découpe en plusieurs outils spécialisés</td></tr><tr><td>Description vague (&quot;do stuff&quot;)</td><td>Appels au mauvais moment</td><td>Ajouter &quot;Utilise UNIQUEMENT quand...&quot;</td></tr><tr><td>Exception non catchée</td><td>Agent crash sans message utile</td><td><code>try/except</code> exhaustif, retour <code>{&quot;status&quot;:&quot;error&quot;}</code></td></tr><tr><td>Trop d'outils dans le prompt</td><td>Hallucination de tool names</td><td>Dynamic loading par tags/catégorie</td></tr><tr><td>Output non structuré (plain text)</td><td>LLM réinterprète mal</td><td>JSON standardisé avec <code>status</code> + <code>data</code>/<code>error</code></td></tr><tr><td>Outil avec effets de bord cachés</td><td>Actions non voulues</td><td>Documenter les effets de bord dans la description</td></tr><tr><td>Idempotence ignorée</td><td>Double send d'email, double débit</td><td>Idempotency key côté outil et API downstream</td></tr><tr><td>Tests absents sur les timeouts</td><td>Silent failure en prod</td><td>Mocker les timeouts, vérifier le retour</td></tr></tbody></table>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -97,124 +97,233 @@ cp -r claude-skills-collection/skills/agent-subagent-delegator ~/.claude/skills/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Subagent Delegator</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utiliser ce skill lorsqu'un agent parent doit distribuer du travail à des sous-agents spécialisés pour paralléliser l'exécution ou isoler des responsabilités. Il s'applique aussi quand la tâche principale est trop vaste pour un seul agent et nécessite un mécanisme de dispatch, de suivi et de collecte de résultats structurés.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Architecture de délégation (parent-child model)</strong></li>
+<table><thead><tr><th>Situation</th><th>Action</th></tr></thead><tbody><tr><td>Tâche décomposable en sous-tâches indépendantes</td><td>Déléguer en parallèle (fan-out)</td></tr><tr><td>Domaines métier distincts (research / write / validate)</td><td>Sous-agents spécialisés</td></tr><tr><td>Tâche trop longue pour un seul contexte LLM</td><td>Pipeline séquentiel A → B → C</td></tr><tr><td>Besoin de résultats redondants/comparés</td><td>Fan-out + voting</td></tr><tr><td>Charge variable, agents réutilisables</td><td>Pool pré-alloué</td></tr></tbody></table>
+<p>Ne pas déléguer si la tâche tient en 1-2 appels directs : la coordination coûte plus que le gain.</p>
+<hr>
+<h2>1. Définir le contrat d'interface avant tout</h2>
+<p>Avant de coder la logique de dispatch, figer les types d'entrée/sortie. Tout le reste en dépend.</p>
+<pre><code class="lang-python">from pydantic import BaseModel
+from typing import Any, Literal
+
+class TaskDefinition(BaseModel):
+    task_id: str                          # UUID unique, tracé de bout en bout
+    objective: str                        # Ce que le sous-agent DOIT produire (1 phrase)
+    context: dict[str, Any]              # Données nécessaires (pas le world state entier)
+    constraints: list[str]               # Ce qui est interdit ou imposé
+    output_format: Literal[&quot;json&quot;, &quot;text&quot;, &quot;structured&quot;]
+    timeout: int = 30                     # Secondes — toujours explicite
+    priority: int = 1
+    retry_limit: int = 3
+
+class TaskResult(BaseModel):
+    task_id: str
+    agent_id: str
+    status: Literal[&quot;success&quot;, &quot;partial&quot;, &quot;failed&quot;]
+    data: Any
+    errors: list[str] = []
+    execution_time: float
+    confidence: float = 1.0              # 0.0-1.0, utile pour le fan-in</code></pre>
+<p>Règle : le <code>context</code> ne contient que ce dont le sous-agent a besoin — pas le state global complet. Surcharger le contexte = latence + hallucination.</p>
+<hr>
+<h2>2. Choisir la stratégie de dispatch</h2>
+<pre><code>Tâches identiques, N agents disponibles  →  round-robin
+Agents avec capacités différentes        →  capability-based (manifest)
+Charge en temps réel connue              →  load-based (queue size)
+Tâches sémantiquement variées            →  semantic routing (embeddings)</code></pre>
+<p>Exemple — capability-based avec manifest déclaratif :</p>
+<pre><code class="lang-python"># Chaque sous-agent déclare son manifest au démarrage
+AGENT_MANIFESTS = {
+    &quot;research-agent&quot;: {&quot;domains&quot;: [&quot;web_search&quot;, &quot;doc_retrieval&quot;], &quot;max_tokens&quot;: 4000},
+    &quot;writer-agent&quot;:   {&quot;domains&quot;: [&quot;text_generation&quot;, &quot;summarization&quot;], &quot;max_tokens&quot;: 8000},
+    &quot;validator-agent&quot;:{&quot;domains&quot;: [&quot;fact_check&quot;, &quot;schema_validation&quot;], &quot;max_tokens&quot;: 2000},
+}
+
+def route_task(task: TaskDefinition) -&gt; str:
+    &quot;&quot;&quot;Retourne l'agent_id le plus adapté à la tâche.&quot;&quot;&quot;
+    keyword = task.objective.split()[0].lower()
+    for agent_id, manifest in AGENT_MANIFESTS.items():
+        if any(keyword in d for d in manifest[&quot;domains&quot;]):
+            return agent_id
+    return &quot;default-agent&quot;</code></pre>
+<p>Pour le semantic routing (charge plus élevée, pertinent si &gt; 10 types de tâches) :</p>
+<pre><code class="lang-python">import numpy as np
+
+def semantic_route(task: TaskDefinition, agents: list, embed_fn) -&gt; str:
+    task_vec = embed_fn(task.objective)
+    scores = {
+        a.id: float(np.dot(task_vec, a.capability_embedding))
+        for a in agents
+    }
+    return max(scores, key=scores.get)</code></pre>
+<hr>
+<h2>3. Instancier les sous-agents (lifecycle)</h2>
+<p><strong>Option A — dynamic (tâche unique, isolation totale) :</strong></p>
+<pre><code class="lang-python">async def delegate_once(task: TaskDefinition, agent_class) -&gt; TaskResult:
+    agent = agent_class()
+    try:
+        return await execute_with_retry(agent, task)
+    finally:
+        await agent.shutdown()</code></pre>
+<p><strong>Option B — pool pré-alloué (haute fréquence, latence faible) :</strong></p>
+<pre><code class="lang-python">import asyncio
+
+class AgentPool:
+    def __init__(self, agent_class, size: int = 5):
+        self._pool = asyncio.Queue()
+        for _ in range(size):
+            self._pool.put_nowait(agent_class())
+
+    async def acquire(self):
+        return await self._pool.get()
+
+    async def release(self, agent):
+        await self._pool.put(agent)
+
+    async def run(self, task: TaskDefinition) -&gt; TaskResult:
+        agent = await self.acquire()
+        try:
+            return await execute_with_retry(agent, task)
+        finally:
+            await self.release(agent)</code></pre>
+<p>Choisir dynamic si chaque tâche nécessite un état propre. Choisir pool si les agents sont stateless ou quasi-stateless.</p>
+<hr>
+<h2>4. Patterns de délégation</h2>
+<h3>Fan-out / Fan-in (parallèle + agrégation)</h3>
+<pre><code class="lang-python">async def fan_out(tasks: list[TaskDefinition], pool: AgentPool) -&gt; list[TaskResult]:
+    return await asyncio.gather(*[pool.run(t) for t in tasks], return_exceptions=True)
+
+def fan_in(results: list[TaskResult], strategy: str = &quot;best_confidence&quot;) -&gt; TaskResult:
+    valid = [r for r in results if isinstance(r, TaskResult) and r.status == &quot;success&quot;]
+    if strategy == &quot;best_confidence&quot;:
+        return max(valid, key=lambda r: r.confidence)
+    if strategy == &quot;merge&quot;:
+        merged_data = [r.data for r in valid]
+        return valid[0].model_copy(update={&quot;data&quot;: merged_data})
+    raise ValueError(f&quot;Unknown strategy: {strategy}&quot;)</code></pre>
+<h3>Pipeline séquentiel (A → B → C)</h3>
+<pre><code class="lang-python">async def pipeline(initial_input: Any, stages: list[tuple]) -&gt; TaskResult:
+    &quot;&quot;&quot;stages = [(agent, task_factory_fn), ...]&quot;&quot;&quot;
+    result = initial_input
+    for agent, make_task in stages:
+        task = make_task(result)           # construit la TaskDefinition à partir du résultat précédent
+        task_result = await execute_with_retry(agent, task)
+        if task_result.status == &quot;failed&quot;:
+            raise RuntimeError(f&quot;Pipeline failed at stage {agent.id}: {task_result.errors}&quot;)
+        result = task_result.data
+    return task_result</code></pre>
+<h3>LangGraph — fan-out déclaratif</h3>
+<pre><code class="lang-python">from langgraph.graph import StateGraph, END
+
+def build_delegation_graph():
+    graph = StateGraph(dict)
+    graph.add_node(&quot;dispatch&quot;,  dispatch_node)
+    graph.add_node(&quot;research&quot;,  research_node)
+    graph.add_node(&quot;write&quot;,     write_node)
+    graph.add_node(&quot;aggregate&quot;, aggregate_node)
+    graph.add_edge(&quot;dispatch&quot;,  &quot;research&quot;)
+    graph.add_edge(&quot;dispatch&quot;,  &quot;write&quot;)
+    graph.add_edge(&quot;research&quot;,  &quot;aggregate&quot;)
+    graph.add_edge(&quot;write&quot;,     &quot;aggregate&quot;)
+    graph.add_edge(&quot;aggregate&quot;, END)
+    return graph.compile()</code></pre>
+<hr>
+<h2>5. Retry, circuit breaker et error propagation</h2>
+<pre><code class="lang-python">async def execute_with_retry(agent, task: TaskDefinition) -&gt; TaskResult:
+    &quot;&quot;&quot;Backoff exponentiel : 1s, 2s, 4s, 8s...&quot;&quot;&quot;
+    last_exc = None
+    for attempt in range(task.retry_limit):
+        try:
+            return await asyncio.wait_for(agent.run(task), timeout=task.timeout)
+        except asyncio.TimeoutError:
+            last_exc = TimeoutError(f&quot;Agent {agent.id} timed out after {task.timeout}s&quot;)
+        except Exception as e:
+            last_exc = e
+        if attempt &lt; task.retry_limit - 1:
+            await asyncio.sleep(2 ** attempt)
+    # Escalade au parent : retourner un TaskResult failed plutôt que lever
+    return TaskResult(
+        task_id=task.task_id, agent_id=agent.id,
+        status=&quot;failed&quot;, data=None,
+        errors=[str(last_exc)], execution_time=0.0,
+    )</code></pre>
+<p>Circuit breaker minimal :</p>
+<pre><code class="lang-python">from collections import defaultdict
+
+_failures: dict[str, int] = defaultdict(int)
+CIRCUIT_THRESHOLD = 5
+
+def is_healthy(agent_id: str) -&gt; bool:
+    return _failures[agent_id] &lt; CIRCUIT_THRESHOLD
+
+def record_failure(agent_id: str):
+    _failures[agent_id] += 1
+
+def reset_circuit(agent_id: str):
+    _failures[agent_id] = 0</code></pre>
+<p>Décision d'escalade :</p>
 <ul>
-<li>Définir clairement qui est le parent (orchestrateur) et qui sont les enfants (exécuteurs)</li>
-<li>Déterminer le scope de chaque sous-agent : domaine métier, outil, API ou type de tâche</li>
-<li>Exemple de structure : <code>ParentAgent → [ResearchAgent, WriterAgent, ValidatorAgent]</code></li>
-<li>Documenter les responsabilités et frontières de chaque sous-agent</li>
+<li>Échec récupérable (timeout réseau, rate-limit) → retry avec backoff</li>
+<li>Échec non-récupérable (données invalides, erreur métier) → <code>status=&quot;failed&quot;</code>, escalade immédiate</li>
+<li>Agent en quarantaine (circuit ouvert) → fallback sur agent de remplacement ou résultat partiel</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Interface de délégation (task definition schema)</strong></li>
+<hr>
+<h2>6. Monitoring et heartbeat</h2>
+<pre><code class="lang-python">from datetime import datetime, timedelta
+
+class AgentMonitor:
+    def __init__(self, timeout_s: int = 30):
+        self._last_seen: dict[str, datetime] = {}
+        self._threshold = timedelta(seconds=timeout_s)
+
+    def heartbeat(self, agent_id: str):
+        self._last_seen[agent_id] = datetime.utcnow()
+
+    def is_alive(self, agent_id: str) -&gt; bool:
+        last = self._last_seen.get(agent_id)
+        return bool(last and datetime.utcnow() - last &lt; self._threshold)
+
+    def dead_agents(self) -&gt; list[str]:
+        return [aid for aid in self._last_seen if not self.is_alive(aid)]</code></pre>
+<p>Log minimum à émettre par le parent à chaque délégation :</p>
+<pre><code>[DELEGATE] task_id=&lt;uuid&gt; agent=&lt;id&gt; objective=&quot;...&quot; timeout=30
+[RESULT]   task_id=&lt;uuid&gt; agent=&lt;id&gt; status=success exec=1.2s confidence=0.95
+[RETRY]    task_id=&lt;uuid&gt; agent=&lt;id&gt; attempt=2/3 error=&quot;TimeoutError&quot;
+[ESCALATE] task_id=&lt;uuid&gt; agent=&lt;id&gt; status=failed errors=[...]</code></pre>
+<hr>
+<h2>7. Capability manifest (contrat de sous-agent)</h2>
+<p>Chaque sous-agent expose son manifest. Le parent l'utilise pour le routing et la validation.</p>
+<pre><code class="lang-python">MANIFEST = {
+    &quot;agent_id&quot;: &quot;research-agent-v2&quot;,
+    &quot;version&quot;: &quot;2.1.0&quot;,
+    &quot;domains&quot;: [&quot;web_search&quot;, &quot;doc_retrieval&quot;, &quot;summarization&quot;],
+    &quot;input_schema&quot;: {
+        &quot;query&quot;: &quot;str&quot;,
+        &quot;max_results&quot;: &quot;int&quot;,
+        &quot;language&quot;: &quot;str&quot;,
+    },
+    &quot;output_schema&quot;: {
+        &quot;summary&quot;: &quot;str&quot;,
+        &quot;sources&quot;: &quot;list[str]&quot;,
+        &quot;confidence&quot;: &quot;float&quot;,
+    },
+    &quot;constraints&quot;: {
+        &quot;max_timeout&quot;: 60,
+        &quot;max_context_tokens&quot;: 4000,
+    },
+}</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Objective vague (&quot;fais quelque chose avec ça&quot;)</td><td>Résultat inutilisable</td><td>1 phrase précise + output_format explicite</td></tr><tr><td>Aucun timeout sur la tâche</td><td>Agent bloqué = système gelé</td><td><code>timeout</code> obligatoire, même si généreux</td></tr><tr><td>Passer le state global en contexte</td><td>Hallucination, tokens gaspillés</td><td>Ne passer que les données strictement nécessaires</td></tr><tr><td>Délégation récursive &gt; 3 niveaux</td><td>Débogage impossible, latence</td><td>Aplatir la hiérarchie, max 2-3 niveaux</td></tr><tr><td>Résultat accepté sans validation</td><td>Erreurs silencieuses propagées</td><td>Valider le schema avec Pydantic avant usage</td></tr><tr><td>Sous-agent stateful dans un pool</td><td>Race condition, état corrompu</td><td>Réinitialiser l'état à chaque <code>acquire()</code></td></tr><tr><td>Retry infini sans circuit breaker</td><td>Cascade de pannes</td><td>Threshold + quarantaine automatique</td></tr><tr><td>task_id non unique</td><td>Tracing impossible</td><td>Générer avec <code>uuid.uuid4()</code> côté parent</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Définir un schéma de tâche standardisé que tout sous-agent peut recevoir</li>
-<li>Champs obligatoires : <code>objective</code>, <code>context</code>, <code>constraints</code>, <code>output_format</code>, <code>timeout</code></li>
+<li><strong>Idempotence obligatoire</strong> : une tâche rejouée ne doit pas créer de doublon (utiliser <code>task_id</code> comme clé d'idempotence côté sous-agent).</li>
+<li><strong>Tracing distribué</strong> : propager un <code>trace_id</code> parent dans chaque <code>TaskDefinition</code> pour relier les spans dans OpenTelemetry/Langfuse.</li>
+<li><strong>Résultats partiels acceptables</strong> : si le fan-out produit 7/10 résultats avant timeout, agréger les 7 plutôt que tout rejeter.</li>
+<li><strong>Observabilité first</strong> : émettre des métriques (durée, taux d'échec, retries) dès le départ — difficile à ajouter après.</li>
+<li><strong>Tester le chaos</strong> : simuler des timeouts et des pannes de sous-agents en CI pour valider le circuit breaker et les fallbacks.</li>
+<li><strong>Versionner les manifests</strong> : quand le contrat d'interface change, bumper la version et maintenir la rétrocompatibilité le temps de la migration.</li>
 </ul>
-</ol>
-<p>   ```python    from pydantic import BaseModel    from typing import Optional, Dict, Any</p>
-<p>   class TaskDefinition(BaseModel):        task_id: str        objective: str        context: Dict[str, Any]        constraints: list[str]        output_format: str  # &quot;json&quot; | &quot;text&quot; | &quot;structured&quot;        timeout: int  # secondes        priority: int = 1        retry_limit: int = 3    ```</p>
-<ol>
-<li><strong>Dispatch strategy (stratégie de routage)</strong></li>
-<ul>
-<li><code>round-robin</code> : distribuer cycliquement entre agents disponibles</li>
-<li><code>capability-based</code> : router selon les capacités déclarées de chaque sous-agent</li>
-<li><code>load-based</code> : envoyer au sous-agent avec la file d'attente la plus courte</li>
-<li><code>semantic routing</code> : classifier la tâche et choisir l'agent le plus adapté</li>
-</ul>
-</ol>
-<p>   ```python    def route_task(task: TaskDefinition, agents: list) -&gt; str:        # Semantic routing avec embeddings        task_embedding = embed(task.objective)        scores = [(a.id, cosine_sim(task_embedding, a.capability_embedding)) for a in agents]        return max(scores, key=lambda x: x[1])[0]    ```</p>
-<ol>
-<li><strong>Spawn de sous-agents (instanciation dynamique)</strong></li>
-<ul>
-<li><code>dynamic creation</code> : créer un sous-agent à la demande, détruire après usage</li>
-<li><code>pool pre-allocated</code> : maintenir un pool de sous-agents prêts à recevoir des tâches</li>
-<li><code>lazy instantiation</code> : instancier seulement si la charge dépasse un seuil</li>
-</ul>
-</ol>
-<p>   ```python    class AgentPool:        def __init__(self, agent_class, pool_size=5):            self.pool = [agent_class() for _ in range(pool_size)]            self.busy = set()</p>
-<p>       def acquire(self):            available = [a for a in self.pool if a.id not in self.busy]            if not available:                return self._spawn_temporary()            agent = available[0]            self.busy.add(agent.id)            return agent    ```</p>
-<ol>
-<li><strong>Communication parent ↔ sous-agent</strong></li>
-<ul>
-<li>Task assignment : envoi de <code>TaskDefinition</code> via queue ou appel direct</li>
-<li>Progress reporting : le sous-agent publie son avancement (<code>0-100%</code> ou états discrets)</li>
-<li>Result return : retour structuré via <code>TaskResult</code> avec statut, données, erreurs</li>
-<li>Error escalation : le sous-agent signale les erreurs non-récupérables au parent</li>
-</ul>
-</ol>
-<p>   ```python    class TaskResult(BaseModel):        task_id: str        agent_id: str        status: str  # &quot;success&quot; | &quot;partial&quot; | &quot;failed&quot;        data: Any        errors: list[str] = []        execution_time: float        confidence: float = 1.0    ```</p>
-<ol>
-<li><strong>Monitoring des sous-agents</strong></li>
-<ul>
-<li>Status tracking : maintenir un registre <code>{agent_id: status, last_update, current_task}</code></li>
-<li>Heartbeat : chaque sous-agent envoie un signal toutes les N secondes</li>
-<li>Timeout detection : si pas de heartbeat après <code>timeout</code>, marquer comme <code>unresponsive</code></li>
-<li>Kill signal : envoyer <code>SIGTERM</code> logique pour interrompre proprement</li>
-</ul>
-</ol>
-<p>   ```python    import asyncio    from datetime import datetime, timedelta</p>
-<p>   class AgentMonitor:        def __init__(self, timeout_seconds=30):            self.heartbeats = {}            self.timeout = timedelta(seconds=timeout_seconds)</p>
-<p>       async def check_health(self, agent_id: str) -&gt; bool:            last = self.heartbeats.get(agent_id)            if not last or datetime.now() - last &gt; self.timeout:                return False            return True    ```</p>
-<ol>
-<li><strong>Résultat handling (collecte et validation)</strong></li>
-<ul>
-<li>Aggregation : collecter tous les <code>TaskResult</code> une fois la file épuisée</li>
-<li>Validation : vérifier le schema, la complétude et la cohérence de chaque résultat</li>
-<li>Retry on failure : re-dispatcher les tâches échouées (max <code>retry_limit</code> fois)</li>
-<li>Partial results : accepter des résultats partiels si le timeout est atteint</li>
-</ul>
-</ol>
-<p>   ```python    async def collect_results(tasks: list, timeout: int) -&gt; list[TaskResult]:        results = await asyncio.gather(            *[agent.execute(task) for task, agent in tasks],            return_exceptions=True        )        return [r for r in results if not isinstance(r, Exception)]    ```</p>
-<ol>
-<li><strong>Cleanup et lifecycle management</strong></li>
-<ul>
-<li>Termination : appeler <code>agent.shutdown()</code> après chaque tâche pour libérer les ressources</li>
-<li>Resource cleanup : fermer les connexions DB, API, file handles ouverts par le sous-agent</li>
-<li>Memory management : garbage collect les objets lourds (embeddings, modèles chargés)</li>
-<li>Pool housekeeping : retirer les agents défaillants du pool et les remplacer</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Error propagation (gestion des pannes)</strong></li>
-<ul>
-<li>Échec récupérable : retry automatique avec backoff exponentiel (<code>1s, 2s, 4s, 8s</code>)</li>
-<li>Échec non-récupérable : escalade au parent avec le contexte complet de l'erreur</li>
-<li>Fallback : si tous les retries échouent, activer un agent de fallback dégradé</li>
-<li>Dead letter queue : archiver les tâches définitivement échouées pour audit</li>
-</ul>
-</ol>
-<p>   ```python    async def execute_with_retry(agent, task: TaskDefinition) -&gt; TaskResult:        for attempt in range(task.retry_limit):            try:                return await asyncio.wait_for(agent.run(task), timeout=task.timeout)            except Exception as e:                if attempt == task.retry_limit - 1:                    raise                await asyncio.sleep(2 ** attempt)    ```</p>
-<ol>
-<li><strong>Patterns de délégation avancés</strong></li>
-<ul>
-<li><code>fan-out/fan-in</code> : distribuer la même tâche à plusieurs agents, agréger les meilleurs résultats</li>
-<li><code>pipeline</code> : chaque sous-agent traite la sortie du précédent (A → B → C)</li>
-<li><code>recursive delegation</code> : un sous-agent peut lui-même déléguer à des sous-sous-agents</li>
-<li><code>conditional delegation</code> : choisir le sous-agent selon une condition évaluée au runtime</li>
-</ul>
-</ol>
-<p>    ```python     # Fan-out/fan-in avec LangGraph     from langgraph.graph import StateGraph</p>
-<p>    def fan_out(state):         return {             &quot;research_task&quot;: state[&quot;query&quot;],             &quot;analysis_task&quot;: state[&quot;query&quot;],         }</p>
-<p>    def fan_in(research_result, analysis_result):         return {&quot;final&quot;: merge(research_result, analysis_result)}     ```</p>
-<h2>Anti-patterns</h2>
-<ul>
-<li><strong>Déléguer sans objectif clair</strong> : un sous-agent qui reçoit une tâche vague produira des résultats inutilisables. Toujours définir <code>objective</code>, <code>constraints</code> et <code>output_format</code> explicitement avant de dispatcher.</li>
-<li><strong>Sous-agent sans timeout</strong> : un sous-agent bloqué peut paralyser tout le système. Chaque tâche doit avoir un timeout strict, et le parent doit savoir gérer un <code>TimeoutError</code>.</li>
-<li><strong>Pas de validation des résultats</strong> : accepter aveuglément la sortie d'un sous-agent sans vérifier le schema ou la cohérence peut propager silencieusement des erreurs. Valider systématiquement avec Pydantic ou un schéma JSON.</li>
-<li><strong>Chaîne de délégation trop profonde</strong> : dépasser 3-4 niveaux de délégation récursive rend le débogage impossible et augmente la latence. Limiter la profondeur et aplatir la hiérarchie si possible.</li>
-</ul>
-<h2>Règles</h2>
-<ol>
-<li><strong>Chaque tâche déléguée doit avoir un ID unique</strong> pour le traçage de bout en bout dans les logs et le monitoring.</li>
-<li><strong>Le parent reste responsable</strong> de la cohérence du résultat final — il ne peut pas déléguer sa responsabilité de validation.</li>
-<li><strong>Toujours implémenter un circuit breaker</strong> : si un sous-agent échoue N fois consécutives, le mettre en quarantaine automatiquement.</li>
-<li><strong>Favoriser l'idempotence</strong> : les tâches déléguées doivent pouvoir être rejouées sans effet de bord si le retry est nécessaire.</li>
-<li><strong>Documenter les contrats d'interface</strong> : chaque sous-agent expose un <code>capability manifest</code> décrivant ce qu'il peut faire, ses inputs attendus et ses outputs garantis.</li>
-</ol>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

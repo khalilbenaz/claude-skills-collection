@@ -96,101 +96,162 @@ cp -r claude-skills-collection/skills/data-dimensional-modeling ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Modélisation Dimensionnelle</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identifier le processus métier</strong> : ventes, commandes, trafic web.</li>
-<li><strong>Définir le grain</strong> : le niveau de détail le plus fin (1 ligne = ?).</li>
-<li><strong>Concevoir les dimensions</strong> : qui, quoi, où, quand, comment.</li>
-<li><strong>Concevoir les faits</strong> : mesures quantitatives liées aux dimensions.</li>
-</ol>
-<h2>Schéma en étoile</h2>
-<pre><code>              ┌──────────────┐
-              │  dim_product  │
-              └──────┬───────┘
-                     │
-┌──────────────┐     │     ┌──────────────┐
-│  dim_customer ├────┼─────┤  dim_store    │
-└──────────────┘     │     └──────────────┘
-                     │
-              ┌──────┴───────┐
-              │  fact_sales   │
-              └──────┬───────┘
-                     │
-              ┌──────┴───────┐
-              │  dim_date     │
-              └──────────────┘</code></pre>
-<h3>Table de faits</h3>
-<pre><code class="lang-sql">CREATE TABLE fact_sales (
-    sale_key BIGINT IDENTITY PRIMARY KEY,
-    date_key INT NOT NULL REFERENCES dim_date(date_key),
-    product_key INT NOT NULL REFERENCES dim_product(product_key),
-    customer_key INT NOT NULL REFERENCES dim_customer(customer_key),
-    store_key INT NOT NULL REFERENCES dim_store(store_key),
+<h2>Workflow — 4 décisions dans l'ordre</h2>
+<h3>1. Identifier le processus métier</h3>
+<p>Choisir UN processus à la fois (ventes, commandes, facturation, trafic web). Ne pas mélanger deux processus dans une même table de faits à ce stade.</p>
+<h3>2. Définir le grain</h3>
+<p>La décision la plus critique. &quot;1 ligne = ?&quot; doit s'énoncer en une phrase.</p>
+<table><thead><tr><th>Grain</th><th>Exemple</th></tr></thead><tbody><tr><td>Grain fin (transactionnel)</td><td>1 ligne par ligne de commande</td></tr><tr><td>Grain moyen</td><td>1 ligne par commande</td></tr><tr><td>Grain agrégé</td><td>1 ligne par client par mois</td></tr></tbody></table>
+<blockquote>Règle : toujours choisir le grain le plus fin techniquement supportable.<br>Les agrégats peuvent toujours être calculés à la requête ; l'inverse est impossible.</blockquote>
+<h3>3. Identifier les dimensions</h3>
+<p>Questions guides : Qui ? Quoi ? Où ? Quand ? Comment ? Chaque dimension répond à l'une de ces questions pour décrire le fait.</p>
+<h3>4. Identifier les mesures (faits)</h3>
+<p>Ne retenir que les mesures numériques cohérentes avec le grain défini. Classer chaque mesure : additive / semi-additive / non-additive.</p>
+<table><thead><tr><th>Additivité</th><th>Définition</th><th>Exemple</th></tr></thead><tbody><tr><td><strong>Additive</strong></td><td>Somme valide sur toutes dimensions</td><td>Quantité vendue, chiffre d'affaires</td></tr><tr><td><strong>Semi-additive</strong></td><td>Somme valide sur certaines dimensions seulement</td><td>Solde de compte (pas sur le temps)</td></tr><tr><td><strong>Non-additive</strong></td><td>Pas de somme utile</td><td>Taux, ratios, prix unitaire</td></tr></tbody></table>
+<hr>
+<h2>Schéma en étoile — Structure SQL</h2>
+<pre><code class="lang-sql">-- Table de faits
+CREATE TABLE fact_sales (
+    sale_key        BIGINT IDENTITY PRIMARY KEY,
+    date_key        INT NOT NULL REFERENCES dim_date(date_key),
+    product_key     INT NOT NULL REFERENCES dim_product(product_key),
+    customer_key    INT NOT NULL REFERENCES dim_customer(customer_key),
+    store_key       INT NOT NULL REFERENCES dim_store(store_key),
 
-    -- Mesures
-    quantity INT NOT NULL,
-    unit_price DECIMAL(10,2) NOT NULL,
-    discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-    net_amount DECIMAL(10,2) NOT NULL,
-    tax_amount DECIMAL(10,2) NOT NULL,
-    total_amount DECIMAL(10,2) NOT NULL,
+    -- Mesures additives
+    quantity        INT            NOT NULL,
+    unit_price      DECIMAL(10,2)  NOT NULL,
+    discount_amount DECIMAL(10,2)  NOT NULL DEFAULT 0,
+    net_amount      DECIMAL(10,2)  NOT NULL,
+    tax_amount      DECIMAL(10,2)  NOT NULL,
+    total_amount    DECIMAL(10,2)  NOT NULL,
 
-    -- Clés dégénérées
-    invoice_number VARCHAR(50),
-    line_number INT
-);</code></pre>
-<h3>Dimension Date</h3>
-<pre><code class="lang-sql">CREATE TABLE dim_date (
-    date_key INT PRIMARY KEY,        -- Format YYYYMMDD
-    full_date DATE NOT NULL,
-    day_of_week INT NOT NULL,
-    day_name VARCHAR(10) NOT NULL,
-    day_of_month INT NOT NULL,
-    week_of_year INT NOT NULL,
-    month_number INT NOT NULL,
-    month_name VARCHAR(10) NOT NULL,
-    quarter INT NOT NULL,
-    year INT NOT NULL,
-    is_weekend BIT NOT NULL,
-    is_holiday BIT NOT NULL,
-    fiscal_year INT,
-    fiscal_quarter INT
-);</code></pre>
-<h2>Slowly Changing Dimensions (SCD)</h2>
-<table><thead><tr><th>Type</th><th>Principe</th><th>Usage</th></tr></thead><tbody><tr><td><strong>Type 1</strong></td><td>Écraser l'ancienne valeur</td><td>Corrections, données non historisées</td></tr><tr><td><strong>Type 2</strong></td><td>Nouvelle ligne + dates de validité</td><td>Historique complet</td></tr><tr><td><strong>Type 3</strong></td><td>Colonne ancienne + nouvelle valeur</td><td>Historique limité (1 changement)</td></tr></tbody></table>
-<h3>SCD Type 2</h3>
-<pre><code class="lang-sql">CREATE TABLE dim_customer (
-    customer_key INT IDENTITY PRIMARY KEY,  -- Surrogate key
-    customer_id VARCHAR(50) NOT NULL,       -- Business key
-    name VARCHAR(200) NOT NULL,
-    email VARCHAR(200),
-    city VARCHAR(100),
-    segment VARCHAR(50),
-
-    -- Colonnes SCD Type 2
-    effective_date DATE NOT NULL,
-    expiration_date DATE NOT NULL DEFAULT '9999-12-31',
-    is_current BIT NOT NULL DEFAULT 1
+    -- Clés dégénérées (identifiants source sans dimension propre)
+    invoice_number  VARCHAR(50),
+    line_number     INT
 );
 
--- Mise à jour SCD Type 2
--- 1. Expirer l'enregistrement actuel
-UPDATE dim_customer
-SET expiration_date = GETDATE(), is_current = 0
-WHERE customer_id = 'CUST-123' AND is_current = 1;
+-- Dimension Date (pré-remplie, jamais via ETL en temps réel)
+CREATE TABLE dim_date (
+    date_key      INT         PRIMARY KEY,  -- Format YYYYMMDD
+    full_date     DATE        NOT NULL,
+    day_of_week   INT         NOT NULL,     -- 1=Lundi ... 7=Dimanche
+    day_name      VARCHAR(10) NOT NULL,
+    day_of_month  INT         NOT NULL,
+    week_of_year  INT         NOT NULL,
+    month_number  INT         NOT NULL,
+    month_name    VARCHAR(10) NOT NULL,
+    quarter       INT         NOT NULL,
+    year          INT         NOT NULL,
+    is_weekend    BIT         NOT NULL,
+    is_holiday    BIT         NOT NULL,
+    fiscal_year   INT,
+    fiscal_quarter INT
+);</code></pre>
+<h3>Remplir dim_date en SQL (script one-shot)</h3>
+<pre><code class="lang-sql">-- Génère toutes les dates entre deux bornes
+WITH dates AS (
+    SELECT CAST('2010-01-01' AS DATE) AS d
+    UNION ALL
+    SELECT DATEADD(DAY, 1, d) FROM dates WHERE d &lt; '2030-12-31'
+)
+INSERT INTO dim_date (date_key, full_date, day_of_week, day_name,
+                      day_of_month, week_of_year, month_number, month_name,
+                      quarter, year, is_weekend)
+SELECT
+    CONVERT(INT, FORMAT(d, 'yyyyMMdd')),
+    d,
+    DATEPART(WEEKDAY, d),
+    DATENAME(WEEKDAY, d),
+    DAY(d),
+    DATEPART(WEEK, d),
+    MONTH(d),
+    DATENAME(MONTH, d),
+    DATEPART(QUARTER, d),
+    YEAR(d),
+    CASE WHEN DATEPART(WEEKDAY, d) IN (1,7) THEN 1 ELSE 0 END
+FROM dates
+OPTION (MAXRECURSION 10000);</code></pre>
+<hr>
+<h2>Slowly Changing Dimensions (SCD)</h2>
+<h3>Critères de choix</h3>
+<table><thead><tr><th>Type</th><th>Conserver l'historique ?</th><th>Volume delta</th><th>À utiliser si…</th></tr></thead><tbody><tr><td><strong>Type 1</strong></td><td>Non</td><td>Faible</td><td>Correction d'erreur, attribut sans valeur analytique (ex: code postal format)</td></tr><tr><td><strong>Type 2</strong></td><td>Oui, complet</td><td>Moyen-élevé</td><td>Segment client, territoire vendeur, catégorie produit</td></tr><tr><td><strong>Type 3</strong></td><td>Partiel (1 seule transition)</td><td>Faible</td><td>Réorganisation connue à l'avance avec comparaison avant/après</td></tr><tr><td><strong>Type 4</strong> (mini-dimension)</td><td>Oui, séparé</td><td>Attributs très volatils</td><td>Profil comportemental changeant fréquemment</td></tr><tr><td><strong>Type 6</strong> (hybride 1+2+3)</td><td>Oui + snapshot courant</td><td>Complexe</td><td>Besoin de navigation historique ET valeur courante dénormalisée</td></tr></tbody></table>
+<h3>SCD Type 2 — Pattern complet</h3>
+<pre><code class="lang-sql">CREATE TABLE dim_customer (
+    customer_key   INT          IDENTITY PRIMARY KEY,  -- Surrogate key
+    customer_id    VARCHAR(50)  NOT NULL,               -- Business key (NK)
+    name           VARCHAR(200) NOT NULL,
+    email          VARCHAR(200),
+    city           VARCHAR(100),
+    segment        VARCHAR(50),
 
--- 2. Insérer la nouvelle version
+    effective_date DATE         NOT NULL,
+    expiration_date DATE        NOT NULL DEFAULT '9999-12-31',
+    is_current     BIT          NOT NULL DEFAULT 1
+);
+
+-- ETL : mise à jour SCD Type 2
+BEGIN TRANSACTION;
+
+-- Étape 1 : expirer l'enregistrement actuel
+UPDATE dim_customer
+SET    expiration_date = CAST(GETDATE() AS DATE),
+       is_current      = 0
+WHERE  customer_id = 'CUST-123'
+  AND  is_current  = 1;
+
+-- Étape 2 : insérer la nouvelle version
 INSERT INTO dim_customer (customer_id, name, email, city, segment, effective_date)
-VALUES ('CUST-123', 'Jean Dupont', 'jean@new.com', 'Lyon', 'Premium', GETDATE());</code></pre>
+VALUES ('CUST-123', 'Jean Dupont', 'jean@new.com', 'Lyon', 'Premium', CAST(GETDATE() AS DATE));
+
+COMMIT;
+
+-- Requête sur une période historique
+SELECT f.total_amount, c.segment
+FROM   fact_sales f
+JOIN   dim_customer c ON c.customer_key = f.customer_key
+                      AND c.effective_date &lt;= f.sale_date
+                      AND f.sale_date &lt; c.expiration_date;</code></pre>
+<hr>
 <h2>Types de tables de faits</h2>
-<table><thead><tr><th>Type</th><th>Grain</th><th>Exemple</th></tr></thead><tbody><tr><td><strong>Transactionnelle</strong></td><td>1 ligne par événement</td><td>Ventes, clics</td></tr><tr><td><strong>Snapshot périodique</strong></td><td>1 ligne par période</td><td>Solde mensuel, stock quotidien</td></tr><tr><td><strong>Snapshot cumulatif</strong></td><td>1 ligne par cycle de vie</td><td>Pipeline de commande (créée → livrée)</td></tr><tr><td><strong>Sans faits</strong></td><td>Intersections sans mesure</td><td>Présence à un événement</td></tr></tbody></table>
-<h2>Règles</h2>
+<table><thead><tr><th>Type</th><th>Grain</th><th>Cas d'usage</th></tr></thead><tbody><tr><td><strong>Transactionnelle</strong></td><td>1 ligne par événement atomique</td><td>Ventes, clics, transactions</td></tr><tr><td><strong>Snapshot périodique</strong></td><td>1 ligne par entité par période</td><td>Solde mensuel, stock fin de journée</td></tr><tr><td><strong>Snapshot cumulatif</strong></td><td>1 ligne par cycle de vie</td><td>Pipeline commande (créée → validée → expédiée → livrée)</td></tr><tr><td><strong>Sans faits (factless)</strong></td><td>Intersection sans mesure</td><td>Présence à un événement, éligibilité à une promotion</td></tr></tbody></table>
+<h3>Snapshot cumulatif — colonnes types</h3>
+<pre><code class="lang-sql">CREATE TABLE fact_order_pipeline (
+    order_key         INT     PRIMARY KEY,
+    order_id          VARCHAR(50),
+    -- Une date_key par étape
+    created_date_key  INT     REFERENCES dim_date(date_key),
+    approved_date_key INT     REFERENCES dim_date(date_key),
+    shipped_date_key  INT     REFERENCES dim_date(date_key),
+    delivered_date_key INT    REFERENCES dim_date(date_key),
+    -- Lag entre étapes (recalculé à chaque mise à jour)
+    days_to_approve   INT,
+    days_to_ship      INT,
+    days_to_deliver   INT,
+    order_amount      DECIMAL(12,2)
+);</code></pre>
+<hr>
+<h2>Schéma flocon (snowflake) — quand l'utiliser</h2>
+<p>Normaliser une dimension (ex: <code>dim_product → dim_category → dim_department</code>) :</p>
 <ul>
-<li>Chaque table de faits doit avoir un <strong>grain clairement défini</strong>.</li>
-<li>Les dimensions doivent utiliser des <strong>surrogate keys</strong> (pas les business keys).</li>
-<li>La <strong>dimension Date</strong> est obligatoire et doit être pré-remplie.</li>
-<li>Les mesures dans les faits doivent être <strong>additives</strong> quand possible.</li>
-<li>Documenter le type de SCD choisi pour chaque attribut de dimension.</li>
+<li><strong>Pour</strong> : réduit la redondance, cohérence de mise à jour.</li>
+<li><strong>Contre</strong> : jointures supplémentaires, requêtes plus lentes, lisibilité dégradée.</li>
+</ul>
+<blockquote>Règle 2026 : préférer le star schema sauf si le volume de la dimension est &gt; 10M lignes et que les attributs normalisables sont très stables. Les outils BI modernes (Power BI, Tableau, Looker) sont optimisés star.</blockquote>
+<hr>
+<h2>Anti-patterns et garde-fous</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td><strong>Grain mixte</strong></td><td>Mesures incomparables dans une même fact</td><td>Séparer en deux tables de faits</td></tr><tr><td><strong>Clé métier comme FK</strong></td><td>JOIN lent, problèmes SCD</td><td>Toujours utiliser les surrogate keys</td></tr><tr><td><strong>Dimension fourre-tout</strong></td><td>dim_misc, dim_attributes avec 80 colonnes</td><td>Décomposer en dimensions thématiques</td></tr><tr><td><strong>Mesure non-additive stockée brute</strong></td><td>Requêtes fausses (SUM de taux)</td><td>Stocker numérateur + dénominateur, calculer le ratio en vue</td></tr><tr><td><strong>SCD Type 2 sur tout</strong></td><td>Table de 100M lignes pour une dim de 10k clients</td><td>Choisir SCD Type 1 pour attributs sans valeur historique</td></tr><tr><td><strong>dim_date absente</strong></td><td>Filtres dates via CAST sur la fact</td><td>Toujours créer et pré-remplir dim_date</td></tr><tr><td><strong>NULL en FK</strong></td><td>Ruptures de jointure silencieuses</td><td>Créer une ligne &quot;inconnu&quot; (key = -1) dans chaque dimension</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Nommage</strong> : préfixe <code>fact_</code> / <code>dim_</code> / <code>bridge_</code> ; clés avec suffixe <code>_key</code> ; business keys avec <code>_id</code> ou <code>_bk</code>.</li>
+<li><strong>Surrogate keys</strong> : <code>INT IDENTITY</code> (OLTP &lt; 2 milliards) ou <code>BIGINT</code> sinon. Ne jamais exposer la surrogate key aux utilisateurs BI.</li>
+<li><strong>Ligne &quot;inconnu&quot;</strong> : insérer <code>customer_key = -1, customer_id = 'UNKNOWN'</code> dans chaque dimension pour absorber les NULLs ETL.</li>
+<li><strong>Date clé</strong> : format <code>YYYYMMDD</code> comme <code>INT</code> — plus rapide pour les range scans que <code>DATE</code>.</li>
+<li><strong>Indexes</strong> : clustered sur la PK de la fact ; columnstore non-clustered pour les agrégations analytiques (SQL Server / Synapse).</li>
+<li><strong>Partitionnement</strong> : partitionner les grandes facts par <code>date_key</code> (partition par année ou trimestre).</li>
+<li><strong>Modèle bus</strong> : définir une matrice bus (processus × dimension) avant de coder pour identifier les dimensions conformées réutilisables.</li>
+<li><strong>Tests de cohérence</strong> : vérifier <code>COUNT(DISTINCT surrogate_key) = COUNT(*)</code> sur les dimensions et l'absence de NULLs sur les FKs de la fact après chaque chargement ETL.</li>
 </ul>
 </article>
 </main>

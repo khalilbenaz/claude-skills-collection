@@ -98,90 +98,158 @@ cp -r claude-skills-collection/skills/data-sql-advanced-analytics ~/.claude/skil
 <h1>SQL Avancé pour l'Analytique</h1>
 <h2>Workflow</h2>
 <ol>
-<li><strong>Comprendre le besoin analytique</strong> : classement, comparaison temporelle, agrégation cumulative.</li>
-<li><strong>Choisir les fonctions</strong> : window functions, CTEs, pivots.</li>
-<li><strong>Écrire la requête</strong> : lisibilité et performance.</li>
-<li><strong>Optimiser</strong> : plan d'exécution, index, matérialisation.</li>
+<li><strong>Identifier le besoin</strong> : classement, comparaison temporelle, agrégation cumulative, hiérarchie, pivot.</li>
+<li><strong>Choisir la construction</strong> :</li>
+<ul>
+<li>Classement/comparaison dans une partition → window function</li>
+<li>Hiérarchie ou récursion → CTE récursive</li>
+<li>Rotation lignes/colonnes → PIVOT / CASE WHEN</li>
+<li>Calcul réutilisé plusieurs fois → CTE non-récursive ou vue matérialisée</li>
+</ul>
+<li><strong>Écrire la requête</strong> : CTEs avant la requête principale, window functions dans le SELECT.</li>
+<li><strong>Valider le plan d'exécution</strong> : <code>EXPLAIN ANALYZE</code> (PG) / <code>SET STATISTICS IO ON</code> (SQL Server).</li>
+<li><strong>Optimiser</strong> : index couvrants, matérialisation, partitionnement.</li>
 </ol>
+<hr>
 <h2>Window Functions</h2>
-<h3>Classement</h3>
-<pre><code class="lang-sql">-- Classement des produits par ventes dans chaque catégorie
-SELECT
+<h3>Critères de choix</h3>
+<table><thead><tr><th>Besoin</th><th>Fonction</th></tr></thead><tbody><tr><td>Rang sans ex-aequo</td><td><code>ROW_NUMBER()</code></td></tr><tr><td>Rang avec ex-aequo, sauts</td><td><code>RANK()</code></td></tr><tr><td>Rang avec ex-aequo, continu</td><td><code>DENSE_RANK()</code></td></tr><tr><td>Découper en N groupes égaux</td><td><code>NTILE(N)</code></td></tr><tr><td>Valeur N lignes avant/après</td><td><code>LAG(col, N)</code> / <code>LEAD(col, N)</code></td></tr><tr><td>Cumul depuis le début</td><td><code>SUM() OVER (ORDER BY ... ROWS UNBOUNDED PRECEDING)</code></td></tr><tr><td>Moyenne mobile</td><td><code>AVG() OVER (ROWS BETWEEN N PRECEDING AND CURRENT ROW)</code></td></tr><tr><td>Premier/dernier de la partition</td><td><code>FIRST_VALUE()</code> / <code>LAST_VALUE()</code> + frame explicite</td></tr></tbody></table>
+<h3>Classement dans une partition</h3>
+<pre><code class="lang-sql">SELECT
     product_name,
     category,
     total_sales,
-    ROW_NUMBER() OVER (PARTITION BY category ORDER BY total_sales DESC) AS rank,
-    RANK() OVER (PARTITION BY category ORDER BY total_sales DESC) AS rank_with_ties,
-    DENSE_RANK() OVER (PARTITION BY category ORDER BY total_sales DESC) AS dense_rank,
-    NTILE(4) OVER (PARTITION BY category ORDER BY total_sales DESC) AS quartile
+    ROW_NUMBER()  OVER (PARTITION BY category ORDER BY total_sales DESC) AS rn,
+    RANK()        OVER (PARTITION BY category ORDER BY total_sales DESC) AS rnk,
+    DENSE_RANK()  OVER (PARTITION BY category ORDER BY total_sales DESC) AS dense_rnk,
+    NTILE(4)      OVER (PARTITION BY category ORDER BY total_sales DESC) AS quartile
 FROM products;</code></pre>
-<h3>Comparaison temporelle</h3>
-<pre><code class="lang-sql">-- Ventes vs mois précédent + moyenne mobile
-SELECT
+<h3>Comparaison temporelle et cumul</h3>
+<pre><code class="lang-sql">SELECT
     month,
     revenue,
-    LAG(revenue, 1) OVER (ORDER BY month) AS prev_month,
-    revenue - LAG(revenue, 1) OVER (ORDER BY month) AS month_over_month,
-    LEAD(revenue, 1) OVER (ORDER BY month) AS next_month,
-    AVG(revenue) OVER (ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS moving_avg_3m,
-    SUM(revenue) OVER (ORDER BY month ROWS UNBOUNDED PRECEDING) AS cumulative_revenue
+    LAG(revenue, 1)  OVER (ORDER BY month)                                           AS prev_month,
+    revenue - LAG(revenue, 1) OVER (ORDER BY month)                                  AS mom_delta,
+    LEAD(revenue, 1) OVER (ORDER BY month)                                            AS next_month,
+    AVG(revenue)     OVER (ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)  AS ma_3m,
+    SUM(revenue)     OVER (ORDER BY month ROWS UNBOUNDED PRECEDING)                  AS cumul
 FROM monthly_sales;</code></pre>
-<h3>Agrégation avec FIRST_VALUE / LAST_VALUE</h3>
-<pre><code class="lang-sql">-- Premier et dernier achat de chaque client
+<h3>FIRST_VALUE / LAST_VALUE — frame obligatoire</h3>
+<pre><code class="lang-sql">-- Sans &quot;ROWS UNBOUNDED FOLLOWING&quot;, LAST_VALUE retourne la ligne courante, pas la dernière !
 SELECT DISTINCT
     customer_id,
-    FIRST_VALUE(product_name) OVER (
-        PARTITION BY customer_id ORDER BY order_date
-        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-    ) AS first_purchase,
-    LAST_VALUE(product_name) OVER (
-        PARTITION BY customer_id ORDER BY order_date
-        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-    ) AS last_purchase
-FROM orders;</code></pre>
-<h2>CTEs récursives</h2>
-<pre><code class="lang-sql">-- Hiérarchie organisationnelle
-WITH RECURSIVE org_tree AS (
-    -- Ancre : le CEO
-    SELECT id, name, manager_id, 1 AS level, name AS path
+    FIRST_VALUE(product_name) OVER w AS first_purchase,
+    LAST_VALUE(product_name)  OVER w AS last_purchase
+FROM orders
+WINDOW w AS (
+    PARTITION BY customer_id ORDER BY order_date
+    ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+);</code></pre>
+<h3>Dédoublonnage par partition (pattern courant)</h3>
+<pre><code class="lang-sql">-- Garder la ligne la plus récente par customer_id
+WITH ranked AS (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY updated_at DESC) AS rn
+    FROM orders
+)
+SELECT * FROM ranked WHERE rn = 1;</code></pre>
+<hr>
+<h2>CTEs</h2>
+<h3>CTE non-récursive — clarifier les étapes</h3>
+<pre><code class="lang-sql">WITH
+revenue_by_month AS (
+    SELECT DATE_TRUNC('month', order_date) AS month, SUM(amount) AS revenue
+    FROM orders
+    GROUP BY 1
+),
+ranked AS (
+    SELECT *, RANK() OVER (ORDER BY revenue DESC) AS rnk
+    FROM revenue_by_month
+)
+SELECT * FROM ranked WHERE rnk &lt;= 5;</code></pre>
+<h3>CTE récursive — hiérarchie</h3>
+<pre><code class="lang-sql">WITH RECURSIVE org_tree AS (
+    -- Ancre : nœud racine
+    SELECT id, name, manager_id, 1 AS depth, CAST(name AS TEXT) AS path
     FROM employees
     WHERE manager_id IS NULL
 
     UNION ALL
 
-    -- Récursion : les subordonnés
-    SELECT e.id, e.name, e.manager_id, ot.level + 1,
-           ot.path || ' &gt; ' || e.name
+    -- Récursion
+    SELECT e.id, e.name, e.manager_id, ot.depth + 1, ot.path || ' &gt; ' || e.name
     FROM employees e
     JOIN org_tree ot ON e.manager_id = ot.id
+    WHERE ot.depth &lt; 10   -- garde-fou anti-cycle
 )
 SELECT * FROM org_tree ORDER BY path;</code></pre>
+<hr>
 <h2>Pivot / Unpivot</h2>
-<pre><code class="lang-sql">-- Pivot : lignes → colonnes (ventes mensuelles par produit)
-SELECT
+<h3>CASE WHEN (portable sur tous les SGBD)</h3>
+<pre><code class="lang-sql">SELECT
     product_name,
-    SUM(CASE WHEN EXTRACT(MONTH FROM sale_date) = 1 THEN amount ELSE 0 END) AS jan,
-    SUM(CASE WHEN EXTRACT(MONTH FROM sale_date) = 2 THEN amount ELSE 0 END) AS feb,
-    SUM(CASE WHEN EXTRACT(MONTH FROM sale_date) = 3 THEN amount ELSE 0 END) AS mar
+    SUM(CASE WHEN EXTRACT(MONTH FROM sale_date) = 1  THEN amount ELSE 0 END) AS jan,
+    SUM(CASE WHEN EXTRACT(MONTH FROM sale_date) = 2  THEN amount ELSE 0 END) AS feb,
+    SUM(CASE WHEN EXTRACT(MONTH FROM sale_date) = 3  THEN amount ELSE 0 END) AS mar
 FROM sales
 GROUP BY product_name;</code></pre>
+<h3>PIVOT natif SQL Server</h3>
+<pre><code class="lang-sql">SELECT product_name, [1] AS jan, [2] AS feb, [3] AS mar
+FROM (
+    SELECT product_name, MONTH(sale_date) AS m, amount FROM sales
+) src
+PIVOT (SUM(amount) FOR m IN ([1],[2],[3])) pvt;</code></pre>
+<h3>Unpivot — colonnes → lignes</h3>
+<pre><code class="lang-sql">SELECT product_name, month_name, revenue
+FROM monthly_pivot
+UNPIVOT (revenue FOR month_name IN (jan, feb, mar)) u;</code></pre>
+<hr>
 <h2>Optimisation</h2>
-<h3>Index pour les requêtes analytiques</h3>
-<pre><code class="lang-sql">-- Index couvrant pour éviter les lookups
+<h3>Lire le plan d'exécution</h3>
+<pre><code class="lang-sql">-- PostgreSQL
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) &lt;votre requête&gt;;
+
+-- SQL Server
+SET STATISTICS IO ON;
+SET STATISTICS TIME ON;
+-- puis exécuter la requête, lire &quot;logical reads&quot;</code></pre>
+<p>Signaux d'alarme : <code>Hash Join</code> sur très grandes tables, <code>Sort</code> sur colonnes non indexées, <code>Nested Loop</code> avec <code>Index Scan</code> répété.</p>
+<h3>Index couvrants pour l'analytique</h3>
+<pre><code class="lang-sql">-- Couvre PARTITION BY + ORDER BY + colonnes SELECT
 CREATE INDEX idx_sales_analytics
 ON sales (category, sale_date)
 INCLUDE (amount, product_id);
 
--- Index partiel pour les requêtes filtrées
+-- Index partiel pour réduire la taille
 CREATE INDEX idx_active_orders
 ON orders (customer_id, order_date)
 WHERE status = 'active';</code></pre>
-<h2>Règles</h2>
+<h3>Matérialisation</h3>
+<pre><code class="lang-sql">-- PostgreSQL : vue matérialisée + refresh
+CREATE MATERIALIZED VIEW mv_monthly_revenue AS
+    SELECT DATE_TRUNC('month', order_date) AS month, SUM(amount) AS revenue
+    FROM orders GROUP BY 1;
+
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_monthly_revenue;
+
+-- SQL Server : indexed view (requiert WITH SCHEMABINDING)
+CREATE VIEW dbo.vw_monthly_revenue WITH SCHEMABINDING AS
+    SELECT DATEFROMPARTS(YEAR(order_date), MONTH(order_date), 1) AS month,
+           SUM(amount) AS revenue, COUNT_BIG(*) AS cnt
+    FROM dbo.orders GROUP BY DATEFROMPARTS(YEAR(order_date), MONTH(order_date), 1);
+
+CREATE UNIQUE CLUSTERED INDEX ix_mv ON dbo.vw_monthly_revenue (month);</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td><code>LAST_VALUE</code> sans frame explicite</td><td>Retourne la ligne courante, pas la dernière</td><td>Ajouter <code>ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING</code></td></tr><tr><td>CTE récursive sans limite de profondeur</td><td>Boucle infinie sur données cycliques</td><td>Ajouter <code>WHERE depth &lt; N</code> ou <code>MAXRECURSION N</code> (SQL Server)</td></tr><tr><td>Window function dans <code>WHERE</code></td><td>Erreur syntaxique</td><td>Encapsuler dans une CTE ou sous-requête, filtrer ensuite</td></tr><tr><td><code>SELECT DISTINCT</code> + window function</td><td>Résultats incohérents si le DISTINCT s'applique avant</td><td>Utiliser une CTE intermédiaire</td></tr><tr><td>Pivot dynamique côté SQL</td><td>Colonnes inconnues à compile-time</td><td>Générer le SQL en application ou via <code>STRING_AGG</code> + <code>EXEC</code></td></tr><tr><td>Trop de window functions sur le même <code>OVER</code> non nommé</td><td>Recalcul répété</td><td>Factoriser avec <code>WINDOW w AS (...)</code> (PostgreSQL) ou CTE</td></tr><tr><td>Requête analytique sur table non partitionnée (milliards de lignes)</td><td>Full scan coûteux</td><td>Ajouter un filtre de date, ou partitionner la table</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Toujours spécifier le <strong>frame</strong> des window functions (<code>ROWS BETWEEN ...</code>) pour éviter les résultats inattendus.</li>
-<li>Préférer les <strong>CTEs</strong> aux sous-requêtes imbriquées pour la lisibilité.</li>
-<li>Vérifier le <strong>plan d'exécution</strong> pour les requêtes analytiques sur de gros volumes.</li>
-<li>Matérialiser les résultats dans des <strong>vues matérialisées</strong> si la requête est exécutée fréquemment.</li>
+<li><strong>Nommer les fenêtres</strong> avec <code>WINDOW w AS (...)</code> quand la même clause est réutilisée (lisibilité + plan partagé sur PostgreSQL 16+).</li>
+<li><strong>Documenter chaque CTE</strong> avec un commentaire d'une ligne sur son rôle.</li>
+<li><strong>Éviter les CTEs pour remplacer des index</strong> : une CTE n'est pas automatiquement matérialisée (SQL Server l'inline souvent) ; préférer une table temporaire si la CTE est jointurée plusieurs fois.</li>
+<li><strong>Tester sur un sous-ensemble</strong> avant d'exécuter sur toute la table (<code>WHERE order_date &gt;= CURRENT_DATE - INTERVAL '7 days'</code>).</li>
+<li><strong>Séparer les étapes</strong> : calcul → classement → filtrage, une CTE par étape.</li>
+<li>Sur SQL Server : utiliser <code>ROWS</code> plutôt que <code>RANGE</code> dans le frame — <code>RANGE</code> est plus lent car il gère les ex-aequo dynamiquement.</li>
 </ul>
 </article>
 </main>

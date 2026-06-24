@@ -97,134 +97,269 @@ cp -r claude-skills-collection/skills/agent-supervisor-builder ~/.claude/skills/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent Supervisor Builder</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utiliser ce skill lors de la construction d'un agent qui doit coordonner et superviser d'autres agents en temps réel, avec la capacité d'intervenir, de rediriger ou d'interrompre leur exécution. Indispensable dans les architectures multi-agents où la qualité des outputs des sous-agents doit être garantie dynamiquement.</p>
+<p>Utiliser ce skill quand une architecture multi-agents requiert une couche de contrôle active : garantie qualité dynamique, interruption d'un agent défaillant, redistribution de charge, escalade humaine. Indispensable dès que deux sous-agents ou plus s'exécutent en parallèle ou en chaîne avec des SLAs à respecter.</p>
+<hr>
+<h2>Critères de décision — quel pattern choisir ?</h2>
+<table><thead><tr><th>Besoin</th><th>Pattern recommandé</th></tr></thead><tbody><tr><td>Délégation simple, un agent à la fois</td><td><code>create_supervisor</code> LangGraph (step 9)</td></tr><tr><td>Équipe hiérarchique avec rôles fixes</td><td>CrewAI <code>Process.hierarchical</code></td></tr><tr><td>Intervenir en cours d'exécution</td><td>Monitor + CorrectionLoop (steps 3-5)</td></tr><tr><td>Failover automatique + retry</td><td>InterventionRules + LoadBalancer (steps 4, 7)</td></tr><tr><td>Escalade humaine obligatoire</td><td>EscalationManager (step 6)</td></tr></tbody></table>
+<hr>
 <h2>Workflow</h2>
+<h3>1. Définir les actions du supervisor</h3>
+<p>Commencer par énumérer toutes les actions possibles avant d'écrire une ligne de logique :</p>
+<pre><code class="lang-python">from enum import Enum
+
+class SupervisorAction(Enum):
+    DISPATCH   = &quot;dispatch&quot;    # Assigner une tâche à un sous-agent
+    MONITOR    = &quot;monitor&quot;     # Surveiller la progression
+    INTERVENE  = &quot;intervene&quot;   # Envoyer une correction en cours d'exécution
+    REDIRECT   = &quot;redirect&quot;    # Réassigner vers un autre sous-agent
+    TERMINATE  = &quot;terminate&quot;   # Arrêter un agent défaillant
+    ESCALATE   = &quot;escalate&quot;    # Remonter à un humain ou orchestrateur supérieur
+    APPROVE    = &quot;approve&quot;     # Valider un output avant livraison</code></pre>
+<h3>2. Routing intelligent — choisir le bon sous-agent</h3>
+<p>Classifier l'intention, scorer les capacités, fallback vers le plus généraliste.</p>
+<pre><code class="lang-python">class IntelligentRouter:
+    def __init__(self, agents: list):
+        self.agents = {a.id: a for a in agents}
+
+    def route(self, request: str) -&gt; str:
+        intent = self._classify_intent(request)
+        best = max(
+            self.agents.values(),
+            key=lambda a: self._score(a, intent)
+        )
+        return best.id
+
+    def _classify_intent(self, request: str) -&gt; dict:
+        # Appel LLM léger (gpt-4o-mini suffit pour la classification)
+        prompt = f&quot;Classifie: '{request}'. JSON: task_type, domain, complexity(low|med|high)&quot;
+        return llm.invoke(prompt, response_format=&quot;json&quot;)
+
+    def _score(self, agent, intent: dict) -&gt; float:
+        return (
+            1.0 * (intent[&quot;task_type&quot;] in agent.capabilities) +
+            0.5 * (intent[&quot;domain&quot;] in agent.domains) +
+            0.3 * (agent.complexity_level &gt;= intent[&quot;complexity&quot;])
+        )</code></pre>
+<p><strong>Décision</strong> : si le score max &lt; 0.5, logger un warning et router vers l'agent généraliste. Ne jamais bloquer.</p>
+<h3>3. Monitoring en temps réel</h3>
+<p>Streamer les outputs des sous-agents et détecter les signaux d'alerte à la volée.</p>
+<pre><code class="lang-python">class AgentMonitor:
+    def __init__(self):
+        self.states: dict[str, dict] = {}
+
+    async def watch(self, agent_id: str, agent):
+        state = {
+            &quot;start_time&quot;: time.time(),
+            &quot;tokens_used&quot;: 0,
+            &quot;last_chunk&quot;: &quot;&quot;,
+            &quot;alerts&quot;: []
+        }
+        self.states[agent_id] = state
+        async for chunk in agent.stream_output():
+            state[&quot;tokens_used&quot;] += count_tokens(chunk)
+            state[&quot;last_chunk&quot;] = chunk[-300:]
+            alert = self._check(state, chunk)
+            if alert:
+                state[&quot;alerts&quot;].append(alert)
+                yield alert   # Le supervisor réagit immédiatement</code></pre>
+<p>Métriques à tracker obligatoirement : <code>elapsed_seconds</code>, <code>tokens_used</code>, <code>quality_score</code> (scoring LLM léger toutes les N secondes), <code>topic_drift_score</code>.</p>
+<h3>4. Règles d'intervention — seuils quantitatifs</h3>
+<p>Tout seuil doit être un nombre. Aucun jugement subjectif non formalisé.</p>
+<pre><code class="lang-python">class InterventionRules:
+    def __init__(self, config: dict):
+        self.max_time    = config.get(&quot;max_time&quot;, 120)       # secondes
+        self.max_tokens  = config.get(&quot;max_tokens&quot;, 4000)
+        self.quality_min = config.get(&quot;quality_min&quot;, 0.6)    # 0.0–1.0
+        self.drift_max   = config.get(&quot;drift_max&quot;, 0.5)
+
+    def check(self, state: dict, task: dict) -&gt; tuple[bool, str]:
+        elapsed = time.time() - state[&quot;start_time&quot;]
+        if elapsed &gt; self.max_time:
+            return True, &quot;timeout&quot;
+        if state[&quot;tokens_used&quot;] &gt; self.max_tokens:
+            return True, &quot;budget_exceeded&quot;
+        if state.get(&quot;quality_score&quot;, 1.0) &lt; self.quality_min:
+            return True, &quot;quality_below_threshold&quot;
+        if self._drift(state[&quot;last_chunk&quot;], task[&quot;objective&quot;]) &gt; self.drift_max:
+            return True, &quot;off_topic&quot;
+        return False, &quot;&quot;</code></pre>
+<p>Valeurs de départ recommandées (à calibrer sur vos données) :</p>
+<table><thead><tr><th>Paramètre</th><th>Valeur initiale</th><th>Ajuster si...</th></tr></thead><tbody><tr><td><code>max_time</code></td><td>120 s</td><td>tâches longues → 300 s</td></tr><tr><td><code>max_tokens</code></td><td>4 000</td><td>tâches volumineuses → 8 000</td></tr><tr><td><code>quality_min</code></td><td>0.6</td><td>domaine critique → 0.75</td></tr><tr><td><code>drift_max</code></td><td>0.5</td><td>sujets larges → 0.7</td></tr></tbody></table>
+<h3>5. Correction loop — feedback et redirection</h3>
+<p>Limiter <code>max_corrections</code> à 3. Au-delà → redirection automatique sans exception.</p>
+<pre><code class="lang-python">class CorrectionLoop:
+    def __init__(self, max_corrections: int = 3):
+        self.counts: dict[str, int] = {}
+        self.max = max_corrections
+
+    async def correct(self, agent_id: str, issue: str, ctx: dict) -&gt; str:
+        n = self.counts.get(agent_id, 0)
+        if n &gt;= self.max:
+            return &quot;redirect&quot;   # Déléguer à un autre agent
+        prompt = self._prompt(issue, ctx)
+        await agent_registry[agent_id].inject(prompt)
+        self.counts[agent_id] = n + 1
+        return &quot;corrected&quot;
+
+    def _prompt(self, issue: str, ctx: dict) -&gt; str:
+        return {
+            &quot;off_topic&quot;:              f&quot;CORRECTION: Recentre-toi sur l'objectif: {ctx['objective']}&quot;,
+            &quot;quality_below_threshold&quot;: f&quot;CORRECTION: Ajoute des détails sur: {ctx.get('weak_points', 'la réponse')}&quot;,
+            &quot;timeout&quot;:                 &quot;CORRECTION: Finalise avec ce que tu as déjà produit.&quot;,
+            &quot;budget_exceeded&quot;:         &quot;CORRECTION: Conclus en 3 phrases maximum.&quot;
+        }.get(issue, f&quot;CORRECTION: Améliore ta réponse pour mieux répondre à: {ctx.get('objective', 'l'objectif initial')}&quot;)</code></pre>
+<h3>6. Escalade — quand le supervisor est dépassé</h3>
+<pre><code class="lang-python">class EscalationManager:
+    def __init__(self, webhook_url: str, orchestrator=None):
+        self.webhook = webhook_url
+        self.orchestrator = orchestrator
+
+    async def escalate(self, reason: str, ctx: dict, to: str = &quot;human&quot;):
+        payload = {
+            &quot;reason&quot;: reason,
+            &quot;agent_id&quot;: ctx[&quot;agent_id&quot;],
+            &quot;task&quot;: ctx[&quot;task&quot;],
+            &quot;attempts&quot;: ctx[&quot;correction_count&quot;],
+            &quot;last_output&quot;: ctx[&quot;last_output&quot;][:500],   # Tronquer pour le webhook
+            &quot;timestamp&quot;: datetime.utcnow().isoformat()
+        }
+        if to == &quot;human&quot;:
+            await httpx.AsyncClient().post(self.webhook, json=payload)
+        elif to == &quot;orchestrator&quot; and self.orchestrator:
+            await self.orchestrator.handle_escalation(payload)</code></pre>
+<p>Règle : toujours définir <code>webhook_url</code> en variable d'environnement (<code>SUPERVISOR_ESCALATION_WEBHOOK</code>), jamais en dur.</p>
+<h3>7. Load balancing — distribution équitable</h3>
+<pre><code class="lang-python">import heapq
+
+class LoadBalancer:
+    def __init__(self):
+        self.loads: dict[str, int] = {}    # agent_id → tâches actives
+        self.queue: list = []              # min-heap (priority, task)
+
+    def push(self, task, priority: int = 5):
+        heapq.heappush(self.queue, (-priority, time.time(), task))
+
+    def least_loaded(self, capability: str) -&gt; str:
+        eligible = [
+            (load, aid)
+            for aid, load in self.loads.items()
+            if capability in agents[aid].capabilities
+        ]
+        if not eligible:
+            raise ValueError(f&quot;Aucun agent disponible pour: {capability}&quot;)
+        return min(eligible)[1]
+
+    def mark_done(self, agent_id: str):
+        self.loads[agent_id] = max(0, self.loads.get(agent_id, 0) - 1)</code></pre>
+<h3>8. State management — persister l'état du supervisor</h3>
+<pre><code class="lang-python">class SupervisorState:
+    def __init__(self, backend: str = &quot;memory&quot;):
+        self.backend = backend
+        self.data = {
+            &quot;active_tasks&quot;: {},
+            &quot;agent_statuses&quot;: {},
+            &quot;metrics&quot;: {&quot;dispatched&quot;: 0, &quot;completed&quot;: 0, &quot;failed&quot;: 0, &quot;interventions&quot;: 0}
+        }
+
+    def update_agent(self, agent_id: str, status: str, task_id: str = None):
+        entry = {&quot;status&quot;: status, &quot;task&quot;: task_id, &quot;ts&quot;: time.time()}
+        self.data[&quot;agent_statuses&quot;][agent_id] = entry
+        if self.backend == &quot;redis&quot;:
+            redis_client.hset(&quot;supervisor:agents&quot;, agent_id, json.dumps(entry))
+
+    def record_intervention(self):
+        self.data[&quot;metrics&quot;][&quot;interventions&quot;] += 1</code></pre>
+<p>Backends supportés : <code>memory</code> (dev/test), <code>redis</code> (prod), <code>postgres</code> (audit long terme).</p>
+<h3>9. Implémentation concrète — LangGraph et CrewAI</h3>
+<p><strong>LangGraph (recommandé 2026, package <code>langgraph-supervisor</code>) :</strong></p>
+<pre><code class="lang-python">from langgraph_supervisor import create_supervisor
+from langgraph.prebuilt import create_react_agent
+
+search_agent = create_react_agent(
+    model, tools=[search_tool], name=&quot;search_agent&quot;,
+    prompt=&quot;Tu es expert en recherche d'informations.&quot;
+)
+code_agent = create_react_agent(
+    model, tools=[code_tool], name=&quot;code_agent&quot;,
+    prompt=&quot;Tu es expert en développement Python.&quot;
+)
+
+supervisor = create_supervisor(
+    agents=[search_agent, code_agent],
+    model=model,
+    prompt=(
+        &quot;Tu es le supervisor. Délègue:\n&quot;
+        &quot;- Recherche → search_agent\n&quot;
+        &quot;- Code → code_agent\n&quot;
+        &quot;Valide la qualité avant de retourner le résultat.&quot;
+    ),
+    output_mode=&quot;last_message&quot;   # ou &quot;full_history&quot; pour audit
+)
+
+result = supervisor.invoke({&quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;...&quot;}]})</code></pre>
+<p><strong>CrewAI (Process.hierarchical) :</strong></p>
+<pre><code class="lang-python">from crewai import Agent, Crew, Process
+from langchain_openai import ChatOpenAI
+
+manager = Agent(
+    role=&quot;Supervisor Manager&quot;,
+    goal=&quot;Coordonner les agents et garantir la qualité des outputs&quot;,
+    backstory=&quot;Tu supervises une équipe d'agents spécialisés.&quot;,
+    llm=ChatOpenAI(model=&quot;gpt-4o&quot;)
+)
+researcher = Agent(role=&quot;Researcher&quot;, goal=&quot;Rechercher des informations précises&quot;, ...)
+writer     = Agent(role=&quot;Writer&quot;, goal=&quot;Rédiger des contenus de qualité&quot;, ...)
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.hierarchical,
+    manager_agent=manager,
+    verbose=True
+)
+result = crew.kickoff()</code></pre>
+<p><strong>AutoGen (pattern GroupChat avec admin) :</strong></p>
+<pre><code class="lang-python">import autogen
+
+supervisor_llm = {&quot;config_list&quot;: [{&quot;model&quot;: &quot;gpt-4o&quot;}]}
+
+supervisor = autogen.AssistantAgent(&quot;supervisor&quot;, llm_config=supervisor_llm,
+    system_message=&quot;Tu coordonnes les agents. Valide chaque output avant de passer à l'étape suivante.&quot;)
+researcher = autogen.AssistantAgent(&quot;researcher&quot;, llm_config=supervisor_llm)
+user_proxy = autogen.UserProxyAgent(&quot;user&quot;, human_input_mode=&quot;NEVER&quot;,
+    max_consecutive_auto_reply=10, code_execution_config={&quot;use_docker&quot;: False})
+
+chat = autogen.GroupChat(agents=[supervisor, researcher, user_proxy], messages=[], max_round=15)
+manager = autogen.GroupChatManager(groupchat=chat, llm_config=supervisor_llm)
+user_proxy.initiate_chat(manager, message=&quot;Lance la recherche sur X.&quot;)</code></pre>
+<h3>10. Reporting — métriques de session</h3>
+<pre><code class="lang-python">class SupervisorReporter:
+    def report(self, state: dict) -&gt; dict:
+        m = state[&quot;metrics&quot;]
+        total = max(m[&quot;dispatched&quot;], 1)
+        return {
+            &quot;success_rate&quot;:       round(m[&quot;completed&quot;] / total, 3),
+            &quot;intervention_rate&quot;:  round(m[&quot;interventions&quot;] / total, 3),
+            &quot;failure_rate&quot;:       round(m[&quot;failed&quot;] / total, 3),
+            &quot;top_failure_reasons&quot;: self._top_reasons(state)
+        }
+
+    def _top_reasons(self, state: dict) -&gt; list[dict]:
+        from collections import Counter
+        reasons = [a[&quot;reason&quot;] for a in state.get(&quot;intervention_log&quot;, [])]
+        return [{&quot;reason&quot;: r, &quot;count&quot;: c} for r, c in Counter(reasons).most_common(5)]</code></pre>
+<hr>
+<h2>Anti-patterns / Pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td><strong>Supervisor qui micro-manage</strong> (correction toutes les 5 s)</td><td>Perturbe l'exécution, dégrade la qualité</td><td>Définir des seuils quantitatifs, laisser tourner entre les checks</td></tr><tr><td><strong>Pas de <code>max_corrections</code></strong></td><td>Boucle infinie, blocage total</td><td>Plafonner à 3, escalade automatique au-delà</td></tr><tr><td><strong>Supervisor sans <code>TERMINATE</code></strong></td><td>Impossible d'arrêter un agent bloqué en prod</td><td><code>TERMINATE</code> + <code>REDIRECT</code> sont obligatoires avant toute mise en prod</td></tr><tr><td><strong>Seuils subjectifs (&quot;si la qualité est mauvaise&quot;)</strong></td><td>Imprévisible, impossible à déboguer</td><td>Chaque déclencheur est un nombre (score, temps, tokens)</td></tr><tr><td><strong>État en mémoire seule en prod</strong></td><td>Perte totale au redémarrage</td><td>Redis ou Postgres dès que le supervisor tourne &gt; 1 h</td></tr><tr><td><strong>Escalade vers humain sans contexte</strong></td><td>L'opérateur ne comprend pas le problème</td><td>Toujours inclure <code>last_output</code>, <code>attempts</code>, <code>task</code> dans le payload</td></tr><tr><td><strong>Supervisor qui exécute les tâches lui-même</strong></td><td>Couplage fort, testabilité nulle</td><td>Son rôle = coordonner uniquement ; mode dégradé explicitement documenté</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ol>
-<li><strong>Définir le rôle du supervisor</strong></li>
-<ul>
-<li><code>Dispatch</code> : recevoir une requête entrante et choisir le bon sous-agent pour l'exécuter</li>
-<li><code>Monitor</code> : surveiller la progression et la qualité de l'exécution en temps réel</li>
-<li><code>Intervene</code> : interrompre un sous-agent qui dérive, dépasse son budget ou produit du mauvais travail</li>
-<li><code>Redirect</code> : réassigner la tâche à un autre sous-agent ou modifier les instructions</li>
-<li><code>Terminate</code> : arrêter définitivement un sous-agent défaillant et en lancer un nouveau</li>
-</ul>
-</ol>
-<p>   ```python    from enum import Enum</p>
-<p>   class SupervisorAction(Enum):        DISPATCH = &quot;dispatch&quot;        MONITOR = &quot;monitor&quot;        INTERVENE = &quot;intervene&quot;        REDIRECT = &quot;redirect&quot;        TERMINATE = &quot;terminate&quot;        ESCALATE = &quot;escalate&quot;        APPROVE = &quot;approve&quot;    ```</p>
-<ol>
-<li><strong>Routing intelligent (choisir le bon sous-agent)</strong></li>
-<ul>
-<li>Classifier l'intention de la requête : type de tâche, domaine, complexité</li>
-<li>Mapper l'intention aux capacités de chaque sous-agent (<code>capability manifest</code>)</li>
-<li>Fallback : si aucun agent ne matche parfaitement, choisir le plus généraliste</li>
-</ul>
-</ol>
-<p>   ```python    class IntelligentRouter:        def __init__(self, agents: list):            self.agents = {a.id: a for a in agents}            self.capability_index = self._build_index(agents)</p>
-<p>       def route(self, request: str) -&gt; str:            # Classification de l'intention            intent = self._classify_intent(request)            # Matching avec les capacités            best_agent = max(                self.agents.values(),                key=lambda a: self._capability_score(a, intent)            )            return best_agent.id</p>
-<p>       def _classify_intent(self, request: str) -&gt; dict:            prompt = f&quot;Classifie cette requête: '{request}'. Retourne: task_type, domain, complexity (low/med/high)&quot;            return llm.invoke(prompt, response_format=&quot;json&quot;)</p>
-<p>       def _capability_score(self, agent, intent: dict) -&gt; float:            return sum([                1.0 if intent[&quot;task_type&quot;] in agent.capabilities else 0.0,                0.5 if intent[&quot;domain&quot;] in agent.domains else 0.0,                0.3 if agent.complexity_level &gt;= intent[&quot;complexity&quot;] else 0.0            ])    ```</p>
-<ol>
-<li><strong>Monitoring en temps réel (observabilité des sous-agents)</strong></li>
-<ul>
-<li>Souscrire au flux de progression de chaque sous-agent actif (output streaming)</li>
-<li>Tracker les métriques clés : temps écoulé, tokens consommés, qualité estimée de l'output</li>
-<li>Détecter les signaux d'alerte : hallucination, boucle, hors-sujet, dépassement de budget</li>
-</ul>
-</ol>
-<p>   ```python    class AgentMonitor:        def __init__(self):            self.agent_states = {}</p>
-<p>       async def stream_monitor(self, agent_id: str, task_id: str):            state = {                &quot;start_time&quot;: time.time(),                &quot;tokens_used&quot;: 0,                &quot;progress&quot;: 0.0,                &quot;last_output_sample&quot;: &quot;&quot;,                &quot;alerts&quot;: []            }            self.agent_states[agent_id] = state            async for chunk in agent.stream_output():                state[&quot;tokens_used&quot;] += count_tokens(chunk)                state[&quot;last_output_sample&quot;] = chunk[-200:]  # Garder les 200 derniers chars                alert = self._check_for_issues(state, chunk)                if alert:                    state[&quot;alerts&quot;].append(alert)                    yield alert  # Notifier le supervisor immédiatement    ```</p>
-<ol>
-<li><strong>Intervention rules (critères d'intervention précis)</strong></li>
-<ul>
-<li><code>Timeout</code> : le sous-agent dépasse le temps alloué → intervention obligatoire</li>
-<li><code>Quality threshold</code> : le score de qualité estimé tombe sous un seuil → feedback et correction</li>
-<li><code>Off-topic</code> : le sous-agent dérive du sujet initial → remise sur les rails ou redirection</li>
-<li><code>Error detected</code> : exception, hallucination détectée, contradiction → arrêt et analyse</li>
-<li><code>Budget exceeded</code> : dépassement du quota de tokens → interruption propre</li>
-</ul>
-</ol>
-<p>   ```python    class InterventionRules:        def __init__(self, config: dict):            self.max_execution_time = config.get(&quot;max_time&quot;, 120)            self.quality_threshold = config.get(&quot;quality_min&quot;, 0.6)            self.max_tokens = config.get(&quot;max_tokens&quot;, 4000)            self.topic_drift_threshold = config.get(&quot;drift_max&quot;, 0.5)</p>
-<p>       def should_intervene(self, state: dict, task: dict) -&gt; tuple[bool, str]:            elapsed = time.time() - state[&quot;start_time&quot;]            if elapsed &gt; self.max_execution_time:                return True, &quot;timeout&quot;            if state[&quot;tokens_used&quot;] &gt; self.max_tokens:                return True, &quot;budget_exceeded&quot;            if state.get(&quot;quality_score&quot;, 1.0) &lt; self.quality_threshold:                return True, &quot;quality_below_threshold&quot;            if self._detect_topic_drift(state[&quot;last_output_sample&quot;], task[&quot;objective&quot;]):                return True, &quot;off_topic&quot;            return False, &quot;&quot;    ```</p>
-<ol>
-<li><strong>Correction loop (feedback et redirection)</strong></li>
-<ul>
-<li>Envoyer un message de correction au sous-agent en cours d'exécution</li>
-<li>Injecter un contexte supplémentaire pour le remettre sur la bonne voie</li>
-<li>Si la correction ne suffit pas après N tentatives, passer à la redirection vers un autre agent</li>
-</ul>
-</ol>
-<p>   ```python    class CorrectionLoop:        def __init__(self, max_corrections: int = 3):            self.correction_counts = {}            self.max_corrections = max_corrections</p>
-<p>       async def correct(self, agent_id: str, issue_type: str, context: dict) -&gt; str:            count = self.correction_counts.get(agent_id, 0)            if count &gt;= self.max_corrections:                return &quot;redirect&quot;   # Trop de corrections → rediriger vers un autre agent            correction_prompt = self._build_correction_prompt(issue_type, context)            await agent.inject_correction(correction_prompt)            self.correction_counts[agent_id] = count + 1            return &quot;corrected&quot;</p>
-<p>       def _build_correction_prompt(self, issue_type: str, context: dict) -&gt; str:            prompts = {                &quot;off_topic&quot;: f&quot;ATTENTION: Tu t'écartes du sujet. Objectif initial: {context['objective']}. Recentre-toi.&quot;,                &quot;quality_below_threshold&quot;: f&quot;La qualité n'est pas suffisante. Ajoute plus de détails sur: {context['weak_points']}&quot;,                &quot;timeout&quot;: &quot;Finalise rapidement ta réponse avec ce que tu as déjà produit.&quot;            }            return prompts.get(issue_type, &quot;Corrige ta réponse pour mieux répondre à l'objectif.&quot;)    ```</p>
-<ol>
-<li><strong>Escalation (quand le supervisor est dépassé)</strong></li>
-<ul>
-<li>Définir les cas où le supervisor lui-même ne peut pas résoudre le problème</li>
-<li>Escalade humaine : notifier un opérateur humain via webhook, Slack, email</li>
-<li>Escalade vers un agent supérieur : remonter à l'orchestrateur avec le contexte complet</li>
-</ul>
-</ol>
-<p>   ```python    class EscalationManager:        async def escalate(self, reason: str, context: dict, to: str = &quot;human&quot;):            escalation_payload = {                &quot;reason&quot;: reason,                &quot;failed_agent&quot;: context[&quot;agent_id&quot;],                &quot;task&quot;: context[&quot;task&quot;],                &quot;attempts&quot;: context[&quot;correction_count&quot;],                &quot;last_output&quot;: context[&quot;last_output&quot;],                &quot;timestamp&quot;: datetime.now().isoformat()            }            if to == &quot;human&quot;:                await self._notify_human(escalation_payload)            elif to == &quot;orchestrator&quot;:                await orchestrator.handle_escalation(escalation_payload)</p>
-<p>       async def _notify_human(self, payload: dict):            # Webhook, email, Slack...            await webhook_client.post(url=ESCALATION_WEBHOOK, json=payload)    ```</p>
-<ol>
-<li><strong>Load balancing (distribution équitable des tâches)</strong></li>
-<ul>
-<li>Maintenir un registre de la charge de chaque sous-agent : tâches en cours, temps moyen</li>
-<li>Implémenter une file d'attente prioritaire : tâches urgentes passent devant</li>
-<li>Éviter la concentration : si un agent est saturé, router vers un agent équivalent disponible</li>
-</ul>
-</ol>
-<p>   ```python    import heapq</p>
-<p>   class LoadBalancer:        def __init__(self):            self.agent_loads = {}   # agent_id -&gt; nombre de tâches actives            self.task_queue = []    # (priority, task) — min-heap</p>
-<p>       def add_task(self, task, priority: int = 5):            heapq.heappush(self.task_queue, (-priority, task))  # Négatif pour max-heap</p>
-<p>       def get_least_loaded_agent(self, required_capability: str) -&gt; str:            eligible = [                (load, agent_id)                for agent_id, load in self.agent_loads.items()                if required_capability in agents[agent_id].capabilities            ]            return min(eligible, key=lambda x: x[0])[1]    ```</p>
-<ol>
-<li><strong>State management (gestion de l'état du supervisor)</strong></li>
-<ul>
-<li>Maintenir un dashboard en mémoire de l'état de tous les sous-agents</li>
-<li>Persister l'état pour survivre aux redémarrages (Redis, base de données)</li>
-<li>Gérer la conversation state : quelle tâche est en cours, quel contexte a été partagé</li>
-</ul>
-</ol>
-<p>   ```python    class SupervisorStateManager:        def __init__(self, backend=&quot;memory&quot;):            self.backend = backend            self.state = {                &quot;active_tasks&quot;: {},                &quot;agent_statuses&quot;: {},                &quot;conversation_history&quot;: [],                &quot;metrics&quot;: {&quot;dispatched&quot;: 0, &quot;completed&quot;: 0, &quot;failed&quot;: 0, &quot;interventions&quot;: 0}            }</p>
-<p>       def update_agent_status(self, agent_id: str, status: str, task_id: str = None):            self.state[&quot;agent_statuses&quot;][agent_id] = {                &quot;status&quot;: status,                &quot;current_task&quot;: task_id,                &quot;last_updated&quot;: time.time()            }            if self.backend == &quot;redis&quot;:                redis_client.hset(&quot;supervisor:agents&quot;, agent_id, json.dumps(self.state[&quot;agent_statuses&quot;][agent_id]))    ```</p>
-<ol>
-<li><strong>Implémentation concrète (LangGraph, CrewAI, AutoGen)</strong></li>
-</ol>
-<p>   ```python    # LangGraph Supervisor Pattern    from langgraph_supervisor import create_supervisor    from langgraph.prebuilt import create_react_agent</p>
-<p>   search_agent = create_react_agent(model, tools=[search_tool], name=&quot;search_agent&quot;,                                      prompt=&quot;Tu es un expert en recherche d'informations.&quot;)    code_agent = create_react_agent(model, tools=[code_tool], name=&quot;code_agent&quot;,                                    prompt=&quot;Tu es un expert en développement Python.&quot;)</p>
-<p>   supervisor = create_supervisor(        agents=[search_agent, code_agent],        model=model,        prompt=&quot;&quot;&quot;Tu es le supervisor. Analyse chaque requête et délègue:</p>
-<ul>
-<li>Questions de recherche → search_agent</li>
-<li>Tâches de code → code_agent</li>
-</ul>
-<p>       Vérifie la qualité des résultats avant de les retourner.&quot;&quot;&quot;,        output_mode=&quot;last_message&quot;  # ou &quot;full_history&quot;    )    result = supervisor.invoke({&quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Recherche puis code...&quot;}]})    ```</p>
-<p>   ```python    # CrewAI Manager avec Process.hierarchical    from crewai import Agent, Task, Crew, Process    from langchain_openai import ChatOpenAI</p>
-<p>   manager = Agent(        role=&quot;Supervisor Manager&quot;,        goal=&quot;Coordonner les agents et garantir la qualité des outputs&quot;,        backstory=&quot;Tu supervises une équipe d'agents spécialisés.&quot;,        llm=ChatOpenAI(model=&quot;gpt-4o&quot;)    )    researcher = Agent(role=&quot;Researcher&quot;, goal=&quot;Rechercher des informations précises&quot;, ...)    writer = Agent(role=&quot;Writer&quot;, goal=&quot;Rédiger des contenus de qualité&quot;, ...)</p>
-<p>   crew = Crew(        agents=[researcher, writer],        tasks=[research_task, writing_task],        process=Process.hierarchical,        manager_agent=manager,        verbose=True    )    ```</p>
-<ol>
-<li><strong>Reporting (métriques et dashboards)</strong></li>
-<ul>
-<li>Générer des rapports de performance à la fin de chaque session supervisée</li>
-<li>Métriques clés : taux de complétion, nombre d'interventions, temps moyen par tâche, coût total</li>
-<li>Identifier les patterns d'échec récurrents pour améliorer les règles d'intervention</li>
-</ul>
-</ol>
-<p>    ```python     class SupervisorReporter:         def generate_report(self, state: dict) -&gt; dict:             metrics = state[&quot;metrics&quot;]             return {                 &quot;session_summary&quot;: {                     &quot;total_tasks&quot;: metrics[&quot;dispatched&quot;],                     &quot;success_rate&quot;: metrics[&quot;completed&quot;] / max(metrics[&quot;dispatched&quot;], 1),                     &quot;intervention_rate&quot;: metrics[&quot;interventions&quot;] / max(metrics[&quot;dispatched&quot;], 1),                     &quot;failure_rate&quot;: metrics[&quot;failed&quot;] / max(metrics[&quot;dispatched&quot;], 1)                 },                 &quot;agent_performance&quot;: {                     agent_id: {                         &quot;tasks_completed&quot;: data.get(&quot;completed&quot;, 0),                         &quot;avg_quality&quot;: data.get(&quot;avg_quality&quot;, 0.0),                         &quot;interventions_received&quot;: data.get(&quot;interventions&quot;, 0)                     }                     for agent_id, data in state.get(&quot;agent_stats&quot;, {}).items()                 },                 &quot;top_failure_reasons&quot;: self._count_failure_reasons(state)             }     ```</p>
-<h2>Anti-patterns</h2>
-<ul>
-<li><strong>Supervisor qui micro-manage</strong> : un supervisor qui envoie des corrections toutes les 5 secondes perturbe l'exécution du sous-agent et dégrade la qualité. Définir des critères d'intervention clairs et laisser le sous-agent travailler sans interférence tant que ces critères ne sont pas franchis.</li>
-<li><strong>Pas de critères d'intervention clairs</strong> : un supervisor qui intervient &quot;à l'intuition&quot; sans règles définies est imprévisible et difficile à déboguer. Chaque type d'intervention doit avoir un déclencheur quantifiable (temps, tokens, score de qualité).</li>
-<li><strong>Supervisor sans pouvoir de kill/restart</strong> : un supervisor qui ne peut qu'observer sans pouvoir interrompre un agent défaillant est inutile. Implémenter obligatoirement les actions <code>TERMINATE</code> et <code>REDIRECT</code> avant de mettre en production.</li>
-<li><strong>Boucle infinie d'interventions</strong> : un supervisor qui intervient, le sous-agent se remet en route, puis déclenche à nouveau l'intervention dans une boucle sans fin bloque tout le système. Toujours imposer une limite <code>max_corrections</code> avec escalade automatique si dépassée.</li>
-</ul>
-<h2>Règles</h2>
-<ol>
-<li><strong>Définir les règles d'intervention de manière quantitative</strong> (seuils numériques) avant de déployer le supervisor — jamais de jugement subjectif non formalisé.</li>
-<li><strong>Tout superviseur doit avoir une action de dernier recours</strong> : si toutes les corrections et redirections échouent, l'escalade (humaine ou vers l'orchestrateur) est obligatoire.</li>
-<li><strong>Le supervisor ne doit jamais exécuter les tâches lui-même</strong> sauf en mode dégradé explicite — son rôle est de coordonner, pas de produire.</li>
-<li><strong>Chaque intervention est loggée</strong> avec le motif, le contexte, l'action prise et le résultat, pour permettre l'audit et l'amélioration continue des règles.</li>
-<li><strong>Le supervisor maintient une limite de correction par agent par tâche</strong> : au-delà de <code>max_corrections</code> (recommandé : 3), l'agent est marqué comme <code>problematic</code> et la tâche est réassignée.</li>
+<li><strong>Seuils numériques obligatoires</strong> — aucune intervention sans déclencheur quantifiable.</li>
+<li><strong>Dernier recours défini</strong> — si <code>max_corrections</code> atteint et redirection impossible → escalade humaine, jamais de boucle silencieuse.</li>
+<li><strong>Logs structurés pour chaque intervention</strong> : <code>{agent_id, reason, action, result, timestamp}</code> — base de l'amélioration continue des règles.</li>
+<li><strong>Health check du supervisor lui-même</strong> — exposer <code>/health</code> ou équivalent ; un supervisor muet doit déclencher une alerte externe.</li>
+<li><strong>Tester les chemins d'escalade en staging</strong> avant la prod — simuler un agent qui timeout, un agent qui dérive, un agent qui dépasse le budget.</li>
+<li><strong>Versioner la config des seuils</strong> séparément du code — permet d'ajuster sans redéploiement.</li>
 </ol>
 </article>
 </main>

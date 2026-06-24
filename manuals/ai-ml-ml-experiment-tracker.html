@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ai-ml-ml-experiment-tracker — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Suivi d'expériences ML avec MLflow, W&amp;B, versioning de modèles et comparaison de métriques">
+<meta name="description" content="Suivi d'expériences ML avec MLflow, W&amp;B, versioning de modèles et comparaison de métriques.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🧠 AI / ML</span>
 <h1 class="skill-title">ai-ml-ml-experiment-tracker</h1>
-<p class="lead">Suivi d'expériences ML avec MLflow, W&amp;B, versioning de modèles et comparaison de métriques</p>
+<p class="lead">Suivi d'expériences ML avec MLflow, W&amp;B, versioning de modèles et comparaison de métriques.</p>
 
 
 
@@ -96,88 +96,168 @@ cp -r claude-skills-collection/skills/ai-ml-ml-experiment-tracker ~/.claude/skil
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>ML Experiment Tracker</h1>
-<p>Guide complet pour le suivi structuré d'expériences de machine learning, le versioning de modèles et la comparaison systématique des métriques.</p>
-<h2>Workflow</h2>
-<h3>1. Choisir et configurer la plateforme de tracking</h3>
+<p>Suivi structuré d'expériences ML, versioning de modèles, comparaison de métriques — MLflow, W&amp;B, Neptune, ClearML.</p>
+<hr>
+<h2>1. Choisir la plateforme</h2>
+<table><thead><tr><th>Outil</th><th>Quand choisir</th></tr></thead><tbody><tr><td><strong>MLflow</strong></td><td>On-premise, équipe data interne, pas de budget SaaS</td></tr><tr><td><strong>W&amp;B</strong></td><td>Collaboration multi-équipes, visualisations riches, GPU cloud</td></tr><tr><td><strong>Neptune</strong></td><td>Gros volumes de métadonnées, intégration CI/CD fine</td></tr><tr><td><strong>ClearML</strong></td><td>Orchestration complète (pipeline + HPO + registry)</td></tr></tbody></table>
+<p><strong>Installation MLflow (auto-hébergé) :</strong></p>
+<pre><code class="lang-bash">pip install mlflow
+mlflow server \
+  --backend-store-uri postgresql://user:pass@host:5432/mlflow \
+  --default-artifact-root s3://mon-bucket/mlflow \
+  --host 0.0.0.0 --port 5000</code></pre>
+<p><strong>Installation W&amp;B (local) :</strong></p>
+<pre><code class="lang-bash">pip install wandb
+wandb login  # ou WANDB_API_KEY=xxx en env var
+wandb server start  # si self-hosted (Weights &amp; Biases Local)</code></pre>
+<hr>
+<h2>2. Structurer les expériences</h2>
+<p>Convention de nommage <strong>obligatoire</strong> avant le premier run :</p>
+<pre><code>{projet}/{tâche}/{variante}
+ex: churn/lgbm/baseline
+    churn/lgbm/feat-engineering-v2
+    fraud/bert/fine-tune-lr3e-5</code></pre>
+<p>Tags standards à appliquer sur chaque run :</p>
 <ul>
-<li>Évaluer les options disponibles : MLflow (open-source, auto-hébergé), Weights &amp; Biases (SaaS), Neptune, ClearML</li>
-<li>Installer et configurer le serveur de tracking (MLflow Tracking Server, W&amp;B workspace)</li>
-<li>Définir la structure des projets et des espaces de travail</li>
-<li>Configurer l'authentification et les droits d'accès pour l'équipe</li>
-<li>Intégrer le tracking dans le pipeline CI/CD existant</li>
+<li><code>dataset_version</code> : hash ou tag DVC</li>
+<li><code>model_type</code> : lgbm, resnet50, bert-base, …</li>
+<li><code>env</code> : dev / staging / prod</li>
+<li><code>owner</code> : alias du data scientist</li>
 </ul>
-<h3>2. Structurer les expériences</h3>
-<ul>
-<li>Définir une convention de nommage claire pour les expériences (projet/tâche/variante)</li>
-<li>Organiser les runs par groupes logiques (exploration, ablation, production)</li>
-<li>Créer des tags standardisés pour faciliter le filtrage (dataset_version, model_type, technique)</li>
-<li>Définir les métadonnées obligatoires à enregistrer pour chaque run</li>
-<li>Documenter l'objectif et l'hypothèse de chaque expérience avant de la lancer</li>
-</ul>
-<h3>3. Logger les paramètres et hyperparamètres</h3>
-<ul>
-<li>Enregistrer automatiquement tous les hyperparamètres (learning rate, batch size, epochs, architecture)</li>
-<li>Logger la configuration complète du modèle (nombre de couches, dimensions, activation)</li>
-<li>Capturer les paramètres du dataset (version, taille, splits, prétraitement appliqué)</li>
-<li>Enregistrer l'environnement d'exécution (GPU, RAM, versions des librairies, seed)</li>
-<li>Utiliser le logging automatique quand disponible (mlflow.autolog(), wandb.watch())</li>
-</ul>
-<h3>4. Suivre les métriques en temps réel</h3>
-<ul>
-<li>Définir les métriques principales (loss, accuracy, F1, BLEU, etc.) et secondaires</li>
-<li>Logger les métriques à chaque step/epoch pour visualiser les courbes d'apprentissage</li>
-<li>Configurer des alertes sur les métriques anormales (divergence, NaN, plateau)</li>
-<li>Enregistrer les métriques de ressources (utilisation GPU, mémoire, temps d'entraînement)</li>
-<li>Logger les métriques custom spécifiques au domaine métier</li>
-</ul>
-<h3>5. Versionner les artefacts</h3>
-<ul>
-<li>Sauvegarder les checkpoints du modèle avec leurs métriques associées</li>
-<li>Versionner les datasets utilisés (lien vers DVC, hash du fichier)</li>
-<li>Stocker les fichiers de configuration et les scripts d'entraînement</li>
-<li>Enregistrer les graphiques et visualisations (courbes ROC, matrices de confusion, samples de prédictions)</li>
-<li>Archiver les logs d'entraînement complets pour le débogage</li>
-</ul>
-<h3>6. Comparer et analyser les résultats</h3>
-<ul>
-<li>Utiliser les tableaux comparatifs pour mettre en regard les runs</li>
-<li>Créer des visualisations parallèles (parallel coordinates, scatter plots)</li>
-<li>Identifier les hyperparamètres ayant le plus d'impact (importance analysis)</li>
-<li>Documenter les conclusions et les insights tirés de chaque comparaison</li>
-<li>Générer des rapports automatiques pour les revues d'expériences</li>
-</ul>
-<h3>7. Gérer le Model Registry</h3>
-<ul>
-<li>Promouvoir les meilleurs modèles dans le registry avec un statut (staging, production, archived)</li>
-<li>Associer chaque version du modèle à son run d'entraînement complet</li>
-<li>Documenter les changements entre versions (model card, changelog)</li>
-<li>Configurer des validations automatiques avant la promotion en production</li>
-<li>Maintenir un historique complet des modèles déployés</li>
-</ul>
-<h3>8. Automatiser et industrialiser</h3>
-<ul>
-<li>Créer des templates de runs pour standardiser les nouvelles expériences</li>
-<li>Mettre en place des sweeps/grid search automatisés avec logging intégré</li>
-<li>Configurer des pipelines de réentraînement automatique avec tracking</li>
-<li>Intégrer le tracking dans les notebooks Jupyter pour l'exploration</li>
-<li>Former l'équipe aux bonnes pratiques de tracking</li>
-</ul>
-<h2>Rules</h2>
+<hr>
+<h2>3. Logger paramètres et métriques</h2>
+<p><strong>MLflow :</strong></p>
+<pre><code class="lang-python">import mlflow
+
+mlflow.set_tracking_uri(&quot;http://mlflow-server:5000&quot;)
+mlflow.set_experiment(&quot;churn/lgbm/baseline&quot;)
+
+with mlflow.start_run(run_name=&quot;lgbm-lr0.05-depth6&quot;):
+    mlflow.log_params({
+        &quot;learning_rate&quot;: 0.05,
+        &quot;max_depth&quot;: 6,
+        &quot;n_estimators&quot;: 500,
+        &quot;dataset_version&quot;: &quot;v2.3&quot;,
+        &quot;seed&quot;: 42,
+    })
+    # ... entraînement ...
+    mlflow.log_metrics({&quot;val_auc&quot;: 0.872, &quot;val_f1&quot;: 0.741}, step=epoch)
+    mlflow.sklearn.log_model(model, &quot;model&quot;)</code></pre>
+<p><strong>W&amp;B :</strong></p>
+<pre><code class="lang-python">import wandb
+
+run = wandb.init(project=&quot;churn&quot;, name=&quot;lgbm-lr0.05&quot;, config={
+    &quot;learning_rate&quot;: 0.05, &quot;max_depth&quot;: 6, &quot;seed&quot;: 42
+})
+wandb.log({&quot;val_auc&quot;: 0.872, &quot;val_f1&quot;: 0.741})
+wandb.finish()</code></pre>
+<p><strong>Auto-logging (MLflow) — à activer systématiquement :</strong></p>
+<pre><code class="lang-python">mlflow.sklearn.autolog()   # scikit-learn
+mlflow.xgboost.autolog()   # XGBoost/LightGBM
+mlflow.pytorch.autolog()   # PyTorch
+mlflow.transformers.autolog()  # HuggingFace</code></pre>
+<hr>
+<h2>4. Versionner les artefacts</h2>
+<pre><code class="lang-python"># MLflow — log artefacts
+mlflow.log_artifact(&quot;conf/config.yaml&quot;)
+mlflow.log_artifact(&quot;reports/confusion_matrix.png&quot;)
+mlflow.sklearn.log_model(
+    sk_model=model,
+    artifact_path=&quot;model&quot;,
+    registered_model_name=&quot;churn-lgbm&quot;,
+)
+
+# Lier un dataset DVC au run
+mlflow.log_param(&quot;dataset_dvc_hash&quot;, subprocess.check_output(
+    [&quot;dvc&quot;, &quot;status&quot;, &quot;--json&quot;]
+).decode())</code></pre>
+<p>Artefacts minimum à logger sur chaque run :</p>
 <ol>
-<li><strong>Logger avant de lancer</strong> : Configurer le tracking complet avant de démarrer l'entraînement. Un run sans logs est un run perdu. Il est impossible de recréer les conditions exactes d'une expérience après coup.</li>
+<li>Fichier de config complet (YAML/JSON)</li>
+<li>Le modèle sérialisé + signature d'entrée/sortie</li>
+<li>Métriques finales sur le test set (pas uniquement validation)</li>
+<li>Plot de la courbe d'apprentissage</li>
+<li>Version Python + <code>pip freeze</code> (ou <code>conda env export</code>)</li>
 </ol>
-<ol>
-<li><strong>Un run = une configuration</strong> : Chaque modification d'hyperparamètre, de dataset ou de code doit correspondre à un nouveau run. Ne jamais écraser un run existant, même en cas d'erreur.</li>
-</ol>
-<ol>
-<li><strong>Métriques reproductibles</strong> : Toujours fixer et enregistrer le random seed, la version exacte des librairies et le hash du code. Deux runs avec les mêmes paramètres doivent produire des résultats identiques (ou quasi-identiques sur GPU).</li>
-</ol>
-<ol>
-<li><strong>Nommer et taguer systématiquement</strong> : Un run sans nom descriptif ni tags est inutilisable pour la comparaison future. Appliquer la convention de nommage de l'équipe sans exception.</li>
-</ol>
-<ol>
-<li><strong>Nettoyer régulièrement</strong> : Archiver ou supprimer les runs exploratoires obsolètes. Un espace de tracking encombré ralentit la recherche et masque les résultats importants.</li>
-</ol>
+<hr>
+<h2>5. Model Registry — promotion par statut</h2>
+<pre><code class="lang-bash"># MLflow CLI : promouvoir en staging
+mlflow models transition-create \
+  --model-name churn-lgbm \
+  --version 7 \
+  --stage Staging
+
+# Puis en Production après validation
+mlflow models transition-create \
+  --model-name churn-lgbm \
+  --version 7 \
+  --stage Production</code></pre>
+<p>Flux minimal :</p>
+<pre><code>None → Staging (tests auto) → Production (validation métier) → Archived</code></pre>
+<p>Documenter dans la <strong>model card</strong> (champ <code>description</code> du registry) :</p>
+<ul>
+<li>Jeu de données d'entraînement + période</li>
+<li>Métriques de référence (AUC, F1, recall @seuil)</li>
+<li>Limites connues et biais identifiés</li>
+<li>Contact owner</li>
+</ul>
+<hr>
+<h2>6. Comparer et analyser les runs</h2>
+<p><strong>MLflow — comparaison programmatique :</strong></p>
+<pre><code class="lang-python">import mlflow
+
+client = mlflow.tracking.MlflowClient()
+runs = client.search_runs(
+    experiment_ids=[&quot;1&quot;],
+    filter_string=&quot;metrics.val_auc &gt; 0.85 and params.model_type = 'lgbm'&quot;,
+    order_by=[&quot;metrics.val_auc DESC&quot;],
+    max_results=10,
+)
+for r in runs:
+    print(r.info.run_id, r.data.metrics[&quot;val_auc&quot;])</code></pre>
+<p><strong>W&amp;B Sweeps (HPO automatisé) :</strong></p>
+<pre><code class="lang-yaml"># sweep.yaml
+method: bayes
+metric:
+  name: val_auc
+  goal: maximize
+parameters:
+  learning_rate:
+    distribution: log_uniform_values
+    min: 0.001
+    max: 0.1
+  max_depth:
+    values: [4, 6, 8, 10]</code></pre>
+<pre><code class="lang-bash">wandb sweep sweep.yaml   # retourne SWEEP_ID
+wandb agent SWEEP_ID     # lancer N agents en parallèle</code></pre>
+<hr>
+<h2>7. Intégration CI/CD</h2>
+<pre><code class="lang-yaml"># GitHub Actions — vérifier que le run n'est pas régressif
+- name: Run experiment
+  run: python train.py
+  env:
+    MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_URI }}
+
+- name: Check metrics gate
+  run: |
+    python scripts/check_metrics.py \
+      --run-id $RUN_ID \
+      --min-val-auc 0.85 \
+      --max-train-val-gap 0.05</code></pre>
+<p><code>check_metrics.py</code> doit retourner exit code 1 si les seuils ne sont pas atteints — le pipeline bloque la promotion automatique.</p>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Logger uniquement la métrique finale</td><td>Impossible de détecter overfitting ou divergence</td><td>Logger à chaque epoch / step</td></tr><tr><td>Runs sans seed fixé</td><td>Non-reproductible, comparaisons faussées</td><td><code>seed=42</code> dans params ET <code>torch.manual_seed()</code></td></tr><tr><td>Écraser un run existant en cas d'erreur</td><td>Historique corrompu</td><td>Toujours créer un nouveau run, laisser l'ancien en &quot;FAILED&quot;</td></tr><tr><td>Stocker les artefacts localement</td><td>Perte à la mort de la VM</td><td>S3 / GCS / Azure Blob comme artifact store</td></tr><tr><td>Promouvoir en production sans test set isolé</td><td>Biais d'optimisme sur val</td><td>Réserver un hold-out jamais vu pendant la recherche</td></tr><tr><td>Tracking uniquement en notebook</td><td>Pas de reproductibilité en prod</td><td>Exporter le code en script avant tout run sérieux</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Lineage complet</strong> : lier chaque run à son commit Git (<code>mlflow.set_tag(&quot;git_commit&quot;, git_sha)</code>) et à son dataset DVC.</li>
+<li><strong>Schema d'input/output</strong> : toujours logger <code>mlflow.models.infer_signature(X_train, y_pred)</code> — obligatoire pour le serving.</li>
+<li><strong>Alertes proactives</strong> : configurer des webhooks MLflow ou W&amp;B Alerts sur <code>run.status == FAILED</code> ou <code>val_loss &gt; threshold</code>.</li>
+<li><strong>Nettoyage périodique</strong> : archiver les runs &gt; 90 jours sans promotion ; supprimer les artefacts des runs FAILED &gt; 30 jours.</li>
+<li><strong>Isolation des environments</strong> : un experiment par branche feature, jamais mélanger les runs de dev et de prod dans le même experiment.</li>
+<li><strong>Coût GPU</strong> : logger <code>cost_usd</code> estimé via <code>gpu_hours * prix_spot</code> pour prioriser les expériences à fort ROI.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

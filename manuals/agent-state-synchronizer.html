@@ -97,11 +97,11 @@ cp -r claude-skills-collection/skills/agent-state-synchronizer ~/.claude/skills/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent State Synchronizer</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill lorsque plusieurs agents ou sous-agents accèdent et modifient un état partagé en parallèle. Cela s'applique aux architectures où des agents collectent, transforment et agrègent des données simultanément, aux workflows où des agents ont besoin de savoir ce que font les autres (coordination), et aux systèmes qui doivent récupérer un état cohérent après une panne. Sans synchronisation explicite, les agents écrivent des données incohérentes, se font écraser mutuellement et produisent des résultats imprévisibles.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Concevoir le shared state</strong> — Commence par définir précisément <strong>ce qui est partagé</strong> : pas tout l'état de chaque agent, seulement les données nécessaires à la coordination. Critères de design : <strong>granularité</strong> (fine-grained : chaque champ est un objet séparé avec son propre locking ; coarse-grained : un seul objet verrouillé en entier), <strong>schéma</strong> (défini avec Pydantic ou TypedDict, versionné), <strong>ownership</strong> (qui peut écrire quoi : un état <code>READ_ALL / WRITE_OWN</code> réduit les conflits). Minimise l'état partagé : ce qui peut rester local à un agent doit rester local.</li>
-</ol>
+<p>Utilise ce skill quand plusieurs agents accèdent et modifient un état commun en parallèle : collecte distribuée, workflows coordinés, récupération après panne. Sans synchronisation explicite : race conditions, écrasements silencieux, résultats non déterministes.</p>
+<hr>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Définir le shared state (schéma minimal)</h3>
+<p>Ne partager que ce qui est nécessaire à la <strong>coordination</strong> — pas l'état interne de chaque agent.</p>
 <pre><code class="lang-python">from pydantic import BaseModel
 from typing import Any
 from datetime import datetime
@@ -109,15 +109,22 @@ from datetime import datetime
 class SharedState(BaseModel):
     version: int = 0
     schema_version: str = &quot;1.0&quot;
-    task_assignments: dict[str, str] = {}      # task_id → agent_id
-    task_results: dict[str, Any] = {}           # task_id → result
-    agent_status: dict[str, str] = {}           # agent_id → &quot;idle&quot;|&quot;working&quot;|&quot;done&quot;|&quot;error&quot;
-    global_context: dict[str, Any] = {}         # données partagées en lecture seule
+    task_assignments: dict[str, str] = {}   # task_id → agent_id
+    task_results: dict[str, Any] = {}        # task_id → result
+    agent_status: dict[str, str] = {}        # agent_id → &quot;idle&quot;|&quot;working&quot;|&quot;done&quot;|&quot;error&quot;
+    global_context: dict[str, Any] = {}      # lecture seule pour tous
     last_updated: datetime = datetime.utcnow()
     last_updated_by: str = &quot;&quot;</code></pre>
-<ol>
-<li><strong>Choisir le state store</strong> — Selon les contraintes de l'architecture : <strong>dict Python en mémoire</strong> (mono-processus, pas de persistance, ultra-rapide), <strong>Redis</strong> (multi-processus, persistance optionnelle, atomic operations avec MULTI/EXEC), <strong>PostgreSQL</strong> (persistance forte, transactions ACID, SELECT FOR UPDATE pour le locking), <strong>event log</strong> (append-only, reconstruit l'état depuis les events, excellente auditabilité), <strong>vector store</strong> (si l'état inclut des embeddings ou des données sémantiques). Pour la plupart des multi-agent systems en développement, commence avec Redis.</li>
-</ol>
+<p><strong>Critères de design :</strong></p>
+<ul>
+<li><code>READ_ALL / WRITE_OWN</code> — chaque agent n'écrit que ses propres champs → moins de conflits.</li>
+<li>Fine-grained (un verrou par champ) vs coarse-grained (un seul verrou global) : préférer fine-grained sauf si les transactions multi-champs sont fréquentes.</li>
+<li>Versionner le schéma (<code>schema_version</code>) dès le départ pour faciliter les migrations.</li>
+</ul>
+<hr>
+<h3>2. Choisir le state store</h3>
+<table><thead><tr><th>Store</th><th>Cas d'usage</th><th>Avantages</th><th>Limites</th></tr></thead><tbody><tr><td>Dict Python</td><td>Mono-process, tests</td><td>Ultra-rapide, zéro infra</td><td>Pas de persistance, un seul process</td></tr><tr><td>Redis</td><td>Multi-process, dev/prod</td><td>Atomic ops, pub/sub, TTL natif</td><td>Consistance éventuelle par défaut</td></tr><tr><td>PostgreSQL</td><td>Persistance forte requise</td><td>ACID, <code>SELECT FOR UPDATE</code></td><td>Plus lent, surcharge opérationnelle</td></tr><tr><td>Event log</td><td>Auditabilité, replay</td><td>Immuable, debuggable</td><td>Reconstruction de l'état coûteuse</td></tr></tbody></table>
+<p><strong>Recommandation :</strong> Redis pour la majorité des systèmes multi-agents en 2026.</p>
 <pre><code class="lang-python">import redis.asyncio as aioredis
 import json
 
@@ -126,35 +133,26 @@ class RedisStateStore:
         self.r = aioredis.from_url(redis_url)
         self.prefix = key_prefix
 
-    async def get(self, state_key: str) -&gt; dict | None:
-        data = await self.r.get(f&quot;{self.prefix}:{state_key}&quot;)
+    async def get(self, key: str) -&gt; dict | None:
+        data = await self.r.get(f&quot;{self.prefix}:{key}&quot;)
         return json.loads(data) if data else None
 
-    async def set(self, state_key: str, state: dict, ttl: int | None = None):
-        serialized = json.dumps(state, default=str)
-        if ttl:
-            await self.r.setex(f&quot;{self.prefix}:{state_key}&quot;, ttl, serialized)
-        else:
-            await self.r.set(f&quot;{self.prefix}:{state_key}&quot;, serialized)
-
-    async def atomic_update(self, state_key: str, update_fn) -&gt; dict:
-        key = f&quot;{self.prefix}:{state_key}&quot;
+    async def atomic_update(self, key: str, update_fn) -&gt; dict:
+        full_key = f&quot;{self.prefix}:{key}&quot;
         async with self.r.pipeline(transaction=True) as pipe:
-            await pipe.watch(key)
-            current = json.loads(await pipe.get(key) or &quot;{}&quot;)
+            await pipe.watch(full_key)
+            current = json.loads(await pipe.get(full_key) or &quot;{}&quot;)
             updated = update_fn(current)
             pipe.multi()
-            pipe.set(key, json.dumps(updated, default=str))
+            pipe.set(full_key, json.dumps(updated, default=str))
             await pipe.execute()
         return updated</code></pre>
-<ol>
-<li><strong>Choisir le modèle de concurrence</strong> — <strong>Optimistic locking</strong> (chaque agent lit la version courante, calcule sa mise à jour, et écrit seulement si la version n'a pas changé entre-temps — idéal pour les conflits rares), <strong>Pessimistic locking</strong> (l'agent acquiert un verrou exclusif avant de lire et d'écrire — idéal pour les conflits fréquents ou les mutations critiques), <strong>CRDT</strong> (Conflict-free Replicated Data Types : structures de données qui mergent automatiquement sans conflit — idéal pour les compteurs, sets, et états append-only), <strong>Event sourcing</strong> (aucun état mutable partagé, seulement des events immuables — le plus robuste mais le plus complexe).</li>
-</ol>
+<hr>
+<h3>3. Choisir le modèle de concurrence</h3>
+<table><thead><tr><th>Modèle</th><th>Quand</th><th>Trade-off</th></tr></thead><tbody><tr><td>Optimistic locking</td><td>Conflits rares (&lt; 5 %)</td><td>Retry en cas de conflit, performant</td></tr><tr><td>Pessimistic locking</td><td>Conflits fréquents, mutations critiques</td><td>Sûr, mais risque de deadlock</td></tr><tr><td>CRDT</td><td>Compteurs, sets, états append-only</td><td>Merge automatique, complexe à implémenter</td></tr><tr><td>Event sourcing</td><td>Auditabilité maximale, replay</td><td>Robuste, reconstruit depuis les events</td></tr></tbody></table>
 <pre><code class="lang-python">import asyncio
 
-class OptimisticLockStateManager:
-    &quot;&quot;&quot;Optimistic locking avec retry automatique.&quot;&quot;&quot;
-
+class OptimisticStateManager:
     def __init__(self, store: RedisStateStore, max_retries: int = 3):
         self.store = store
         self.max_retries = max_retries
@@ -162,146 +160,132 @@ class OptimisticLockStateManager:
     async def update(self, key: str, agent_id: str, update_fn, retry_delay: float = 0.1) -&gt; dict:
         for attempt in range(self.max_retries):
             state = await self.store.get(key) or {}
-            current_version = state.get(&quot;version&quot;, 0)
+            version = state.get(&quot;version&quot;, 0)
             new_state = update_fn(state)
-            new_state[&quot;version&quot;] = current_version + 1
-            new_state[&quot;last_updated_by&quot;] = agent_id
+            new_state.update({&quot;version&quot;: version + 1, &quot;last_updated_by&quot;: agent_id})
             try:
-                # Écriture atomique conditionnelle via Redis WATCH
-                saved = await self.store.atomic_update(key, lambda _: new_state)
-                return saved
-            except Exception:  # Version conflict
-                await asyncio.sleep(retry_delay * (2 ** attempt))  # exponential backoff
-        raise RuntimeError(f&quot;Impossible de mettre à jour l'état après {self.max_retries} tentatives&quot;)</code></pre>
-<ol>
-<li><strong>Définir les patterns Read/Write</strong> — Distingue les agents <strong>lecteurs</strong> (read-only, peuvent travailler sur un snapshot, pas besoin de locking fort) des agents <strong>écrivains</strong> (modifient l'état, nécessitent une synchronisation). Patterns recommandés : <strong>read replicas</strong> (les agents lecteurs lisent depuis un replica local mis à jour périodiquement, les agents écrivains écrivent sur le master), <strong>write quorum</strong> (un write n'est validé que si N/2+1 agents confirment, pour la haute disponibilité), <strong>single writer</strong> (un seul agent peut écrire à la fois, simplifie drastiquement la synchronisation).</li>
-</ol>
-<ol>
-<li><strong>Résoudre les conflits d'écriture</strong> — Quand deux agents ont modifié le même champ : <strong>last-write-wins (LWW)</strong> (le timestamp le plus récent gagne — simple mais peut perdre des données), <strong>merge functions</strong> (définir une fonction de merge par champ : <code>max()</code> pour les compteurs, <code>union()</code> pour les sets, <code>LLM synthesis</code> pour le texte), <strong>manual resolution</strong> (mettre le champ en état <code>CONFLICT</code> et déclencher le skill <code>agent-conflict-resolver</code>), <strong>vector clocks</strong> (chaque agent maintient un vecteur d'horloge logique pour détecter les relations causales entre les mises à jour).</li>
-</ol>
+                return await self.store.atomic_update(key, lambda _: new_state)
+            except Exception:
+                await asyncio.sleep(retry_delay * (2 ** attempt))  # backoff exponentiel
+        raise RuntimeError(f&quot;Échec mise à jour état après {self.max_retries} tentatives&quot;)</code></pre>
+<hr>
+<h3>4. Définir les politiques de merge par champ</h3>
+<p>Chaque champ doit avoir une politique explicite. Sans politique : résolution arbitraire → bugs silencieux.</p>
 <pre><code class="lang-python">from typing import Callable
 
-MERGE_FUNCTIONS: dict[str, Callable] = {
-    &quot;counter&quot;: max,
-    &quot;set_field&quot;: lambda a, b: list(set(a) | set(b)),
-    &quot;list_append&quot;: lambda a, b: a + [x for x in b if x not in a],
-    &quot;overwrite&quot;: lambda a, b: b,  # last-write-wins
+MERGE_POLICIES: dict[str, Callable] = {
+    &quot;counter&quot;:      max,
+    &quot;set_field&quot;:    lambda a, b: list(set(a) | set(b)),
+    &quot;list_append&quot;:  lambda a, b: a + [x for x in b if x not in a],
+    &quot;overwrite&quot;:    lambda a, b: b,   # last-write-wins
 }
 
 def merge_states(state_a: dict, state_b: dict, field_policies: dict[str, str]) -&gt; dict:
     merged = {}
-    all_keys = set(state_a) | set(state_b)
-    for key in all_keys:
+    for key in set(state_a) | set(state_b):
         if key not in state_a:
             merged[key] = state_b[key]
         elif key not in state_b:
             merged[key] = state_a[key]
         else:
-            policy = field_policies.get(key, &quot;overwrite&quot;)
-            merge_fn = MERGE_FUNCTIONS[policy]
-            merged[key] = merge_fn(state_a[key], state_b[key])
+            fn = MERGE_POLICIES.get(field_policies.get(key, &quot;overwrite&quot;), lambda a, b: b)
+            merged[key] = fn(state_a[key], state_b[key])
     return merged</code></pre>
-<ol>
-<li><strong>Implémenter la sync event-driven</strong> — Plutôt que du polling (chaque agent vérifie l'état toutes les N secondes), utilise un système d'événements : quand l'état change, le state store publie un event sur un channel (<code>state.changed:{key}</code>), les agents abonnés reçoivent la notification et peuvent réagir. Avec Redis : <code>PUBLISH/SUBSCRIBE</code> ou Redis Streams. Avantages : réactivité immédiate, moins de charge sur le state store, consistance éventuelle naturelle.</li>
-</ol>
-<pre><code class="lang-python">import asyncio
-
-class EventDrivenStateSync:
+<p>Si conflit non résolvable automatiquement → passer la main au skill <code>agent-conflict-resolver</code>.</p>
+<hr>
+<h3>5. Sync event-driven (éviter le polling)</h3>
+<p>Le polling toutes les N secondes charge inutilement le state store. Préférer pub/sub.</p>
+<pre><code class="lang-python">class EventDrivenSync:
     def __init__(self, redis_url: str):
         self.r = aioredis.from_url(redis_url)
-        self._subscribers: dict[str, list[Callable]] = {}
 
-    async def subscribe(self, state_key: str, callback):
-        self._subscribers.setdefault(state_key, []).append(callback)
+    async def publish(self, key: str, new_state: dict):
+        await self.r.publish(f&quot;state.changed:{key}&quot;, json.dumps(new_state, default=str))
+
+    async def subscribe(self, key: str, callback):
         async with self.r.pubsub() as pubsub:
-            await pubsub.subscribe(f&quot;state.changed:{state_key}&quot;)
-            async for message in pubsub.listen():
-                if message[&quot;type&quot;] == &quot;message&quot;:
-                    new_state = json.loads(message[&quot;data&quot;])
-                    for cb in self._subscribers.get(state_key, []):
-                        await cb(new_state)
-
-    async def publish_change(self, state_key: str, new_state: dict):
-        await self.r.publish(f&quot;state.changed:{state_key}&quot;, json.dumps(new_state, default=str))</code></pre>
-<ol>
-<li><strong>Implémenter snapshots et checkpoints</strong> — Pour la résilience : <strong>periodic snapshot</strong> (sauvegarder l'état complet toutes les N secondes ou N opérations), <strong>checkpoint on milestone</strong> (snapshot à chaque étape clé du workflow), <strong>rollback capability</strong> (garder les N derniers snapshots pour permettre de revenir en arrière), <strong>point-in-time recovery</strong> (reconstruire l'état à n'importe quel instant depuis les snapshots + events intercalaires). Stocke les snapshots avec un timestamp et une version dans le state store.</li>
-</ol>
-<pre><code class="lang-python">import hashlib
-
-class StateCheckpointer:
+            await pubsub.subscribe(f&quot;state.changed:{key}&quot;)
+            async for msg in pubsub.listen():
+                if msg[&quot;type&quot;] == &quot;message&quot;:
+                    await callback(json.loads(msg[&quot;data&quot;]))</code></pre>
+<p>Pour des besoins d'historique et de replay : utiliser <strong>Redis Streams</strong> (<code>XADD</code>/<code>XREAD</code>) plutôt que pub/sub simple.</p>
+<hr>
+<h3>6. Snapshots et rollback</h3>
+<pre><code class="lang-python">class StateCheckpointer:
     def __init__(self, store: RedisStateStore, max_snapshots: int = 10):
         self.store = store
         self.max_snapshots = max_snapshots
 
-    async def checkpoint(self, state_key: str, state: dict) -&gt; str:
-        snap_id = f&quot;{state_key}:snap:{state['version']}&quot;
-        await self.store.set(snap_id, state, ttl=86400 * 7)  # 7 jours
-        # Maintenir la liste des snapshots
-        snap_list_key = f&quot;{state_key}:snapshots&quot;
-        snap_list = await self.store.get(snap_list_key) or []
-        snap_list.append(snap_id)
-        if len(snap_list) &gt; self.max_snapshots:
-            oldest = snap_list.pop(0)
-            # Supprimer l'ancien snapshot (optionnel selon la politique)
-        await self.store.set(snap_list_key, snap_list)
+    async def checkpoint(self, key: str, state: dict) -&gt; str:
+        snap_id = f&quot;{key}:snap:{state['version']}&quot;
+        await self.store.r.set(snap_id, json.dumps(state, default=str), ex=86400 * 7)
+        snap_list_key = f&quot;{key}:snapshots&quot;
+        snaps = await self.store.get(snap_list_key) or []
+        snaps.append(snap_id)
+        if len(snaps) &gt; self.max_snapshots:
+            snaps.pop(0)  # purger les plus anciens
+        await self.store.r.set(snap_list_key, json.dumps(snaps))
         return snap_id
 
-    async def rollback(self, state_key: str, version: int) -&gt; dict | None:
-        snap_id = f&quot;{state_key}:snap:{version}&quot;
-        return await self.store.get(snap_id)</code></pre>
-<ol>
-<li><strong>Gérer la partition tolerance</strong> — Que faire quand un agent perd la connexion au state store ? Options : <strong>read from local cache</strong> (l'agent continue avec sa dernière version locale, en mode dégradé), <strong>fail-fast</strong> (l'agent s'arrête et signale l'erreur — safe pour les opérations critiques), <strong>write to local buffer</strong> (l'agent accumule ses mises à jour localement et les rejoue dès que la connexion est restaurée, avec gestion des conflits), <strong>circuit breaker</strong> (après N échecs consécutifs, basculer en mode dégradé automatiquement). Documente explicitement le comportement choisi.</li>
-</ol>
-<pre><code class="lang-python">from datetime import datetime, timedelta
+    async def rollback(self, key: str, version: int) -&gt; dict | None:
+        return await self.store.get(f&quot;{key}:snap:{version}&quot;)</code></pre>
+<p>Déclencher un checkpoint : à chaque milestone workflow, après N opérations, ou en cas d'erreur agent.</p>
+<hr>
+<h3>7. Circuit breaker (protection panne state store)</h3>
+<pre><code class="lang-python">from datetime import datetime
 
 class CircuitBreaker:
     def __init__(self, failure_threshold: int = 3, recovery_timeout: float = 30.0):
-        self.failure_count = 0
-        self.failure_threshold = failure_threshold
-        self.recovery_timeout = recovery_timeout
-        self.last_failure_time: datetime | None = None
+        self.failures = 0
+        self.threshold = failure_threshold
+        self.timeout = recovery_timeout
+        self.last_failure: datetime | None = None
         self.state = &quot;closed&quot;  # closed | open | half-open
 
     def record_failure(self):
-        self.failure_count += 1
-        self.last_failure_time = datetime.utcnow()
-        if self.failure_count &gt;= self.failure_threshold:
+        self.failures += 1
+        self.last_failure = datetime.utcnow()
+        if self.failures &gt;= self.threshold:
             self.state = &quot;open&quot;
 
     def record_success(self):
-        self.failure_count = 0
+        self.failures = 0
         self.state = &quot;closed&quot;
 
     def can_attempt(self) -&gt; bool:
         if self.state == &quot;closed&quot;:
             return True
-        if self.state == &quot;open&quot;:
-            elapsed = (datetime.utcnow() - self.last_failure_time).total_seconds()
-            if elapsed &gt; self.recovery_timeout:
+        if self.state == &quot;open&quot; and self.last_failure:
+            elapsed = (datetime.utcnow() - self.last_failure).total_seconds()
+            if elapsed &gt; self.timeout:
                 self.state = &quot;half-open&quot;
                 return True
         return self.state == &quot;half-open&quot;</code></pre>
-<ol>
-<li><strong>Optimiser les performances</strong> — Techniques d'optimisation : <strong>cache local par agent</strong> (chaque agent maintient un cache LRU des champs qu'il lit fréquemment, invalidé par events), <strong>batch writes</strong> (grouper plusieurs mises à jour en une seule transaction Redis MULTI/EXEC), <strong>lazy sync</strong> (ne synchroniser que les champs modifiés, pas l'état complet), <strong>compression</strong> (compresser les gros états avec <code>zlib</code> ou <code>lz4</code> avant stockage), <strong>TTL adaptatif</strong> (les états inactifs expirent automatiquement pour limiter la taille du state store).</li>
-</ol>
-<ol>
-<li><strong>Monitorer la synchronisation</strong> — Métriques essentielles : <strong>state size</strong> (taille en bytes de l'état global, évolution dans le temps), <strong>sync latency</strong> (délai entre une écriture et sa visibilité par les autres agents, p50/p95), <strong>conflict rate</strong> (nombre de conflits d'écriture par minute), <strong>stale reads</strong> (pourcentage de lectures qui récupèrent une version périmée), <strong>snapshot frequency</strong> (fréquence des checkpoints), <strong>recovery time</strong> (temps pour restaurer l'état depuis un snapshot). Alerte si <code>conflict_rate &gt; 10/min</code> ou <code>sync_latency_p95 &gt; 500ms</code>.</li>
-</ol>
-<h2>Anti-patterns</h2>
+<p>En mode <code>open</code> : lire depuis le cache local (mode dégradé documenté) ou fail-fast selon la criticité.</p>
+<hr>
+<h3>8. Monitoring et alertes</h3>
+<p>Métriques minimales à instrumenter :</p>
+<table><thead><tr><th>Métrique</th><th>Seuil d'alerte</th></tr></thead><tbody><tr><td><code>sync_latency_p95</code></td><td>&gt; 500 ms</td></tr><tr><td><code>conflict_rate</code></td><td>&gt; 10 / min</td></tr><tr><td><code>stale_read_ratio</code></td><td>&gt; 5 %</td></tr><tr><td><code>state_size_bytes</code></td><td>croissance &gt; 10 % / heure</td></tr><tr><td><code>circuit_breaker_open</code></td><td>toute ouverture</td></tr></tbody></table>
+<pre><code class="lang-python"># Exemple avec prometheus_client
+from prometheus_client import Counter, Histogram
+
+sync_latency = Histogram(&quot;agent_state_sync_latency_seconds&quot;, &quot;Latence sync état&quot;, [&quot;operation&quot;])
+conflict_count = Counter(&quot;agent_state_conflicts_total&quot;, &quot;Conflits d'écriture&quot;, [&quot;agent_id&quot;])</code></pre>
+<hr>
+<h2>Adaptation aux frameworks</h2>
+<table><thead><tr><th>Framework</th><th>Mécanisme natif</th></tr></thead><tbody><tr><td><strong>LangGraph</strong></td><td><code>State</code> object + reducers par champ (<code>operator.add</code>, custom)</td></tr><tr><td><strong>CrewAI</strong></td><td><code>shared_memory</code> ou outil de lecture/écriture partagé</td></tr><tr><td><strong>AutoGen</strong></td><td><code>ConversableAgent</code> avec <code>shared_context</code> dict</td></tr><tr><td><strong>Custom async</strong></td><td><code>asyncio.Lock</code> (mono-process) ou Redis (multi-process)</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns et pièges</h2>
 <ul>
-<li><strong>État global sans locking</strong> — Permettre à tous les agents d'écrire librement dans un dict partagé sans synchronisation produit des race conditions et des corruptions silencieuses. Toute écriture partagée doit passer par un mécanisme de contrôle de concurrence.</li>
-<li><strong>Chaque agent avec sa propre copie sans sync</strong> — Si chaque agent maintient une copie locale de l'état sans mécanisme de synchronisation, le système diverge progressivement et produit des résultats incohérents. Définir clairement ce qui est local vs partagé.</li>
-<li><strong>State qui grossit sans limite</strong> — Un state store qui accumule indéfiniment des données finit par dégrader les performances de toutes les opérations. Implémenter des TTL, des politiques d'archivage et de pruning dès le départ.</li>
-<li><strong>Absence de snapshot/rollback</strong> — Sans capacité de rollback, une corruption de l'état partagé ou une erreur d'un agent peut rendre le système entier irrécupérable. Toujours implémenter les checkpoints, même sommaires.</li>
+<li><strong>Dict partagé sans verrou</strong> — Race condition garantie en async. Toute écriture partagée passe par un mécanisme de contrôle de concurrence, même <code>asyncio.Lock</code> minimal.</li>
+<li><strong>Copie locale sans sync</strong> — Chaque agent avec sa propre copie et aucun mécanisme de réconciliation : l'état diverge silencieusement. Définir explicitement ce qui est local vs partagé.</li>
+<li><strong>État qui grossit sans limite</strong> — Pas de TTL, pas de pruning → dégradation progressive. Implémenter les politiques d'expiration dès le départ.</li>
+<li><strong>Pas de snapshot</strong> — Une corruption ou une erreur agent rend le système irrécupérable. Checkpoints obligatoires, même sommaires.</li>
+<li><strong>Polling agressif</strong> — Vérifier l'état toutes les 100 ms sur 20 agents = surcharge inutile. Pub/sub ou Redis Streams à la place.</li>
+<li><strong>Politiques de merge implicites</strong> — Résolution de conflit sans politique définie = comportement non déterministe. Documenter la politique de chaque champ dans le schéma.</li>
+<li><strong>Circuit breaker absent</strong> — La panne du state store cascade sur tous les agents simultanément. Circuit breaker obligatoire sur tout accès réseau au state store.</li>
+<li><strong>Consistance forte partout</strong> — Forcer la consistance forte sur tous les champs ralentit inutilement le système. Évaluer champ par champ : certains acceptent la consistance éventuelle.</li>
 </ul>
-<h2>Règles</h2>
-<ol>
-<li><strong>Minimise l'état partagé</strong> — Seules les données nécessaires à la coordination inter-agents doivent être dans le state store partagé. Tout ce qui peut rester local à un agent doit rester local. Moins d'état partagé = moins de conflits = meilleures performances.</li>
-<li><strong>Définis les policies d'écriture par champ</strong> — Chaque champ de l'état partagé doit avoir une politique de merge explicite (last-write-wins, max, union, etc.). Sans politique définie, les conflits sont résolus de façon arbitraire.</li>
-<li><strong>Circuit breaker obligatoire</strong> — Tout accès au state store externe doit être protégé par un circuit breaker. La perte de connexion au state store ne doit pas faire crasher tous les agents simultanément.</li>
-<li><strong>Documente les trade-offs de consistance</strong> — Consistance forte (toutes les lectures voient la dernière écriture) est lente. Consistance éventuelle est rapide mais produit des stale reads. Choisis et documente explicitement le niveau de consistance requis par chaque champ.</li>
-<li><strong>Adapte au framework</strong> — LangGraph : utilise le <code>State</code> object natif avec reducers pour les champs partagés. CrewAI : <code>shared_memory</code> ou outil de lecture/écriture partagé. AutoGen : <code>ConversableAgent</code> avec shared context. Custom : <code>asyncio.Lock</code> pour l'in-process, Redis pour le multi-process.</li>
-</ol>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

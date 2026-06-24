@@ -5,261 +5,377 @@ description: Guide complet pour construire des systèmes multi-agents avec CrewA
 
 # CrewAI Expert — Systèmes Multi-Agents Collaboratifs
 
-## Quand utiliser ce skill
+## Critères de décision — Quand utiliser CrewAI
 
-Utiliser ce skill quand l'utilisateur veut construire un système multi-agents collaboratifs avec CrewAI, où plusieurs agents IA spécialisés travaillent ensemble pour accomplir un objectif complexe. Typiquement : pipelines de recherche et rédaction, automatisation de workflows métier, systèmes d'analyse de données multi-étapes, ou tout projet nécessitant des agents avec des rôles distincts (researcher, writer, analyst, reviewer, etc.) qui se passent du contexte.
+| Situation | Recommandation |
+|-----------|---------------|
+| Tâche décomposable en sous-rôles distincts (chercheur, rédacteur, réviseur…) | ✅ CrewAI |
+| Pipeline séquentiel simple (A → B → C) avec LLM unique | ⚠️ LangChain chain suffisante |
+| Parallélisme massif ou orchestration conditionnelle complexe | ⚠️ LangGraph ou Temporal |
+| Workflow métier avec mémoire partagée entre sessions | ✅ CrewAI + memory |
+| Prototype rapide < 1 jour | ✅ CrewAI (API haut niveau) |
+| Budget API serré, chaque token compte | ⚠️ Surveiller `usage_metrics`, limiter `max_iter` |
 
-## Workflow
+---
 
-1. **Installation et setup du projet**
-   - Installer les dépendances : `pip install crewai==0.80.0 crewai-tools==0.17.0`
-   - Structure recommandée du projet :
-     ```
-     my_crew/
-     ├── main.py
-     ├── crew.py
-     ├── agents.py
-     ├── tasks.py
-     ├── tools/
-     │   └── custom_tool.py
-     └── .env  # OPENAI_API_KEY, SERPER_API_KEY
-     ```
-   - Configurer les variables d'environnement (`OPENAI_API_KEY`, `OPENAI_MODEL_NAME`)
+## Workflow en étapes
 
-2. **Définition des agents**
-   - Chaque agent possède : `role` (titre), `goal` (objectif précis), `backstory` (contexte narratif qui influe sur le comportement)
-   - Paramètres avancés : `llm` (modèle LLM), `tools` (liste d'outils), `allow_delegation` (peut déléguer à d'autres agents), `verbose` (logging détaillé), `max_iter` (nombre max d'itérations), `memory` (activer la mémoire)
-   - Piège courant : un `backstory` trop vague produit des résultats génériques — soyez précis et donnez un contexte métier réaliste
+### 1. Installation et structure du projet
 
-3. **Création des outils custom**
-   - Méthode recommandée avec `@tool` decorator :
-     ```python
-     from crewai.tools import tool
+```bash
+pip install crewai==0.100.0 crewai-tools==0.20.0
+# Avec CLI officielle (recommandé pour nouveaux projets)
+pip install crewai[tools]
+crewai create crew mon_projet
+```
 
-     @tool("Outil de recherche web")
-     def search_web(query: str) -> str:
-         """Effectue une recherche web et retourne les résultats."""
-         # implémentation
-         return results
-     ```
-   - Méthode classe avec `BaseTool` pour plus de contrôle (validation Pydantic, gestion d'erreurs)
-   - Outils intégrés disponibles : `SerperDevTool`, `ScrapeWebsiteTool`, `FileReadTool`, `CSVSearchTool`, `PDFSearchTool`
+Structure recommandée :
+```
+mon_projet/
+├── src/mon_projet/
+│   ├── crew.py          # définition du Crew principal
+│   ├── agents.py        # factory d'agents
+│   ├── tasks.py         # définition des tâches
+│   └── tools/
+│       └── custom_tool.py
+├── .env                 # OPENAI_API_KEY, SERPER_API_KEY
+├── pyproject.toml
+└── README.md
+```
 
-4. **Définition des tâches (Task)**
-   - Paramètres clés : `description` (ce que l'agent doit faire, très détaillé), `expected_output` (format exact attendu), `agent` (agent assigné), `context` (liste de tâches dont dépend cette tâche)
-   - Le champ `context` crée des dépendances : la tâche attend la completion des tâches listées
-   - Utiliser `output_file` pour sauvegarder le résultat dans un fichier
-   - `output_json` / `output_pydantic` pour forcer un format de sortie structuré
+Variables `.env` minimum :
+```
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL_NAME=gpt-4o
+SERPER_API_KEY=...        # si SerperDevTool
+```
 
-5. **Configuration du Crew**
-   - `process=Process.sequential` : tâches exécutées dans l'ordre (défaut, le plus simple)
-   - `process=Process.hierarchical` : un manager LLM orchestre et délègue dynamiquement (nécessite `manager_llm`)
-   - Paramètres : `verbose=True` pour le debug, `max_rpm` pour limiter les appels API, `share_crew=False`
+---
 
-6. **Gestion de la mémoire**
-   - Activer avec `memory=True` sur le Crew (utilise ChromaDB par défaut)
-   - Types : `short_term_memory` (contexte de session), `long_term_memory` (base de données persistante), `entity_memory` (extraction d'entités)
-   - Configurer l'embedder : `embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}}`
-   - La mémoire améliore la cohérence sur des runs longs mais augmente les coûts
+### 2. Définition des agents
 
-7. **Callbacks et monitoring**
-   - `step_callback` : appelé après chaque action d'un agent (logging, UI updates)
-   - `task_callback` : appelé après chaque tâche complétée
-   - Intégration avec Langfuse ou Langsmith via les callbacks pour le tracing
-   - Formater les outputs avec des templates Pydantic pour une meilleure observabilité
+Chaque agent = `role` + `goal` + `backstory` (les trois piliers du comportement).
 
-8. **Exécution et debug**
-   - Lancement : `result = crew.kickoff(inputs={"topic": "IA générative", "year": "2025"})`
-   - Variables d'input injectées dans les descriptions avec `{variable_name}`
-   - Lancement asynchrone : `await crew.kickoff_async(inputs=...)`
-   - Lancement sur une liste : `crew.kickoff_for_each(inputs=[{...}, {...}])`
-   - Debug : activer `verbose=2`, vérifier les logs d'itération, inspecter `task.output`
+```python
+from crewai import Agent
 
-9. **Patterns avancés**
-   - **Hierarchical crew** : manager_llm délègue dynamiquement aux agents selon la tâche
-   - **Crew pipelines** : `Pipeline(stages=[crew1, crew2])` pour chaîner plusieurs crews
-   - **Conditional tasks** : utiliser des callbacks et des conditions dans les descriptions
-   - **Async execution** : `kickoff_async` avec `asyncio.gather` pour parallélisme
-   - **Crew comme outil** : un Crew peut être encapsulé comme outil d'un agent parent
+researcher = Agent(
+    role="Analyste Financier Senior",
+    goal="Extraire les indicateurs clés de {company} à partir de rapports publics",
+    backstory=(
+        "Vous êtes analyste financier avec 12 ans d'expérience chez un cabinet de conseil Tier-1. "
+        "Expert en lecture de bilans IFRS, vous détectez les signaux faibles que d'autres ignorent. "
+        "Vous citez toujours vos sources avec l'URL et la date."
+    ),
+    llm="gpt-4o",
+    tools=[search_tool, scrape_tool],
+    allow_delegation=False,   # évite les délégations involontaires en sequential
+    max_iter=5,               # stoppe les boucles runaway
+    verbose=True,
+)
+```
 
-10. **Déploiement en production**
-    - **CrewAI+** : plateforme hébergée avec monitoring intégré
-    - Encapsuler dans une API FastAPI : `@app.post("/run") async def run_crew(request: CrewRequest)`
-    - Scheduling avec Celery ou APScheduler pour l'exécution périodique
-    - Cost tracking : surveiller `usage_metrics` sur chaque agent après l'exécution
-    - Rate limiting : `max_rpm=10` sur le Crew pour éviter les erreurs 429
+**Paramètres avancés utiles :**
 
-## Exemples de code
+| Paramètre | Valeur par défaut | Usage |
+|-----------|------------------|-------|
+| `max_iter` | 25 | Limiter en production (5–10) |
+| `max_rpm` | None | Throttle appels API de cet agent |
+| `allow_delegation` | False | Activer seulement en process hiérarchique |
+| `memory` | False | Activer pour cohérence longue session |
+| `cache` | True | Désactiver si les outils doivent toujours être rappelés |
+| `step_callback` | None | Passer une fonction pour logger chaque action |
 
-### Crew de 3 agents : Recherche, Rédaction et Révision d'un article de blog
+---
+
+### 3. Création des outils custom
+
+**Option A — decorator `@tool` (simple, rapide) :**
+
+```python
+from crewai.tools import tool
+
+@tool("Calculateur de marge brute")
+def calculate_margin(revenue: float, cost: float) -> str:
+    """Calcule la marge brute en pourcentage à partir du CA et du coût."""
+    if revenue == 0:
+        return "Erreur : CA ne peut pas être zéro."
+    margin = ((revenue - cost) / revenue) * 100
+    return f"Marge brute : {margin:.2f}%"
+```
+
+**Option B — classe `BaseTool` (validation Pydantic, gestion d'erreurs robuste) :**
+
+```python
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class SQLQueryInput(BaseModel):
+    query: str = Field(description="Requête SQL SELECT à exécuter")
+
+class SQLTool(BaseTool):
+    name: str = "Outil SQL"
+    description: str = "Exécute une requête SQL en lecture seule sur la base de données."
+    args_schema: type[BaseModel] = SQLQueryInput
+
+    def _run(self, query: str) -> str:
+        # connexion + exécution
+        return results_as_str
+```
+
+**Outils intégrés les plus utiles :**
+- `SerperDevTool` — recherche Google
+- `ScrapeWebsiteTool` / `SeleniumScrapingTool` — scraping
+- `FileReadTool` / `FileWriterTool` — I/O fichiers
+- `CSVSearchTool` / `PDFSearchTool` — RAG sur fichiers
+- `CodeInterpreterTool` — exécution Python sandboxée
+
+---
+
+### 4. Définition des tâches
+
+```python
+from crewai import Task
+from pydantic import BaseModel
+
+class AnalysisOutput(BaseModel):
+    company: str
+    revenue_2024: float
+    growth_rate: float
+    key_risks: list[str]
+
+analysis_task = Task(
+    description=(
+        "Analysez les données financières publiques de {company} pour l'exercice 2024. "
+        "Cherchez les rapports annuels, communiqués de presse et données Boursorama. "
+        "Identifiez le CA, la croissance YoY, et les 3 principaux risques."
+    ),
+    expected_output=(
+        "Un rapport JSON structuré avec : company, revenue_2024 (en M€), "
+        "growth_rate (en %), key_risks (liste de 3 phrases max chacune)."
+    ),
+    agent=researcher,
+    output_pydantic=AnalysisOutput,   # force la structure de sortie
+    output_file="analysis.json",
+)
+```
+
+**Chaîner les tâches avec `context` :**
+
+```python
+synthesis_task = Task(
+    description="Rédigez un executive summary à partir des analyses fournies pour {company}.",
+    expected_output="Executive summary de 300 mots max en français.",
+    agent=writer,
+    context=[analysis_task],    # attend la complétion de analysis_task
+)
+```
+
+---
+
+### 5. Configuration et exécution du Crew
+
+```python
+from crewai import Crew, Process
+
+# Process séquentiel (défaut, déterministe)
+crew = Crew(
+    agents=[researcher, writer, reviewer],
+    tasks=[analysis_task, writing_task, review_task],
+    process=Process.sequential,
+    verbose=True,
+    memory=True,
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}},
+    max_rpm=20,           # limite globale appels/minute
+)
+
+# Exécution standard
+result = crew.kickoff(inputs={"company": "Société Générale", "year": "2024"})
+print(result.raw)
+print(f"Tokens : {crew.usage_metrics}")
+
+# Exécution sur une liste (batch)
+results = crew.kickoff_for_each(inputs=[
+    {"company": "BNP Paribas"},
+    {"company": "Crédit Agricole"},
+])
+
+# Exécution asynchrone
+import asyncio
+result = asyncio.run(crew.kickoff_async(inputs={"company": "AXA"}))
+```
+
+**Process hiérarchique — quand le manager délègue dynamiquement :**
+
+```python
+hierarchical_crew = Crew(
+    agents=[analyst, researcher, writer],  # sans agent dans les Task
+    tasks=[task1, task2, task3],           # le manager choisit qui fait quoi
+    process=Process.hierarchical,
+    manager_llm="gpt-4o",   # ou manager_agent=Agent(...)
+    verbose=True,
+)
+```
+
+---
+
+### 6. Crew Pipelines (chaîner plusieurs crews)
+
+```python
+from crewai import Pipeline
+
+pipeline = Pipeline(
+    stages=[
+        data_collection_crew,   # output → input du suivant automatiquement
+        analysis_crew,
+        reporting_crew,
+    ]
+)
+result = pipeline.kickoff(inputs={"topic": "march IA 2026"})
+```
+
+---
+
+### 7. Monitoring et callbacks
+
+```python
+from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+
+def on_step(step_output):
+    print(f"[STEP] {step_output}")
+
+def on_task(task_output):
+    print(f"[TASK DONE] {task_output.description[:60]}")
+
+crew = Crew(
+    ...,
+    step_callback=on_step,
+    task_callback=on_task,
+)
+```
+
+**Intégration Langfuse (tracing en production) :**
+
+```bash
+pip install langfuse
+```
+
+```python
+import os
+os.environ["LANGFUSE_SECRET_KEY"] = "..."
+os.environ["LANGFUSE_PUBLIC_KEY"] = "..."
+os.environ["LANGFUSE_HOST"] = "https://cloud.langfuse.com"
+# CrewAI détecte automatiquement Langfuse via OpenTelemetry
+```
+
+---
+
+## Exemple complet : pipeline recherche → rédaction → révision
 
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
-from crewai.tools import tool
 from crewai_tools import SerperDevTool, ScrapeWebsiteTool
-from pydantic import BaseModel
 
-# Configuration
-os.environ["OPENAI_API_KEY"] = "votre-clé"
-os.environ["SERPER_API_KEY"] = "votre-clé-serper"
+os.environ["OPENAI_API_KEY"] = "sk-..."
+os.environ["SERPER_API_KEY"] = "..."
 
-# Outils
 search_tool = SerperDevTool()
 scrape_tool = ScrapeWebsiteTool()
 
-# --- Agents ---
 researcher = Agent(
     role="Chercheur Expert en IA",
     goal="Trouver des informations précises et récentes sur {topic}",
     backstory=(
-        "Vous êtes un chercheur senior spécialisé en intelligence artificielle, "
-        "avec 10 ans d'expérience dans l'analyse de tendances technologiques. "
-        "Vous savez identifier les sources fiables et synthétiser l'information."
+        "Chercheur senior spécialisé en IA avec 10 ans d'expérience. "
+        "Identifie les sources fiables, cite les URLs, synthétise efficacement."
     ),
     tools=[search_tool, scrape_tool],
-    llm="gpt-4o",
-    verbose=True,
-    allow_delegation=False,
-    max_iter=5,
+    llm="gpt-4o", max_iter=5, verbose=True,
 )
 
 writer = Agent(
     role="Rédacteur Technique",
-    goal="Rédiger un article de blog engageant et informatif sur {topic}",
-    backstory=(
-        "Vous êtes un rédacteur technique avec une expertise en IA et une "
-        "capacité à rendre des sujets complexes accessibles. Vous écrivez "
-        "pour un public de développeurs et de professionnels tech."
-    ),
-    llm="gpt-4o",
-    verbose=True,
-    allow_delegation=False,
+    goal="Rédiger un article de blog engageant sur {topic}",
+    backstory="Rédacteur tech ciblant un public de développeurs. Ton clair, exemples concrets.",
+    llm="gpt-4o", max_iter=3, verbose=True,
 )
 
 reviewer = Agent(
-    role="Éditeur et Réviseur",
-    goal="Vérifier la qualité, l'exactitude et la clarté de l'article",
-    backstory=(
-        "Vous êtes un éditeur expérimenté qui vérifie la structure narrative, "
-        "la cohérence technique et l'engagement du lecteur. Vous améliorez "
-        "sans réécrire complètement."
-    ),
-    llm="gpt-4o-mini",
-    verbose=True,
-    allow_delegation=False,
+    role="Éditeur",
+    goal="Vérifier qualité, exactitude et clarté de l'article",
+    backstory="Éditeur expérimenté : structure, cohérence technique, engagement.",
+    llm="gpt-4o-mini", max_iter=3, verbose=True,
 )
 
-# --- Tâches ---
 research_task = Task(
     description=(
-        "Effectuez une recherche approfondie sur {topic}. "
-        "Identifiez les 5 tendances principales, les acteurs clés, "
-        "les chiffres importants et les cas d'usage concrets. "
-        "Citez vos sources avec les URLs."
+        "Recherche approfondie sur {topic}. "
+        "5 tendances, acteurs clés, chiffres, cas d'usage. Cite les URLs."
     ),
-    expected_output=(
-        "Un rapport de recherche structuré avec : "
-        "1) Résumé exécutif (200 mots), "
-        "2) 5 tendances clés avec exemples, "
-        "3) Liste des acteurs principaux, "
-        "4) Données chiffrées pertinentes, "
-        "5) URLs des sources."
-    ),
-    agent=researcher,
-    output_file="research_report.md",
+    expected_output="Rapport structuré : résumé (200 mots), 5 tendances, acteurs, chiffres, URLs.",
+    agent=researcher, output_file="research.md",
 )
 
 writing_task = Task(
-    description=(
-        "Rédigez un article de blog de 800-1000 mots sur {topic} "
-        "basé sur les recherches fournies. "
-        "Structure : titre accrocheur, introduction, 3-4 sections avec H2, "
-        "conclusion avec call-to-action. Ton : professionnel mais accessible."
-    ),
-    expected_output=(
-        "Un article de blog complet en Markdown avec : "
-        "titre H1, introduction percutante, sections H2 développées, "
-        "exemples concrets, conclusion et CTA. Entre 800 et 1000 mots."
-    ),
-    agent=writer,
-    context=[research_task],  # dépend de la recherche
-    output_file="draft_article.md",
+    description="Article de blog 800-1000 mots sur {topic}. Titre, intro, 3-4 H2, conclusion CTA.",
+    expected_output="Article Markdown complet entre 800 et 1000 mots.",
+    agent=writer, context=[research_task], output_file="draft.md",
 )
 
 review_task = Task(
-    description=(
-        "Révisez l'article de blog rédigé. Vérifiez : "
-        "1) Exactitude technique, 2) Clarté et fluidité, "
-        "3) Structure et cohérence, 4) SEO (mots-clés présents). "
-        "Proposez des améliorations et produisez la version finale."
-    ),
-    expected_output=(
-        "La version finale de l'article avec les corrections appliquées, "
-        "suivi d'un rapport de révision listant les changements effectués."
-    ),
-    agent=reviewer,
-    context=[writing_task],
-    output_file="final_article.md",
+    description="Révise l'article : exactitude, clarté, SEO. Produis la version finale.",
+    expected_output="Version finale Markdown + rapport de révision.",
+    agent=reviewer, context=[writing_task], output_file="final.md",
 )
 
-# --- Crew ---
 crew = Crew(
     agents=[researcher, writer, reviewer],
     tasks=[research_task, writing_task, review_task],
     process=Process.sequential,
-    verbose=True,
-    memory=True,
-    embedder={
-        "provider": "openai",
-        "config": {"model": "text-embedding-3-small"},
-    },
+    verbose=True, memory=True, max_rpm=20,
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}},
 )
 
-# --- Exécution ---
 if __name__ == "__main__":
-    result = crew.kickoff(inputs={"topic": "Les agents IA en 2025"})
-    print("=== RÉSULTAT FINAL ===")
+    result = crew.kickoff(inputs={"topic": "Agents IA en 2026"})
     print(result.raw)
-    print(f"\nTokens utilisés : {crew.usage_metrics}")
+    print(f"Tokens : {crew.usage_metrics}")
 ```
 
-### Crew hiérarchique avec manager LLM
+---
 
-```python
-from crewai import Agent, Task, Crew, Process
+## Garde-fous, anti-patterns et pièges
 
-manager_agent = Agent(
-    role="Chef de Projet IA",
-    goal="Orchestrer l'équipe pour livrer {deliverable} dans les délais",
-    backstory="Manager expérimenté qui délègue efficacement selon les compétences.",
-    llm="gpt-4o",
-    allow_delegation=True,
-)
+### Anti-patterns fréquents
 
-# Agents spécialisés...
-data_analyst = Agent(role="Analyste Data", goal="...", backstory="...", llm="gpt-4o-mini")
-strategist = Agent(role="Stratège", goal="...", backstory="...", llm="gpt-4o-mini")
+| Anti-pattern | Problème | Correction |
+|---|---|---|
+| `backstory` vague ("Tu es un expert") | Résultats génériques | Contexte métier précis, spécialité, style attendu |
+| `max_iter` non défini | Boucles infinies, budget explosé | Toujours fixer 5–10 en production |
+| `allow_delegation=True` en process sequential | Délégations involontaires qui bloquent | N'activer qu'en hiérarchique avec manager |
+| Tâches avec `context` circulaire (A → B → A) | Deadlock silencieux | Vérifier le DAG des dépendances |
+| Trop d'agents pour une tâche simple | Coût × latence × hallucinations | 2–3 agents = sweet spot pour 80% des cas |
+| `output_pydantic` sans `expected_output` détaillé | L'agent ne sait pas le format attendu | Décrire le format dans `expected_output` + schema Pydantic |
+| Memory activée sans nettoyage | ChromaDB grossit indéfiniment | `crew.reset_memories()` entre les runs de prod |
+| Outils sans gestion d'erreur | Un 404 plante tout le crew | Wrapper try/except dans `_run()`, retourner un message d'erreur |
 
-hierarchical_crew = Crew(
-    agents=[data_analyst, strategist],
-    tasks=[...],  # tâches sans agent assigné — le manager délègue
-    process=Process.hierarchical,
-    manager_agent=manager_agent,  # ou manager_llm="gpt-4o"
-    verbose=True,
-)
+### Pièges de déploiement
 
-result = hierarchical_crew.kickoff(inputs={"deliverable": "rapport stratégique"})
-```
+- **Variables d'environnement manquantes** : CrewAI charge `.env` via `python-dotenv` — vérifier le cwd ou passer `load_dotenv()` explicitement.
+- **Versions incompatibles** : `crewai` et `crewai-tools` doivent être compatibles — toujours épingler ensemble dans `pyproject.toml`.
+- **ChromaDB en multi-process** : la mémoire partagée ChromaDB n'est pas thread-safe. En production, utiliser `memory=False` ou un backend externe (Qdrant, Pinecone).
+- **Rate limits OpenAI** : `max_rpm` sur le Crew est global mais ne gère pas les retries exponentiels — ajouter un wrapper retry avec `tenacity` si besoin.
+- **Coût non anticipé** : `gpt-4o` sur un crew de 5 agents × 10 itérations = des centaines de milliers de tokens. Utiliser `gpt-4o-mini` pour les agents non-critiques.
 
-## Règles
+---
 
-1. **Toujours tester avec des agents simples d'abord** — Commencez avec 2 agents et `verbose=True` avant d'ajouter de la complexité. Débuggez chaque agent individuellement avant d'assembler le Crew.
+## Bonnes pratiques 2026
 
-2. **Rédiger des backstories précises et contextuelles** — La qualité du `backstory` est le principal levier de performance. Un backstory vague = résultats génériques. Donnez un contexte métier réel, des années d'expérience, des spécialités précises.
-
-3. **Gérer les coûts avec `max_rpm` et `max_iter`** — En production, toujours définir `max_rpm` (requests per minute) et `max_iter` sur les agents pour éviter les boucles infinies et les dépassements de budget API.
-
-4. **Utiliser `output_pydantic` pour les sorties structurées** — Quand l'output doit être parsé programmatiquement, définir un modèle Pydantic comme `output_pydantic=MonModele` sur la tâche pour garantir la structure.
-
-5. **Préférer `Process.sequential` pour débuter** — Le process hiérarchique est puissant mais imprévisible. Utilisez `sequential` pour les workflows déterministes, `hierarchical` uniquement quand la délégation dynamique est vraiment nécessaire.
+1. **Tester chaque agent seul** avant l'assemblage : `agent.execute_task(task)` pour valider le comportement isolément.
+2. **Séparer config et logique** : agents/tasks dans des fichiers YAML (supporté nativement via `crewai create`) pour une gestion propre des prompts.
+3. **Tracer en production** : Langfuse ou AgentOps pour capturer chaque step, token et latence — indispensable pour optimiser les coûts.
+4. **Pinning des versions** : `crewai==0.100.0` dans `pyproject.toml` — l'API change fréquemment entre minor versions.
+5. **`output_pydantic` systématique** pour les outputs consommés programmatiquement — évite le parsing fragile du texte libre.
+6. **Process `sequential` par défaut** — réserver `hierarchical` aux cas où la délégation dynamique apporte une vraie valeur (tâches imprévisibles, volume variable).
+7. **Monitorer `usage_metrics`** après chaque run et logguer dans un CSV ou DB pour tracker la dérive des coûts.

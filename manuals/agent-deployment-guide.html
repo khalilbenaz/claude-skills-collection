@@ -97,102 +97,214 @@ cp -r claude-skills-collection/skills/agent-deployment-guide ~/.claude/skills/</
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent Deployment Guide</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill lorsque l'utilisateur souhaite passer d'un agent fonctionnel en local à un déploiement production fiable et scalable. Couvre tous les patterns de déploiement : API synchrone, worker asynchrone, webhook, tâche planifiée, ou streaming temps réel. Applicable sur AWS, Azure, GCP, ou infrastructure on-premise.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Architecture de déploiement</strong> — Choisir le pattern adapté au use case :</li>
+<p>Passage d'un agent fonctionnel en local vers un déploiement production fiable et scalable. Couvre API synchrone, worker asynchrone, webhook, tâche planifiée, streaming temps réel. Applicable sur AWS, Azure, GCP, ou infrastructure on-premise.</p>
+<hr>
+<h2>Étape 1 — Choisir le pattern de déploiement</h2>
+<table><thead><tr><th>Pattern</th><th>Quand l'utiliser</th><th>Latence max</th><th>Exemple</th></tr></thead><tbody><tr><td>API synchrone (FastAPI)</td><td>Usage interactif, réponse &lt; 30s</td><td>29s</td><td>Chatbot, Q&amp;A</td></tr><tr><td>Worker async (Celery/Bull)</td><td>Tâches longues, batch</td><td>Illimité</td><td>Analyse de docs, rapport</td></tr><tr><td>Webhook handler</td><td>Événements externes (GitHub, Slack)</td><td>3s (ACK)</td><td>Bot Slack, CI/CD agent</td></tr><tr><td>Scheduled agent (cron)</td><td>Récurrent, pas de déclencheur externe</td><td>N/A</td><td>Rapport hebdo, cleanup</td></tr><tr><td>Streaming SSE/WebSocket</td><td>UX conversationnelle temps réel</td><td>&lt; 1s TTFB</td><td>Assistant interactif</td></tr></tbody></table>
+<p><strong>Critère décisif</strong> : si la réponse prend &gt; 30s → worker async + polling/webhook. Sinon → API synchrone.</p>
+<hr>
+<h2>Étape 2 — Containeriser l'agent</h2>
+<pre><code class="lang-dockerfile"># Dockerfile multi-stage (léger et sécurisé)
+FROM python:3.12-slim AS builder
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+FROM python:3.12-slim
+WORKDIR /app
+COPY --from=builder /install /usr/local
+COPY . .
+# Pas de root en prod
+RUN useradd -m appuser &amp;&amp; chown -R appuser /app
+USER appuser
+CMD [&quot;uvicorn&quot;, &quot;main:app&quot;, &quot;--host&quot;, &quot;0.0.0.0&quot;, &quot;--port&quot;, &quot;8080&quot;, &quot;--workers&quot;, &quot;4&quot;]</code></pre>
+<p>Points critiques :</p>
 <ul>
-<li>API synchrone (FastAPI) : réponses &lt; 30s, usage interactif</li>
-<li>Worker async (Celery/Bull) : tâches longues, &gt; 30s</li>
-<li>Webhook handler : déclenché par événements externes (GitHub, Slack, Stripe)</li>
-<li>Scheduled agent (cron) : rapports périodiques, maintenance automatisée</li>
-<li>Real-time streaming : UI conversationnelle, SSE ou WebSocket</li>
+<li>Tag Docker <strong>immutable</strong> (<code>image:v1.2.3</code>), jamais <code>latest</code> en prod</li>
+<li>Secrets → volume/secret manager, jamais <code>COPY .env</code> dans l'image</li>
+<li>Model weights → volume monté ou téléchargement S3 au démarrage, pas dans l'image</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Containerisation</strong> — Créer un <code>Dockerfile</code> optimisé pour l'agent :</li>
-</ol>
-<p>   ```dockerfile    FROM python:3.11-slim    WORKDIR /app    COPY requirements.txt .    RUN pip install --no-cache-dir -r requirements.txt    COPY . .    CMD [&quot;uvicorn&quot;, &quot;main:app&quot;, &quot;--host&quot;, &quot;0.0.0.0&quot;, &quot;--port&quot;, &quot;8080&quot;]    ```    Gérer les model weights séparément (volume ou S3), ne jamais inclure de secrets dans l'image.</p>
-<ol>
-<li><strong>API wrapping</strong> — Encapsuler l'agent dans une API robuste :</li>
+<hr>
+<h2>Étape 3 — Wrapper API robuste</h2>
+<pre><code class="lang-python"># main.py — FastAPI avec health checks et streaming
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+import asyncio, uuid, os
+
+app = FastAPI()
+
+class AgentRequest(BaseModel):
+    message: str = Field(..., max_length=4000)
+    conversation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+@app.get(&quot;/health&quot;)   # liveness probe
+async def health(): return {&quot;status&quot;: &quot;ok&quot;}
+
+@app.get(&quot;/ready&quot;)    # readiness probe
+async def ready():
+    # Vérifier dépendances critiques
+    try:
+        await check_llm_api()  # ping minimal
+        await check_redis()
+    except Exception as e:
+        raise HTTPException(503, detail=str(e))
+    return {&quot;status&quot;: &quot;ready&quot;}
+
+@app.post(&quot;/run&quot;)
+async def run_agent(req: AgentRequest):
+    async def stream():
+        async for chunk in agent.run_stream(req.message, req.conversation_id):
+            yield f&quot;data: {chunk}\n\n&quot;
+    return StreamingResponse(stream(), media_type=&quot;text/event-stream&quot;)</code></pre>
+<hr>
+<h2>Étape 4 — State management externalisé (obligatoire)</h2>
+<p>Toute l'état doit vivre <strong>hors du processus</strong> pour permettre le scaling horizontal.</p>
+<pre><code class="lang-python">import redis.asyncio as redis
+import json
+
+r = redis.from_url(os.environ[&quot;REDIS_URL&quot;])
+
+async def save_thread(conversation_id: str, messages: list):
+    await r.setex(
+        f&quot;thread:{conversation_id}&quot;,
+        86400,  # TTL 24h
+        json.dumps(messages)
+    )
+
+async def load_thread(conversation_id: str) -&gt; list:
+    data = await r.get(f&quot;thread:{conversation_id}&quot;)
+    return json.loads(data) if data else []</code></pre>
 <ul>
-<li>Input validation avec Pydantic (schéma strict, limites de taille)</li>
-<li>Gestion async native (<code>async def</code>, streaming avec <code>StreamingResponse</code>)</li>
-<li>Endpoint de santé <code>/health</code> et <code>/ready</code></li>
-<li>Timeout configurables par type de requête</li>
-<li>Idempotency keys pour éviter les doubles exécutions</li>
+<li><strong>Redis</strong> : sessions courtes, cache tool results (TTL court)</li>
+<li><strong>PostgreSQL</strong> : historique long terme, audit trail, facturation</li>
+<li><strong>Ne jamais</strong> stocker l'état dans une variable globale ou en mémoire d'instance</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Queue et async processing</strong> — Pour les tâches longues :</li>
+<hr>
+<h2>Étape 5 — Worker async pour tâches longues</h2>
+<pre><code class="lang-python"># tasks.py — Celery worker
+from celery import Celery
+app_celery = Celery(&quot;agent&quot;, broker=os.environ[&quot;REDIS_URL&quot;])
+
+@app_celery.task(bind=True, max_retries=3, default_retry_delay=60)
+def run_long_agent(self, task_id: str, payload: dict):
+    try:
+        result = agent.run(payload)
+        save_result(task_id, result)
+    except Exception as exc:
+        self.retry(exc=exc)
+
+# Endpoint de soumission
+@app.post(&quot;/submit&quot;)
+async def submit(req: AgentRequest):
+    task_id = str(uuid.uuid4())
+    run_long_agent.delay(task_id, req.dict())
+    return {&quot;task_id&quot;: task_id, &quot;status_url&quot;: f&quot;/status/{task_id}&quot;}
+
+@app.get(&quot;/status/{task_id}&quot;)
+async def status(task_id: str):
+    result = get_result(task_id)  # Redis ou DB
+    return result or {&quot;status&quot;: &quot;pending&quot;}</code></pre>
+<hr>
+<h2>Étape 6 — Scaling et résilience</h2>
+<p><strong>Auto-scaling Kubernetes (HPA) :</strong></p>
+<pre><code class="lang-yaml">apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: agent-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agent
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60</code></pre>
+<p><strong>Circuit breaker avec tenacity :</strong></p>
+<pre><code class="lang-python">from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import httpx
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type(httpx.HTTPError)
+)
+async def call_llm(prompt: str) -&gt; str:
+    async with httpx.AsyncClient(timeout=25.0) as client:
+        response = await client.post(LLM_ENDPOINT, json={&quot;prompt&quot;: prompt})
+        response.raise_for_status()
+        return response.json()[&quot;text&quot;]</code></pre>
+<hr>
+<h2>Étape 7 — Secrets et configuration</h2>
+<pre><code class="lang-bash"># AWS Secrets Manager — récupération au démarrage
+aws secretsmanager get-secret-value \
+  --secret-id prod/agent/anthropic-key \
+  --query SecretString --output text
+
+# Kubernetes Secret (injecter en env, pas en fichier)
+kubectl create secret generic agent-secrets \
+  --from-literal=ANTHROPIC_API_KEY=sk-...
+
+# Dans le pod spec
+envFrom:
+  - secretRef:
+      name: agent-secrets</code></pre>
+<p>Règle : <code>.env</code> uniquement en dev local. En prod → secret manager ou Kubernetes Secrets.</p>
+<hr>
+<h2>Étape 8 — Rollback et canary release</h2>
+<pre><code class="lang-bash"># Rollback immédiat Kubernetes
+kubectl rollout undo deployment/agent
+kubectl rollout status deployment/agent
+
+# Canary : 10% vers v2, 90% vers v1 (nginx ingress)
+# Annoter l'ingress canary :
+kubectl annotate ingress agent-canary \
+  nginx.ingress.kubernetes.io/canary=&quot;true&quot; \
+  nginx.ingress.kubernetes.io/canary-weight=&quot;10&quot;</code></pre>
+<hr>
+<h2>Étape 9 — Observabilité minimale obligatoire (dès J1)</h2>
+<pre><code class="lang-python"># Prometheus metrics — instrumenter dès le début
+from prometheus_client import Counter, Histogram, generate_latest
+import time
+
+REQUEST_COUNT = Counter(&quot;agent_requests_total&quot;, &quot;Total requests&quot;, [&quot;status&quot;])
+REQUEST_LATENCY = Histogram(&quot;agent_request_duration_seconds&quot;, &quot;Latency&quot;)
+LLM_COST = Counter(&quot;agent_llm_tokens_total&quot;, &quot;Tokens used&quot;, [&quot;model&quot;])
+
+@app.middleware(&quot;http&quot;)
+async def metrics_middleware(request, call_next):
+    start = time.time()
+    response = await call_next(request)
+    REQUEST_LATENCY.observe(time.time() - start)
+    REQUEST_COUNT.labels(status=response.status_code).inc()
+    return response
+
+@app.get(&quot;/metrics&quot;)
+async def metrics():
+    return Response(generate_latest(), media_type=&quot;text/plain&quot;)</code></pre>
+<p>Métriques indispensables : latence p50/p95/p99, taux d'erreur, tokens LLM consommés, coût/requête, queue depth.</p>
+<hr>
+<h2>Garde-fous — Anti-patterns et pièges courants</h2>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Remède</th></tr></thead><tbody><tr><td>État en mémoire d'instance</td><td>Erreurs aléatoires après scaling</td><td>Externaliser tout dans Redis/DB</td></tr><tr><td>Tag <code>latest</code> en prod</td><td>Rollback impossible</td><td>Tags immutables <code>v1.2.3</code></td></tr><tr><td>Timeout LLM trop long</td><td>Workers bloqués, queue saturée</td><td>Timeout 25-28s max, retry avec backoff</td></tr><tr><td>Secrets dans l'image Docker</td><td>Fuite si image partagée</td><td>Secret manager + injection runtime</td></tr><tr><td>Cold start Lambda/Cloud Run sans warmup</td><td>Latence p99 catastrophique</td><td>Min instances = 1, ou warmup ping</td></tr><tr><td>Pas de readiness probe</td><td>Traffic vers pods non-prêts</td><td><code>/ready</code> vérifie TOUTES les dépendances</td></tr><tr><td>Scaling sur CPU uniquement</td><td>Queue déborde, CPU stable</td><td>Ajouter métrique custom (queue depth)</td></tr><tr><td>Réponse synchrone &gt; 30s</td><td>Timeouts client, retries en cascade</td><td>Passer en worker async + polling</td></tr><tr><td>Rate limit LLM API non géré</td><td><code>429</code> en cascade, panne totale</td><td>Retry exponentiel + circuit breaker</td></tr></tbody></table>
+<hr>
+<h2>Checklist de mise en production</h2>
 <ul>
-<li>Celery + Redis/RabbitMQ (Python)</li>
-<li>Bull + Redis (Node.js)</li>
-<li>Azure Service Bus / AWS SQS / GCP Pub/Sub (cloud-native)</li>
-<li>Pattern : soumettre la tâche → retourner un <code>task_id</code> → polling ou webhook de complétion</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Scaling</strong> — Configurer la scalabilité :</li>
-<ul>
-<li>Horizontal scaling : plusieurs instances stateless, load balancer (nginx, ALB, Traefik)</li>
-<li>Auto-scaling : HPA Kubernetes basé CPU/mémoire ou métriques custom (queue depth)</li>
-<li>Connection pooling vers les APIs LLM (httpx avec limites, retry exponentiel)</li>
-<li>Rate limiting par utilisateur en amont (API Gateway, nginx)</li>
-</ul>
-</ol>
-<ol>
-<li><strong>State management en production</strong> — Persister l'état de l'agent :</li>
-<ul>
-<li>Redis pour sessions courtes et thread cache (TTL 24h)</li>
-<li>PostgreSQL pour historique de conversations et audit trail</li>
-<li>Pattern : <code>conversation_id</code> unique par session, stockage structuré des messages</li>
-<li>Ne jamais stocker l'état en mémoire d'instance (incompatible avec scaling horizontal)</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Health checks et readiness</strong> — Implémenter des probes robustes :</li>
-<ul>
-<li><code>/health</code> (liveness) : répond 200 si le processus est vivant</li>
-<li><code>/ready</code> (readiness) : vérifie connexion LLM API, Redis, base de données</li>
-<li>Graceful shutdown : terminer les requêtes en cours avant d'arrêter (SIGTERM handler)</li>
-<li>Timeouts Kubernetes : <code>initialDelaySeconds</code>, <code>periodSeconds</code>, <code>failureThreshold</code></li>
-</ul>
-</ol>
-<ol>
-<li><strong>Environnements</strong> — Gérer le cycle de vie dev → staging → prod :</li>
-<ul>
-<li>Feature flags (LaunchDarkly, Unleash) pour activer les nouveaux comportements progressivement</li>
-<li>A/B deployment : router X% du trafic vers la nouvelle version</li>
-<li>Canary release : déploiement progressif avec rollback automatique sur erreur</li>
-<li>Config par environnement via variables d'environnement, jamais en dur dans le code</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Secrets et config</strong> — Gestion sécurisée des credentials :</li>
-<ul>
-<li>AWS Secrets Manager / Azure Key Vault / GCP Secret Manager pour les clés API</li>
-<li>Rotation automatique des clés LLM (stratégie multi-clé avec failover)</li>
-<li><code>.env</code> uniquement en dev local, jamais en production</li>
-<li>Injecter via Kubernetes Secrets ou Docker secrets, pas en variable d'environnement plain text</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Rollback et recovery</strong> — Assurer la résilience :</li>
-<ul>
-<li>Versioning des déploiements (tags Docker immutables, pas <code>latest</code>)</li>
-<li>Rollback instantané : <code>kubectl rollout undo</code> ou équivalent cloud</li>
-<li>Circuit breaker (tenacity, pybreaker) : couper le trafic si le LLM API échoue</li>
-<li>Fallback behavior : réponse dégradée lisible si l'agent est indisponible</li>
-</ul>
-</ol>
-<h2>Règles</h2>
-<ul>
-<li>Fournis des exemples de code et configuration concrets adaptés au cloud provider de l'utilisateur (AWS, Azure, GCP).</li>
-<li>Priorise la sécurité et la fiabilité : ne jamais exposer de secrets, toujours implémenter des timeouts.</li>
-<li>Documente les pièges courants : cold starts, state en mémoire, timeouts LLM API, coûts de scaling.</li>
-<li>Impose le stateless design pour toutes les instances : toute l'état doit être externalisé.</li>
-<li>Inclure systématiquement les métriques de base (latence, erreurs, coût) dès le déploiement initial.</li>
+<li>[ ] Image Docker avec tag immutable, multi-stage, non-root</li>
+<li>[ ] Secrets via secret manager (pas en dur, pas dans l'image)</li>
+<li>[ ] <code>/health</code> et <code>/ready</code> implémentés et configurés dans Kubernetes/cloud</li>
+<li>[ ] State 100% externalisé (Redis + DB)</li>
+<li>[ ] Retry + circuit breaker sur les appels LLM API</li>
+<li>[ ] HPA configuré avec métriques pertinentes</li>
+<li>[ ] Métriques Prometheus exposées + dashboard Grafana</li>
+<li>[ ] Rollback testé en staging avant chaque mise en prod</li>
+<li>[ ] Canary ou blue/green pour les releases majeures</li>
+<li>[ ] Alertes sur taux d'erreur &gt; 1% et latence p95 &gt; SLA</li>
 </ul>
 </article>
 </main>

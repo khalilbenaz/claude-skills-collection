@@ -5,207 +5,184 @@ description: Décomposition automatique de tâches complexes en sous-tâches pou
 
 # Agent Task Decomposer
 
-## Quand utiliser ce skill
-Utiliser ce skill lorsqu'une tâche principale est trop vaste ou trop hétérogène pour être confiée à un seul agent. Il s'applique dès que la parallélisation peut accélérer l'exécution, ou lorsque différentes parties d'une tâche requièrent des compétences ou outils distincts. Indispensable avant tout dispatch vers des sous-agents.
+## Quand l'utiliser
+
+Utiliser ce skill quand une tâche est trop vaste ou hétérogène pour un seul agent : longue durée estimée, compétences multiples requises, ou parties indépendantes parallélisables. Indispensable avant tout dispatch vers des sous-agents.
+
+**Seuil pratique** : si la tâche dépasse ~3 min d'exécution ou implique >2 domaines distincts (recherche + code + validation), décomposer.
+
+## Choisir la bonne stratégie
+
+| Stratégie | Quand l'utiliser | Exemple |
+|---|---|---|
+| `sequential` | Chaque étape dépend de la précédente | Pipeline ETL : extract → transform → load |
+| `parallel` | Toutes les parties sont indépendantes | Analyser 10 fichiers log simultanément |
+| `tree` | Décomposition récursive avec agrégation finale | Rapport multi-sections avec résumé global |
+| `dag` | Mix de parallèle et séquentiel, dépendances complexes | Build CI : tests parallèles → package → deploy |
+
+Critère de décision rapide :
+```
+toutes indépendantes → parallel
+chaîne stricte → sequential
+branches qui se rejoignent → tree ou dag
+```
 
 ## Workflow
 
-1. **Analyse de la tâche principale**
-   - Identifier l'objectif final précis : quel livrable, quel format, quelle qualité attendue
-   - Recenser les contraintes : deadline, budget tokens, outils disponibles, données d'entrée
-   - Comprendre le contexte : quelle connaissance préalable est nécessaire, quels sont les risques
-   - Poser les questions de clarification si l'objectif est ambigu avant de décomposer
-   ```python
-   class TaskAnalysis(BaseModel):
-       objective: str
-       expected_output: str
-       constraints: list[str]
-       available_tools: list[str]
-       deadline_seconds: Optional[int]
-       context: dict
-   ```
+### 1. Analyser la tâche principale
 
-2. **Stratégie de décomposition (choisir le bon modèle)**
-   - `sequential` : les sous-tâches s'enchaînent, chacune dépend de la précédente (pipeline)
-   - `parallel` : toutes les sous-tâches sont indépendantes, exécutées simultanément
-   - `tree` : une tâche se décompose récursivement en branches, réunies à la racine
-   - `DAG (Directed Acyclic Graph)` : graphe de dépendances complexe, certaines tâches parallèles, d'autres séquentielles
-   ```python
-   from enum import Enum
+Avant de couper quoi que ce soit, répondre à ces questions :
+- **Livrable attendu** : format exact, critères de qualité, destinataire
+- **Contraintes** : budget tokens, deadline, outils disponibles
+- **Données d'entrée** : quelles informations sont disponibles dès le départ, lesquelles viennent d'autres sous-tâches
+- **Risques** : quelle sous-tâche peut bloquer l'ensemble si elle échoue
 
-   class DecompositionStrategy(Enum):
-       SEQUENTIAL = "sequential"
-       PARALLEL = "parallel"
-       TREE = "tree"
-       DAG = "dag"
+Si l'objectif est ambigu, clarifier d'abord. Une mauvaise décomposition coûte plus cher qu'une question posée.
 
-   def choose_strategy(task: TaskAnalysis) -> DecompositionStrategy:
-       if all_independent(task.subtasks):
-           return DecompositionStrategy.PARALLEL
-       elif has_complex_dependencies(task.subtasks):
-           return DecompositionStrategy.DAG
-       else:
-           return DecompositionStrategy.SEQUENTIAL
-   ```
+### 2. Identifier et nommer les sous-tâches
 
-3. **Identification des sous-tâches (atomicité et complétude)**
-   - Chaque sous-tâche doit être **atomique** : réalisable par un seul agent sans sous-décomposition
-   - Chaque sous-tâche doit être **complète** : produire un livrable intermédiaire utilisable
-   - Chaque sous-tâche doit être **indépendante** autant que possible pour maximiser le parallélisme
-   - Nommer chaque sous-tâche avec un verbe d'action : `rechercher_sources`, `rédiger_intro`, `valider_faits`
-   ```python
-   class SubTask(BaseModel):
-       subtask_id: str
-       name: str
-       description: str
-       required_inputs: list[str]   # IDs des sous-tâches dont ce résultat dépend
-       expected_output: str
-       required_capability: str     # "search" | "write" | "code" | "validate"
-       complexity: str              # "low" | "medium" | "high"
-   ```
+Règles d'atomicité :
+- Une sous-tâche = un seul agent, pas de sous-décomposition interne
+- Elle produit un livrable intermédiaire **vérifiable** (fichier, JSON, résultat booléen)
+- Elle est nommée avec un verbe d'action : `extraire_entités`, `générer_rapport`, `valider_schema`
 
-4. **Modélisation des dépendances (DAG ordering)**
-   - Construire un graphe orienté : nœuds = sous-tâches, arêtes = dépendances
-   - Vérifier l'absence de cycles (sinon deadlock assuré)
-   - Calculer le **chemin critique** : la chaîne de sous-tâches la plus longue, qui définit la durée totale
-   - Identifier les sous-tâches qui peuvent être parallélisées (pas de dépendances communes)
-   ```python
-   import networkx as nx
+Modèle de données minimal :
+```python
+class SubTask(BaseModel):
+    id: str                        # ex: "T1", "T2"
+    name: str                      # verbe + complément
+    description: str
+    depends_on: list[str]          # IDs des sous-tâches dont le résultat est requis
+    expected_output: str           # format précis du livrable
+    capability: str                # "search" | "code" | "write" | "validate" | "transform"
+    complexity: Literal["low", "medium", "high"]
+```
 
-   def build_dependency_graph(subtasks: list[SubTask]) -> nx.DiGraph:
-       G = nx.DiGraph()
-       for task in subtasks:
-           G.add_node(task.subtask_id)
-           for dep in task.required_inputs:
-               G.add_edge(dep, task.subtask_id)
-       if not nx.is_directed_acyclic_graph(G):
-           raise ValueError("Cycle détecté dans les dépendances !")
-       return G
+### 3. Modéliser les dépendances (DAG)
 
-   def get_execution_order(G: nx.DiGraph) -> list[list[str]]:
-       # Retourne des batches de tâches exécutables en parallèle
-       return list(nx.topological_generations(G))
-   ```
+Construire le graphe et vérifier l'absence de cycles avant toute exécution :
+```python
+import networkx as nx
 
-5. **Estimation de complexité par sous-tâche**
-   - `low` : tâche simple, modèle léger suffisant (ex: GPT-4o-mini), durée < 10s
-   - `medium` : raisonnement modéré, modèle standard (ex: GPT-4o), durée 10-60s
-   - `high` : complexité élevée, modèle premium (ex: o3, Claude Opus), durée > 60s
-   - Estimation du coût token pour allouer le budget de manière optimale
-   ```python
-   def estimate_complexity(subtask: SubTask) -> dict:
-       base_tokens = {
-           "low": 500,
-           "medium": 2000,
-           "high": 8000
-       }
-       return {
-           "model": select_model(subtask.complexity),
-           "estimated_tokens": base_tokens[subtask.complexity],
-           "timeout": {"low": 15, "medium": 60, "high": 180}[subtask.complexity]
-       }
-   ```
+def build_and_validate_dag(subtasks: list[SubTask]) -> nx.DiGraph:
+    G = nx.DiGraph()
+    for t in subtasks:
+        G.add_node(t.id, label=t.name)
+        for dep in t.depends_on:
+            G.add_edge(dep, t.id)
+    if not nx.is_directed_acyclic_graph(G):
+        cycles = list(nx.simple_cycles(G))
+        raise ValueError(f"Cycles détectés : {cycles}")
+    return G
 
-6. **Assignment aux sous-agents (matching capacités/tâches)**
-   - Mapper chaque sous-tâche à l'agent le plus qualifié selon `required_capability`
-   - Appliquer le load balancing : ne pas surcharger un seul agent si d'autres sont disponibles
-   - Respecter la spécialisation : envoyer les tâches de code au `CodeAgent`, de recherche au `SearchAgent`
-   ```python
-   class TaskAssigner:
-       def assign(self, subtasks: list[SubTask], agents: list) -> dict:
-           assignments = {}
-           capability_map = self._build_capability_map(agents)
-           for task in subtasks:
-               eligible = capability_map.get(task.required_capability, [])
-               if not eligible:
-                   raise ValueError(f"Aucun agent pour la capacité : {task.required_capability}")
-               # Load balancing : prendre l'agent avec le moins de tâches assignées
-               agent = min(eligible, key=lambda a: len(assignments.get(a.id, [])))
-               assignments.setdefault(agent.id, []).append(task)
-           return assignments
-   ```
+def execution_batches(G: nx.DiGraph) -> list[list[str]]:
+    """Retourne des groupes de tâches exécutables en parallèle."""
+    return [list(gen) for gen in nx.topological_generations(G)]
 
-7. **Execution plan generation (plan d'exécution)**
-   - Générer un plan d'exécution avec : ordre des batches, agents assignés, timeouts
-   - Calculer le parallelisme maximal : combien de sous-tâches peuvent s'exécuter simultanément
-   - Identifier le chemin critique pour prioriser les tâches les plus bloquantes
-   ```python
-   class ExecutionPlan(BaseModel):
-       plan_id: str
-       batches: list[list[str]]       # Groupes de subtask_ids exécutables en parallèle
-       assignments: dict[str, str]    # subtask_id -> agent_id
-       critical_path: list[str]       # Chemin le plus long
-       estimated_total_time: float
-       estimated_total_cost: float
+def critical_path(G: nx.DiGraph) -> list[str]:
+    return nx.dag_longest_path(G)
+```
 
-   def generate_plan(subtasks, graph, assignments) -> ExecutionPlan:
-       batches = list(nx.topological_generations(graph))
-       critical = nx.dag_longest_path(graph)
-       return ExecutionPlan(
-           plan_id=uuid4().hex,
-           batches=batches,
-           assignments=assignments,
-           critical_path=critical,
-           estimated_total_time=sum(estimate_complexity(t)["timeout"] for t in critical)
-       )
-   ```
+Exemple de plan Mermaid généré automatiquement :
+```python
+def to_mermaid(subtasks: list[SubTask]) -> str:
+    lines = ["graph TD"]
+    for t in subtasks:
+        lines.append(f'  {t.id}["{t.name}"]')
+        for dep in t.depends_on:
+            lines.append(f"  {dep} --> {t.id}")
+    return "\n".join(lines)
+```
 
-8. **Checkpoint et validation intermédiaire**
-   - Avant de passer au batch suivant, valider les résultats du batch précédent
-   - Vérifier : format conforme, données complètes, pas d'erreurs silencieuses
-   - Si une sous-tâche critique échoue, décider : retry, fallback, ou arrêt du plan
-   ```python
-   async def execute_with_checkpoints(plan: ExecutionPlan, agents: dict):
-       results = {}
-       for batch in plan.batches:
-           batch_results = await execute_parallel_batch(batch, agents, results)
-           # Valider avant de continuer
-           for task_id, result in batch_results.items():
-               if not validate_intermediate_result(result):
-                   await handle_failure(task_id, plan, agents, results)
-           results.update(batch_results)
-       return results
-   ```
+Résultat :
+```mermaid
+graph TD
+  T1["extraire_entités"]
+  T2["analyser_sentiments"]
+  T3["générer_rapport"]
+  T1 --> T3
+  T2 --> T3
+```
 
-9. **Re-planning dynamique (adaptation en temps réel)**
-   - Si une sous-tâche échoue et que le retry ne suffit pas, re-décomposer cette partie
-   - Si une sous-tâche prend trop de temps, diviser en sous-tâches plus petites à la volée
-   - Si le contexte change (nouvelles informations), mettre à jour le plan et notifier les agents concernés
-   ```python
-   class DynamicReplanner:
-       def replan_on_failure(self, failed_task: SubTask, plan: ExecutionPlan) -> ExecutionPlan:
-           # Décomposer plus finement la tâche échouée
-           finer_subtasks = decompose_further(failed_task)
-           # Supprimer la tâche originale et insérer les nouvelles
-           updated_plan = insert_subtasks(plan, failed_task.subtask_id, finer_subtasks)
-           return updated_plan
-   ```
+### 4. Estimer complexité et allouer les ressources
 
-10. **Visualisation du plan (Gantt et dependency graph)**
-    - Générer une représentation visuelle pour valider le plan avant exécution
-    - Gantt-like : afficher les batches sur une timeline avec les durées estimées
-    - Dependency graph : DOT format pour Graphviz ou Mermaid pour affichage dans Markdown
-    ```python
-    def to_mermaid(plan: ExecutionPlan, subtasks: dict) -> str:
-        lines = ["graph TD"]
-        for task_id, task in subtasks.items():
-            lines.append(f'  {task_id}["{task.name}"]')
-            for dep in task.required_inputs:
-                lines.append(f'  {dep} --> {task_id}')
-        return "\n".join(lines)
-    ```
+| Complexité | Modèle recommandé | Tokens estimés | Timeout |
+|---|---|---|---|
+| `low` | claude-haiku / gpt-4o-mini | ~500 | 15 s |
+| `medium` | claude-sonnet / gpt-4o | ~2 000 | 60 s |
+| `high` | claude-opus / o3 | ~8 000 | 180 s |
 
-## Anti-patterns
+Calculer le coût total estimé sur le chemin critique uniquement — les branches parallèles ne s'additionnent pas.
 
-- **Sous-tâches trop couplées** : des sous-tâches qui partagent un état mutable ou des effets de bord empêchent la parallélisation et créent des race conditions. Chaque sous-tâche doit opérer sur ses propres données.
-- **Décomposition trop fine** : découper en dizaines de micro-tâches génère plus d'overhead de coordination que de gain en parallélisme. Une bonne granularité signifie que chaque sous-tâche prend au moins 5-10 secondes à exécuter.
-- **Pas de dépendances modélisées** : ignorer les dépendances et tout exécuter en parallèle cause des résultats incohérents quand une tâche utilise le résultat d'une autre qui n'est pas encore terminée.
-- **Plan rigide sans adaptation** : un plan d'exécution figé qui ne peut pas être modifié en cas d'échec ou de nouvelle information conduit à l'échec total de la mission au moindre imprévu.
+### 5. Assigner aux sous-agents
 
-## Règles
+Mapper `capability` → agent spécialisé. Load-balancing si plusieurs agents ont la même capacité :
+```python
+def assign_tasks(subtasks: list[SubTask], agents: dict[str, list]) -> dict[str, str]:
+    """agents = {"search": [AgentA, AgentB], "code": [AgentC]}"""
+    workload: dict = {}
+    assignments: dict = {}
+    for t in subtasks:
+        candidates = agents.get(t.capability, [])
+        if not candidates:
+            raise ValueError(f"Aucun agent disponible pour '{t.capability}'")
+        agent = min(candidates, key=lambda a: workload.get(a.id, 0))
+        assignments[t.id] = agent.id
+        workload[agent.id] = workload.get(agent.id, 0) + 1
+    return assignments
+```
 
-1. **Valider le DAG avant exécution** : détecter les cycles et les dépendances manquantes avant de lancer quoi que ce soit pour éviter les deadlocks et les erreurs de runtime.
-2. **Chaque sous-tâche produit un livrable vérifiable** : sans output mesurable, impossible de détecter un échec silencieux ou de construire sur le résultat.
-3. **Toujours calculer le chemin critique** et prioriser son exécution pour minimiser le temps total d'exécution.
-4. **Prévoir systématiquement un plan de fallback** pour chaque sous-tâche sur le chemin critique — une alternative moins optimale mais fonctionnelle en cas d'échec.
-5. **Documenter les hypothèses de décomposition** : expliquer pourquoi telle tâche a été découpée de cette façon, pour faciliter le re-planning si le contexte change.
+### 6. Exécuter avec checkpoints inter-batches
+
+Ne jamais lancer le batch N+1 sans valider le batch N :
+```python
+async def execute_plan(batches: list[list[str]], run_task, validate):
+    results = {}
+    for batch in batches:
+        batch_results = await asyncio.gather(
+            *[run_task(task_id, results) for task_id in batch],
+            return_exceptions=True
+        )
+        for task_id, result in zip(batch, batch_results):
+            if isinstance(result, Exception) or not validate(task_id, result):
+                raise RuntimeError(f"Échec sur {task_id} : {result}")
+            results[task_id] = result
+    return results
+```
+
+### 7. Re-planning dynamique en cas d'échec
+
+Si une sous-tâche échoue sur le chemin critique :
+1. **Retry** avec paramètres différents (modèle plus puissant, prompt reformulé)
+2. **Sous-décomposition** : découper cette sous-tâche en parties plus petites
+3. **Fallback** : résultat dégradé acceptable pour continuer
+4. **Arrêt contrôlé** : remonter l'erreur avec contexte complet (ne pas échouer silencieusement)
+
+```python
+async def handle_task_failure(task: SubTask, plan, results):
+    # Tentative 1 : retry avec modèle supérieur
+    if task.complexity != "high":
+        return await retry_with_upgrade(task, results)
+    # Tentative 2 : sous-décomposition
+    finer = decompose_further(task)
+    return await execute_plan(build_and_validate_dag(finer), ...)
+```
+
+## Anti-patterns et garde-fous
+
+| Anti-pattern | Symptôme | Correction |
+|---|---|---|
+| **Sous-tâches trop couplées** | État partagé mutable entre tâches | Chaque sous-tâche reçoit ses inputs en paramètre, retourne ses outputs sans side-effect |
+| **Décomposition trop fine** | Dizaines de micro-tâches de <2 s | Fusionner : granularité cible ≥ 10 s d'exécution par sous-tâche |
+| **Dépendances ignorées** | Exécution "tout parallèle" qui produit des résultats incohérents | Toujours modéliser le DAG, même pour 3 tâches |
+| **Plan rigide** | Échec total au premier imprévu | Prévoir retry + fallback sur chaque nœud du chemin critique |
+| **Livrable non vérifiable** | Échec silencieux non détecté | `expected_output` doit être testable (schéma JSON, assertion, checksum) |
+| **Re-planning infini** | Boucle de sous-décompositions récursives | Limiter à 2 niveaux de re-planning ; au-delà, escalader à l'humain |
+
+## Bonnes pratiques 2026
+
+- **Nommer les sous-tâches avec un verbe** — facilite la traçabilité dans les logs et les audits d'agents.
+- **Chemin critique en priorité** — lancer les tâches du chemin critique en premier, même si d'autres sont prêtes.
+- **Contexte minimal par sous-tâche** — ne passer que les données strictement nécessaires ; pas de dump complet du contexte parent (coût tokens, risque de confusion).
+- **Idempotence** — chaque sous-tâche doit pouvoir être relancée sans effet de bord : écriture dans un fichier nommé par son `id`, pas append dans un fichier partagé.
+- **Traces structurées** — logger `task_id`, `batch`, `duration_ms`, `tokens_used`, `status` pour chaque sous-tâche : indispensable pour diagnostiquer les lenteurs et optimiser les plans futurs.

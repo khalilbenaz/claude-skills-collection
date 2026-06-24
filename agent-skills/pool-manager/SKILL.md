@@ -1,215 +1,279 @@
 ---
 name: pool-manager
-description: Gestion de pools de sous-agents pré-instanciés pour performance et réutilisation. Se déclenche avec "pool agent", "agent pool", "pool de sous-agents", "pre-allocated agents", "agent reuse", "warm agents", "agent cache", "worker pool agents".
+description: Gestion de pools de sous-agents pré-instanciés pour performance et réutilisation. Se déclenche avec "pool agent", "agent pool", "pool de sous-agents", "pre-allocated agents", "agent reuse", "warm agents", "agent cache", "worker pool agents". Couvre sizing, checkout/checkin, state reset, health monitoring, auto-scaling et routing multi-pool.
 ---
 
 # Agent Pool Manager
 
-## Quand utiliser ce skill
+## Quand utiliser un pool d'agents
 
-Utiliser ce skill lorsque la latence de création d'agents est inacceptable et que des agents "chauds" (pré-initialisés) sont nécessaires pour répondre rapidement à des requêtes entrantes. Ce skill est particulièrement adapté aux systèmes à fort débit où les mêmes types d'agents sont sollicités en rafale. Il convient également aux architectures où le coût de warm-up (chargement du modèle, initialisation des tools) est significatif et doit être amorti sur plusieurs exécutions.
+| Situation | Pool recommandé ? |
+|---|---|
+| Latence de cold-start > 500 ms (chargement modèle, init tools) | Oui |
+| Rafales de tâches homogènes (même type d'agent) | Oui |
+| Tâches ponctuelles, types variés et imprévisibles | Non |
+| Budget CPU/mémoire contraint, peu de concurrence | Non — instancier à la demande |
+| SLA strict sur le temps de réponse (< 200 ms P95) | Oui |
 
-## Workflow
+**Règle rapide :** si le coût de warm-up dépasse 20 % du temps de traitement moyen d'une tâche, un pool est rentable.
 
-1. **Conception du pool** — Définir la topologie : taille fixe (pool statique, prévisible) vs taille dynamique (auto-scaling selon la charge). Identifier les types d'agents à maintenir dans le pool et leur proportion relative (ex : 60% researchers, 30% coders, 10% reviewers).
+---
 
-2. **Initialisation du pool** — Pré-créer les agents au démarrage du système : charger les modèles, préparer les outils, initialiser les connexions. Effectuer un health check initial sur chaque agent avant de le marquer `available`.
+## Workflow en 10 étapes
 
-3. **Checkout / Checkin** — Implémenter le mécanisme d'emprunt : un consommateur réclame un agent (`checkout`), l'utilise pour sa tâche, puis le retourne au pool (`checkin`). Utiliser un pattern de context manager (`with pool.borrow() as agent`) pour garantir le retour automatique.
+### 1. Définir la topologie du pool
 
-4. **State reset** — Avant de remettre un agent dans le pool, effacer intégralement son état : historique de conversation, variables de session, cache mémoire, résultats intermédiaires. Un agent retourné doit être indiscernable d'un agent fraîchement créé.
+Choisir entre pool **statique** (taille fixe, simple, prévisible) et pool **dynamique** (auto-scaling, plus complexe).
 
-5. **Pool sizing** — Définir `min_size` (agents toujours disponibles) et `max_size` (plafond absolu). Déclencher le scale-up quand la queue d'attente dépasse un seuil ; déclencher le scale-down quand l'utilisation reste sous un pourcentage pendant un intervalle donné.
+- Pool statique : cas d'usage à charge constante, environnements embarqués.
+- Pool dynamique : SaaS, charges variables, pics prévisibles ou non.
 
-6. **Health monitoring** — Vérifier périodiquement l'état de santé de chaque agent avec une sonde légère (ping). Remplacer silencieusement les agents unhealthy. Effectuer un refresh complet des agents qui ont dépassé un nombre maximal d'utilisations pour éviter la dégradation progressive.
+Identifier les types d'agents et leur proportion :
+```
+researcher_pool : min=3, max=10
+coder_pool      : min=2, max=8
+reviewer_pool   : min=1, max=4
+```
 
-7. **Pools spécialisés** — Maintenir des pools distincts par spécialisation : `coder_pool`, `researcher_pool`, `reviewer_pool`. Implémenter un router qui sélectionne le bon pool selon le type de tâche entrante.
+### 2. Initialiser le pool au démarrage
 
-8. **Queue management** — Gérer la file d'attente des tâches en attente d'un agent disponible : priorité configurable (urgente, normale, basse), politique FIFO par défaut, fair scheduling pour éviter la famine des tâches basse priorité.
-
-9. **Métriques** — Collecter et exposer : taux d'utilisation du pool, temps d'attente moyen, débit (tâches/seconde), taux de réutilisation, coût par tâche. Ces métriques pilotent les décisions d'auto-scaling.
-
-10. **Auto-scaling** — Implémenter le scaling prédictif : scale-up proactif en fonction des patterns de charge historiques (ex : pic du lundi matin), scale-down progressif la nuit. Comparer le coût du warm-up vs le coût de maintien d'agents idle.
+Pré-créer `min_size` agents, effectuer un health check avant de les marquer `available`.
 
 ```python
-# Exemple d'implémentation Python — Agent Pool avec context manager
-import asyncio
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Optional
-import uuid
-
-@dataclass
-class PooledAgent:
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    agent_type: str = ""
-    status: str = "available"  # available | busy | unhealthy
-    use_count: int = 0
-    last_used: Optional[datetime] = None
-    max_uses: int = 50  # refresh après 50 utilisations
-
-    def reset_state(self):
-        """Effacer l'état entre les utilisations."""
-        self.status = "available"
-        self.last_used = datetime.utcnow()
-        # Ici : vider l'historique LLM, reset les tools, etc.
-        print(f"[RESET] Agent {self.id} réinitialisé")
-
-    def is_healthy(self) -> bool:
-        return self.use_count < self.max_uses and self.status != "unhealthy"
-
-
-class AgentPool:
-    def __init__(self, agent_type: str, min_size: int = 2, max_size: int = 10):
-        self.agent_type = agent_type
-        self.min_size = min_size
-        self.max_size = max_size
-        self._available: asyncio.Queue = asyncio.Queue()
-        self._all_agents: dict[str, PooledAgent] = {}
-        self._waiters: int = 0
-
-    async def initialize(self):
-        """Pré-remplir le pool au démarrage."""
-        for _ in range(self.min_size):
-            agent = PooledAgent(agent_type=self.agent_type)
+async def initialize(self):
+    for _ in range(self.min_size):
+        agent = await self._create_agent()
+        if await agent.ping():          # health check initial
             self._all_agents[agent.id] = agent
             await self._available.put(agent)
-        print(f"[POOL] {self.agent_type} pool initialisé avec {self.min_size} agents")
-
-    @asynccontextmanager
-    async def borrow(self):
-        """Emprunter un agent — retour automatique à la fin du bloc."""
-        self._waiters += 1
-        agent = await self._checkout()
-        self._waiters -= 1
-        try:
-            yield agent
-        finally:
-            await self._checkin(agent)
-
-    async def _checkout(self) -> PooledAgent:
-        # Scale-up si nécessaire
-        current_size = len(self._all_agents)
-        if self._available.empty() and current_size < self.max_size:
-            new_agent = PooledAgent(agent_type=self.agent_type)
-            self._all_agents[new_agent.id] = new_agent
-            await self._available.put(new_agent)
-            print(f"[SCALE-UP] Nouvel agent {new_agent.id} ajouté au pool")
-
-        agent = await self._available.get()
-        agent.status = "busy"
-        agent.use_count += 1
-        return agent
-
-    async def _checkin(self, agent: PooledAgent):
-        if agent.is_healthy():
-            agent.reset_state()
-            await self._available.put(agent)
         else:
-            # Remplacer l'agent usé
-            del self._all_agents[agent.id]
-            fresh = PooledAgent(agent_type=self.agent_type)
-            self._all_agents[fresh.id] = fresh
-            await self._available.put(fresh)
-            print(f"[REFRESH] Agent {agent.id} remplacé par {fresh.id}")
+            await agent.destroy()       # ne pas injecter un agent cassé
+    print(f"[POOL:{self.agent_type}] {self._available.qsize()} agents prêts")
+```
 
-    def metrics(self) -> dict:
-        busy = sum(1 for a in self._all_agents.values() if a.status == "busy")
-        available = sum(1 for a in self._all_agents.values() if a.status == "available")
-        return {
-            "type": self.agent_type,
-            "total": len(self._all_agents),
-            "busy": busy,
-            "available": available,
-            "utilization": busy / max(len(self._all_agents), 1),
-            "waiters": self._waiters,
-        }
+### 3. Checkout avec timeout obligatoire
 
+Ne jamais attendre indéfiniment. Lever une exception explicite plutôt que bloquer.
 
-# Pool router multi-spécialisation
-class PoolRouter:
-    def __init__(self):
-        self.pools: dict[str, AgentPool] = {}
+```python
+async def _checkout(self, timeout: float = 5.0) -> PooledAgent:
+    try:
+        agent = await asyncio.wait_for(self._available.get(), timeout=timeout)
+    except asyncio.TimeoutError:
+        raise PoolExhaustedError(
+            f"Aucun agent {self.agent_type} disponible après {timeout}s "
+            f"(pool size={len(self._all_agents)}, waiters={self._waiters})"
+        )
+    agent.status = "busy"
+    agent.use_count += 1
+    return agent
+```
 
-    def register(self, pool: AgentPool):
-        self.pools[pool.agent_type] = pool
+### 4. Context manager — retour garanti
 
-    async def route(self, task_type: str):
-        pool = self.pools.get(task_type)
-        if not pool:
-            raise ValueError(f"Aucun pool pour le type: {task_type}")
-        return pool.borrow()
+```python
+@asynccontextmanager
+async def borrow(self, timeout: float = 5.0):
+    self._waiters += 1
+    agent = await self._checkout(timeout=timeout)
+    self._waiters -= 1
+    try:
+        yield agent
+    finally:
+        await self._checkin(agent)   # retour même si exception
 
 # Usage
-async def main():
-    router = PoolRouter()
-    researcher_pool = AgentPool("researcher", min_size=3, max_size=8)
-    coder_pool = AgentPool("coder", min_size=2, max_size=6)
-    
-    await researcher_pool.initialize()
-    await coder_pool.initialize()
-    
-    router.register(researcher_pool)
-    router.register(coder_pool)
-
-    async with researcher_pool.borrow() as agent:
-        print(f"Utilisation de l'agent {agent.id}")
-        # ... exécuter la tâche ...
-
-    print(researcher_pool.metrics())
+async with pool.borrow(timeout=3.0) as agent:
+    result = await agent.run(task)
 ```
 
-```
-Architecture — Agent Pool Manager
+### 5. State reset complet avant checkin
 
-  Tâches entrantes
-        │
-        ▼
-  ┌─────────────┐
-  │ Pool Router │ ← routing par type de tâche
-  └──────┬──────┘
-         │
-    ┌────┴──────────────────────┐
-    │                           │
-    ▼                           ▼
-┌──────────────┐        ┌──────────────┐
-│ Researcher   │        │  Coder Pool  │
-│    Pool      │        │              │
-│ [A][A][B][A] │        │  [A][B][A]   │
-│ min=3 max=8  │        │  min=2 max=6 │
-└──────────────┘        └──────────────┘
-       │
-  checkout/checkin
-  state reset après usage
+Un agent retourné doit être **indiscernable** d'un agent neuf.
 
-  A = available  B = busy
-
-  Health Monitor → remplace agents unhealthy
-  Auto-scaler   → ajuste min/max selon métriques
+```python
+def reset_state(self):
+    self.conversation_history.clear()   # historique LLM
+    self.memory.flush()                 # mémoire éphémère
+    self.tool_cache.clear()             # cache des tools
+    self.context_vars = {}              # variables de session
+    self.status = "available"
+    self.last_used = datetime.utcnow()
 ```
 
-**Comparaison LangGraph vs CrewAI vs Custom :**
+Checkin avec remplacement automatique si l'agent est usé :
 
-| Critère | LangGraph | CrewAI | Custom Python |
+```python
+async def _checkin(self, agent: PooledAgent):
+    agent.reset_state()
+    if agent.use_count >= agent.max_uses or not await agent.ping():
+        del self._all_agents[agent.id]
+        fresh = await self._create_agent()
+        self._all_agents[fresh.id] = fresh
+        await self._available.put(fresh)
+    else:
+        await self._available.put(agent)
+```
+
+### 6. Sizing — calibrer min/max
+
+```
+min_size = ceil(avg_concurrent_tasks * 1.2)   # marge 20 %
+max_size = ceil(peak_concurrent_tasks * 1.5)  # marge 50 % pour pics
+max_uses = 50  # refresh préventif — ajuster selon dégradation observée
+```
+
+Calibrer avec des mesures réelles : lancer un test de charge, observer `utilization` et `avg_wait_ms`.
+
+### 7. Health monitoring périodique
+
+```python
+async def _health_loop(self, interval: float = 30.0):
+    while True:
+        await asyncio.sleep(interval)
+        for agent_id, agent in list(self._all_agents.items()):
+            if agent.status == "available" and not await agent.ping():
+                self._all_agents.pop(agent_id, None)
+                fresh = await self._create_agent()
+                self._all_agents[fresh.id] = fresh
+                await self._available.put(fresh)
+                print(f"[HEALTH] Agent {agent_id} remplacé (unhealthy)")
+```
+
+### 8. Auto-scaling dynamique
+
+```python
+async def _autoscale_loop(self, interval: float = 10.0):
+    while True:
+        await asyncio.sleep(interval)
+        m = self.metrics()
+        # Scale-up : file d'attente non vide ET pool non saturé
+        if m["waiters"] > 0 and m["total"] < self.max_size:
+            fresh = await self._create_agent()
+            self._all_agents[fresh.id] = fresh
+            await self._available.put(fresh)
+        # Scale-down : utilisation < 20 % ET au-dessus du min
+        elif m["utilization"] < 0.2 and m["total"] > self.min_size:
+            try:
+                agent = self._available.get_nowait()
+                del self._all_agents[agent.id]
+                await agent.destroy()
+            except asyncio.QueueEmpty:
+                pass
+```
+
+### 9. Router multi-pool
+
+```python
+class PoolRouter:
+    def __init__(self):
+        self._pools: dict[str, AgentPool] = {}
+
+    def register(self, pool: AgentPool) -> "PoolRouter":
+        self._pools[pool.agent_type] = pool
+        return self
+
+    def borrow(self, task_type: str, timeout: float = 5.0):
+        pool = self._pools.get(task_type)
+        if not pool:
+            raise ValueError(f"Aucun pool enregistré pour: {task_type!r}")
+        return pool.borrow(timeout=timeout)
+
+# Mise en place
+router = PoolRouter()
+router.register(AgentPool("researcher", min_size=3, max_size=10))
+router.register(AgentPool("coder",      min_size=2, max_size=8))
+router.register(AgentPool("reviewer",   min_size=1, max_size=4))
+
+async with router.borrow("coder") as agent:
+    result = await agent.run(task)
+```
+
+### 10. Métriques à exposer
+
+```python
+def metrics(self) -> dict:
+    busy = sum(1 for a in self._all_agents.values() if a.status == "busy")
+    total = len(self._all_agents)
+    return {
+        "type": self.agent_type,
+        "total": total,
+        "busy": busy,
+        "available": total - busy,
+        "utilization_pct": round(busy / max(total, 1) * 100, 1),
+        "waiters": self._waiters,
+        "avg_use_count": sum(a.use_count for a in self._all_agents.values()) / max(total, 1),
+    }
+```
+
+Exposer via Prometheus (`/metrics`), Datadog, ou simple log périodique. Alerter si `waiters > 0` pendant plus de 10 s.
+
+---
+
+## Architecture
+
+```
+Tâches entrantes
+      │
+      ▼
+┌─────────────┐
+│ Pool Router │  routing par task_type
+└──────┬──────┘
+       ├─────────────────────┐
+       ▼                     ▼
+┌──────────────┐     ┌──────────────┐
+│ researcher   │     │  coder pool  │
+│ [A][A][B][A] │     │  [A][B][A]   │
+│ min=3 max=10 │     │  min=2 max=8 │
+└──────┬───────┘     └──────────────┘
+       │  checkout → execute → reset → checkin
+       ▼
+  Health Monitor  (ping toutes les 30 s, remplace si KO)
+  Auto-Scaler     (ajuste total selon waiters / utilization)
+
+  A = available   B = busy
+```
+
+---
+
+## Comparatif framework
+
+| Critère | LangGraph | CrewAI | Custom asyncio |
 |---|---|---|---|
-| Pool natif | Non (manuel) | Non (manuel) | asyncio.Queue |
-| State reset | Graph reset | Non natif | Manuel |
-| Auto-scaling | Non | Non | Manuel / K8s |
-| Health check | Non | Non | Manuel |
-| Multi-pool routing | Non | Partiel | Total contrôle |
+| Pool natif | Non | Non | `asyncio.Queue` |
+| State reset automatique | Non | Non | Manuel (total contrôle) |
+| Auto-scaling | Non | Non | Manuel / HPA K8s |
+| Health check intégré | Non | Non | Manuel |
+| Multi-pool routing | Non | Partiel | Total |
 
-## Anti-patterns
+---
 
-- **Pool trop grand** — Maintenir 50 agents idle coûte cher même sans tâche. Calibrer `min_size` au minimum nécessaire ; laisser l'auto-scaling gérer les pics.
-- **Pas de reset entre les utilisations** — Un agent qui garde l'historique d'une conversation précédente peut "contaminer" la tâche suivante avec du contexte irrelevant ou confidentiel.
-- **Timeout infini sur le checkout** — Si tous les agents sont occupés, une tâche qui attend indéfiniment bloque le thread. Toujours définir un `timeout` et lever une exception explicite.
-- **Pool monotype pour des tâches variées** — Un seul pool d'agents généralistes sous-performe face à des pools spécialisés. La spécialisation améliore la qualité et réduit le temps de traitement.
+## Garde-fous et anti-patterns
 
-## Règles
+**Pool trop grand (idle cost)**
+Maintenir 50 agents sans charge coûte en mémoire et en tokens d'initialisation. Calibrer `min_size` au strict nécessaire ; l'auto-scaler gère les pics.
 
-1. **Toujours reset l'état complet d'un agent avant de le retourner au pool** — contexte, mémoire, cache, historique : rien ne doit persister d'une tâche à l'autre.
-2. **Définir `min_size` et `max_size` explicitement** — ne jamais laisser le pool croître sans plafond ; documenter la justification de chaque valeur.
-3. **Implémenter le pattern context manager** (`with pool.borrow() as agent`) — garantit le retour de l'agent même en cas d'exception.
-4. **Refresher les agents après `max_uses` utilisations** — les agents LLM peuvent dégrader subtilement leurs performances après de nombreuses interactions ; le refresh préventif évite ce problème.
-5. **Exposer les métriques du pool en temps réel** — utilisation, temps d'attente, throughput : ces données sont indispensables pour dimensionner correctement le pool.
+**State reset incomplet**
+Si l'historique de conversation persiste, l'agent "se souvient" de la tâche précédente. Résultat : fuites de données entre clients, hallucinations contextuelles. Le reset doit couvrir : historique LLM, mémoire, cache tools, variables session.
+
+**Timeout absent sur checkout**
+Sans timeout, une tâche bloque indéfiniment si le pool est saturé. Toujours `asyncio.wait_for(queue.get(), timeout=N)` et lever `PoolExhaustedError`.
+
+**Pool monotype pour tâches hétérogènes**
+Un pool d'agents généralistes sous-performe face à des pools spécialisés. La spécialisation améliore la qualité, réduit le prompt overhead et permet un sizing indépendant.
+
+**Pas de refresh après N utilisations**
+Les agents LLM accumulent un état interne subtil (cache KV) et peuvent dégrader sur la durée. Définir `max_uses` (50–200 selon le type) et remplacer proactivement.
+
+**Health check trop fréquent**
+Un ping toutes les secondes sur 50 agents génère du bruit et consomme les quotas API. Intervalle recommandé : 30–60 s en production, 5 s en dev.
+
+---
+
+## Bonnes pratiques 2026
+
+- **Graceful shutdown** : à l'arrêt, attendre que tous les agents `busy` terminent leur tâche avant de détruire le pool (`await asyncio.gather(*[a.finish() for a in busy_agents])`).
+- **Circuit breaker** : si le taux d'agents unhealthy dépasse 50 %, passer en mode dégradé (instanciation à la demande) plutôt que crasher.
+- **Observabilité** : tagger chaque tâche avec l'`agent_id` qui l'a traitée pour corréler les anomalies de qualité avec des agents spécifiques.
+- **Séparation des pools par environnement** : ne jamais partager un pool entre prod et staging ; les agents peuvent conserver du contexte cross-env en mémoire partagée.
+- **Tests de pool** : tester le comportement sous saturation (`max_size` agents tous busy) dès le CI — vérifier que `PoolExhaustedError` est levée proprement, jamais un deadlock.

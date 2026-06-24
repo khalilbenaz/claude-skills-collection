@@ -97,37 +97,192 @@ cp -r claude-skills-collection/skills/agent-agent-observability ~/.claude/skills
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent Observability</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Définir la stratégie d'observabilité</strong> — Identifier les trois piliers à instrumenter pour les agents IA : traces distribuées (parcours d'exécution), métriques (performance et usage), et logs structurés (événements et erreurs). Adapter la granularité au type d'agent (autonome, orchestré, multi-agent).</li>
-</ol>
-<ol>
-<li><strong>Instrumenter avec OpenTelemetry</strong> — Intégrer le SDK OpenTelemetry dans l'agent pour générer des spans sur chaque étape : appel LLM, tool calling, récupération de contexte (RAG), décision de routage, et interaction utilisateur. Propager le trace context entre agents et services.</li>
-</ol>
-<ol>
-<li><strong>Configurer les métriques custom</strong> — Définir les métriques spécifiques aux agents IA : nombre de tokens consommés, latence par appel LLM, taux de succès des tool calls, nombre d'itérations par tâche, coût par requête, et taux d'hallucination détecté.</li>
-</ol>
-<ol>
-<li><strong>Structurer les logs</strong> — Implémenter le logging structuré (JSON) avec corrélation aux traces : prompt envoyé, réponse LLM (tronquée), outils appelés, paramètres et résultats, décisions prises, et erreurs rencontrées. Inclure le trace_id et span_id dans chaque log.</li>
-</ol>
-<ol>
-<li><strong>Construire les dashboards</strong> — Créer des dashboards de supervision dans Grafana, Datadog ou Azure Monitor : vue d'ensemble des agents actifs, performance par agent, analyse des coûts, détection des anomalies, et drill-down sur les traces individuelles.</li>
-</ol>
-<ol>
-<li><strong>Configurer les alertes</strong> — Définir les alertes sur les seuils critiques : latence d'exécution anormale, taux d'erreur élevé, consommation de tokens excessive, boucles infinies détectées, et agents non responsifs.</li>
-</ol>
-<ol>
-<li><strong>Tracer les workflows multi-agents</strong> — Instrumenter les échanges entre agents avec des spans parent-enfant, visualiser le graphe d'exécution complet, mesurer les latences inter-agents, et identifier les goulots d'étranglement dans les chaînes de traitement.</li>
-</ol>
-<ol>
-<li><strong>Analyser et optimiser</strong> — Exploiter les données d'observabilité pour optimiser les prompts (réduire les tokens), identifier les outils lents, détecter les patterns de défaillance récurrents, et améliorer la qualité des réponses via l'analyse des traces.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Choisir la stratégie d'instrumentation</h3>
+<p>Identifie les trois piliers à couvrir selon le type d'agent :</p>
+<table><thead><tr><th>Type d'agent</th><th>Traces</th><th>Métriques prioritaires</th><th>Logs</th></tr></thead><tbody><tr><td>Agent autonome (ReAct)</td><td>Chaque itération reason→act</td><td>tokens/iter, nb iterations</td><td>prompt + tool calls</td></tr><tr><td>Orchestrateur multi-agents</td><td>Spans parent→enfant par sous-agent</td><td>latence inter-agents, taux délégation</td><td>handoff payloads</td></tr><tr><td>Agent RAG</td><td>Retrieval + LLM call séparés</td><td>recall@k, rerank score, latence retrieval</td><td>query + docs retenus</td></tr><tr><td>Pipeline séquentiel</td><td>Un span par étape du pipeline</td><td>throughput, erreurs par étape</td><td>inputs/outputs chaque step</td></tr></tbody></table>
+<p><strong>Critère de décision :</strong> si tu as plus de 2 agents en chaîne → distributed tracing obligatoire. Agent isolé → métriques + logs structurés suffisent pour commencer.</p>
+<hr>
+<h3>2. Instrumenter avec OpenTelemetry</h3>
+<p>Installer le SDK Python ou TypeScript selon le runtime :</p>
+<pre><code class="lang-bash"># Python
+pip install opentelemetry-sdk opentelemetry-exporter-otlp opentelemetry-instrumentation-httpx
+
+# TypeScript / Node
+npm install @opentelemetry/sdk-node @opentelemetry/exporter-otlp-http @opentelemetry/instrumentation-http</code></pre>
+<p>Initialiser le tracer en entrée de l'agent (une seule fois) :</p>
+<pre><code class="lang-python">from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+provider = TracerProvider(resource=Resource({&quot;service.name&quot;: &quot;my-agent&quot;, &quot;agent.version&quot;: &quot;1.0&quot;}))
+provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=&quot;http://otel-collector:4318&quot;)))
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer(__name__)</code></pre>
+<p>Wrapper minimal autour des appels LLM :</p>
+<pre><code class="lang-python">def call_llm(prompt: str, model: str = &quot;claude-sonnet-4-6&quot;) -&gt; str:
+    with tracer.start_as_current_span(&quot;llm.call&quot;) as span:
+        span.set_attributes({
+            &quot;llm.model&quot;: model,
+            &quot;llm.prompt_tokens&quot;: count_tokens(prompt),
+            &quot;llm.prompt_hash&quot;: sha256(prompt)[:8],  # pas le texte en clair
+        })
+        response = client.messages.create(model=model, messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt}])
+        span.set_attributes({
+            &quot;llm.completion_tokens&quot;: response.usage.output_tokens,
+            &quot;llm.cost_usd&quot;: estimate_cost(response.usage),
+        })
+        return response.content[0].text</code></pre>
+<p>Propager le context entre agents (HTTP) :</p>
+<pre><code class="lang-python">from opentelemetry.propagate import inject, extract
+
+# Agent émetteur — injecter dans les headers
+headers = {}
+inject(headers)
+requests.post(&quot;http://sub-agent/run&quot;, json=payload, headers=headers)
+
+# Agent récepteur — extraire le context
+ctx = extract(request.headers)
+with tracer.start_as_current_span(&quot;sub_agent.run&quot;, context=ctx):
+    ...</code></pre>
+<hr>
+<h3>3. Définir les métriques custom agents IA</h3>
+<pre><code class="lang-python">from opentelemetry import metrics
+
+meter = metrics.get_meter(&quot;agent-metrics&quot;)
+
+# Compteurs et histogrammes à créer
+llm_tokens = meter.create_counter(&quot;agent.llm.tokens_total&quot;, unit=&quot;tokens&quot;)
+llm_latency = meter.create_histogram(&quot;agent.llm.latency_ms&quot;, unit=&quot;ms&quot;)
+tool_calls = meter.create_counter(&quot;agent.tool.calls_total&quot;)
+tool_errors = meter.create_counter(&quot;agent.tool.errors_total&quot;)
+task_iterations = meter.create_histogram(&quot;agent.task.iterations&quot;)
+agent_cost = meter.create_counter(&quot;agent.cost_usd_total&quot;, unit=&quot;USD&quot;)
+
+# Usage dans le code
+llm_tokens.add(tokens, {&quot;model&quot;: model, &quot;agent_id&quot;: agent_id})
+llm_latency.record(elapsed_ms, {&quot;model&quot;: model})</code></pre>
+<p>Métriques critiques à ne pas oublier :</p>
 <ul>
-<li>Instrumente chaque appel LLM et chaque tool call comme un span distinct avec les métadonnées pertinentes (modèle, tokens, latence).</li>
-<li>Ne log jamais les données sensibles des utilisateurs en clair — masque les PII et les secrets dans les traces et logs.</li>
-<li>Corrèle systématiquement les logs aux traces distribuées via trace_id pour permettre le drill-down depuis les dashboards.</li>
-<li>Définis des budgets d'alerte réalistes pour éviter la fatigue d'alerte — priorise les anomalies impactant l'expérience utilisateur.</li>
-<li>Conserve un historique des traces suffisant pour l'analyse post-mortem (minimum 7 jours) tout en maîtrisant les coûts de stockage.</li>
+<li><code>agent.task.success_rate</code> — taux de tâches réussies (objectif vs résultat)</li>
+<li><code>agent.loop.detected</code> — compteur de boucles infinies détectées</li>
+<li><code>agent.handoff.count</code> — délégations entre agents (multi-agent)</li>
+<li><code>agent.context_window.utilization</code> — % de fenêtre contexte utilisé</li>
+</ul>
+<hr>
+<h3>4. Structurer les logs avec corrélation trace</h3>
+<pre><code class="lang-python">import logging, json
+from opentelemetry import trace
+
+class AgentLogger:
+    def __init__(self, name: str):
+        self.logger = logging.getLogger(name)
+
+    def _base(self, extra: dict) -&gt; dict:
+        span = trace.get_current_span()
+        ctx = span.get_span_context()
+        return {
+            &quot;trace_id&quot;: format(ctx.trace_id, &quot;032x&quot;) if ctx.is_valid else None,
+            &quot;span_id&quot;: format(ctx.span_id, &quot;016x&quot;) if ctx.is_valid else None,
+            **extra,
+        }
+
+    def tool_call(self, tool: str, params: dict, result_summary: str):
+        self.logger.info(json.dumps(self._base({
+            &quot;event&quot;: &quot;tool.call&quot;,
+            &quot;tool&quot;: tool,
+            &quot;params_keys&quot;: list(params.keys()),  # pas les valeurs sensibles
+            &quot;result_summary&quot;: result_summary[:200],
+        })))
+
+    def decision(self, reason: str, action: str):
+        self.logger.info(json.dumps(self._base({
+            &quot;event&quot;: &quot;agent.decision&quot;,
+            &quot;reason&quot;: reason[:500],
+            &quot;action&quot;: action,
+        })))</code></pre>
+<p><strong>Règle de masquage PII</strong> : ne logguer que les clés des paramètres (pas les valeurs), tronquer les textes libres à 200-500 chars, ne jamais logguer tokens API, mots de passe, données personnelles.</p>
+<hr>
+<h3>5. Dashboards — panels essentiels</h3>
+<p><strong>Grafana / Datadog — structure recommandée :</strong></p>
+<pre><code>Panel 1 — Overview (last 1h)
+  - Agents actifs (gauge)
+  - Requêtes/min (time series)
+  - Taux d'erreur % (stat + threshold rouge &gt;5%)
+  - Coût total estimé (stat)
+
+Panel 2 — LLM Performance
+  - Latence p50/p95/p99 par modèle (histogram)
+  - Tokens consommés par requête (time series)
+  - Distribution des longueurs de prompt (histogram)
+
+Panel 3 — Tool Calls
+  - Top 10 outils les plus appelés (bar chart)
+  - Taux d'échec par outil (table)
+  - Latence moyenne par outil (bar chart)
+
+Panel 4 — Multi-agent (si applicable)
+  - Graphe de dépendances agents (node graph panel)
+  - Latence inter-agents (heatmap)
+  - Chaînes les plus longues (table)
+
+Panel 5 — Traces individuelles
+  - Lien vers Jaeger/Tempo avec filtre trace_id</code></pre>
+<hr>
+<h3>6. Alertes — seuils 2026</h3>
+<pre><code class="lang-yaml"># Prometheus AlertManager — exemples copiables
+- alert: AgentHighLatency
+  expr: histogram_quantile(0.95, agent_llm_latency_ms_bucket) &gt; 10000
+  for: 5m
+  labels: { severity: warning }
+  annotations:
+    summary: &quot;LLM p95 latency &gt; 10s sur {{ $labels.model }}&quot;
+
+- alert: AgentLoopDetected
+  expr: increase(agent_loop_detected_total[5m]) &gt; 0
+  labels: { severity: critical }
+  annotations:
+    summary: &quot;Boucle infinie détectée — agent {{ $labels.agent_id }}&quot;
+
+- alert: AgentHighCost
+  expr: increase(agent_cost_usd_total[1h]) &gt; 10
+  labels: { severity: warning }
+  annotations:
+    summary: &quot;Coût agent &gt; $10/h — vérifier les requêtes abusives&quot;
+
+- alert: AgentErrorRate
+  expr: rate(agent_tool_errors_total[5m]) / rate(agent_tool_calls_total[5m]) &gt; 0.1
+  for: 3m
+  labels: { severity: critical }</code></pre>
+<hr>
+<h3>7. Tracer les workflows multi-agents</h3>
+<p>Pattern recommandé — chaque agent reçoit et propage le trace context :</p>
+<pre><code class="lang-python"># Orchestrateur — crée la trace racine
+with tracer.start_as_current_span(&quot;orchestrator.task&quot;, attributes={&quot;task.id&quot;: task_id}):
+    # Déléguer à sous-agent A
+    with tracer.start_as_current_span(&quot;delegate.agent_a&quot;):
+        result_a = call_sub_agent(&quot;agent-a&quot;, payload_a)
+
+    # Déléguer à sous-agent B en parallèle
+    with tracer.start_as_current_span(&quot;delegate.agent_b&quot;):
+        result_b = call_sub_agent(&quot;agent-b&quot;, payload_b)
+
+    # Agréger
+    with tracer.start_as_current_span(&quot;aggregate&quot;):
+        final = aggregate(result_a, result_b)</code></pre>
+<p>Visualisation dans Jaeger/Tempo : waterfall view → identifier quel agent bloque la chaîne.</p>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Solution</th></tr></thead><tbody><tr><td>Logguer le prompt complet en prod</td><td>Fuite PII + coût stockage élevé</td><td>Hash du prompt + tronquage</td></tr><tr><td>Créer un span par token streamé</td><td>Overhead OTel &gt; temps LLM</td><td>Un seul span par appel LLM complet</td></tr><tr><td>Pas de sampling en prod</td><td>Volume ingestion x100</td><td>Tail-based sampling à 10-20% + 100% sur erreurs</td></tr><tr><td>Alertes sur métriques brutes sans baseline</td><td>Fatigue d'alerte dès le lancement</td><td>Définir les seuils après 1 semaine d'observation</td></tr><tr><td>Trace context non propagé vers les workers async</td><td>Traces orphelines, corrélation impossible</td><td>Toujours passer le context explicitement aux threads/coroutines</td></tr><tr><td>Métriques LLM sans dimension <code>model</code></td><td>Impossible de comparer les modèles</td><td>Toujours tagger avec <code>model</code>, <code>agent_id</code>, <code>env</code></td></tr><tr><td>Retention 30 jours par défaut</td><td>Coûts ingestion élevés</td><td>7j traces détaillées, 90j métriques agrégées</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Sampling stratégique</strong> : 100% en dev, tail-based 10-20% en prod (garder 100% des erreurs et des spans lents).</li>
+<li><strong>OpenTelemetry Collector</strong> comme proxy — ne pas exporter directement depuis l'agent vers Datadog/Grafana, passer par le collector pour buffering et retry.</li>
+<li><strong>Semantic conventions LLM</strong> : utiliser les attributs standardisés <code>gen_ai.*</code> (spec OpenTelemetry Semantic Conventions for LLM Systems, stable depuis 2025).</li>
+<li><strong>Cost attribution</strong> : tagger chaque span avec <code>tenant_id</code> et <code>feature_id</code> pour le chargeback par équipe/feature.</li>
+<li><strong>Offline replay</strong> : sauvegarder les traces complètes des cas d'échec pour rejouer en local lors du debug.</li>
+<li><strong>SLO sur les agents</strong> : définir un SLO explicite (ex: 95% des tâches &lt; 15s, taux succès &gt; 98%) et alerter sur le burn rate, pas sur les seuils bruts.</li>
 </ul>
 </article>
 </main>

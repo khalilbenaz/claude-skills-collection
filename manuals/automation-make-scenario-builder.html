@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>automation-make-scenario-builder — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Scénarios d'automatisation avec Make (ex-Integromat) — modules, routers, iterators, webhooks et orchestration visuelle.">
+<meta name="description" content="Scénarios d'automatisation avec Make (ex-Integromat) — modules, routers, iterators, webhooks, data stores et orchestration visuelle.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">⚙️ Automatisation</span>
 <h1 class="skill-title">automation-make-scenario-builder</h1>
-<p class="lead">Scénarios d'automatisation avec Make (ex-Integromat) — modules, routers, iterators, webhooks et orchestration visuelle.</p>
+<p class="lead">Scénarios d'automatisation avec Make (ex-Integromat) — modules, routers, iterators, webhooks, data stores et orchestration visuelle.</p>
 
 
 
@@ -96,38 +96,120 @@ cp -r claude-skills-collection/skills/automation-make-scenario-builder ~/.claude
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Make Scenario Builder</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définir le scénario d'automatisation</strong> — analyser le processus métier, identifier les applications impliquées et vérifier leur disponibilité dans le catalogue Make (1500+ apps), définir la fréquence d'exécution (instantané via webhook, ou planifié par intervalle), et estimer le volume d'opérations pour choisir le plan adapté.</li>
-</ol>
-<ol>
-<li><strong>Configurer le module trigger</strong> — sélectionner le module déclencheur (Watch pour polling périodique, Instant pour webhook temps réel), connecter le compte de l'application source, configurer les filtres de déclenchement pour ne traiter que les données pertinentes, et tester pour vérifier la récupération des données.</li>
-</ol>
-<ol>
-<li><strong>Construire le flux avec les modules</strong> — enchaîner les modules d'action dans l'éditeur visuel, mapper les champs dynamiquement entre les modules avec le panneau de mapping, utiliser les fonctions intégrées (<code>formatDate</code>, <code>parseJSON</code>, <code>ifempty</code>, <code>replace</code>) pour transformer les données en transit.</li>
-</ol>
-<ol>
-<li><strong>Utiliser les Routers pour le branchement</strong> — ajouter un Router pour créer des branches parallèles ou conditionnelles, configurer des filtres sur chaque route (conditions AND/OR sur les données), ordonner les routes par priorité avec l'option fallback, et utiliser des routes distinctes pour les différents cas métier.</li>
-</ol>
-<ol>
-<li><strong>Gérer les collections avec Iterators et Aggregators</strong> — utiliser un Iterator pour décomposer un tableau en éléments individuels traités un par un, puis un Aggregator (Array, Text, Numeric) pour reconstituer les résultats après traitement, et configurer le Array Aggregator pour regrouper les données filtrées.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les webhooks personnalisés</strong> — créer un webhook Make pour recevoir des données externes en temps réel, définir la structure des données attendues (data structure), répondre immédiatement avec un Webhook Response, et sécuriser avec une vérification IP ou un token.</li>
-</ol>
-<ol>
-<li><strong>Gérer les erreurs</strong> — ajouter des Error Handlers (Resume, Commit, Rollback, Break, Ignore) sur les modules critiques, configurer les notifications d'erreur par email ou Slack, utiliser le module Break pour mettre en file d'attente les exécutions échouées et les relancer.</li>
-</ol>
-<ol>
-<li><strong>Optimiser et déployer</strong> — activer le scénario en mode scheduling, surveiller la consommation d'opérations dans le tableau de bord, utiliser les Data Stores pour le stockage intermédiaire persistant, et cloner le scénario dans un espace d'équipe pour la collaboration.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Étape 1 — Cadrage du scénario</h2>
+<p><strong>Questions à poser avant de toucher l'éditeur :</strong></p>
+<table><thead><tr><th>Question</th><th>Décision</th></tr></thead><tbody><tr><td>Délai acceptable entre événement et action ?</td><td>&lt; 1 min → webhook instant ; sinon polling</td></tr><tr><td>Volume mensuel d'opérations estimé ?</td><td>&lt; 10 k → Free ; &lt; 150 k → Core ; au-delà → Pro/Teams</td></tr><tr><td>Les deux apps sont-elles dans le catalogue Make ?</td><td>Oui → module natif ; Non → HTTP / Webhook générique</td></tr><tr><td>Données à stocker entre exécutions ?</td><td>Oui → Data Store ; Non → traitement stateless</td></tr></tbody></table>
+<p><strong>Estimation rapide des opérations :</strong></p>
+<pre><code>opérations = nb_exécutions × nb_modules_actifs × taille_collection_moyenne
+Exemple : 500 leads/jour × 6 modules × 1 = 3 000 ops/jour → ~90 k/mois (plan Core suffit)</code></pre>
+<hr>
+<h2>Étape 2 — Trigger</h2>
+<h3>Polling (Watch)</h3>
 <ul>
-<li>Toujours estimer le nombre d'opérations avant de déployer un scénario — chaque module exécuté consomme une opération, et les boucles (Iterators) multiplient la consommation.</li>
-<li>Utiliser les filtres le plus tôt possible dans le scénario pour éviter de consommer des opérations sur des données non pertinentes.</li>
-<li>Implémenter systématiquement des Error Handlers sur les modules qui interagissent avec des API externes — les timeouts et erreurs réseau sont fréquents.</li>
-<li>Documenter chaque scénario avec des notes sur les modules et nommer explicitement les connexions — un scénario visuel non documenté devient incompréhensible après quelques semaines.</li>
-<li>Tester avec l'option &quot;Run once&quot; avant d'activer le scheduling — vérifier chaque module individuellement et valider les données de sortie.</li>
+<li>Intervalle minimum : 1 min (plan payant), 15 min (Free).</li>
+<li>Configurer <strong>Max results</strong> : commencer à 10, augmenter en production.</li>
+<li>Cocher <strong>Process all cycles</strong> pour ne pas sauter de lots en cas de retard.</li>
+</ul>
+<h3>Webhook instant</h3>
+<pre><code>URL générée : https://hook.eu2.make.com/xxxxxxxxxxxx
+Header recommandé : X-Secret-Token: &lt;votre_token&gt;</code></pre>
+<ul>
+<li>Cliquer <strong>Redéfinir la structure de données</strong> après le premier appel test pour inférer automatiquement le schéma.</li>
+<li>Toujours répondre avec un <strong>Webhook Response</strong> (200 + corps JSON) sinon l'appelant retente.</li>
+</ul>
+<pre><code class="lang-json">{ &quot;status&quot;: &quot;ok&quot;, &quot;received&quot;: true }</code></pre>
+<hr>
+<h2>Étape 3 — Mapping et transformations</h2>
+<p>Fonctions utiles copiables dans le panneau de mapping :</p>
+<pre><code># Date ISO → format lisible
+{{formatDate(1.created_at; &quot;DD/MM/YYYY HH:mm&quot;; &quot;UTC&quot;)}}
+
+# Valeur par défaut si vide
+{{ifempty(1.email; &quot;no-reply@example.com&quot;)}}
+
+# Extraction de domaine email
+{{replace(1.email; &quot;/^.*@/&quot;; &quot;&quot;)}}
+
+# Parsing JSON embarqué
+{{parseJSON(1.metadata)}}
+
+# Troncature de texte
+{{substring(1.description; 0; 255)}}</code></pre>
+<p><strong>Règle :</strong> mapper à partir des sorties du module précédent (panneau gauche) plutôt que taper en dur — les valeurs hardcodées cassent silencieusement si le schéma source change.</p>
+<hr>
+<h2>Étape 4 — Routers et filtres</h2>
+<p>Structure type à 3 routes :</p>
+<pre><code>[Trigger]
+    └─ [Router]
+         ├── Route A  (filtre : 1.status = &quot;new&quot;)       → créer dans CRM
+         ├── Route B  (filtre : 1.status = &quot;updated&quot;)   → mettre à jour CRM
+         └── Route C  (fallback — aucun filtre)          → log dans Slack #alertes</code></pre>
+<ul>
+<li><strong>Ordre des routes</strong> : la plus restrictive en premier, fallback en dernier.</li>
+<li><strong>Opérateurs disponibles</strong> : Equal, Contains, Matches pattern (regex), Exists.</li>
+<li>Activer <strong>Stop processing routes after first match</strong> si les routes sont mutuellement exclusives (économise des opérations).</li>
+</ul>
+<hr>
+<h2>Étape 5 — Iterator / Aggregator</h2>
+<p>Pattern standard pour traiter un tableau :</p>
+<pre><code>[Module qui renvoie un tableau]
+    → [Iterator]          ← décompose chaque élément
+        → [Traitement par élément]
+            → [Array Aggregator]   ← reconstruit le tableau
+                → [Suite du scénario]</code></pre>
+<p>Configuration Array Aggregator :</p>
+<ul>
+<li><strong>Source module</strong> : pointer sur l'Iterator (pas sur le module de traitement).</li>
+<li><strong>Aggregated fields</strong> : sélectionner uniquement les champs nécessaires.</li>
+<li>Résultat disponible comme <code>{{n.array}}</code> dans le module suivant.</li>
+</ul>
+<p><strong>Attention :</strong> chaque itération consomme autant d'opérations que de modules dans la boucle.</p>
+<hr>
+<h2>Étape 6 — Data Stores</h2>
+<p>Cas d'usage : mémoriser un état entre exécutions (IDs déjà traités, compteurs, cache).</p>
+<pre><code># Schéma minimal pour déduplication
+Champ : record_id  (Text, clé unique)
+Champ : processed_at  (Date)
+
+# Logique dans le scénario
+[Search a record] → existe ? 
+    Oui → skip (Router vers rien)
+    Non → [traitement] → [Add/Replace a record]</code></pre>
+<p>Quota : 1 Data Store par scénario sur Free, illimité sur payant. Taille max : 1 MB (Free) / variable (payant).</p>
+<hr>
+<h2>Étape 7 — Gestion des erreurs</h2>
+<table><thead><tr><th>Handler</th><th>Comportement</th><th>Quand l'utiliser</th></tr></thead><tbody><tr><td><strong>Ignore</strong></td><td>Continue malgré l'erreur</td><td>Données non critiques</td></tr><tr><td><strong>Resume</strong></td><td>Continue avec valeur de remplacement</td><td>Champ optionnel manquant</td></tr><tr><td><strong>Break</strong></td><td>Met en file d'attente pour retry</td><td>API tierce instable</td></tr><tr><td><strong>Rollback</strong></td><td>Annule toute l'exécution</td><td>Transaction multi-apps</td></tr><tr><td><strong>Commit</strong></td><td>Valide les opérations précédentes puis arrête</td><td>Étape partielle acceptable</td></tr></tbody></table>
+<p><strong>Notification d'erreur standard (Slack) :</strong></p>
+<pre><code>Message : ⚠️ Scénario {{scenarioName}} — erreur module {{moduleName}}
+Détail : {{error.message}}
+Lien : https://www.make.com/en/dashboard</code></pre>
+<p>Activer <strong>Incomplete executions</strong> dans les paramètres du scénario → les exécutions échouées sont rejouables manuellement depuis l'onglet dédié.</p>
+<hr>
+<h2>Étape 8 — Déploiement et monitoring</h2>
+<p><strong>Checklist avant activation :</strong></p>
+<ul>
+<li>[ ] Run once testé avec données réelles</li>
+<li>[ ] Chaque module validé individuellement (icône verte)</li>
+<li>[ ] Error handler posé sur chaque module HTTP / API externe</li>
+<li>[ ] Scénario nommé : <code>[Domaine] — [Source] → [Destination] — [env]</code></li>
+<li>[ ] Notes ajoutées sur les modules complexes (clic droit → Add note)</li>
+<li>[ ] Connexions nommées explicitement (pas &quot;Ma connexion 1&quot;)</li>
+</ul>
+<p><strong>Surveillance opérations :</strong></p>
+<pre><code>Dashboard → Organization → Usage
+Alerte recommandée : poser un scénario de monitoring qui envoie un email
+si ops restantes &lt; 20% du quota mensuel.</code></pre>
+<hr>
+<h2>Anti-patterns et pièges fréquents</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Filtrer tard dans le flux</td><td>Consommation d'ops inutile</td><td>Filtrer dès le module Trigger ou juste après</td></tr><tr><td>Aucun Error Handler sur HTTP</td><td>Scénario bloqué silencieusement</td><td>Handler Break + Incomplete executions activé</td></tr><tr><td>Mapping hardcodé (texte fixe)</td><td>Régression si schéma change</td><td>Toujours mapper depuis les sorties de module</td></tr><tr><td>Iterator sans Aggregator</td><td>Modules suivants reçoivent un seul élément</td><td>Toujours clore la boucle avec un Aggregator</td></tr><tr><td>Webhook sans réponse immédiate</td><td>L'appelant retente → doublons</td><td>Webhook Response avant les traitements longs</td></tr><tr><td>Clé d'API en clair dans un champ texte</td><td>Fuite de secret</td><td>Utiliser les Connections Make ou un Data Store chiffré</td></tr><tr><td>Scénario actif sans nom clair</td><td>Impossible à maintenir en équipe</td><td>Convention de nommage systématique</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Blueprints</strong> : exporter chaque scénario en JSON (trois points → Export Blueprint) et le versionner dans git — Make ne versionne pas nativement.</li>
+<li><strong>Environnements</strong> : utiliser des équipes séparées (ou des connexions nommées <code>prod</code> / <code>staging</code>) pour isoler les environnements.</li>
+<li><strong>Rate limiting API</strong> : ajouter un module <strong>Sleep</strong> (Tools → Sleep, 1-2 s) dans les boucles qui appellent des API avec quotas stricts.</li>
+<li><strong>Sous-scénarios</strong> : découper les scénarios &gt; 20 modules en sous-scénarios appelés via <strong>Run a scenario</strong> — gain en lisibilité et réutilisabilité.</li>
+<li><strong>MCP / AI modules</strong> : Make expose désormais des modules OpenAI, Anthropic et HuggingFace natifs — préférer ces modules aux appels HTTP bruts pour les intégrations IA.</li>
 </ul>
 </article>
 </main>

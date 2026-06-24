@@ -96,38 +96,193 @@ cp -r claude-skills-collection/skills/automation-script-automation-expert ~/.cla
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Script Automation Expert</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyser la tâche répétitive</strong> — identifier précisément les étapes manuelles à automatiser, les entrées/sorties attendues, la fréquence d'exécution, les dépendances système, et choisir le langage approprié (Bash pour Linux/CLI, PowerShell pour Windows/Azure, Python pour cross-platform/API).</li>
-</ol>
-<ol>
-<li><strong>Concevoir l'architecture du script</strong> — structurer le script avec un point d'entrée clair, des fonctions modulaires réutilisables, un fichier de configuration externe (YAML, JSON, <code>.env</code>) pour les paramètres variables, et un système de logging pour le suivi des exécutions.</li>
-</ol>
-<ol>
-<li><strong>Implémenter la gestion des fichiers et données</strong> — automatiser la lecture/écriture de fichiers (CSV, JSON, XML, Excel), le déplacement et renommage en batch, la compression/archivage, le nettoyage de fichiers anciens, et la synchronisation entre répertoires avec gestion des conflits.</li>
-</ol>
-<ol>
-<li><strong>Intégrer les API et services externes</strong> — utiliser les bibliothèques HTTP (<code>requests</code> en Python, <code>Invoke-RestMethod</code> en PowerShell, <code>curl</code> en Bash) pour interagir avec les API REST, gérer l'authentification (API keys, OAuth, tokens), et parser les réponses JSON/XML.</li>
-</ol>
-<ol>
-<li><strong>Planifier l'exécution automatique</strong> — configurer les cron jobs (Linux) avec <code>crontab</code>, les Task Scheduler (Windows) avec <code>schtasks</code> ou PowerShell <code>Register-ScheduledTask</code>, ou les timers systemd, en incluant la redirection des logs et la notification en cas d'échec.</li>
-</ol>
-<ol>
-<li><strong>Implémenter la gestion d'erreurs robuste</strong> — utiliser les blocs try/catch/finally (Python, PowerShell) ou <code>trap</code> (Bash), implémenter les retries avec backoff exponentiel pour les opérations réseau, logger les erreurs avec contexte, et envoyer des alertes (email, Slack) en cas d'échec critique.</li>
-</ol>
-<ol>
-<li><strong>Tester et valider</strong> — écrire des tests unitaires pour les fonctions critiques (pytest, Pester, bats), tester avec des données réelles dans un environnement de staging, simuler les cas d'erreur (timeout, fichier manquant, permission refusée), et valider les performances sur le volume attendu.</li>
-</ol>
-<ol>
-<li><strong>Déployer et maintenir</strong> — versionner le script dans Git, documenter l'installation et la configuration dans un README, créer un mécanisme de mise à jour, monitorer les exécutions planifiées, et réviser régulièrement le script pour l'adapter aux changements d'API ou d'environnement.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Choisir le bon langage</h2>
+<table><thead><tr><th>Critère</th><th>Bash</th><th>PowerShell</th><th>Python</th></tr></thead><tbody><tr><td>OS cible</td><td>Linux/macOS</td><td>Windows/Azure</td><td>Cross-platform</td></tr><tr><td>Manipulation fichiers</td><td>✅ natif</td><td>✅ natif</td><td>✅ via <code>pathlib</code></td></tr><tr><td>API REST</td><td><code>curl</code></td><td><code>Invoke-RestMethod</code></td><td><code>requests</code> / <code>httpx</code></td></tr><tr><td>Parsing JSON/XML</td><td><code>jq</code> requis</td><td>natif <code>ConvertFrom-Json</code></td><td>natif <code>json</code></td></tr><tr><td>Disponibilité par défaut</td><td>Linux/macOS</td><td>Windows Server 2016+</td><td>à installer</td></tr><tr><td>Tests unitaires</td><td><code>bats</code></td><td><code>Pester</code></td><td><code>pytest</code></td></tr></tbody></table>
+<p><strong>Règle</strong> : si le script tourne sur plusieurs OS ou consomme des API complexes → Python. Si c'est pur Windows/AD/Azure → PowerShell. Si c'est du glue CLI Linux → Bash.</p>
+<hr>
+<h2>2. Workflow en étapes</h2>
+<h3>Étape 1 — Analyser et cadrer</h3>
+<p>Avant d'écrire une ligne de code, répondre à :</p>
 <ul>
-<li>Toujours externaliser les paramètres configurables (chemins, credentials, seuils) dans un fichier de configuration — ne jamais coder en dur les valeurs qui peuvent changer entre environnements.</li>
-<li>Implémenter un système de logging dès le début avec horodatage, niveau de sévérité et contexte — un script sans logs est impossible à déboguer en production.</li>
-<li>Rendre chaque script idempotent — une ré-exécution ne doit pas dupliquer les données ni provoquer d'effets de bord indésirables.</li>
-<li>Ne jamais stocker les credentials en clair dans les scripts — utiliser des variables d'environnement, des gestionnaires de secrets (Vault, Azure Key Vault), ou des fichiers protégés avec permissions restrictives.</li>
-<li>Inclure un mode dry-run (<code>--dry-run</code>) qui affiche les actions sans les exécuter — indispensable pour valider le comportement avant l'exécution réelle.</li>
+<li>Entrées/sorties : fichiers, API, base de données ?</li>
+<li>Fréquence : unitaire, planifié, déclenché sur événement ?</li>
+<li>Volume : combien d'items par exécution ?</li>
+<li>Dépendances système : outils CLI, credentials, réseau ?</li>
+<li>Idempotence requise ? (re-run sans effet de bord)</li>
+</ul>
+<h3>Étape 2 — Structurer le script</h3>
+<p>Modèle Python minimal production-ready :</p>
+<pre><code class="lang-python">#!/usr/bin/env python3
+&quot;&quot;&quot;process_invoices.py — traitement batch des factures.&quot;&quot;&quot;
+
+import argparse, logging, sys
+from pathlib import Path
+from datetime import datetime
+
+LOG_FORMAT = &quot;%(asctime)s %(levelname)s %(message)s&quot;
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT,
+                    handlers=[logging.StreamHandler(),
+                               logging.FileHandler(f&quot;run_{datetime.now():%Y%m%d}.log&quot;)])
+log = logging.getLogger(__name__)
+
+def parse_args():
+    p = argparse.ArgumentParser()
+    p.add_argument(&quot;--input-dir&quot;, required=True)
+    p.add_argument(&quot;--dry-run&quot;, action=&quot;store_true&quot;)
+    return p.parse_args()
+
+def process(path: Path, dry_run: bool) -&gt; bool:
+    log.info(&quot;Traitement %s&quot;, path.name)
+    if dry_run:
+        log.info(&quot;[DRY-RUN] %s ignoré&quot;, path.name)
+        return True
+    # ... logique métier ici
+    return True
+
+def main():
+    args = parse_args()
+    errors = 0
+    for f in Path(args.input_dir).glob(&quot;*.csv&quot;):
+        if not process(f, args.dry_run):
+            errors += 1
+    sys.exit(1 if errors else 0)
+
+if __name__ == &quot;__main__&quot;:
+    main()</code></pre>
+<p>Modèle PowerShell équivalent :</p>
+<pre><code class="lang-powershell">#Requires -Version 7
+[CmdletBinding(SupportsShouldProcess)]
+param(
+    [string]$InputDir = &quot;C:\data\invoices&quot;,
+    [switch]$DryRun
+)
+
+$ErrorActionPreference = &quot;Stop&quot;
+$logFile = &quot;run_$(Get-Date -Format yyyyMMdd).log&quot;
+
+function Write-Log { param([string]$Msg, [string]$Level = &quot;INFO&quot;)
+    $line = &quot;$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [$Level] $Msg&quot;
+    Add-Content $logFile $line; Write-Host $line }
+
+try {
+    Get-ChildItem $InputDir -Filter &quot;*.csv&quot; | ForEach-Object {
+        Write-Log &quot;Traitement $($_.Name)&quot;
+        if (-not $DryRun) {
+            # logique métier ici
+        } else { Write-Log &quot;[DRY-RUN] $($_.Name) ignoré&quot; }
+    }
+} catch {
+    Write-Log $_.Exception.Message &quot;ERROR&quot;
+    exit 1
+}</code></pre>
+<h3>Étape 3 — Externaliser la configuration</h3>
+<p>Ne jamais hardcoder. Utiliser selon le contexte :</p>
+<pre><code class="lang-bash"># Bash : fichier .env
+source .env
+# ou inline
+DB_HOST=&quot;${DB_HOST:-localhost}&quot;</code></pre>
+<pre><code class="lang-python"># Python : config.yaml + python-dotenv
+from dotenv import load_dotenv; load_dotenv()
+import os
+DB_HOST = os.environ[&quot;DB_HOST&quot;]  # erreur explicite si absent</code></pre>
+<pre><code class="lang-powershell"># PowerShell : fichier JSON
+$cfg = Get-Content config.json | ConvertFrom-Json
+$cfg.DbHost</code></pre>
+<p>Jamais de credential en clair. Options par priorité :</p>
+<ol>
+<li>Variables d'environnement injectées par le scheduler/CI</li>
+<li>Azure Key Vault / AWS Secrets Manager / HashiCorp Vault</li>
+<li>Fichier protégé hors dépôt Git (<code>chmod 600</code>)</li>
+</ol>
+<h3>Étape 4 — Gestion d'erreurs et retries</h3>
+<pre><code class="lang-python">import time, functools
+
+def retry(max_attempts=3, backoff=2.0, exceptions=(Exception,)):
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return fn(*args, **kwargs)
+                except exceptions as e:
+                    if attempt == max_attempts:
+                        raise
+                    wait = backoff ** attempt
+                    log.warning(&quot;Tentative %d/%d échouée (%s) — retry dans %.1fs&quot;,
+                                attempt, max_attempts, e, wait)
+                    time.sleep(wait)
+        return wrapper
+    return decorator
+
+@retry(max_attempts=3, exceptions=(requests.Timeout, requests.ConnectionError))
+def fetch_data(url: str) -&gt; dict:
+    return requests.get(url, timeout=10).json()</code></pre>
+<h3>Étape 5 — Planifier l'exécution</h3>
+<p><strong>Cron Linux</strong> — toujours rediriger stderr :</p>
+<pre><code class="lang-cron"># Toutes les nuits à 02h30, log complet
+30 2 * * * /usr/bin/python3 /opt/scripts/process.py --input-dir /data &gt;&gt; /var/log/process.log 2&gt;&amp;1</code></pre>
+<p><strong>systemd timer</strong> (préférable à cron pour les services) :</p>
+<pre><code class="lang-ini"># /etc/systemd/system/process.timer
+[Unit]
+Description=Process invoices nightly
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+<p><strong>Windows Task Scheduler via PowerShell</strong> :</p>
+<pre><code class="lang-powershell">$action  = New-ScheduledTaskAction -Execute &quot;pwsh&quot; -Argument &quot;-File C:\scripts\process.ps1&quot;
+$trigger = New-ScheduledTaskTrigger -Daily -At &quot;02:30&quot;
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+Register-ScheduledTask -TaskName &quot;ProcessInvoices&quot; -Action $action `
+    -Trigger $trigger -Settings $settings -RunLevel Highest</code></pre>
+<h3>Étape 6 — Alertes en cas d'échec</h3>
+<pre><code class="lang-python">import smtplib
+from email.message import EmailMessage
+
+def alert_failure(script_name: str, error: str):
+    msg = EmailMessage()
+    msg[&quot;Subject&quot;] = f&quot;[ALERTE] {script_name} en échec&quot;
+    msg[&quot;From&quot;] = &quot;monitoring@company.com&quot;
+    msg[&quot;To&quot;] = &quot;team@company.com&quot;
+    msg.set_content(f&quot;Erreur:\n{error}&quot;)
+    with smtplib.SMTP(&quot;smtp.company.com&quot;) as s:
+        s.send_message(msg)</code></pre>
+<p>Slack (webhook) :</p>
+<pre><code class="lang-bash">curl -s -X POST &quot;$SLACK_WEBHOOK&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &quot;{\&quot;text\&quot;:\&quot;❌ *process.sh* en échec : $ERROR_MSG\&quot;}&quot;</code></pre>
+<h3>Étape 7 — Tester</h3>
+<pre><code class="lang-bash"># Pré-commit : dry-run obligatoire
+python process.py --input-dir test/fixtures --dry-run
+
+# Tests pytest
+pytest tests/ -v --tb=short</code></pre>
+<pre><code class="lang-powershell"># Pester
+Invoke-Pester tests/ -Output Detailed</code></pre>
+<h3>Étape 8 — Versionner et documenter</h3>
+<p>Structure de dépôt minimale :</p>
+<pre><code>my-script/
+├── process.py          # script principal
+├── config.yaml.example # template de config (jamais le vrai)
+├── requirements.txt
+├── tests/
+│   └── test_process.py
+└── README.md           # installation, usage, variables requises</code></pre>
+<hr>
+<h2>3. Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Credentials hardcodés</td><td>Fuite dans Git</td><td>Variables d'env / Vault</td></tr><tr><td>Pas de dry-run</td><td>Données corrompues en test</td><td><code>--dry-run</code> systématique</td></tr><tr><td>Script non-idempotent</td><td>Doublons / effets de bord</td><td>Vérifier si déjà traité avant d'agir</td></tr><tr><td>Pas de logs</td><td>Débogage impossible</td><td>Logger chaque action significative</td></tr><tr><td><code>rm -rf</code> sans vérification</td><td>Perte de données</td><td>Vérifier le chemin, demander confirmation</td></tr><tr><td>Ignorer le code de retour</td><td>Erreurs silencieuses</td><td><code>set -euo pipefail</code> (Bash) / <code>$ErrorActionPreference = &quot;Stop&quot;</code></td></tr><tr><td>Timeout absent sur les appels réseau</td><td>Blocage infini</td><td>Toujours définir un timeout explicite</td></tr><tr><td>Script monolithique</td><td>Maintenance impossible</td><td>Fonctions &lt; 30 lignes, modules séparés</td></tr></tbody></table>
+<hr>
+<h2>4. Bonnes pratiques 2026</h2>
+<ul>
+<li><strong><code>set -euo pipefail</code></strong> en tête de tout script Bash — stoppe à la première erreur, détecte les variables non définies, propage les échecs dans les pipes.</li>
+<li><strong><code>uv</code></strong> remplace <code>pip</code> + <code>venv</code> pour Python : <code>uv run process.py</code> gère l'environnement isolé sans setup préalable.</li>
+<li><strong>Structured logging JSON</strong> en production (Python <code>structlog</code>, PowerShell <code>Write-Information</code> avec tags) pour l'ingestion dans ELK/Loki.</li>
+<li><strong>Limite de durée</strong> sur les tâches planifiées : toujours définir un timeout max pour éviter les runs zombies.</li>
+<li><strong>Atomicité</strong> : écrire dans un fichier <code>.tmp</code> puis renommer — jamais écrire directement le fichier destination (évite les lectures partielles).</li>
+<li><strong>Rapport d'exécution</strong> : en fin de run, afficher <code>Succès: N | Échecs: M | Durée: Xs</code> — facilite le monitoring sans ouvrir les logs.</li>
 </ul>
 </article>
 </main>

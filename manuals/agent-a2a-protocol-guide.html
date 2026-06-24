@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>agent-a2a-protocol-guide — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Guide du protocole Agent-to-Agent (A2A) de Google pour l'interopérabilité entre agents IA — découverte, communication et collaboration inter-agents.">
+<meta name="description" content="Guide du protocole Agent-to-Agent (A2A) de Google pour l'interopérabilité entre agents IA — découverte, communication et collaboration inter-agents, avec exemples de code, critères de décision et pièges à éviter.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🤖 Agents IA</span>
 <h1 class="skill-title">agent-a2a-protocol-guide</h1>
-<p class="lead">Guide du protocole Agent-to-Agent (A2A) de Google pour l'interopérabilité entre agents IA — découverte, communication et collaboration inter-agents.</p>
+<p class="lead">Guide du protocole Agent-to-Agent (A2A) de Google pour l'interopérabilité entre agents IA — découverte, communication et collaboration inter-agents, avec exemples de code, critères de décision et pièges à éviter.</p>
 
 
 
@@ -96,38 +96,175 @@ cp -r claude-skills-collection/skills/agent-a2a-protocol-guide ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide du Protocole A2A</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Comprendre l'architecture A2A</strong> — Expliquer les concepts fondamentaux du protocole : Agent Cards (description des capacités), Task lifecycle (submitted, working, completed, failed), Artifacts (résultats produits), et les rôles client/server entre agents.</li>
-</ol>
-<ol>
-<li><strong>Créer l'Agent Card</strong> — Définir la carte d'identité de l'agent au format JSON : nom, description, URL du endpoint, capabilities supportées (streaming, push notifications), skills déclarées avec exemples d'utilisation, et méthodes d'authentification acceptées.</li>
-</ol>
-<ol>
-<li><strong>Implémenter le serveur A2A</strong> — Développer le endpoint HTTP qui reçoit les requêtes JSON-RPC 2.0 : <code>tasks/send</code> pour les tâches synchrones, <code>tasks/sendSubscribe</code> pour le streaming SSE, <code>tasks/get</code> pour consulter le statut, et <code>tasks/cancel</code> pour l'annulation.</li>
-</ol>
-<ol>
-<li><strong>Gérer le cycle de vie des tâches</strong> — Implémenter la machine à états des tâches (submitted → working → completed/failed/canceled), les mises à jour intermédiaires via <code>TaskStatusUpdateEvent</code>, et la production d'artifacts (fichiers, données structurées, messages).</li>
-</ol>
-<ol>
-<li><strong>Configurer la découverte d'agents</strong> — Publier l'Agent Card sur <code>/.well-known/agent.json</code>, implémenter un registre d'agents pour la découverte dynamique, et définir les critères de sélection d'un agent pour une tâche donnée (skills, disponibilité, coût).</li>
-</ol>
-<ol>
-<li><strong>Sécuriser les communications</strong> — Mettre en place l'authentification entre agents (OAuth 2.0, API keys), le chiffrement des échanges (HTTPS), la validation des Agent Cards, et les politiques d'autorisation (quels agents peuvent interagir).</li>
-</ol>
-<ol>
-<li><strong>Orchestrer la collaboration multi-agents</strong> — Concevoir les workflows de collaboration : délégation de sous-tâches, agrégation de résultats, gestion des échecs et fallback vers d'autres agents, et chaînage de tâches entre agents spécialisés.</li>
-</ol>
-<ol>
-<li><strong>Monitorer et debugger</strong> — Tracer les échanges inter-agents avec des correlation IDs, logger les transitions de statut des tâches, mesurer les latences de communication, et diagnostiquer les échecs de découverte ou d'authentification.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Concepts fondamentaux</h2>
+<table><thead><tr><th>Composant</th><th>Rôle</th></tr></thead><tbody><tr><td><strong>Agent Card</strong></td><td>Fichier JSON décrivant l'agent (skills, endpoint, auth) — publié sur <code>/.well-known/agent.json</code></td></tr><tr><td><strong>Task</strong></td><td>Unité de travail délégué ; cycle : <code>submitted → working → completed / failed / canceled</code></td></tr><tr><td><strong>Artifact</strong></td><td>Résultat produit par une tâche (fichier, JSON, message)</td></tr><tr><td><strong>Part</strong></td><td>Fragment d'un message ou artifact : <code>TextPart</code>, <code>FilePart</code>, <code>DataPart</code></td></tr><tr><td><strong>Client / Server</strong></td><td>Un agent peut être les deux selon la direction de l'appel</td></tr></tbody></table>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Définir l'Agent Card</h3>
+<p>Fichier minimal exposé sur <code>GET /.well-known/agent.json</code> :</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;DataExtractorAgent&quot;,
+  &quot;description&quot;: &quot;Extrait des données structurées depuis des documents PDF&quot;,
+  &quot;url&quot;: &quot;https://agent.example.com/a2a&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;capabilities&quot;: {
+    &quot;streaming&quot;: true,
+    &quot;pushNotifications&quot;: false
+  },
+  &quot;authentication&quot;: {
+    &quot;schemes&quot;: [&quot;Bearer&quot;]
+  },
+  &quot;skills&quot;: [
+    {
+      &quot;id&quot;: &quot;extract-invoice&quot;,
+      &quot;name&quot;: &quot;Invoice Extraction&quot;,
+      &quot;description&quot;: &quot;Retourne les champs clés d'une facture PDF&quot;,
+      &quot;examples&quot;: [&quot;Extrais les montants de cette facture&quot;],
+      &quot;inputModes&quot;: [&quot;application/pdf&quot;],
+      &quot;outputModes&quot;: [&quot;application/json&quot;]
+    }
+  ]
+}</code></pre>
+<p><strong>Critère de décision — streaming</strong> : active <code>streaming: true</code> si les tâches durent &gt; 5 s ou produisent des résultats progressifs. Sinon, mode synchrone suffit.</p>
+<hr>
+<h3>2. Implémenter le serveur A2A (JSON-RPC 2.0)</h3>
+<p>Endpoint unique <code>POST /a2a</code> — méthodes requises :</p>
+<table><thead><tr><th>Méthode</th><th>Usage</th></tr></thead><tbody><tr><td><code>tasks/send</code></td><td>Tâche synchrone (réponse directe)</td></tr><tr><td><code>tasks/sendSubscribe</code></td><td>Tâche longue — SSE stream</td></tr><tr><td><code>tasks/get</code></td><td>Consulter statut + artifacts</td></tr><tr><td><code>tasks/cancel</code></td><td>Annuler une tâche en cours</td></tr></tbody></table>
+<pre><code class="lang-python"># FastAPI — squelette minimal
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, StreamingResponse
+import uuid, asyncio
+
+app = FastAPI()
+
+tasks_store = {}  # En prod : Redis ou DB
+
+@app.post(&quot;/a2a&quot;)
+async def a2a_handler(request: Request):
+    body = await request.json()
+    method = body.get(&quot;method&quot;)
+    params = body.get(&quot;params&quot;, {})
+    rpc_id = body.get(&quot;id&quot;)
+
+    if method == &quot;tasks/send&quot;:
+        task_id = str(uuid.uuid4())
+        result = await run_task(params)
+        tasks_store[task_id] = {&quot;status&quot;: &quot;completed&quot;, &quot;result&quot;: result}
+        return JSONResponse({
+            &quot;jsonrpc&quot;: &quot;2.0&quot;, &quot;id&quot;: rpc_id,
+            &quot;result&quot;: {&quot;id&quot;: task_id, &quot;status&quot;: {&quot;state&quot;: &quot;completed&quot;}, &quot;artifacts&quot;: [result]}
+        })
+
+    if method == &quot;tasks/get&quot;:
+        task_id = params[&quot;id&quot;]
+        task = tasks_store.get(task_id)
+        if not task:
+            return JSONResponse({&quot;jsonrpc&quot;: &quot;2.0&quot;, &quot;id&quot;: rpc_id,
+                                 &quot;error&quot;: {&quot;code&quot;: -32001, &quot;message&quot;: &quot;Task not found&quot;}})
+        return JSONResponse({&quot;jsonrpc&quot;: &quot;2.0&quot;, &quot;id&quot;: rpc_id, &quot;result&quot;: task})
+
+    return JSONResponse({&quot;jsonrpc&quot;: &quot;2.0&quot;, &quot;id&quot;: rpc_id,
+                         &quot;error&quot;: {&quot;code&quot;: -32601, &quot;message&quot;: &quot;Method not found&quot;}})</code></pre>
+<hr>
+<h3>3. Appeler un agent distant (côté client)</h3>
+<pre><code class="lang-python">import httpx, json
+
+async def send_task(agent_url: str, message: str, token: str) -&gt; dict:
+    payload = {
+        &quot;jsonrpc&quot;: &quot;2.0&quot;, &quot;id&quot;: &quot;1&quot;, &quot;method&quot;: &quot;tasks/send&quot;,
+        &quot;params&quot;: {
+            &quot;message&quot;: {
+                &quot;role&quot;: &quot;user&quot;,
+                &quot;parts&quot;: [{&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: message}]
+            }
+        }
+    }
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            agent_url,
+            json=payload,
+            headers={&quot;Authorization&quot;: f&quot;Bearer {token}&quot;},
+            timeout=30
+        )
+        resp.raise_for_status()
+        return resp.json()[&quot;result&quot;]</code></pre>
+<hr>
+<h3>4. Streaming SSE (<code>tasks/sendSubscribe</code>)</h3>
+<pre><code class="lang-python">from fastapi.responses import StreamingResponse
+
+@app.post(&quot;/a2a/stream&quot;)
+async def stream_task(request: Request):
+    body = await request.json()
+
+    async def event_generator():
+        # Mise à jour intermédiaire
+        yield f&quot;data: {json.dumps({'type': 'TaskStatusUpdateEvent', 'status': {'state': 'working'}})}\n\n&quot;
+        await asyncio.sleep(1)
+        # Résultat final
+        artifact = {&quot;type&quot;: &quot;DataPart&quot;, &quot;data&quot;: {&quot;key&quot;: &quot;value&quot;}}
+        yield f&quot;data: {json.dumps({'type': 'TaskArtifactUpdateEvent', 'artifact': artifact})}\n\n&quot;
+        yield f&quot;data: {json.dumps({'type': 'TaskStatusUpdateEvent', 'status': {'state': 'completed'}})}\n\n&quot;
+
+    return StreamingResponse(event_generator(), media_type=&quot;text/event-stream&quot;)</code></pre>
+<hr>
+<h3>5. Découverte et sélection d'agent</h3>
+<pre><code class="lang-python">async def discover_agent(base_url: str) -&gt; dict:
+    async with httpx.AsyncClient() as client:
+        r = await client.get(f&quot;{base_url}/.well-known/agent.json&quot;, timeout=5)
+        r.raise_for_status()
+        return r.json()
+
+# Critère de sélection
+def select_agent(agents: list[dict], required_skill: str) -&gt; dict | None:
+    for a in agents:
+        skills = [s[&quot;id&quot;] for s in a.get(&quot;skills&quot;, [])]
+        if required_skill in skills:
+            return a
+    return None</code></pre>
+<p><strong>Registre simple</strong> : maintenir une liste d'URLs connues + cache de leurs Agent Cards (TTL 5 min). Pour du dynamique, utiliser un service de registre central (ex. : endpoint <code>GET /agents</code> dans l'orchestrateur).</p>
+<hr>
+<h3>6. Sécurité</h3>
 <ul>
-<li>Respecte strictement la spécification JSON-RPC 2.0 pour tous les échanges entre agents — pas de formats propriétaires.</li>
-<li>Chaque agent doit exposer une Agent Card complète et à jour sur son endpoint <code>/.well-known/agent.json</code>.</li>
-<li>Implémente toujours les mécanismes de timeout et d'annulation pour éviter les tâches bloquées indéfiniment.</li>
-<li>Conçois les agents comme des services indépendants et stateless — l'état des tâches doit être persisté côté serveur.</li>
-<li>Documente clairement les skills et le format des artifacts produits par chaque agent pour faciliter l'intégration.</li>
+<li><strong>Transport</strong> : HTTPS obligatoire ; rejeter toute requête HTTP plain.</li>
+<li><strong>Auth</strong> : OAuth 2.0 Bearer token ou API key dans <code>Authorization</code> header — déclarer le scheme dans l'Agent Card.</li>
+<li><strong>Validation</strong> : vérifier la signature de l'Agent Card si elle provient d'un registre tiers.</li>
+<li><strong>Autorisation</strong> : liste blanche d'agents autorisés par skill — refuser les appels d'agents inconnus.</li>
+</ul>
+<pre><code class="lang-python"># Middleware auth minimal
+from fastapi import Depends, HTTPException, Header
+
+async def verify_token(authorization: str = Header(...)):
+    if not authorization.startswith(&quot;Bearer &quot;):
+        raise HTTPException(status_code=401)
+    token = authorization[7:]
+    if token not in ALLOWED_TOKENS:
+        raise HTTPException(status_code=403)</code></pre>
+<hr>
+<h3>7. Orchestration multi-agents</h3>
+<p>Pattern <strong>fan-out / fan-in</strong> :</p>
+<pre><code class="lang-python">async def orchestrate(agents: list[str], prompt: str) -&gt; list:
+    tasks = [send_task(url, prompt, TOKEN) for url in agents]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    return [r for r in results if not isinstance(r, Exception)]</code></pre>
+<p>Pattern <strong>chaîne séquentielle</strong> : sortie artifact de l'agent N devient le message d'entrée de l'agent N+1. Extraire le bon <code>Part</code> depuis <code>artifacts[0].parts</code>.</p>
+<hr>
+<h3>8. Monitoring et debug</h3>
+<ul>
+<li>Propager un <code>X-Correlation-ID</code> dans tous les appels inter-agents.</li>
+<li>Logger : <code>task_id</code>, <code>agent_url</code>, <code>method</code>, <code>status_transition</code>, <code>duration_ms</code>.</li>
+<li>Alertes : tâches en état <code>working</code> depuis &gt; timeout configuré → déclencher <code>tasks/cancel</code>.</li>
+<li>Sanity check périodique : <code>GET /.well-known/agent.json</code> sur chaque agent du registre.</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correct</th></tr></thead><tbody><tr><td>Stocker l'état des tâches en mémoire process</td><td>Perdu au redémarrage</td><td>Redis / DB persistante</td></tr><tr><td>Pas de timeout sur <code>tasks/send</code></td><td>Blocage indéfini</td><td>Timeout HTTP + <code>tasks/cancel</code> si dépassé</td></tr><tr><td>Agent Card statique en cache illimité</td><td>Capabilities obsolètes</td><td>TTL max 5 min, invalider sur erreur 404/401</td></tr><tr><td>Exposer <code>/.well-known/agent.json</code> sans auth</td><td>Enumération par tiers</td><td>Auth optionnelle mais recommandée en prod interne</td></tr><tr><td>Format propriétaire dans les <code>parts</code></td><td>Interop cassée</td><td>Utiliser <code>TextPart</code>, <code>FilePart</code>, <code>DataPart</code> standard</td></tr><tr><td>Ignorer les erreurs <code>return_exceptions</code> en gather</td><td>Résultats silencieusement manquants</td><td>Logger chaque exception, circuit breaker si taux &gt; seuil</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Versionner l'Agent Card (<code>&quot;version&quot;</code>) et gérer la compatibilité ascendante des skills.</li>
+<li>Implémenter idempotency via un <code>taskId</code> côté client — le serveur doit dédupliquer les renvois.</li>
+<li>Limiter la taille des artifacts inline : au-delà de 1 Mo, retourner une URL signée (<code>FilePart</code> avec <code>uri</code>).</li>
+<li>Déclarer les <code>inputModes</code> / <code>outputModes</code> MIME précis : facilite la sélection automatique d'agent.</li>
+<li>Tester la conformité avec le SDK officiel Google A2A (<code>pip install a2a-sdk</code> ou <code>npm install @google/a2a</code>).</li>
 </ul>
 </article>
 </main>

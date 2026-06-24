@@ -5,240 +5,217 @@ description: Agrégation et synthèse des résultats de multiples sous-agents en
 
 # Agent Result Aggregator
 
-## Quand utiliser ce skill
-Utiliser ce skill dès que plusieurs sous-agents ont produit des résultats qui doivent être fusionnés en un output unique cohérent. Applicable pour les résultats complémentaires (chaque agent couvre une partie), les résultats redondants (plusieurs agents ont traité la même question), ou les résultats contradictoires (les agents ont abouti à des conclusions différentes).
+## Quand l'utiliser
 
-## Workflow
+| Situation | Pattern recommandé |
+|---|---|
+| Chaque agent couvre une partie distincte | Fusion complémentaire |
+| Plusieurs agents traitent la même question | Déduplication + ranking |
+| Les agents aboutissent à des conclusions différentes | Résolution de conflits |
+| Un agent a échoué / timeout | Fallback sur résultats partiels |
 
-1. **Définir le format de sortie attendu**
-   - Spécifier le schema exact du résultat final avant de commencer l'agrégation
-   - Choisir le niveau de détail : résumé exécutif, rapport complet, JSON structuré, réponse conversationnelle
-   - Définir les champs obligatoires vs optionnels pour détecter les résultats incomplets
-   ```python
-   from pydantic import BaseModel
-   from typing import Optional, Any
+---
 
-   class AggregatedResult(BaseModel):
-       result_id: str
-       summary: str
-       details: dict[str, Any]
-       sources: list[dict]       # Attribution par sous-agent
-       confidence: float         # 0.0 - 1.0
-       conflicts: list[dict]     # Contradictions détectées et résolues
-       metadata: dict
-   ```
+## Workflow en 7 étapes
 
-2. **Collecte des résultats (gathering asynchrone)**
-   - Utiliser `asyncio.gather` pour collecter tous les résultats en parallèle
-   - Gérer les timeouts : un sous-agent lent ne doit pas bloquer l'agrégation
-   - Distinguer les résultats complets des résultats partiels des échecs
-   ```python
-   import asyncio
-   from dataclasses import dataclass
+### 1. Définir le schéma de sortie avant tout
 
-   @dataclass
-   class AgentResult:
-       agent_id: str
-       status: str        # "complete" | "partial" | "failed"
-       data: Any
-       confidence: float
-       execution_time: float
+Spécifier le contrat du résultat final **avant** de lancer les sous-agents.
 
-   async def collect_all_results(agents: list, timeout: int = 60) -> list[AgentResult]:
-       tasks = [asyncio.wait_for(agent.get_result(), timeout=timeout) for agent in agents]
-       raw_results = await asyncio.gather(*tasks, return_exceptions=True)
-       return [
-           r if not isinstance(r, Exception)
-           else AgentResult(agent_id=agents[i].id, status="failed", data=None, confidence=0.0, execution_time=timeout)
-           for i, r in enumerate(raw_results)
-       ]
-   ```
+```python
+from pydantic import BaseModel
+from typing import Any
 
-3. **Validation des résultats (qualité et conformité)**
-   - Vérifier la conformité au schema attendu pour chaque résultat reçu
-   - Scorer la qualité : longueur minimale, présence des champs clés, cohérence interne
-   - Catégoriser : `valid`, `partial` (manque des champs), `invalid` (hors schema), `empty`
-   ```python
-   class ResultValidator:
-       def validate(self, result: AgentResult, schema: BaseModel) -> dict:
-           score = 0.0
-           issues = []
-           if result.status == "failed":
-               return {"valid": False, "score": 0.0, "issues": ["Agent a échoué"]}
-           try:
-               schema.model_validate(result.data)
-               score += 0.5
-           except Exception as e:
-               issues.append(f"Non-conformité schema: {e}")
-           # Vérification qualité supplémentaire
-           if result.confidence >= 0.7:
-               score += 0.3
-           if result.execution_time < 60:
-               score += 0.2
-           return {"valid": score >= 0.5, "score": score, "issues": issues}
-   ```
+class AggregatedResult(BaseModel):
+    summary: str
+    details: dict[str, Any]
+    sources: list[dict]      # {agent_id, confidence, status}
+    confidence: float        # min des confidences individuelles, pas la moyenne
+    conflicts_resolved: list[dict]
+    metadata: dict           # nb_agents, success_rate, duration_ms
+```
 
-4. **Résolution de conflits (contradictions entre agents)**
-   - Détecter les contradictions : deux agents donnent des réponses incompatibles sur le même fait
-   - Stratégie `voting` : prendre la réponse majoritaire si 3+ agents ou plus
-   - Stratégie `confidence-based` : prendre la réponse de l'agent avec la confiance la plus haute
-   - Stratégie `LLM arbitration` : demander à un LLM de trancher en analysant les deux versions
-   ```python
-   class ConflictResolver:
-       def resolve(self, conflicts: list[tuple], strategy: str = "confidence") -> dict:
-           resolved = {}
-           for field, competing_values in conflicts:
-               if strategy == "voting":
-                   resolved[field] = max(set(v for _, v in competing_values),
-                                         key=lambda x: sum(1 for _, v in competing_values if v == x))
-               elif strategy == "confidence":
-                   resolved[field] = max(competing_values, key=lambda x: x[0])[1]
-               elif strategy == "llm":
-                   resolved[field] = self._llm_arbitrate(field, competing_values)
-           return resolved
+**Critère de décision :** si le schéma change après l'agrégation, l'étape est trop tardive.
 
-       def _llm_arbitrate(self, field: str, options: list) -> Any:
-           prompt = f"Choisir la meilleure valeur pour '{field}': {options}. Justifier."
-           return llm.invoke(prompt)
-   ```
+---
 
-5. **Déduplication (éliminer les redondances)**
-   - Détecter les résultats identiques ou quasi-identiques (même contenu, sources différentes)
-   - `Exact dedup` : hash MD5/SHA des données, supprimer les doublons exacts
-   - `Semantic dedup` : embeddings + similarité cosinus pour détecter les paraphrases
-   ```python
-   from sklearn.metrics.pairwise import cosine_similarity
-   import numpy as np
+### 2. Collecter en parallèle avec timeout strict
 
-   class SemanticDeduplicator:
-       def __init__(self, similarity_threshold: float = 0.92):
-           self.threshold = similarity_threshold
+```python
+import asyncio
 
-       def deduplicate(self, results: list[AgentResult]) -> list[AgentResult]:
-           texts = [str(r.data) for r in results]
-           embeddings = embed_batch(texts)  # Votre fonction d'embedding
-           kept = [0]
-           for i in range(1, len(results)):
-               sims = cosine_similarity([embeddings[i]], [embeddings[j] for j in kept])[0]
-               if max(sims) < self.threshold:
-                   kept.append(i)
-           return [results[i] for i in kept]
-   ```
+async def collect(agents: list, timeout: int = 60) -> list:
+    tasks = [asyncio.wait_for(a.get_result(), timeout=timeout) for a in agents]
+    raw = await asyncio.gather(*tasks, return_exceptions=True)
+    return [
+        {"agent_id": agents[i].id, "status": "failed", "data": None, "confidence": 0.0}
+        if isinstance(r, Exception)
+        else {"agent_id": agents[i].id, "status": "complete", "data": r, "confidence": r.confidence}
+        for i, r in enumerate(raw)
+    ]
+```
 
-6. **Ranking et priorisation (sélection des meilleurs résultats)**
-   - Scorer chaque résultat selon : confiance de l'agent, qualité de validation, fraîcheur des données
-   - Prioriser les résultats des agents spécialisés sur les agents généralistes
-   - En cas de budget de tokens limité, tronquer en gardant les résultats les mieux scorés
-   ```python
-   class ResultRanker:
-       def rank(self, results: list[AgentResult], validations: list[dict]) -> list[tuple]:
-           scored = []
-           for result, validation in zip(results, validations):
-               score = (
-                   result.confidence * 0.4 +
-                   validation["score"] * 0.4 +
-                   (1.0 if result.status == "complete" else 0.3) * 0.2
-               )
-               scored.append((score, result))
-           return sorted(scored, reverse=True, key=lambda x: x[0])
-   ```
+**Règle :** ne jamais bloquer sur un agent lent. Timeout = SLA de l'agent le plus lent × 1,5.
 
-7. **Synthèse (fusion en un output cohérent)**
-   - Pour des résultats complémentaires : concatener intelligemment en évitant les redites
-   - Pour des résultats redondants : prendre le meilleur et enrichir avec les nuances des autres
-   - Utiliser un LLM pour la synthèse finale quand la structure est complexe
-   ```python
-   class LLMSynthesizer:
-       def synthesize(self, ranked_results: list, output_format: str) -> str:
-           context = "\n\n".join([
-               f"[Agent {r.agent_id}, confiance={r.confidence:.2f}]\n{r.data}"
-               for _, r in ranked_results[:5]  # Top 5 résultats
-           ])
-           prompt = f"""Synthétise les résultats suivants de multiple agents en un {output_format} cohérent.
-           Résous les contradictions, élimine les répétitions, garde les informations les plus précises.
+---
 
-           Résultats des agents :
-           {context}
+### 3. Valider et scorer chaque résultat
 
-           Output attendu: {output_format}"""
-           return llm.invoke(prompt)
-   ```
+Catégories : `valid` · `partial` · `invalid` · `empty`
 
-8. **Citation et attribution (source tracking)**
-   - Tracer quelle information vient de quel sous-agent dans le résultat final
-   - Permet l'audit post-hoc et le débogage en cas d'erreur dans le résultat agrégé
-   - Format de citation : `[Agent: research_agent_1, confiance: 0.92, timestamp: ...]`
-   ```python
-   class SourceTracker:
-       def __init__(self):
-           self.attributions = {}
+```python
+def validate(result: dict, required_fields: list[str]) -> dict:
+    if result["status"] == "failed":
+        return {"category": "empty", "score": 0.0}
+    data = result.get("data") or {}
+    missing = [f for f in required_fields if f not in data]
+    if missing:
+        return {"category": "partial", "score": 0.4, "missing": missing}
+    confidence_bonus = result.get("confidence", 0) * 0.3
+    return {"category": "valid", "score": 0.7 + confidence_bonus}
+```
 
-       def track(self, field: str, value: Any, source_agent: AgentResult):
-           self.attributions[field] = {
-               "agent_id": source_agent.agent_id,
-               "confidence": source_agent.confidence,
-               "execution_time": source_agent.execution_time,
-               "status": source_agent.status
-           }
+Exclure les résultats `invalid` de l'agrégation. Inclure les `partial` avec flag explicite.
 
-       def generate_attribution_report(self) -> dict:
-           return {"sources": self.attributions}
-   ```
+---
 
-9. **Quality assurance (vérification du résultat final)**
-   - Vérifier la cohérence interne du résultat agrégé (pas de contradictions internes résiduelles)
-   - Fact-checking léger : les affirmations clés sont-elles étayées par au moins une source ?
-   - Completeness check : tous les champs obligatoires du schema de sortie sont-ils remplis ?
-   ```python
-   class FinalQAChecker:
-       def check(self, aggregated: AggregatedResult) -> dict:
-           issues = []
-           # Vérification complétude
-           if not aggregated.summary or len(aggregated.summary) < 50:
-               issues.append("Résumé trop court ou absent")
-           if not aggregated.sources:
-               issues.append("Aucune attribution de source")
-           if aggregated.confidence < 0.3:
-               issues.append("Confiance trop basse — résultat peu fiable")
-           # Cohérence
-           if aggregated.conflicts and not all(c.get("resolved") for c in aggregated.conflicts):
-               issues.append("Des conflits non résolus subsistent")
-           return {"passed": len(issues) == 0, "issues": issues}
-   ```
+### 4. Déduplication
 
-10. **Output formatting (mise en forme finale)**
-    - Adapter le format au contexte : JSON pour une API, Markdown pour un humain, texte brut pour un LLM suivant
-    - Inclure les métadonnées : nombre d'agents, taux de succès, confiance globale, durée d'exécution
-    - Proposer différents niveaux de détail : résumé / complet / avec sources
-    ```python
-    class OutputFormatter:
-        def format(self, result: AggregatedResult, mode: str = "full") -> str:
-            if mode == "summary":
-                return result.summary
-            elif mode == "json":
-                return result.model_dump_json(indent=2)
-            elif mode == "markdown":
-                lines = [f"# Résultat agrégé\n\n{result.summary}\n\n## Détails\n"]
-                for k, v in result.details.items():
-                    lines.append(f"### {k}\n{v}\n")
-                lines.append(f"\n---\n*Confiance: {result.confidence:.0%} | Sources: {len(result.sources)} agents*")
-                return "\n".join(lines)
-    ```
+**Exact** (données structurées) : hash SHA-256 du JSON canonique.
 
-## Anti-patterns
+```python
+import hashlib, json
 
-- **Concaténer sans synthétiser** : empiler les résultats des agents les uns après les autres sans fusion intelligente produit un output redondant, incohérent et trop long. Toujours passer par une étape de synthèse qui fusionne et déduplique.
-- **Ignorer les conflits** : quand deux agents se contredisent, laisser les deux affirmations dans le résultat final crée de la confusion. Chaque conflit doit être détecté, documenté et résolu explicitement.
-- **Pas de validation du résultat final** : même si chaque résultat individuel est valide, leur agrégation peut produire des incohérences. Toujours exécuter un QA check sur l'output final avant de le livrer.
-- **Perdre l'attribution des sources** : un résultat agrégé sans traçabilité est un résultat non auditable. Conserver systématiquement le lien entre chaque information et le sous-agent qui l'a produite.
+def dedup_exact(results: list[dict]) -> list[dict]:
+    seen = set()
+    out = []
+    for r in results:
+        h = hashlib.sha256(json.dumps(r["data"], sort_keys=True).encode()).hexdigest()
+        if h not in seen:
+            seen.add(h)
+            out.append(r)
+    return out
+```
 
-## Règles
+**Sémantique** (texte libre) : embeddings + seuil cosinus 0.92. Ne conserver que les résultats dont la similarité avec tous les éléments déjà gardés est < 0.92.
 
-1. **Toujours définir le schema du résultat final avant de lancer l'agrégation** — travailler vers un format inconnu rend l'agrégation non déterministe.
-2. **Les résultats partiels sont mieux que rien** : si un sous-agent a échoué, inclure ses résultats partiels avec un flag `partial` plutôt que de les ignorer complètement.
-3. **La confiance globale est le minimum des confidences individuelles**, pas la moyenne — un résultat final est aussi fiable que son maillon le plus faible.
-4. **Documenter chaque conflit résolu** dans les métadonnées du résultat final pour permettre l'audit et l'amélioration continue du système.
-5. **Limiter la taille de l'output agrégé** : un résultat trop verbeux est inutilisable. Définir une longueur cible et utiliser le LLM de synthèse pour respecter cette contrainte.
+---
+
+### 5. Résoudre les conflits
+
+Choisir la stratégie selon le contexte :
+
+| Stratégie | Quand l'utiliser |
+|---|---|
+| `voting` | 3+ agents, données factuelles binaires |
+| `confidence` | Agents avec scores de confiance fiables |
+| `llm_arbitration` | Résultats nuancés, texte, jugement qualitatif |
+| `human_escalation` | Conflit critique, impact métier élevé |
+
+```python
+def resolve_conflict(field: str, candidates: list[tuple[float, Any]], strategy: str) -> Any:
+    # candidates : [(confidence, value), ...]
+    if strategy == "confidence":
+        return max(candidates, key=lambda x: x[0])[1]
+    if strategy == "voting":
+        from collections import Counter
+        return Counter(v for _, v in candidates).most_common(1)[0][0]
+    if strategy == "llm_arbitration":
+        prompt = f"Champ '{field}' — choisir la meilleure valeur parmi : {candidates}. Justifier."
+        return llm.invoke(prompt)
+    raise ValueError(f"human_escalation required for field={field}")
+```
+
+Documenter chaque conflit résolu dans `conflicts_resolved` pour l'audit.
+
+---
+
+### 6. Ranking et synthèse
+
+**Scorer** chaque résultat :
+
+```python
+def score(result: dict, validation: dict) -> float:
+    return (
+        result.get("confidence", 0) * 0.4 +
+        validation["score"]          * 0.4 +
+        (1.0 if result["status"] == "complete" else 0.3) * 0.2
+    )
+```
+
+**Synthèse LLM** (résultats textuels ou complexes) :
+
+```python
+def synthesize(ranked: list[dict], output_format: str) -> str:
+    context = "\n\n".join(
+        f"[Agent {r['agent_id']}, confiance={r['confidence']:.2f}]\n{r['data']}"
+        for r in ranked[:5]  # Top 5 uniquement
+    )
+    return llm.invoke(
+        f"Synthétise en un {output_format} cohérent. "
+        f"Résous contradictions, élimine répétitions.\n\n{context}"
+    )
+```
+
+**Confiance globale = min des confidences individuelles** (maillon le plus faible), pas la moyenne.
+
+---
+
+### 7. QA final + formatage
+
+```python
+def qa_check(result: AggregatedResult) -> list[str]:
+    issues = []
+    if not result.summary or len(result.summary) < 30:
+        issues.append("Résumé absent ou trop court")
+    if not result.sources:
+        issues.append("Aucune attribution de source")
+    if result.confidence < 0.3:
+        issues.append("Confiance globale trop basse (< 0.3)")
+    unresolved = [c for c in result.conflicts_resolved if not c.get("resolved")]
+    if unresolved:
+        issues.append(f"{len(unresolved)} conflit(s) non résolu(s)")
+    return issues
+```
+
+Formats de sortie selon le consommateur :
+
+| Mode | Usage |
+|---|---|
+| `json` | API, agent suivant dans le pipeline |
+| `markdown` | Rapport humain |
+| `summary_only` | Notification, résumé exécutif |
+
+---
+
+## Garde-fous / Anti-patterns
+
+**Concaténer sans synthétiser** — empiler les outputs bruts produit un résultat redondant et incohérent. Toujours passer par une étape de déduplication + synthèse.
+
+**Moyenne des confidences** — masque un agent peu fiable. Utiliser le minimum.
+
+**Ignorer les conflits** — deux affirmations contradictoires dans l'output final invalident l'ensemble. Chaque conflit doit être résolu ET documenté.
+
+**Résultat non auditable** — sans attribution `agent_id → information`, impossible de déboguer une erreur en production. Conserver le `SourceTracker` même en mode summary.
+
+**Schema défini après l'agrégation** — conduit à reformater après coup et perd des informations. Définir le contrat en premier.
+
+**Top-K trop grand** — passer 20 résultats au LLM de synthèse dilue le signal et explose les tokens. Limiter à 5-7 résultats triés.
+
+---
+
+## Checklist opérationnelle
+
+```
+[ ] Schéma AggregatedResult défini avant le lancement des agents
+[ ] Timeout configuré par agent (pas global)
+[ ] Résultats partiels inclus avec flag, pas ignorés
+[ ] Déduplication appliquée avant résolution de conflits
+[ ] Stratégie de conflit choisie et documentée
+[ ] Confiance = min(confidences), pas moyenne
+[ ] QA check exécuté avant livraison
+[ ] Attribution source conservée dans le résultat final
+```
 
 
 ## Communication Rules — MANDATORY

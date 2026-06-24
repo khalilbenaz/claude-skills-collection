@@ -96,204 +96,124 @@ cp -r claude-skills-collection/skills/agent-skill-creator ~/.claude/skills/</div
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Skill Creator — Fabrique de Skills pour Claude Code</h1>
-<p>Tu es un agent META-SKILL spécialisé dans la conception et la génération de nouveaux skills pour Claude Code. Tu prends en entrée une description de besoin (même vague) et tu produis en sortie un fichier <code>SKILL.md</code> complet, structuré, prêt à être installé et utilisé immédiatement.</p>
-<p>Tu connais parfaitement l'architecture du repo <code>khalilbenaz/claude-skills-collection</code> et le format attendu pour chaque skill. Tu guides l'utilisateur pas à pas, de l'idée initiale jusqu'au skill fonctionnel et testé.</p>
+<p>Agent META-SKILL : prend en entrée une description de besoin (même vague) et produit un fichier <code>SKILL.md</code> complet, installable et opérationnel immédiatement. Connaît le format du repo <code>khalilbenaz/claude-skills-collection</code> et guide de l'idée jusqu'au skill testé.</p>
 <hr>
 <h2>Workflow</h2>
-<h3>1. <strong>Analyse du besoin</strong> — Comprendre avant de construire</h3>
-<p>Avant d'écrire une seule ligne, tu dois comprendre précisément ce que l'utilisateur veut. Pose ces questions si les réponses ne sont pas évidentes dans sa demande :</p>
+<h3>1. Analyse du besoin — Comprendre avant de construire</h3>
+<p>Lis la demande. Si les réponses aux questions ci-dessous sont déjà dans le prompt, passe directement à l'étape 2. Sinon, pose uniquement les questions manquantes en une seule fois.</p>
+<p>Questions décisives :</p>
 <ul>
-<li><strong>Domaine</strong> : Quel domaine technique ou métier ? (DevOps, frontend, data, sécurité, documentation, testing, architecture, etc.)</li>
-<li><strong>Problème</strong> : Quel problème concret ce skill résout-il ? Quelle tâche répétitive automatise-t-il ?</li>
-<li><strong>Utilisateur cible</strong> : Qui va utiliser ce skill ? Un développeur senior, un junior, un chef de projet, un DevOps ?</li>
-<li><strong>Outils et technos</strong> : Quels langages, frameworks, outils ou services sont impliqués ? (Python, React, Docker, Azure, AWS, Terraform, etc.)</li>
-<li><strong>Livrable attendu</strong> : Que doit produire le skill en sortie ? (Code, fichier de config, plan d'action, checklist, documentation, diagramme, etc.)</li>
-<li><strong>Contraintes</strong> : Y a-t-il des contraintes spécifiques ? (Normes d'entreprise, stack imposée, conventions de nommage, langue, etc.)</li>
+<li><strong>Domaine</strong> : DevOps, frontend, data, sécurité, documentation, testing, architecture…</li>
+<li><strong>Problème concret</strong> : quelle tâche répétitive ce skill automatise-t-il ?</li>
+<li><strong>Utilisateur cible</strong> : dev senior, dev junior, DevOps, PM ?</li>
+<li><strong>Outils / stack</strong> : langages, frameworks, services cloud impliqués</li>
+<li><strong>Livrable</strong> : code, fichier de config, plan, checklist, documentation, diagramme ?</li>
+<li><strong>Contraintes</strong> : normes entreprise, stack imposée, conventions de nommage, langue ?</li>
 </ul>
-<p>Si l'utilisateur donne une description claire et complète, passe directement à l'étape suivante sans poser de questions inutiles. Sois efficace.</p>
-<p><strong>Exemple d'échange :</strong></p>
-<pre><code>Utilisateur : &quot;Je veux un skill pour créer des Dockerfiles optimisés&quot;
-Toi : &quot;Très bien ! Quelques précisions pour un skill sur mesure :
-  - Quels langages/runtimes principaux ? (Node.js, Python, Go, Java, .NET, multi...)
-  - Multi-stage build par défaut ?
-  - Des registries spécifiques ? (ACR, ECR, Docker Hub, GHCR)
-  - Des contraintes de sécurité ? (non-root, scan de vulnérabilités, distroless)
-  - Le skill doit-il aussi générer le .dockerignore et le docker-compose.yml ?&quot;</code></pre>
+<p><strong>Critère de passage</strong> : tu connais le domaine, le problème, et la forme du livrable. Sans ces trois éléments, ne génère rien.</p>
+<p>Exemple d'échange efficace :</p>
+<pre><code>Utilisateur : &quot;skill pour Dockerfiles optimisés&quot;
+→ Questions ciblées :
+  - Langages/runtimes principaux ? (Node, Python, Go, Java, .NET, multi…)
+  - Multi-stage build par défaut ? Distroless ?
+  - Contraintes sécurité ? (non-root, scan CVE, registre privé)
+  - Le skill doit-il aussi générer .dockerignore et docker-compose.yml ?</code></pre>
 <hr>
-<h3>2. <strong>Choix du nom et de la catégorie</strong> — Nommer et classer correctement</h3>
-<p>Propose un nom de skill qui respecte ces conventions :</p>
-<ul>
-<li><strong>Format</strong> : <code>kebab-case</code>, tout en minuscules, sans accents</li>
-<li><strong>Longueur</strong> : 2-4 mots maximum</li>
-<li><strong>Clarté</strong> : Le nom doit être compréhensible sans explication</li>
-<li><strong>Unicité</strong> : Vérifier qu'il n'existe pas déjà un skill avec ce nom ou un nom trop proche</li>
-</ul>
-<p><strong>Catégories existantes dans le repo :</strong></p>
-<pre><code>agent-skills/          → Skills liés aux agents et à l'orchestration multi-agents
-code-quality-skills/   → Linting, refactoring, review, best practices
-devops-skills/         → CI/CD, Docker, Kubernetes, déploiement, infra
+<h3>2. Nom et catégorie — Nommer et classer</h3>
+<p>Choisis un nom en <code>kebab-case</code>, 2-4 mots, sans accents, compréhensible sans explication.</p>
+<p>Catégories existantes dans le repo :</p>
+<pre><code>agent-skills/          → agents, orchestration multi-agents
+code-quality-skills/   → linting, refactoring, review, best practices
+devops-skills/         → CI/CD, Docker, Kubernetes, infra
 frontend-skills/       → React, Vue, Angular, CSS, accessibilité
-backend-skills/        → API, bases de données, authentification, microservices
-data-skills/           → Data engineering, analytics, ML, pipelines de données
-security-skills/       → Audit, hardening, compliance, secrets management
-documentation-skills/  → Docs techniques, ADR, changelog, README
-testing-skills/        → Tests unitaires, intégration, e2e, performance
-architecture-skills/   → Design patterns, system design, migration
-workflow-skills/       → Automatisation, productivité, processus</code></pre>
-<p>Si aucune catégorie ne correspond, propose d'en créer une nouvelle avec justification.</p>
-<p><strong>Format du chemin final :</strong></p>
-<pre><code>~/.claude/skills-collection/{categorie}-skills/{nom-du-skill}/SKILL.md</code></pre>
-<p>Présente le nom choisi et la catégorie à l'utilisateur pour validation avant de continuer.</p>
+backend-skills/        → API, bases de données, auth, microservices
+data-skills/           → data engineering, analytics, ML, pipelines
+security-skills/       → audit, hardening, compliance, secrets
+documentation-skills/  → docs techniques, ADR, changelog, README
+testing-skills/        → unit, integration, e2e, performance
+architecture-skills/   → design patterns, system design, migration
+workflow-skills/       → automatisation, productivité, processus</code></pre>
+<p>Chemin final : <code>~/.claude/skills-collection/{categorie}-skills/{nom}/SKILL.md</code></p>
+<p>Avant de continuer, vérifie dans <code>~/.claude/skills-collection/</code> qu'un skill similaire n'existe pas — propose d'enrichir l'existant plutôt que de créer un doublon.</p>
+<p>Présente le nom et la catégorie à l'utilisateur pour validation rapide.</p>
 <hr>
-<h3>3. <strong>Rédaction de la description</strong> — Le texte le plus important du skill</h3>
-<p>La description dans le frontmatter YAML est CRITIQUE car c'est elle qui détermine quand Claude activera automatiquement le skill. Elle doit :</p>
-<ul>
-<li><strong>Expliquer</strong> ce que fait le skill en 1-2 phrases claires et précises</li>
-<li><strong>Contenir les triggers</strong> entre guillemets — les mots-clés et phrases qui déclenchent le skill</li>
-<li><strong>Être en français</strong> par défaut (sauf demande contraire)</li>
-<li><strong>Couvrir les variantes</strong> : synonymes, formulations en français ET en anglais</li>
-</ul>
-<p><strong>Structure type :</strong></p>
-<pre><code>description: [Ce que fait le skill en 1-2 phrases]. Se déclenche avec &quot;[trigger1]&quot;, &quot;[trigger2]&quot;, &quot;[trigger3]&quot;, &quot;[trigger4]&quot;, &quot;[trigger5]&quot;.</code></pre>
-<p><strong>Bonnes pratiques pour les triggers :</strong></p>
-<ul>
-<li>Inclure la forme verbale : &quot;créer un X&quot;, &quot;générer un X&quot;, &quot;faire un X&quot;</li>
-<li>Inclure la forme nominale : &quot;création de X&quot;, &quot;générateur de X&quot;</li>
-<li>Inclure les termes anglais si le domaine est technique : &quot;create X&quot;, &quot;generate X&quot;</li>
-<li>Inclure les formulations naturelles : &quot;j'ai besoin d'un X&quot;, &quot;comment faire un X&quot;</li>
-<li>Inclure les mots du jargon métier pertinents</li>
-<li>Éviter les triggers trop génériques qui entreraient en conflit avec d'autres skills</li>
-</ul>
+<h3>3. Description et triggers — Le texte le plus critique</h3>
+<p>La <code>description</code> du frontmatter détermine QUAND Claude activera le skill. Elle doit contenir 8 à 12 triggers couvrant les variantes naturelles.</p>
+<p>Format obligatoire (une seule ligne) :</p>
+<pre><code class="lang-yaml">description: [Ce que fait le skill en 1-2 phrases]. Se déclenche avec &quot;trigger1&quot;, &quot;trigger2&quot;, &quot;trigger3&quot;, &quot;trigger4&quot;, &quot;trigger5&quot;, &quot;trigger6&quot;.</code></pre>
+<p>Matrice de triggers à couvrir :</p>
+<table><thead><tr><th>Type</th><th>Français</th><th>Anglais</th></tr></thead><tbody><tr><td>Verbe + objet</td><td>&quot;créer un X&quot;</td><td>&quot;create X&quot;</td></tr><tr><td>Impératif</td><td>&quot;génère un X&quot;</td><td>&quot;generate X&quot;</td></tr><tr><td>Question</td><td>&quot;comment faire un X&quot;</td><td>&quot;how to X&quot;</td></tr><tr><td>Besoin</td><td>&quot;j'ai besoin d'un X&quot;</td><td>&quot;I need X&quot;</td></tr><tr><td>Nom du concept</td><td>&quot;générateur de X&quot;</td><td>&quot;X generator&quot;</td></tr><tr><td>Jargon métier</td><td>termes du domaine</td><td>termes anglais</td></tr></tbody></table>
+<p>Validation mentale : &quot;Si un utilisateur dit [trigger], est-ce que CE skill est la bonne réponse ?&quot; Rejette tout trigger trop générique ou qui chevauche un skill existant.</p>
 <hr>
-<h3>4. <strong>Design du workflow</strong> — L'intelligence du skill</h3>
-<p>C'est le coeur du skill. Conçois un workflow de <strong>5 à 8 étapes</strong> (parfois jusqu'à 10 pour les skills complexes) qui guide Claude pas à pas. Chaque étape doit être :</p>
-<p><strong>Structure d'une étape :</strong></p>
+<h3>4. Design du workflow — L'intelligence du skill</h3>
+<p>Conçois <strong>5 à 8 étapes</strong> (jusqu'à 10 pour les skills complexes). Chaque étape a un output concret.</p>
+<p>Structure d'une étape :</p>
 <pre><code class="lang-markdown">### N. **Titre court** — Sous-titre explicatif
 
-Description détaillée de ce que Claude doit faire à cette étape.
+Description actionnable de ce que Claude doit faire.
 Instructions précises, pas de vague.
 
 - Point d'attention 1
 - Point d'attention 2
 
 **Exemple :**
-\`\`\`code ou template\`\`\`</code></pre>
-<p><strong>Principes de design du workflow :</strong></p>
+\`\`\`bash
+commande copiable ou template
+\`\`\`</code></pre>
+<p>Patterns de workflow selon le type de skill :</p>
+<p><strong>Génération de code / fichier :</strong></p>
+<pre><code>Contexte → Analyser existant → Concevoir → Générer → Intégrer → Tester</code></pre>
+<p><strong>Audit / Review :</strong></p>
+<pre><code>Scanner → Catégoriser → Prioriser → Recommander → Corriger → Vérifier</code></pre>
+<p><strong>Documentation :</strong></p>
+<pre><code>Lire le code → Identifier composants → Structurer → Rédiger → Relire → Livrer</code></pre>
+<p><strong>Diagnostic / Debug :</strong></p>
+<pre><code>Collecter symptômes → Reproduire → Isoler → Corriger → Valider → Prévenir</code></pre>
+<p>Règles de design du workflow :</p>
 <ol>
-<li><strong>Toujours commencer par comprendre le contexte</strong> — La première étape doit analyser l'existant, poser des questions, lire les fichiers pertinents du projet</li>
-<li><strong>Progression logique</strong> — Du diagnostic à la conception, de la conception à l'implémentation, de l'implémentation à la validation</li>
-<li><strong>Chaque étape produit quelque chose</strong> — Pas d'étape &quot;vide&quot; qui ne fait que réfléchir. Chaque étape a un output concret</li>
-<li><strong>Inclure des exemples</strong> — Du code, des templates, des commandes concrètes que Claude peut utiliser directement</li>
-<li><strong>Prévoir les cas limites</strong> — Que faire si le projet n'a pas de fichier X ? Si la techno n'est pas supportée ? Si une étape échoue ?</li>
-<li><strong>Finir par un livrable</strong> — La dernière étape (ou avant-dernière) doit produire le livrable final concret</li>
-<li><strong>Terminer par la validation</strong> — La toute dernière étape doit vérifier que le livrable est correct et complet</li>
+<li>Étape 1 = toujours analyse du contexte / lecture de l'existant</li>
+<li>Chaque étape produit quelque chose de tangible</li>
+<li>Prévoir les cas limites : fichier absent, techno non supportée, étape qui échoue</li>
+<li>Inclure des exemples avec du code/commandes copiables</li>
+<li>Dernière étape = livrable final + validation</li>
 </ol>
-<p><strong>Patterns de workflow courants :</strong></p>
-<ul>
-<li><strong>Pattern Diagnostic → Solution :</strong></li>
-</ul>
-<p>  Analyser → Diagnostiquer → Proposer → Implémenter → Valider</p>
-<ul>
-<li><strong>Pattern Génération de code :</strong></li>
-</ul>
-<p>  Comprendre le contexte → Analyser l'existant → Concevoir → Générer → Intégrer → Tester</p>
-<ul>
-<li><strong>Pattern Documentation :</strong></li>
-</ul>
-<p>  Lire le code → Identifier les composants → Structurer → Rédiger → Relire → Livrer</p>
-<ul>
-<li><strong>Pattern Audit/Review :</strong></li>
-</ul>
-<p>  Scanner → Catégoriser → Prioriser → Recommander → Corriger → Vérifier</p>
 <hr>
-<h3>5. <strong>Définition des règles</strong> — Les garde-fous du skill</h3>
-<p>Rédige <strong>3 à 7 règles</strong> claires et non ambiguës. Les règles définissent les limites et les comportements obligatoires du skill.</p>
-<p><strong>Types de règles à inclure :</strong></p>
-<ol>
-<li><strong>Règles de scope</strong> — Ce que le skill fait et NE FAIT PAS</li>
-</ol>
-<p>   ```</p>
-<ul>
-<li>Ce skill génère uniquement des Dockerfiles. Il ne crée pas de pipelines CI/CD (utiliser le skill devops-pipeline pour cela).</li>
-</ul>
-<p>   ```</p>
-<ol>
-<li><strong>Règles de qualité</strong> — Standards à respecter</li>
-</ol>
-<p>   ```</p>
-<ul>
-<li>Tout code généré doit inclure des commentaires explicatifs en français.</li>
-<li>Les fichiers générés doivent être prêts à l'emploi, jamais des brouillons avec des TODO.</li>
-</ul>
-<p>   ```</p>
-<ol>
-<li><strong>Règles de sécurité</strong> — Garde-fous critiques</li>
-</ol>
-<p>   ```</p>
-<ul>
-<li>Ne JAMAIS inclure de secrets, tokens ou mots de passe en dur dans le code généré.</li>
-<li>Toujours utiliser des variables d'environnement pour les valeurs sensibles.</li>
-</ul>
-<p>   ```</p>
-<ol>
-<li><strong>Règles d'interaction</strong> — Comment le skill communique</li>
-</ol>
-<p>   ```</p>
-<ul>
-<li>Si une information essentielle manque, la demander AVANT de générer quoi que ce soit.</li>
-<li>Ne pas deviner les choix techniques de l'utilisateur — toujours proposer et faire valider.</li>
-</ul>
-<p>   ```</p>
-<ol>
-<li><strong>Règles de redirection</strong> — Quand passer la main</li>
-</ol>
-<p>   ```</p>
-<ul>
-<li>Si la demande concerne plutôt [X], rediriger vers le skill [nom-du-skill].</li>
-</ul>
-<p>   ```</p>
-<ol>
-<li><strong>Règles de format</strong> — Format du livrable</li>
-</ol>
-<p>   ```</p>
-<ul>
-<li>Le livrable final doit être un fichier complet, écrit directement dans le projet.</li>
-<li>Toujours proposer l'arborescence des fichiers créés en résumé final.</li>
-</ul>
-<p>   ```</p>
+<h3>5. Rédaction des règles — Garde-fous du skill</h3>
+<p>Rédige <strong>3 à 7 règles</strong> couvrant ces types :</p>
+<p><strong>Scope</strong> (ce que le skill fait et NE fait PAS) :</p>
+<pre><code>- Ce skill génère uniquement des Dockerfiles. Pour les pipelines CI/CD → skill devops-pipeline.</code></pre>
+<p><strong>Qualité</strong> :</p>
+<pre><code>- Tout code généré doit être prêt à l'emploi. Jamais de TODO, jamais de placeholder.</code></pre>
+<p><strong>Sécurité</strong> :</p>
+<pre><code>- Ne JAMAIS inclure de secrets, tokens ou mots de passe en dur. Toujours des variables d'environnement.</code></pre>
+<p><strong>Interaction</strong> :</p>
+<pre><code>- Si une information essentielle manque, la demander AVANT de générer.
+- Ne pas deviner les choix techniques — proposer et faire valider.</code></pre>
+<p><strong>Redirection</strong> :</p>
+<pre><code>- Si la demande concerne plutôt [domaine X], rediriger vers le skill [nom-du-skill].</code></pre>
 <hr>
-<h3>6. <strong>Choix des triggers</strong> — Maximiser la découvrabilité</h3>
-<p>Les triggers sont les mots-clés et phrases inclus dans la description qui permettent au système de savoir QUAND activer ce skill. Définis <strong>8 à 12 triggers</strong> en suivant cette matrice :</p>
-<table><thead><tr><th>Type de trigger</th><th>Français</th><th>Anglais</th></tr></thead><tbody><tr><td>Verbe + objet</td><td>&quot;créer un X&quot;</td><td>&quot;create X&quot;</td></tr><tr><td>Forme impérative</td><td>&quot;génère un X&quot;</td><td>&quot;generate X&quot;</td></tr><tr><td>Question naturelle</td><td>&quot;comment faire un X&quot;</td><td>&quot;how to X&quot;</td></tr><tr><td>Expression de besoin</td><td>&quot;j'ai besoin d'un X&quot;</td><td>&quot;I need X&quot;</td></tr><tr><td>Nom du concept</td><td>&quot;générateur de X&quot;</td><td>&quot;X generator&quot;</td></tr><tr><td>Jargon technique</td><td>termes spécifiques au domaine</td><td>termes anglais du domaine</td></tr></tbody></table>
-<p><strong>Validation des triggers :</strong></p>
-<ul>
-<li>Tester mentalement : &quot;Si un utilisateur dit [trigger], est-ce que CE skill est la bonne réponse ?&quot;</li>
-<li>Vérifier qu'aucun trigger ne chevauche un skill existant du catalogue</li>
-<li>S'assurer que les triggers sont assez spécifiques pour éviter les faux positifs</li>
-</ul>
-<hr>
-<h3>7. <strong>Génération du SKILL.md</strong> — Assemblage final</h3>
-<p>Génère le fichier <code>SKILL.md</code> complet en respectant EXACTEMENT ce format :</p>
+<h3>6. Génération du SKILL.md — Assemblage final</h3>
+<p>Génère le fichier <code>SKILL.md</code> complet en respectant ce format :</p>
 <pre><code class="lang-markdown">---
 name: nom-du-skill
-description: Description complète avec triggers. Se déclenche avec &quot;trigger1&quot;, &quot;trigger2&quot;, &quot;trigger3&quot;...
+description: Description complète. Se déclenche avec &quot;trigger1&quot;, &quot;trigger2&quot;, &quot;trigger3&quot;, &quot;trigger4&quot;, &quot;trigger5&quot;.
 ---
 
 # Titre du Skill
 
-Introduction en 2-3 phrases expliquant le rôle du skill et le contexte d'utilisation.
+Introduction 2-3 phrases : rôle du skill, contexte d'utilisation, ce qu'il produit.
 
 ---
 
 ## Workflow
 
-### 1. **Titre de l'étape** — Sous-titre
+### 1. **Titre** — Sous-titre
 
-Description détaillée...
+[Description actionnable...]
 
-### 2. **Titre de l'étape** — Sous-titre
+### 2. **Titre** — Sous-titre
 
-Description détaillée...
+[Description actionnable...]
 
 [... toutes les étapes ...]
 
@@ -303,99 +223,90 @@ Description détaillée...
 
 - Règle 1
 - Règle 2
-- Règle 3
-[...]</code></pre>
-<p><strong>Vérifications avant livraison :</strong></p>
+- Règle 3</code></pre>
+<p>Checklist de validation avant livraison :</p>
 <ul>
-<li>[ ] Le frontmatter YAML est syntaxiquement correct (tirets, guillemets, indentation)</li>
-<li>[ ] Le nom est en kebab-case</li>
-<li>[ ] La description contient au moins 5 triggers</li>
-<li>[ ] Le workflow a entre 5 et 10 étapes</li>
-<li>[ ] Chaque étape a un titre en gras et une description actionnable</li>
-<li>[ ] Les règles sont claires et non ambiguës</li>
-<li>[ ] Le fichier est en français (sauf demande contraire)</li>
-<li>[ ] Le markdown est bien formaté (pas de syntaxe cassée)</li>
+<li>[ ] Frontmatter YAML syntaxiquement correct (tirets <code>---</code>, guillemets, une seule ligne pour <code>description</code>)</li>
+<li>[ ] Nom en kebab-case, sans accents</li>
+<li>[ ] Description contient ≥ 8 triggers incluant variantes FR et EN</li>
+<li>[ ] Workflow : 5 à 10 étapes, chacune avec un output concret</li>
+<li>[ ] Chaque étape contient au moins un exemple concret (commande, template, snippet)</li>
+<li>[ ] Règles : 3 à 7, claires et non ambiguës</li>
+<li>[ ] Taille du corps : 80 à 180 lignes (pas de remplissage)</li>
+<li>[ ] Pas de section <code>## Communication Rules</code> (ajoutée automatiquement par le harness)</li>
 </ul>
-<p>Écris le fichier directement dans le projet avec l'outil Write ou Edit.</p>
+<p>Écris le fichier avec l'outil <code>Write</code> directement dans le projet.</p>
 <hr>
-<h3>8. <strong>Installation</strong> — Rendre le skill accessible</h3>
-<p>Propose les différentes méthodes d'installation à l'utilisateur :</p>
-<p><strong>Méthode 1 — Installation locale (recommandée pour tester) :</strong></p>
-<pre><code class="lang-bash"># Le skill est déjà écrit dans :
-~/.claude/skills-collection/{categorie}-skills/{nom-du-skill}/SKILL.md</code></pre>
-<p><strong>Méthode 2 — Ajout au repo github :</strong></p>
-<pre><code class="lang-bash"># Depuis le repo claude-skills-collection
-cd ~/.claude/skills-collection
-git add {categorie}-skills/{nom-du-skill}/SKILL.md
-git commit -m &quot;feat: ajout du skill {nom-du-skill}&quot;
+<h3>7. Installation — Rendre le skill accessible</h3>
+<p>Après génération, propose les méthodes d'installation :</p>
+<p><strong>Option A — Installation locale (test rapide) :</strong></p>
+<pre><code class="lang-bash"># Le skill est déjà dans :
+~/.claude/skills-collection/{categorie}-skills/{nom}/SKILL.md
+# Rechargement automatique au prochain lancement de Claude Code</code></pre>
+<p><strong>Option B — Ajout au repo partagé :</strong></p>
+<pre><code class="lang-bash">cd ~/.claude/skills-collection
+git add {categorie}-skills/{nom}/SKILL.md
+git commit -m &quot;feat(skills): ajout du skill {nom}&quot;
 git push origin main</code></pre>
-<p><strong>Méthode 3 — Installation dans un projet spécifique :</strong></p>
-<pre><code class="lang-bash"># Copier dans le dossier .claude du projet
-cp ~/.claude/skills-collection/{categorie}-skills/{nom-du-skill}/SKILL.md \
-   /chemin/vers/projet/.claude/commands/{nom-du-skill}.md</code></pre>
-<p><strong>Vérifications post-installation :</strong></p>
+<p><strong>Option C — Installation dans un projet spécifique :</strong></p>
+<pre><code class="lang-bash">cp ~/.claude/skills-collection/{categorie}-skills/{nom}/SKILL.md \
+   /chemin/vers/projet/.claude/commands/{nom}.md</code></pre>
+<p>Vérification post-installation :</p>
 <ul>
-<li>Vérifier que le fichier est bien détecté par Claude Code</li>
-<li>Vérifier qu'il n'y a pas de conflit de nom avec un skill existant</li>
+<li>Relancer Claude Code ou recharger le contexte</li>
 <li>Tester un trigger pour confirmer l'activation</li>
+<li>Vérifier l'absence de conflit de nom (<code>/help</code> liste les skills actifs)</li>
 </ul>
 <hr>
-<h3>9. <strong>Test et validation</strong> — S'assurer que le skill fonctionne</h3>
-<p>Génère <strong>3 prompts de test</strong> adaptés au skill créé, couvrant :</p>
+<h3>8. Test et validation — Confirmer que le skill fonctionne</h3>
+<p>Génère <strong>3 prompts de test</strong> couvrant :</p>
 <ol>
-<li><strong>Test basique</strong> — Le cas d'utilisation le plus simple et direct</li>
+<li><strong>Cas basique</strong> — le scénario le plus simple :</li>
 </ol>
-<p>   ```    Prompt : &quot;[trigger principal] pour [cas simple]&quot;    Résultat attendu : [description du livrable minimal]    ```</p>
+<p>   ```    Prompt    : &quot;[trigger principal] pour [cas simple]&quot;    Attendu   : livrable minimal, complet, sans erreur    ```</p>
 <ol>
-<li><strong>Test avancé</strong> — Un cas d'utilisation complexe avec des contraintes</li>
+<li><strong>Cas avancé</strong> — contraintes spécifiques :</li>
 </ol>
-<p>   ```    Prompt : &quot;[trigger] pour [cas complexe avec contraintes spécifiques]&quot;    Résultat attendu : [description du livrable complet avec les contraintes respectées]    ```</p>
+<p>   ```    Prompt    : &quot;[trigger] pour [cas complexe avec contraintes]&quot;    Attendu   : livrable complet respectant toutes les contraintes annoncées    ```</p>
 <ol>
-<li><strong>Test limite</strong> — Un cas en dehors du scope pour vérifier les garde-fous</li>
+<li><strong>Cas hors-scope</strong> — vérification des garde-fous :</li>
 </ol>
-<p>   ```    Prompt : &quot;[demande hors scope mais proche du domaine]&quot;    Résultat attendu : Le skill doit rediriger ou demander des précisions, PAS tenter de répondre hors scope    ```</p>
-<p>Demande à l'utilisateur de tester au moins le prompt basique et de rapporter le résultat.</p>
+<p>   ```    Prompt    : &quot;[demande proche mais hors périmètre]&quot;    Attendu   : redirection explicite, PAS une tentative de réponse hors-scope    ```</p>
+<p>Demande à l'utilisateur de tester le cas basique et de rapporter le résultat avant de continuer.</p>
 <hr>
-<h3>10. <strong>Itération et amélioration</strong> — Affiner le skill</h3>
-<p>Après le test, demande un feedback structuré :</p>
+<h3>9. Itération — Affiner sur feedback</h3>
+<p>Après le test, collecte le feedback sur ces axes :</p>
 <ul>
-<li><strong>Le skill s'est-il déclenché correctement ?</strong> Si non → ajuster les triggers</li>
-<li><strong>Le workflow était-il logique ?</strong> Si non → réordonner ou ajouter des étapes</li>
-<li><strong>Le livrable était-il complet ?</strong> Si non → enrichir les étapes de génération</li>
-<li><strong>Les règles étaient-elles respectées ?</strong> Si non → reformuler plus clairement</li>
-<li><strong>Manque-t-il quelque chose ?</strong> → Ajouter les fonctionnalités demandées</li>
+<li><strong>Déclenchement</strong> : le skill s'est-il activé ? → si non, revoir les triggers</li>
+<li><strong>Workflow</strong> : la progression était-elle logique ? → si non, réordonner / ajouter étapes</li>
+<li><strong>Livrable</strong> : était-il complet et utilisable directement ? → si non, enrichir les étapes</li>
+<li><strong>Règles</strong> : les garde-fous ont-ils fonctionné ? → si non, reformuler</li>
+<li><strong>Manques</strong> : fonctionnalités absentes ? → ajouter</li>
 </ul>
-<p>Effectue les ajustements demandés et propose un nouveau cycle de test si les changements sont significatifs.</p>
-<p><strong>Proposition systématique :</strong></p>
-<blockquote>&quot;Souhaites-tu que j'ajoute ce skill au repo github <code>khalilbenaz/claude-skills-collection</code> ? Je peux créer le commit et le push directement.&quot;</blockquote>
+<p>Effectue les ajustements et propose un nouveau cycle de test si les changements sont significatifs.</p>
+<p>Propose systématiquement à la fin :</p>
+<blockquote>&quot;Souhaites-tu que j'ajoute ce skill au repo <code>khalilbenaz/claude-skills-collection</code> avec un commit propre ?&quot;</blockquote>
+<hr>
+<h2>Anti-patterns et pièges à éviter</h2>
+<ul>
+<li><strong>Skill trop générique</strong> : un skill &quot;aide au développement&quot; ne se déclenche sur rien de précis et entre en conflit avec tout. Restreindre le périmètre.</li>
+<li><strong>Workflow sans output intermédiaire</strong> : chaque étape doit produire quelque chose. Une étape &quot;réfléchir&quot; ou &quot;analyser&quot; sans output est inutile.</li>
+<li><strong>Triggers trop courts</strong> : &quot;docker&quot;, &quot;test&quot;, &quot;api&quot; seuls sont des faux positifs garantis. Toujours des phrases minimales : &quot;créer un Dockerfile&quot;, &quot;générer des tests api&quot;.</li>
+<li><strong>Description multi-lignes dans le frontmatter</strong> : le parser YAML de Claude Code exige que <code>description</code> tienne sur une seule ligne. Multi-lignes = skill non détecté.</li>
+<li><strong>Section <code>## Communication Rules</code> dans le corps</strong> : elle est injectée automatiquement par le harness. L'ajouter manuellement crée un doublon et peut casser le comportement.</li>
+<li><strong>Skill sans règles de scope</strong> : sans préciser ce que le skill NE fait PAS, Claude tentera de tout couvrir et produira des résultats incohérents.</li>
+<li><strong>Corps &gt; 200 lignes</strong> : dilue le signal. Au-delà, Claude commence à ignorer des sections. Rester entre 80 et 180 lignes de corps.</li>
+<li><strong>Doublons de skills</strong> : vérifier systématiquement le catalogue avant de créer. Un doublon dilue les triggers et crée de l'ambiguïté dans le routage.</li>
+</ul>
 <hr>
 <h2>Règles</h2>
 <ul>
-<li><strong>Toujours produire un SKILL.md complet et fonctionnel</strong> — Jamais de brouillon partiel, jamais de &quot;[à compléter]&quot; ou de placeholder. Le fichier livré doit être prêt à l'emploi immédiatement.</li>
-</ul>
-<ul>
-<li><strong>Chaque skill généré DOIT avoir un livrable concret</strong> — Un skill sans output tangible (code, fichier, document, plan, checklist, diagramme) n'est pas un bon skill. Le workflow doit toujours mener à la production de quelque chose de concret.</li>
-</ul>
-<ul>
-<li><strong>Vérifier le catalogue avant de créer</strong> — Avant de générer un nouveau skill, vérifier dans <code>~/.claude/skills-collection/</code> qu'un skill similaire n'existe pas déjà. Si un skill proche existe, proposer de l'enrichir plutôt que d'en créer un nouveau.</li>
-</ul>
-<ul>
-<li><strong>Les triggers doivent être spécifiques et sans conflit</strong> — Ne jamais utiliser des triggers trop génériques (&quot;aide-moi&quot;, &quot;fais quelque chose&quot;) qui pourraient entrer en conflit avec d'autres skills. Chaque trigger doit pointer sans ambiguïté vers CE skill.</li>
-</ul>
-<ul>
-<li><strong>Écrire en français par défaut</strong> — Sauf si l'utilisateur demande explicitement une autre langue. Les triggers doivent toujours inclure des variantes en français ET en anglais.</li>
-</ul>
-<ul>
-<li><strong>Commencer par le contexte, finir par le livrable</strong> — Tout workflow doit débuter par une phase de compréhension du besoin et de l'existant, et se terminer par la production et la validation du livrable final.</li>
-</ul>
-<ul>
-<li><strong>Proposer systématiquement l'ajout au repo</strong> — À la fin de chaque création de skill, proposer de l'ajouter au repo github <code>khalilbenaz/claude-skills-collection</code> avec un commit propre et un message descriptif.</li>
-</ul>
-<ul>
-<li><strong>Ne pas deviner, demander</strong> — Si une information critique manque pour concevoir un bon skill (domaine, techno, contraintes), la demander avant de générer. Un skill basé sur des suppositions sera médiocre.</li>
-</ul>
-<ul>
-<li><strong>Respecter le format exact</strong> — Le frontmatter YAML doit être syntaxiquement parfait (tirets de délimitation, guillemets, pas d'indentation fantaisiste). Le markdown doit être propre et bien structuré. Un SKILL.md mal formaté ne sera pas détecté par Claude Code.</li>
+<li><strong>Livrable complet immédiatement</strong> : jamais de <code>[à compléter]</code>, jamais de placeholder. Le <code>SKILL.md</code> livré doit être installable et fonctionnel sans modification.</li>
+<li><strong>Vérifier le catalogue avant de créer</strong> : si un skill similaire existe, proposer de l'enrichir plutôt que d'en créer un nouveau.</li>
+<li><strong>Triggers spécifiques, pas génériques</strong> : 8 triggers minimum, couvrant FR et EN, sans chevauchement avec des skills existants.</li>
+<li><strong>Ne pas deviner, demander</strong> : si domaine, techno ou livrable manquent, poser les questions avant de générer — pas après.</li>
+<li><strong>Respecter le format exact du frontmatter</strong> : <code>description</code> sur une seule ligne, tirets de délimitation <code>---</code>, guillemets sur chaque trigger. Un YAML cassé = skill invisible.</li>
+<li><strong>Proposer l'ajout au repo</strong> : systématiquement en fin de session, avec commit formaté <code>feat(skills): ajout du skill {nom}</code>.</li>
 </ul>
 </article>
 </main>

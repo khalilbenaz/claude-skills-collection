@@ -96,24 +96,41 @@ cp -r claude-skills-collection/skills/api-gateway-ocelot-gateway-guide ~/.claude
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide Ocelot API Gateway</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Installer</strong> : package NuGet Ocelot + configuration JSON.</li>
-<li><strong>Définir les routes</strong> : mapping upstream → downstream.</li>
-<li><strong>Configurer</strong> : rate limiting, load balancing, caching.</li>
-<li><strong>Sécuriser</strong> : authentification, autorisation, CORS.</li>
-</ol>
-<h2>Configuration de base</h2>
-<pre><code class="lang-csharp">// Program.cs
+<h2>Workflow — mise en place pas à pas</h2>
+<h3>1. Installer les packages</h3>
+<pre><code class="lang-bash">dotnet add package Ocelot                          # Core — toujours requis
+dotnet add package Ocelot.Provider.Consul          # Service Discovery Consul
+dotnet add package Ocelot.Provider.Eureka          # Service Discovery Eureka
+dotnet add package Ocelot.Cache.CacheManager       # Cache distribué
+dotnet add package Ocelot.Tracing.OpenTracing      # Tracing distribué</code></pre>
+<h3>2. Brancher Ocelot dans Program.cs</h3>
+<pre><code class="lang-csharp">// Program.cs (.NET 8+)
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration.AddJsonFile(&quot;ocelot.json&quot;, optional: false, reloadOnChange: true);
-builder.Services.AddOcelot();
+// Charge ocelot.json en priorité sur appsettings.json
+builder.Configuration
+    .AddJsonFile(&quot;ocelot.json&quot;, optional: false, reloadOnChange: true)
+    .AddJsonFile($&quot;ocelot.{builder.Environment.EnvironmentName}.json&quot;,
+                 optional: true, reloadOnChange: true);
+
+builder.Services
+    .AddOcelot(builder.Configuration)
+    .AddCacheManager(x =&gt; x.WithDictionaryHandle())  // cache en mémoire
+    .AddConsul()                                      // si Consul utilisé
+    ;
+
+builder.Services.AddAuthentication()
+    .AddJwtBearer(&quot;Bearer&quot;, options =&gt;
+    {
+        options.Authority = builder.Configuration[&quot;Jwt:Authority&quot;];
+        options.Audience  = builder.Configuration[&quot;Jwt:Audience&quot;];
+    });
 
 var app = builder.Build();
 await app.UseOcelot();
 app.Run();</code></pre>
-<h3>ocelot.json</h3>
+<h3>3. Définir les routes dans ocelot.json</h3>
+<p>Chaque route = un objet dans <code>&quot;Routes&quot;</code>. Minima obligatoires :</p>
 <pre><code class="lang-json">{
   &quot;Routes&quot;: [
     {
@@ -123,16 +140,25 @@ app.Run();</code></pre>
         { &quot;Host&quot;: &quot;payment-service&quot;, &quot;Port&quot;: 8080 }
       ],
       &quot;UpstreamPathTemplate&quot;: &quot;/payments/{everything}&quot;,
-      &quot;UpstreamHttpMethod&quot;: [ &quot;GET&quot;, &quot;POST&quot;, &quot;PUT&quot;, &quot;DELETE&quot; ],
+      &quot;UpstreamHttpMethod&quot;: [&quot;GET&quot;, &quot;POST&quot;, &quot;PUT&quot;, &quot;DELETE&quot;],
+
       &quot;AuthenticationOptions&quot;: {
         &quot;AuthenticationProviderKey&quot;: &quot;Bearer&quot;
       },
+
       &quot;RateLimitOptions&quot;: {
         &quot;EnableRateLimiting&quot;: true,
         &quot;Period&quot;: &quot;1m&quot;,
         &quot;PeriodTimespan&quot;: 60,
         &quot;Limit&quot;: 100
       },
+
+      &quot;QoSOptions&quot;: {
+        &quot;ExceptionsAllowedBeforeBreaking&quot;: 3,
+        &quot;DurationOfBreak&quot;: 10000,
+        &quot;TimeoutValue&quot;: 5000
+      },
+
       &quot;FileCacheOptions&quot;: {
         &quot;TtlSeconds&quot;: 30,
         &quot;Region&quot;: &quot;payments&quot;
@@ -142,19 +168,12 @@ app.Run();</code></pre>
       &quot;DownstreamPathTemplate&quot;: &quot;/api/orders/{everything}&quot;,
       &quot;DownstreamScheme&quot;: &quot;https&quot;,
       &quot;DownstreamHostAndPorts&quot;: [
-        { &quot;Host&quot;: &quot;order-service-1&quot;, &quot;Port&quot;: 8080 },
-        { &quot;Host&quot;: &quot;order-service-2&quot;, &quot;Port&quot;: 8080 }
+        { &quot;Host&quot;: &quot;order-svc-1&quot;, &quot;Port&quot;: 8080 },
+        { &quot;Host&quot;: &quot;order-svc-2&quot;, &quot;Port&quot;: 8080 }
       ],
       &quot;UpstreamPathTemplate&quot;: &quot;/orders/{everything}&quot;,
-      &quot;UpstreamHttpMethod&quot;: [ &quot;GET&quot;, &quot;POST&quot; ],
-      &quot;LoadBalancerOptions&quot;: {
-        &quot;Type&quot;: &quot;RoundRobin&quot;
-      },
-      &quot;QoSOptions&quot;: {
-        &quot;ExceptionsAllowedBeforeBreaking&quot;: 3,
-        &quot;DurationOfBreak&quot;: 10000,
-        &quot;TimeoutValue&quot;: 5000
-      }
+      &quot;UpstreamHttpMethod&quot;: [&quot;GET&quot;, &quot;POST&quot;],
+      &quot;LoadBalancerOptions&quot;: { &quot;Type&quot;: &quot;RoundRobin&quot; }
     }
   ],
   &quot;GlobalConfiguration&quot;: {
@@ -166,29 +185,32 @@ app.Run();</code></pre>
     }
   }
 }</code></pre>
-<h2>Fonctionnalités</h2>
-<h3>Aggregation de requêtes</h3>
+<h3>4. Aggregation de requêtes</h3>
+<p>Agrège plusieurs appels downstream en une seule réponse upstream. Utiliser la clé <code>&quot;Key&quot;</code> sur chaque route participante :</p>
 <pre><code class="lang-json">{
   &quot;Routes&quot;: [
     {
       &quot;DownstreamPathTemplate&quot;: &quot;/api/users/{userId}&quot;,
       &quot;UpstreamPathTemplate&quot;: &quot;/users/{userId}&quot;,
+      &quot;DownstreamHostAndPorts&quot;: [{ &quot;Host&quot;: &quot;user-svc&quot;, &quot;Port&quot;: 8080 }],
       &quot;Key&quot;: &quot;user&quot;
     },
     {
       &quot;DownstreamPathTemplate&quot;: &quot;/api/orders?userId={userId}&quot;,
       &quot;UpstreamPathTemplate&quot;: &quot;/users/{userId}/orders&quot;,
+      &quot;DownstreamHostAndPorts&quot;: [{ &quot;Host&quot;: &quot;order-svc&quot;, &quot;Port&quot;: 8080 }],
       &quot;Key&quot;: &quot;orders&quot;
     }
   ],
   &quot;Aggregates&quot;: [
     {
-      &quot;RouteKeys&quot;: [ &quot;user&quot;, &quot;orders&quot; ],
+      &quot;RouteKeys&quot;: [&quot;user&quot;, &quot;orders&quot;],
       &quot;UpstreamPathTemplate&quot;: &quot;/users/{userId}/profile&quot;
     }
   ]
 }</code></pre>
-<h3>Service Discovery (Consul)</h3>
+<blockquote>Limite : l'agrégation ne supporte que GET. Pour des cas complexes (POST, transformation de payload), implémenter un custom <code>IDefinedAggregator</code>.</blockquote>
+<h3>5. Service Discovery avec Consul</h3>
 <pre><code class="lang-csharp">builder.Services.AddOcelot().AddConsul();</code></pre>
 <pre><code class="lang-json">{
   &quot;Routes&quot;: [
@@ -196,7 +218,7 @@ app.Run();</code></pre>
       &quot;DownstreamPathTemplate&quot;: &quot;/api/{everything}&quot;,
       &quot;UpstreamPathTemplate&quot;: &quot;/payments/{everything}&quot;,
       &quot;ServiceName&quot;: &quot;payment-service&quot;,
-      &quot;LoadBalancerOptions&quot;: { &quot;Type&quot;: &quot;RoundRobin&quot; }
+      &quot;LoadBalancerOptions&quot;: { &quot;Type&quot;: &quot;LeastConnection&quot; }
     }
   ],
   &quot;GlobalConfiguration&quot;: {
@@ -204,18 +226,69 @@ app.Run();</code></pre>
       &quot;Scheme&quot;: &quot;http&quot;,
       &quot;Host&quot;: &quot;consul&quot;,
       &quot;Port&quot;: 8500,
-      &quot;Type&quot;: &quot;Consul&quot;
+      &quot;Type&quot;: &quot;Consul&quot;,
+      &quot;PollingInterval&quot;: 5000
     }
   }
 }</code></pre>
-<h2>Ocelot vs YARP</h2>
-<table><thead><tr><th>Critère</th><th>Ocelot</th><th>YARP</th></tr></thead><tbody><tr><td><strong>Configuration</strong></td><td>JSON déclaratif</td><td>Config + code</td></tr><tr><td><strong>Aggregation</strong></td><td>Intégrée</td><td>Custom middleware</td></tr><tr><td><strong>Service Discovery</strong></td><td>Consul, Eureka</td><td>Custom</td></tr><tr><td><strong>Performance</strong></td><td>Bonne</td><td>Excellente (Microsoft)</td></tr><tr><td><strong>Maintenance</strong></td><td>Communauté</td><td>Microsoft officiel</td></tr><tr><td><strong>Cas d'usage</strong></td><td>Gateway simple à moyenne</td><td>Proxy haute performance</td></tr></tbody></table>
-<h2>Règles</h2>
+<h3>6. Headers et claims transformation</h3>
+<pre><code class="lang-json">{
+  &quot;AddHeadersToRequest&quot;: {
+    &quot;X-Tenant-Id&quot;: &quot;Claims[tenant_id] &gt; value&quot;
+  },
+  &quot;AddClaimsToRequest&quot;: {
+    &quot;sub&quot;: &quot;Claims[sub] &gt; value&quot;
+  },
+  &quot;AddQueriesToRequest&quot;: {
+    &quot;clientId&quot;: &quot;Claims[client_id] &gt; value&quot;
+  },
+  &quot;UpstreamHeaderTransform&quot;: {
+    &quot;X-Forwarded-For&quot;: &quot;{RemoteIpAddress}&quot;
+  },
+  &quot;DownstreamHeaderTransform&quot;: {
+    &quot;Location&quot;: &quot;{DownstreamBaseUrl}/{UpstreamBaseUrl}&quot;
+  }
+}</code></pre>
+<h3>7. Middleware personnalisé</h3>
+<pre><code class="lang-csharp">// Middleware de corrélation avant Ocelot
+app.Use(async (ctx, next) =&gt;
+{
+    ctx.Request.Headers[&quot;X-Correlation-Id&quot;] =
+        ctx.Request.Headers.TryGetValue(&quot;X-Correlation-Id&quot;, out var existing)
+            ? existing.ToString()
+            : Guid.NewGuid().ToString(&quot;N&quot;);
+    await next();
+});
+
+await app.UseOcelot();</code></pre>
+<h2>Critères de décision — Ocelot vs YARP</h2>
+<table><thead><tr><th>Critère</th><th>Ocelot</th><th>YARP</th></tr></thead><tbody><tr><td>Configuration</td><td>JSON déclaratif</td><td>Code + config</td></tr><tr><td>Aggregation intégrée</td><td>Oui</td><td>Non (custom)</td></tr><tr><td>Service Discovery</td><td>Consul, Eureka</td><td>Custom</td></tr><tr><td>Performance</td><td>Bonne</td><td>Excellente (Microsoft)</td></tr><tr><td>Maintenance</td><td>Communauté</td><td>Microsoft officiel</td></tr><tr><td>Courbe d'apprentissage</td><td>Faible</td><td>Moyenne</td></tr><tr><td>Cas d'usage</td><td>Équipes petites/moyennes, config déclarative</td><td>Proxy haute performance, finops</td></tr></tbody></table>
+<p><strong>Choisir Ocelot si</strong> : config JSON suffisante, aggregation native requise, équipe habituée au routing déclaratif. <strong>Choisir YARP si</strong> : throughput critique (&gt;50k req/s), besoin de transformations complexes en code.</p>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne pas faire :</strong></p>
 <ul>
-<li>Pour les nouveaux projets, <strong>évaluer YARP</strong> comme alternative plus performante et maintenue par Microsoft.</li>
-<li>Séparer la configuration par fichier (<code>ocelot.dev.json</code>, <code>ocelot.prod.json</code>).</li>
-<li>Configurer les <strong>QoS options</strong> (circuit breaker, timeout) sur chaque route.</li>
-<li>L'aggregation ne doit pas masquer les erreurs — logger chaque sous-requête.</li>
+<li>Laisser une route sans <code>QoSOptions</code> — un service lent bloque toute la gateway.</li>
+<li>Partager un seul <code>ocelot.json</code> pour tous les environnements — utiliser <code>ocelot.{env}.json</code>.</li>
+<li>Utiliser le cache (<code>FileCacheOptions</code>) sur des routes POST/PUT/DELETE — effets de bord silencieux.</li>
+<li>Masquer les erreurs d'aggregation : si un sous-appel échoue, retourner un corps partiel avec un statut <code>207 Multi-Status</code> et logger chaque sous-requête individuellement.</li>
+<li>Exposer le port Consul admin (<code>8500</code>) sur le réseau public.</li>
+<li>Stocker les secrets (<code>Jwt:Authority</code>, clés API) en clair dans <code>ocelot.json</code> — utiliser les variables d'environnement ou un vault.</li>
+</ul>
+<p><strong>Pièges courants :</strong></p>
+<ul>
+<li><code>UpstreamPathTemplate</code> trop générique (<code>/{everything}</code>) capte tout et masque d'autres routes. Toujours ordonner du plus spécifique au plus général.</li>
+<li>L'aggregation retourne HTTP 200 même si les sous-requêtes ont échoué — vérifier chaque body de la réponse agrégée.</li>
+<li><code>reloadOnChange: true</code> sur <code>ocelot.json</code> peut causer un reload à chaud en production ; tester en staging d'abord.</li>
+<li>Le circuit breaker (<code>QoSOptions</code>) nécessite le package <code>Polly</code> — sans lui, les options sont ignorées silencieusement.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Versionner <code>ocelot.json</code> avec le code source, jamais dans un ConfigMap Kubernetes non tracé.</li>
+<li>Activer les health checks Ocelot avec <code>/health</code> et lier à la readiness probe.</li>
+<li>Utiliser <code>LeastConnection</code> plutôt que <code>RoundRobin</code> dès que les services ont des latences inégales.</li>
+<li>En Kubernetes, préférer le Service Discovery natif (<code>Kube</code>) plutôt que Consul sauf si multi-cluster.</li>
+<li>Exposer les métriques via OpenTelemetry (<code>Ocelot.Tracing.OpenTracing</code>) et les consommer dans Grafana.</li>
+<li>Limiter le nombre de routes par fichier à ~50 ; au-delà, splitter en fichiers partiels chargés via <code>AddOcelot(builder.Configuration)</code>.</li>
 </ul>
 </article>
 </main>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ai-ml-dataset-builder — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Construction et curation de datasets pour l'entraînement ML (nettoyage, augmentation, annotation, split)">
+<meta name="description" content="Construction et curation de datasets pour l'entraînement ML (nettoyage, augmentation, annotation, split, versioning, qualité, datacard)">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🧠 AI / ML</span>
 <h1 class="skill-title">ai-ml-dataset-builder</h1>
-<p class="lead">Construction et curation de datasets pour l'entraînement ML (nettoyage, augmentation, annotation, split)</p>
+<p class="lead">Construction et curation de datasets pour l'entraînement ML (nettoyage, augmentation, annotation, split, versioning, qualité, datacard)</p>
 
 
 
@@ -96,88 +96,172 @@ cp -r claude-skills-collection/skills/ai-ml-dataset-builder ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Dataset Builder</h1>
-<p>Guide complet pour la construction, la curation et la gestion de datasets de qualité pour l'entraînement de modèles de machine learning.</p>
-<h2>Workflow</h2>
-<h3>1. Définir les besoins du dataset</h3>
+<p>Guide opérationnel pour construire, curate et maintenir des datasets ML de production.</p>
+<hr>
+<h2>Étape 1 — Cadrer les besoins</h2>
+<table><thead><tr><th>Question</th><th>Décision</th></tr></thead><tbody><tr><td>Tâche ML ?</td><td>Classif / régression / détection / génération</td></tr><tr><td>Volume minimum viable ?</td><td>Règle empirique : ≥ 1 000 exemples/classe pour classif tabulaire, ≥ 10 k images pour CNN</td></tr><tr><td>Déséquilibre acceptable ?</td><td>Ratio max 1:10 sans traitement ; au-delà → SMOTE/oversampling</td></tr><tr><td>Contraintes légales ?</td><td>RGPD / consentement / droit à l'oubli à vérifier avant collecte</td></tr></tbody></table>
+<p>Fixer un <strong>schéma de données</strong> dès le départ :</p>
+<pre><code class="lang-python"># Exemple de schéma avec Pydantic
+from pydantic import BaseModel, Field
+from typing import Literal
+
+class Sample(BaseModel):
+    text: str = Field(min_length=10)
+    label: Literal[&quot;positive&quot;, &quot;negative&quot;, &quot;neutral&quot;]
+    source: str
+    collected_at: str  # ISO 8601</code></pre>
+<hr>
+<h2>Étape 2 — Collecter les données brutes</h2>
+<p>Choisir le format de stockage selon le cas d'usage :</p>
+<table><thead><tr><th>Format</th><th>Quand l'utiliser</th></tr></thead><tbody><tr><td><strong>Parquet</strong></td><td>Données tabulaires, requêtes analytiques, &gt; 100 k lignes</td></tr><tr><td><strong>JSONL</strong></td><td>Texte, NLP, LLM fine-tuning</td></tr><tr><td><strong>TFRecord / WebDataset</strong></td><td>Images/audio à grande échelle, streaming</td></tr><tr><td><strong>CSV</strong></td><td>Prototypage, petits datasets (&lt; 50 k lignes)</td></tr></tbody></table>
+<p>Collecter avec provenance :</p>
+<pre><code class="lang-bash"># Exemple : snapshot DVC d'une source API
+dvc run -n collect_api \
+  -d scripts/collect.py \
+  -o data/raw/samples.jsonl \
+  python scripts/collect.py --source api --date 2026-06-24</code></pre>
+<p>Déduplication à la collecte (texte) :</p>
+<pre><code class="lang-python">import hashlib, json
+
+seen = set()
+with open(&quot;data/raw/samples.jsonl&quot;, &quot;w&quot;) as out:
+    for record in raw_records:
+        h = hashlib.md5(record[&quot;text&quot;].encode()).hexdigest()
+        if h not in seen:
+            seen.add(h)
+            out.write(json.dumps(record, ensure_ascii=False) + &quot;\n&quot;)</code></pre>
+<hr>
+<h2>Étape 3 — Nettoyer et prétraiter</h2>
+<p>Pipeline type avec <strong>Pandas + Pandera</strong> :</p>
+<pre><code class="lang-python">import pandas as pd
+import pandera as pa
+
+schema = pa.DataFrameSchema({
+    &quot;text&quot;: pa.Column(str, pa.Check(lambda s: s.str.len() &gt; 10)),
+    &quot;label&quot;: pa.Column(str, pa.Check.isin([&quot;positive&quot;, &quot;negative&quot;, &quot;neutral&quot;])),
+})
+
+df = pd.read_parquet(&quot;data/raw/samples.parquet&quot;)
+df = df.drop_duplicates(subset=[&quot;text&quot;])
+df = df.dropna(subset=[&quot;label&quot;])
+df = schema.validate(df)  # lève une exception si non-conforme
+df.to_parquet(&quot;data/clean/samples.parquet&quot;, index=False)</code></pre>
+<p>Quasi-doublons (fuzzy) :</p>
+<pre><code class="lang-bash">pip install datasketch
+# MinHash LSH pour détection de duplicats near-exact à grande échelle</code></pre>
+<hr>
+<h2>Étape 4 — Annoter et labelliser</h2>
+<p><strong>Critères de choix de l'outil d'annotation :</strong></p>
+<table><thead><tr><th>Outil</th><th>Type de données</th><th>Points forts</th></tr></thead><tbody><tr><td>Label Studio</td><td>Texte, images, audio, vidéo</td><td>Open-source, tout-en-un</td></tr><tr><td>Prodigy</td><td>NLP/texte</td><td>Annotation active learning intégrée</td></tr><tr><td>CVAT</td><td>Images / vidéo</td><td>Bounding box, segmentation</td></tr><tr><td>Argilla</td><td>LLM feedback, RLHF</td><td>Interface moderne, intégration HuggingFace</td></tr></tbody></table>
+<p>Mesurer l'accord inter-annotateurs <strong>avant</strong> de valider le guide :</p>
+<pre><code class="lang-python">from sklearn.metrics import cohen_kappa_score
+
+kappa = cohen_kappa_score(annotator_1_labels, annotator_2_labels)
+# Seuil acceptable : kappa &gt; 0.7
+# &lt; 0.6 → guide d'annotation à retravailler
+print(f&quot;Cohen's Kappa: {kappa:.3f}&quot;)</code></pre>
+<hr>
+<h2>Étape 5 — Augmenter les données</h2>
+<h3>Texte</h3>
+<pre><code class="lang-python"># back-translation légère avec deep-translator
+from deep_translator import GoogleTranslator
+
+def back_translate(text, lang=&quot;es&quot;):
+    translated = GoogleTranslator(source=&quot;fr&quot;, target=lang).translate(text)
+    return GoogleTranslator(source=lang, target=&quot;fr&quot;).translate(translated)</code></pre>
+<h3>Images (Albumentations)</h3>
+<pre><code class="lang-python">import albumentations as A
+
+transform = A.Compose([
+    A.HorizontalFlip(p=0.5),
+    A.RandomBrightnessContrast(p=0.3),
+    A.Rotate(limit=15, p=0.4),
+    A.GaussNoise(p=0.2),
+])
+augmented = transform(image=img)[&quot;image&quot;]</code></pre>
+<h3>Tabulaire (déséquilibre de classes)</h3>
+<pre><code class="lang-python">from imblearn.over_sampling import SMOTE
+
+sm = SMOTE(sampling_strategy=&quot;minority&quot;, random_state=42)
+X_res, y_res = sm.fit_resample(X_train, y_train)</code></pre>
+<p>Règle : <strong>n'augmenter que le train set</strong>, jamais validation ni test.</p>
+<hr>
+<h2>Étape 6 — Splits train / validation / test</h2>
+<pre><code class="lang-python">from sklearn.model_selection import train_test_split
+
+# Stratifié (classification)
+X_train, X_tmp, y_train, y_tmp = train_test_split(
+    X, y, test_size=0.2, stratify=y, random_state=42
+)
+X_val, X_test, y_val, y_test = train_test_split(
+    X_tmp, y_tmp, test_size=0.5, stratify=y_tmp, random_state=42
+)
+# Résultat : 80% / 10% / 10%</code></pre>
+<p>Cas spéciaux :</p>
+<table><thead><tr><th>Cas</th><th>Stratégie</th></tr></thead><tbody><tr><td>Données temporelles</td><td>Split chronologique strict — pas de shuffle</td></tr><tr><td>Données groupées (patient, user)</td><td><code>GroupShuffleSplit</code> — un groupe = un seul split</td></tr><tr><td>Très petit dataset (&lt; 5 k)</td><td>Cross-validation k-fold stratifiée</td></tr></tbody></table>
+<pre><code class="lang-python"># Split temporel
+df_sorted = df.sort_values(&quot;date&quot;)
+n = len(df_sorted)
+train = df_sorted.iloc[:int(n*0.8)]
+val   = df_sorted.iloc[int(n*0.8):int(n*0.9)]
+test  = df_sorted.iloc[int(n*0.9):]</code></pre>
+<hr>
+<h2>Étape 7 — Valider et documenter</h2>
+<h3>Rapport de qualité automatique</h3>
+<pre><code class="lang-bash">pip install great_expectations
+great_expectations init
+great_expectations suite new  # définir les expectations
+great_expectations checkpoint run my_checkpoint  # générer le rapport HTML</code></pre>
+<h3>Dataset card (HuggingFace standard)</h3>
+<pre><code class="lang-yaml"># README.md du dataset (format HF)
+---
+dataset_info:
+  features:
+    - name: text
+      dtype: string
+    - name: label
+      dtype: class_label
+  splits:
+    - name: train
+      num_examples: 8000
+    - name: validation
+      num_examples: 1000
+    - name: test
+      num_examples: 1000
+license: cc-by-4.0
+---</code></pre>
+<h3>Versioning avec DVC</h3>
+<pre><code class="lang-bash">dvc add data/clean/samples.parquet
+git add data/clean/samples.parquet.dvc .gitignore
+git commit -m &quot;feat(data): v1.2 — +2k samples, dedup applied&quot;
+git tag dataset-v1.2
+dvc push  # stockage distant (S3, GCS, Azure…)</code></pre>
+<hr>
+<h2>Étape 8 — Maintenir et itérer</h2>
 <ul>
-<li>Identifier la tâche ML cible et les exigences en termes de volume de données</li>
-<li>Définir le schéma des données : features d'entrée, labels, métadonnées</li>
-<li>Établir les critères de qualité minimaux (complétude, exactitude, cohérence)</li>
-<li>Recenser les sources de données disponibles (bases internes, APIs, web scraping, données publiques)</li>
-<li>Vérifier les contraintes légales et éthiques (RGPD, consentement, biais)</li>
+<li><strong>Data drift</strong> : surveiller avec <code>evidently</code> ou <code>whylogs</code> en production</li>
+<li><strong>Active learning</strong> : remonter les exemples incertains du modèle pour re-annotation prioritaire</li>
+<li><strong>Changelog</strong> : <code>CHANGELOG.md</code> daté sur chaque version du dataset</li>
 </ul>
-<h3>2. Collecter les données brutes</h3>
+<pre><code class="lang-python"># Détecter un drift de distribution (evidently)
+from evidently.report import Report
+from evidently.metric_preset import DataDriftPreset
+
+report = Report(metrics=[DataDriftPreset()])
+report.run(reference_data=df_train, current_data=df_new)
+report.save_html(&quot;drift_report.html&quot;)</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Remède</th></tr></thead><tbody><tr><td><strong>Data leakage</strong> : normalisation fit sur tout le dataset</td><td>Résultats gonflés, modèle inutilisable en prod</td><td>Fit scaler/encodeur uniquement sur train</td></tr><tr><td><strong>Test set contaminé</strong> : augmentation avant split</td><td>Métriques non représentatives</td><td>Toujours splitter avant d'augmenter</td></tr><tr><td><strong>Label imbalance ignoré</strong></td><td>Accuracy trompeuse, mauvaise généralisation</td><td>F1-macro, stratification, SMOTE</td></tr><tr><td><strong>Doublons cross-split</strong></td><td>Surestimation des performances</td><td>Dédupliquer avant de splitter</td></tr><tr><td><strong>Guide d'annotation vague</strong></td><td>Kappa &lt; 0.6, labels incohérents</td><td>Exemples concrets pour chaque cas-limite</td></tr><tr><td><strong>Dataset sans version</strong></td><td>Expériences non reproductibles</td><td>DVC ou LakeFS obligatoire dès le début</td></tr><tr><td><strong>Collecte sans consentement</strong></td><td>Violation RGPD, dette légale</td><td>Vérifier licences et consentements avant toute collecte</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Mettre en place des pipelines de collecte automatisés (scrapers, connecteurs API, ETL)</li>
-<li>Agréger les données depuis les différentes sources identifiées</li>
-<li>Stocker les données brutes dans un format standardisé (Parquet, CSV, JSONL)</li>
-<li>Documenter la provenance de chaque source (date, méthode, volume)</li>
-<li>Gérer la déduplication à la collecte pour éviter les biais de surreprésentation</li>
+<li><strong>Format Parquet + Delta Lake</strong> pour les datasets &gt; 1 M lignes (ACID, time-travel)</li>
+<li><strong>Synthetic data (LLM-generated)</strong> : valider avec un modèle discriminateur avant d'inclure en train</li>
+<li><strong>Modèles d'embedding pour déduplication</strong> sémantique (ex. <code>sentence-transformers</code> + FAISS)</li>
+<li><strong>Datacard obligatoire</strong> sur tout dataset partagé ou utilisé pour fine-tuning LLM</li>
+<li><strong>Privacy-preserving</strong> : PII scrubbing automatisé (<code>presidio</code>, <code>spacy</code> NER) avant stockage</li>
 </ul>
-<h3>3. Nettoyer et prétraiter les données</h3>
-<ul>
-<li>Détecter et traiter les valeurs manquantes (imputation, suppression, marquage)</li>
-<li>Identifier et corriger les outliers statistiques</li>
-<li>Normaliser les formats (dates, textes, encodages, unités)</li>
-<li>Supprimer les doublons exacts et quasi-doublons (fuzzy matching)</li>
-<li>Valider la cohérence des types de données et des plages de valeurs</li>
-<li>Appliquer les transformations spécifiques au domaine (tokenization pour le texte, redimensionnement pour les images)</li>
-</ul>
-<h3>4. Annoter et labelliser les données</h3>
-<ul>
-<li>Définir un guide d'annotation clair avec des exemples pour chaque catégorie</li>
-<li>Choisir la méthode d'annotation (manuelle, semi-automatique avec pré-annotation, crowdsourcing)</li>
-<li>Mettre en place des outils d'annotation adaptés (Label Studio, Prodigy, CVAT)</li>
-<li>Assurer la qualité via l'accord inter-annotateurs (Cohen's Kappa, Fleiss' Kappa)</li>
-<li>Gérer les cas ambigus avec un processus de résolution documenté</li>
-</ul>
-<h3>5. Augmenter les données si nécessaire</h3>
-<ul>
-<li>Pour le texte : paraphrase, back-translation, insertion/suppression de mots, génération synthétique</li>
-<li>Pour les images : rotation, flip, crop, ajustement de luminosité, mixup, CutMix</li>
-<li>Pour les données tabulaires : SMOTE, ADASYN, génération par modèle génératif</li>
-<li>Vérifier que l'augmentation ne dégrade pas la qualité ni n'introduit de biais</li>
-<li>Calibrer le ratio d'augmentation pour chaque classe sous-représentée</li>
-</ul>
-<h3>6. Créer les splits train/validation/test</h3>
-<ul>
-<li>Appliquer une stratification pour maintenir la distribution des classes dans chaque split</li>
-<li>Utiliser des proportions standards (70-80% train, 10-15% validation, 10-15% test)</li>
-<li>Garantir l'absence de fuite de données entre les splits (data leakage)</li>
-<li>Pour les données temporelles, respecter l'ordre chronologique dans les splits</li>
-<li>Pour les données groupées (même patient, même utilisateur), garder les groupes intacts dans un seul split</li>
-</ul>
-<h3>7. Valider et documenter le dataset</h3>
-<ul>
-<li>Calculer les statistiques descriptives complètes (distribution, corrélations, taille)</li>
-<li>Générer un rapport de qualité automatique (Great Expectations, Pandera)</li>
-<li>Créer une datacard/dataset card documentant la composition, les biais connus et l'usage prévu</li>
-<li>Versionner le dataset avec un outil dédié (DVC, Delta Lake, HuggingFace Datasets)</li>
-<li>Archiver les métadonnées de provenance et de transformation</li>
-</ul>
-<h3>8. Maintenir et itérer le dataset</h3>
-<ul>
-<li>Mettre en place un monitoring de la qualité des données en continu</li>
-<li>Planifier des mises à jour régulières pour éviter la dérive des données (data drift)</li>
-<li>Intégrer les retours du modèle en production pour enrichir le dataset (active learning)</li>
-<li>Maintenir un changelog des modifications apportées au dataset</li>
-</ul>
-<h2>Rules</h2>
-<ol>
-<li><strong>La qualité prime sur la quantité</strong> : Un petit dataset propre et bien annoté produira de meilleurs résultats qu'un grand dataset bruité. Investir dans le nettoyage et l'annotation de qualité est toujours prioritaire.</li>
-</ol>
-<ol>
-<li><strong>Interdiction absolue de fuite de données</strong> : Les données de test ne doivent jamais influencer l'entraînement, ni directement ni indirectement. Vérifier systématiquement l'absence de data leakage entre les splits, y compris via les transformations et l'augmentation.</li>
-</ol>
-<ol>
-<li><strong>Documenter la provenance et les transformations</strong> : Chaque étape de construction du dataset doit être traçable et reproductible. Sans documentation, le dataset perd sa valeur scientifique et rend le débogage impossible.</li>
-</ol>
-<ol>
-<li><strong>Évaluer et corriger les biais</strong> : Analyser systématiquement les biais de représentation dans le dataset (genre, ethnie, géographie, etc.). Un modèle entraîné sur des données biaisées reproduira et amplifiera ces biais en production.</li>
-</ol>
-<ol>
-<li><strong>Versionner le dataset comme du code</strong> : Chaque version du dataset doit être identifiable et récupérable. Utiliser DVC, Git LFS ou un système équivalent pour garantir la reproductibilité des expériences.</li>
-</ol>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -97,45 +97,172 @@ cp -r claude-skills-collection/skills/agent-voice-agent-builder ~/.claude/skills
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Voice Agent Builder</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill lorsque tu dois concevoir ou implémenter un agent vocal interactif — qu'il s'agisse d'un bot téléphonique, d'un assistant vocal embarqué dans une application, d'un IVR intelligent ou d'un agent conversationnel temps réel sur WebRTC. Il couvre l'ensemble du pipeline STT → LLM → TTS et la gestion du dialogue.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Architecture du pipeline</strong> — Concevoir le pipeline de bout en bout : Audio entrant → STT (transcription) → NLU/LLM (compréhension + génération) → TTS (synthèse) → Audio sortant. Choisir entre architecture synchrone (simple, latence élevée) et streaming end-to-end (complexe, latence &lt; 800 ms). Définir la gestion du WebRTC/SIP, les timeouts, les buffers audio et les points de reprise en cas d'erreur.</li>
-</ol>
-<ol>
-<li><strong>Speech-to-Text</strong> — Sélectionner et configurer le moteur STT selon les contraintes : Whisper (open-source, multilingue, haute précision, déploiement local possible), Deepgram Nova-2 (streaming temps réel, API, excellente précision en anglais/français), Google Speech-to-Text (intégration GCP, multilingue), Azure Speech (intégration Microsoft, custom models). Configurer le VAD (Voice Activity Detection), les timeouts de silence et la détection de barge-in.</li>
-</ol>
-<ol>
-<li><strong>Compréhension du langage naturel</strong> — Extraire l'intention et les entités de la transcription. Maintenir l'état de la conversation (dialog state) avec les variables de session. Gérer les ambiguïtés et les transcriptions partiellement incorrectes (correction de contexte). Choisir entre NLU classique (Rasa, Dialogflow) pour les domaines bornés ou LLM directement pour la flexibilité maximale.</li>
-</ol>
-<ol>
-<li><strong>Gestion du dialogue</strong> — Implémenter la logique conversationnelle : state machine explicite pour les flux structurés (prise de RDV, commandes), LLM-based pour les conversations libres, hybride pour la plupart des cas d'usage réels. Gérer les interruptions (barge-in), le silence prolongé (reprompt), les répétitions et les demandes de confirmation. Définir clairement les conditions de fin de conversation.</li>
-</ol>
-<ol>
-<li><strong>Text-to-Speech</strong> — Configurer le moteur TTS pour naturalité et performance : ElevenLabs (voix ultra-réalistes, clonage vocal, streaming), OpenAI TTS (simple, rapide, bonne qualité), Azure Speech (SSML avancé, personnalisation), Google Cloud TTS. Utiliser SSML pour contrôler les pauses, l'emphase et la prononciation des termes métier. Pré-générer les phrases les plus fréquentes pour réduire la latence.</li>
-</ol>
-<ol>
-<li><strong>Optimisation de la latence</strong> — Cible : latence totale perçue &lt; 1,5 s de bout en bout. Techniques : streaming STT (commencer le traitement LLM avant la fin de la transcription), génération TTS en streaming (commencer la lecture pendant la génération), filler words (&quot;Bien sûr, laissez-moi vérifier...&quot;) pour masquer le délai de traitement, parallélisation des appels d'outils, pré-computation des réponses fréquentes.</li>
-</ol>
-<ol>
-<li><strong>Intégration téléphonie</strong> — Connecter l'agent aux canaux vocaux : Twilio (PSTN, SIP, Flex), Vapi (stack voix IA clé en main, recommandé pour démarrer vite), LiveKit (WebRTC temps réel, self-hosted), SIP direct pour les intégrations PBX enterprise. Gérer les spécificités téléphoniques : qualité audio variable, bruit de fond, coupures réseau, transferts vers agents humains.</li>
-</ol>
-<ol>
-<li><strong>Voice UX</strong> — Concevoir l'expérience vocale selon les bonnes pratiques : confirmations concises (&quot;D'accord, je note...&quot;), questions à choix unique plutôt que multiples, messages d'erreur naturels (&quot;Je n'ai pas bien compris, pourriez-vous reformuler ?&quot;), gestion de la prononciation des nombres/dates/acronymes via SSML, personnalité de la voix cohérente avec la marque. Éviter les formules robotiques et les menus DTMF hérités.</li>
-</ol>
-<ol>
-<li><strong>Multi-langue</strong> — Implémenter la détection automatique de la langue dès les premières phrases, le basculement dynamique du pipeline STT/TTS vers la langue détectée, la gestion des accents régionaux via les modèles adaptés, la localisation des formats (dates, nombres, devises) et la gestion du code-switching (mélange de langues). Tester avec des locuteurs natifs de chaque langue supportée.</li>
-</ol>
-<ol>
-<li><strong>Tests et validation</strong> — Tester l'agent vocal avec une suite dédiée : simulation de conversations via text injection (sans audio) pour les tests fonctionnels, tests avec audio synthétique pour les tests STT, benchmarks de latence end-to-end sous charge, tests de robustesse (bruit de fond, mauvaise qualité audio), tests utilisateurs avec de vrais locuteurs. Monitorer en production : latence P50/P95, taux de transcription correcte, taux de succès conversationnel.</li>
-</ol>
-<h2>Règles</h2>
+<p>Conception ou implémentation d'un agent vocal interactif : bot téléphonique, IVR intelligent, assistant vocal webapp, agent conversationnel WebRTC/SIP. Couvre le pipeline complet STT → LLM → TTS et la gestion du dialogue.</p>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Choix d'architecture</h3>
+<p><strong>Décision clé :</strong> synchrone vs streaming end-to-end.</p>
+<table><thead><tr><th>Critère</th><th>Synchrone (simple)</th><th>Streaming E2E (recommandé prod)</th></tr></thead><tbody><tr><td>Latence typique</td><td>2–4 s</td><td>&lt; 1 s</td></tr><tr><td>Complexité</td><td>Faible</td><td>Élevée</td></tr><tr><td>Cas d'usage</td><td>PoC, flux courts</td><td>Production, conversations longues</td></tr></tbody></table>
+<p>Pipeline cible :</p>
+<pre><code>Micro → VAD → STT (stream) → LLM (stream) → TTS (stream) → Haut-parleur
+                ↑ barge-in détecté → interrompre TTS</code></pre>
+<p><strong>Stack recommandée 2026 pour démarrer vite :</strong></p>
 <ul>
-<li><strong>La latence est reine</strong> : une latence &gt; 2 s détruit l'expérience vocale. Tout choix architectural doit être évalué à l'aune de son impact sur la latence perçue. Préférer le streaming à tous les niveaux du pipeline.</li>
-<li><strong>Concevoir pour la parole imparfaite</strong> : les utilisateurs se reprennent, parlent avec du bruit, ont des accents. L'agent doit gérer gracieusement les transcriptions partiellement incorrectes sans demander de répéter plus de deux fois sur un même point.</li>
-<li><strong>Transparence sur les limites</strong> : l'agent vocal doit clairement indiquer quand il ne comprend pas ou quand il transfère vers un humain. Ne jamais simuler une compréhension qui n'a pas eu lieu.</li>
-<li><strong>Tester avec de vraies voix</strong> : les tests purement textuels ne suffisent pas. Valider obligatoirement avec des enregistrements audio réels avant la mise en production, couvrant les accents, âges et conditions d'enregistrement variés.</li>
-<li><strong>Fallback humain toujours disponible</strong> : tout agent vocal en production doit avoir un mécanisme de transfert vers un agent humain accessible à tout moment. Définir les déclencheurs automatiques (frustration détectée, échecs répétés, demande explicite).</li>
+<li>Plateforme voix : <strong>Vapi</strong> (gère WebRTC/PSTN, VAD, barge-in, SIP nativement)</li>
+<li>STT : <strong>Deepgram Nova-3</strong> (streaming, &lt; 300 ms first byte, FR/EN)</li>
+<li>LLM : <strong>GPT-4o / Claude 3.5 Sonnet</strong> (streaming obligatoire)</li>
+<li>TTS : <strong>ElevenLabs Turbo v2.5</strong> ou <strong>OpenAI TTS-1</strong></li>
+</ul>
+<hr>
+<h3>2. Speech-to-Text (STT)</h3>
+<p><strong>Critères de sélection :</strong></p>
+<table><thead><tr><th>Moteur</th><th>Latence stream</th><th>Langues</th><th>Coût/min</th><th>Cas d'usage</th></tr></thead><tbody><tr><td>Deepgram Nova-3</td><td>~200 ms</td><td>36 langues</td><td>$0.0043</td><td>Production générale</td></tr><tr><td>Whisper large-v3</td><td>~500 ms (local)</td><td>99 langues</td><td>Gratuit (GPU)</td><td>Multi-langue, RGPD strict</td></tr><tr><td>Azure Speech</td><td>~250 ms</td><td>100+</td><td>$0.016</td><td>Intégration Microsoft</td></tr><tr><td>Google STT v2</td><td>~300 ms</td><td>125</td><td>$0.016</td><td>Écosystème GCP</td></tr></tbody></table>
+<p><strong>Configuration VAD incontournable :</strong></p>
+<pre><code class="lang-python"># Deepgram avec VAD + barge-in
+dg_config = {
+    &quot;model&quot;: &quot;nova-3&quot;,
+    &quot;language&quot;: &quot;fr&quot;,
+    &quot;interim_results&quot;: True,      # transcription partielle pour barge-in
+    &quot;endpointing&quot;: 300,           # ms de silence avant fin d'énoncé
+    &quot;utterance_end_ms&quot;: 1000,     # timeout si silence prolongé
+    &quot;vad_events&quot;: True,           # événements speech_started / speech_ended
+    &quot;smart_format&quot;: True,         # formatage nombres, dates auto
+}</code></pre>
+<p><strong>Barge-in (interruption utilisateur) :</strong></p>
+<pre><code class="lang-python">async def on_speech_started():
+    if tts_is_playing:
+        await tts_client.stop()       # couper TTS immédiatement
+        await cancel_pending_llm()    # annuler génération en cours si possible
+        conversation.add_interruption_marker()</code></pre>
+<hr>
+<h3>3. Gestion du dialogue</h3>
+<p><strong>Choisir le bon modèle de gestion d'état :</strong></p>
+<ul>
+<li><strong>State machine</strong> : flux structurés (prise de RDV, paiement, identification). Déterministe, testable.</li>
+<li><strong>LLM pur</strong> : conversations libres, FAQs. Flexible mais moins contrôlable.</li>
+<li><strong>Hybride (recommandé)</strong> : state machine pour les étapes critiques (confirmation, paiement), LLM pour le remplissage et les clarifications.</li>
+</ul>
+<pre><code class="lang-python"># Exemple system prompt voice-optimized
+SYSTEM_PROMPT = &quot;&quot;&quot;
+Tu es l'assistant vocal de {company}. Règles strictes :
+- Réponds en 1 à 2 phrases maximum. Les réponses longues sont coupées par l'utilisateur.
+- N'utilise jamais de listes à puces, markdown, ou caractères spéciaux.
+- Dis les nombres à l'oral (&quot;vingt-trois&quot; pas &quot;23&quot;).
+- Si tu ne comprends pas, dis : &quot;Pouvez-vous reformuler ?&quot;
+- Si tu ne peux pas aider : &quot;Je vous transfère à un conseiller.&quot;
+État actuel : {state}
+Contexte : {context}
+&quot;&quot;&quot;</code></pre>
+<p><strong>Gestion des silences :</strong></p>
+<pre><code class="lang-python">SILENCE_TIMEOUT_MS = 5000
+REPROMPT_MESSAGE = &quot;Je suis toujours là, vous pouvez parler.&quot;
+MAX_REPROMPTS = 2  # au-delà → transfert humain ou fin d'appel</code></pre>
+<hr>
+<h3>4. Text-to-Speech (TTS)</h3>
+<p><strong>Sélection moteur :</strong></p>
+<table><thead><tr><th>Moteur</th><th>Latence TTFB</th><th>Qualité</th><th>Streaming</th><th>Clonage vocal</th></tr></thead><tbody><tr><td>ElevenLabs Turbo v2.5</td><td>~200 ms</td><td>Excellent</td><td>✅</td><td>✅</td></tr><tr><td>OpenAI TTS-1</td><td>~300 ms</td><td>Bon</td><td>✅</td><td>❌</td></tr><tr><td>Azure Neural TTS</td><td>~200 ms</td><td>Très bon</td><td>✅</td><td>Limité</td></tr><tr><td>Cartesia Sonic</td><td>~90 ms</td><td>Bon</td><td>✅</td><td>✅</td></tr></tbody></table>
+<p><strong>SSML pour les cas spéciaux :</strong></p>
+<pre><code class="lang-xml">&lt;!-- Pause naturelle + prononciation métier --&gt;
+&lt;speak&gt;
+  Votre numéro de dossier est
+  &lt;say-as interpret-as=&quot;characters&quot;&gt;ABC123&lt;/say-as&gt;.
+  &lt;break time=&quot;500ms&quot;/&gt;
+  Souhaitez-vous que je répète ?
+&lt;/speak&gt;</code></pre>
+<p><strong>Filler words pour masquer la latence LLM :</strong></p>
+<pre><code class="lang-python">FILLERS = {
+    &quot;thinking&quot;: [&quot;Bien sûr...&quot;, &quot;Laissez-moi vérifier...&quot;, &quot;Un instant...&quot;],
+    &quot;searching&quot;: [&quot;Je consulte votre dossier...&quot;, &quot;Je recherche...&quot;],
+}
+# Jouer le filler dès la réception du 1er token LLM si délai &gt; 600 ms
+async def stream_with_filler(llm_stream):
+    first_chunk = await asyncio.wait_for(llm_stream.__anext__(), timeout=0.6)
+    yield first_chunk
+    async for chunk in llm_stream:
+        yield chunk
+# Si timeout → jouer filler, puis continuer stream</code></pre>
+<hr>
+<h3>5. Intégration téléphonie / WebRTC</h3>
+<p><strong>Choisir la plateforme :</strong></p>
+<table><thead><tr><th>Plateforme</th><th>Type</th><th>Recommandé pour</th></tr></thead><tbody><tr><td><strong>Vapi</strong></td><td>SaaS clé en main</td><td>Démarrage rapide, PSTN, webhook simple</td></tr><tr><td><strong>LiveKit</strong></td><td>Self-hosted WebRTC</td><td>Contrôle total, RGPD, faible latence</td></tr><tr><td><strong>Twilio Voice + Media Streams</strong></td><td>SaaS PSTN</td><td>Intégration Twilio existante</td></tr><tr><td><strong>Asterisk/FreeSWITCH + SIP</strong></td><td>Self-hosted PBX</td><td>Enterprise, on-premise strict</td></tr></tbody></table>
+<p><strong>Exemple Vapi — démarrer un appel sortant :</strong></p>
+<pre><code class="lang-bash">curl -X POST https://api.vapi.ai/call/phone \
+  -H &quot;Authorization: Bearer $VAPI_API_KEY&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;phoneNumberId&quot;: &quot;xxx&quot;,
+    &quot;customer&quot;: {&quot;number&quot;: &quot;+33600000000&quot;},
+    &quot;assistant&quot;: {
+      &quot;model&quot;: {&quot;provider&quot;: &quot;anthropic&quot;, &quot;model&quot;: &quot;claude-sonnet-4-5&quot;},
+      &quot;voice&quot;: {&quot;provider&quot;: &quot;elevenlabs&quot;, &quot;voiceId&quot;: &quot;yyy&quot;},
+      &quot;firstMessage&quot;: &quot;Bonjour, je suis votre assistant vocal.&quot;,
+      &quot;silenceTimeoutSeconds&quot;: 5
+    }
+  }'</code></pre>
+<p><strong>Transfert vers humain (escalade) — toujours prévoir :</strong></p>
+<pre><code class="lang-python">ESCALATION_TRIGGERS = [
+    lambda ctx: ctx.failed_intents &gt;= 3,        # incompréhensions répétées
+    lambda ctx: ctx.sentiment_score &lt; -0.6,      # frustration détectée
+    lambda ctx: &quot;conseiller&quot; in ctx.last_user_text,
+    lambda ctx: ctx.turn_count &gt; 20,             # conversation trop longue
+]</code></pre>
+<hr>
+<h3>6. Optimisation latence</h3>
+<p>Cible : <strong>&lt; 1,2 s end-to-end</strong> perçu par l'utilisateur.</p>
+<pre><code>Budget latence :
+  STT first result    : 150–300 ms
+  LLM first token     : 200–400 ms  (streaming requis)
+  TTS first audio     : 100–250 ms  (streaming requis)
+  Transport réseau    : 50–100 ms
+  ─────────────────────────────────
+  Total cible         : 500–1050 ms ✅</code></pre>
+<p>Optimisations prioritaires :</p>
+<ol>
+<li><strong>Streaming à tous les niveaux</strong> — ne jamais attendre la fin d'une étape pour commencer la suivante.</li>
+<li><strong>Truncation des réponses longues</strong> — couper après 60 mots si l'utilisateur peut interrompre.</li>
+<li><strong>Cache TTS</strong> — pré-générer les phrases fixes (accueil, erreurs courantes) et les servir depuis le CDN.</li>
+<li><strong>Modèle LLM léger</strong> — pour les tours simples (confirmation oui/non), utiliser un modèle rapide (GPT-4o-mini) plutôt que le modèle complet.</li>
+<li><strong>Déploiement régional</strong> — héberger STT/LLM/TTS dans la même région cloud pour minimiser les RTT inter-services.</li>
+</ol>
+<hr>
+<h3>7. Tests et validation</h3>
+<pre><code class="lang-python"># Test sans audio — text injection (CI/CD)
+response = await agent.process_turn(
+    text=&quot;Je voudrais annuler ma commande numéro 4521&quot;,
+    session_id=&quot;test-001&quot;
+)
+assert response.intent == &quot;cancel_order&quot;
+assert &quot;4521&quot; in response.entities[&quot;order_id&quot;]
+assert len(response.tts_text.split()) &lt;= 30  # réponse courte
+
+# Benchmark latence end-to-end
+import time
+latencies = []
+for audio_file in test_audio_samples:
+    t0 = time.perf_counter()
+    await agent.process_audio(audio_file)
+    latencies.append(time.perf_counter() - t0)
+assert statistics.quantiles(latencies, n=20)[18] &lt; 1.5  # P95 &lt; 1.5 s</code></pre>
+<p><strong>Checklist avant mise en production :</strong></p>
+<ul>
+<li>[ ] Testé avec enregistrements réels (accents, bruit de fond, mobile vs fixe)</li>
+<li>[ ] Latence P95 &lt; 1,5 s mesurée sous charge (10+ appels simultanés)</li>
+<li>[ ] Barge-in fonctionnel et non perturbateur</li>
+<li>[ ] Transfert humain accessible à tout moment et testé</li>
+<li>[ ] Gestion des coupures réseau (reconnexion, reprise de session)</li>
+<li>[ ] Monitoring latence, taux d'erreur STT, taux d'escalade en place</li>
+</ul>
+<hr>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Attendre la fin de transcription pour appeler le LLM</td><td>Latence +800 ms</td><td>Streaming STT → LLM dès interim results stables</td></tr><tr><td>Réponses TTS &gt; 3 phrases</td><td>Interruption, frustration</td><td>Limiter à 1–2 phrases par tour</td></tr><tr><td>Pas de VAD côté client</td><td>Faux déclenchements, écho</td><td>Intégrer VAD (WebRTC VAD, Silero VAD)</td></tr><tr><td>Appeler le LLM à chaque mot interimaire</td><td>Surcoût ×10, incohérence</td><td>Attendre endpointing (silence &gt; 300 ms)</td></tr><tr><td>SSML avec balises non supportées par le moteur TTS</td><td>Lecture littérale des balises</td><td>Tester le SSML sur chaque moteur cible</td></tr><tr><td>Aucun fallback si STT timeout</td><td>Appel bloqué indéfiniment</td><td>Timeout + reprompt + escalade après 2 échecs</td></tr><tr><td>Stocker l'audio des conversations sans consentement</td><td>Non-conformité RGPD</td><td>Consentement explicite ou transcription-only</td></tr><tr><td>Pipeline monolithique non testable unitairement</td><td>Debugging impossible</td><td>Interfaces mockables entre STT/LLM/TTS</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Modèles audio natifs</strong> : GPT-4o Audio et Gemini 2.0 Flash Live permettent de court-circuiter le pipeline STT→LLM→TTS en un seul appel. Évaluer pour les cas où la latence est critique et le contrôle fin sur la voix moins important.</li>
+<li><strong>Détection d'émotion</strong> : intégrer un classificateur léger (Hume AI, ou modèle local) sur l'audio pour adapter le ton de l'agent en temps réel.</li>
+<li><strong>Voice Activity Detection locale</strong> : toujours faire le VAD côté client (Silero VAD WebAssembly) avant d'envoyer au STT cloud pour réduire les coûts et la latence.</li>
+<li><strong>Test de régression audio</strong> : maintenir un corpus d'enregistrements annotés et rejouer après chaque changement de modèle STT/LLM/TTS.</li>
+<li><strong>Observabilité</strong> : tracer chaque tour de conversation avec <code>trace_id</code> commun STT/LLM/TTS pour le debugging de latence. Alerter sur P95 &gt; 2 s et taux d'escalade &gt; 15 %.</li>
 </ul>
 </article>
 </main>

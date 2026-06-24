@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>agent-message-protocol — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Design de protocoles de communication entre agents et sous-agents — formats de messages, routing et delivery.">
+<meta name="description" content="Design de protocoles de communication entre agents et sous-agents — formats de messages, routing, delivery guarantees, ACK/NACK, versioning et middleware.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🤖 Agents IA</span>
 <h1 class="skill-title">agent-message-protocol</h1>
-<p class="lead">Design de protocoles de communication entre agents et sous-agents — formats de messages, routing et delivery.</p>
+<p class="lead">Design de protocoles de communication entre agents et sous-agents — formats de messages, routing, delivery guarantees, ACK/NACK, versioning et middleware.</p>
 
 
 
@@ -97,11 +97,12 @@ cp -r claude-skills-collection/skills/agent-message-protocol ~/.claude/skills/</
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent Message Protocol</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill lorsque tu dois concevoir ou implémenter un système de communication structuré entre plusieurs agents ou sous-agents. Il s'applique aussi bien aux architectures mono-processus (event bus local) qu'aux systèmes distribués (Redis Streams, RabbitMQ). Indispensable dès que deux agents ou plus doivent s'échanger des tâches, des résultats ou des signaux de contrôle de façon fiable et traçable.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définir le format de message standard</strong> — Chaque message doit comporter : <code>message_id</code> (UUID), <code>sender</code> (identifiant de l'agent émetteur), <code>recipient</code> (identifiant de l'agent cible ou <code>&quot;broadcast&quot;</code>), <code>type</code> (voir étape 2), <code>payload</code> (données utiles sérialisées), <code>timestamp</code> (ISO 8601 UTC), <code>correlation_id</code> (pour relier requête et réponse) et <code>schema_version</code> (pour la compatibilité).</li>
-</ol>
+<p>Utilise ce skill dès que deux agents ou plus doivent s'échanger des tâches, des résultats ou des signaux de contrôle de façon fiable et traçable — qu'il s'agisse d'une architecture mono-processus (event bus local) ou distribuée (Redis Streams, RabbitMQ, Kafka).</p>
+<hr>
+<h2>Workflow en 10 étapes</h2>
+<h3>1. Définir le format de message standard</h3>
+<p>Tout message doit contenir ces champs minimaux :</p>
+<table><thead><tr><th>Champ</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code>message_id</code></td><td>UUID v4</td><td>Identifiant unique du message</td></tr><tr><td><code>sender</code></td><td>string</td><td>ID de l'agent émetteur</td></tr><tr><td><code>recipient</code></td><td>string</td><td>ID de l'agent cible ou <code>&quot;broadcast&quot;</code></td></tr><tr><td><code>type</code></td><td>enum</td><td><code>task_request</code> / <code>task_result</code> / <code>status_update</code> / <code>error</code> / <code>heartbeat</code> / <code>control</code></td></tr><tr><td><code>payload</code></td><td>dict</td><td>Données utiles sérialisées</td></tr><tr><td><code>timestamp</code></td><td>ISO 8601 UTC</td><td>Heure d'émission</td></tr><tr><td><code>correlation_id</code></td><td>UUID v4</td><td>Relie requête et réponse</td></tr><tr><td><code>schema_version</code></td><td>string</td><td>Ex. <code>&quot;1.2&quot;</code> — pour la compatibilité</td></tr></tbody></table>
 <pre><code class="lang-python">import uuid
 from datetime import datetime, timezone
 from dataclasses import dataclass, field
@@ -112,89 +113,195 @@ class AgentMessage:
     message_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     sender: str = &quot;&quot;
     recipient: str = &quot;&quot;
-    type: str = &quot;&quot;           # task_request | task_result | status_update | error | heartbeat | control
+    type: str = &quot;&quot;  # task_request | task_result | status_update | error | heartbeat | control
     payload: dict[str, Any] = field(default_factory=dict)
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     correlation_id: str | None = None
     schema_version: str = &quot;1.0&quot;</code></pre>
-<ol>
-<li><strong>Typer les messages</strong> — Utilise des types distincts pour chaque usage : <code>task_request</code> (demande d'exécution), <code>task_result</code> (résultat d'une tâche), <code>status_update</code> (progression, pourcentage), <code>error</code> (échec avec code et message), <code>heartbeat</code> (signal de vie périodique) et <code>control</code> (pause, reprise, annulation). Chaque type doit avoir un schéma de <code>payload</code> documenté et validé.</li>
-</ol>
-<ol>
-<li><strong>Choisir le routing pattern</strong> — Sélectionne le modèle adapté à ton architecture : <strong>direct</strong> (un émetteur, un destinataire connu), <strong>broadcast</strong> (un émetteur, tous les agents abonnés), <strong>topic-based</strong> (abonnement par topic, ex. <code>&quot;results.summarizer&quot;</code>), <strong>content-based</strong> (le routeur inspecte le payload pour décider du destinataire). Le content-based routing est le plus flexible mais le plus coûteux en CPU.</li>
-</ol>
-<pre><code class="lang-python">class MessageRouter:
-    def __init__(self):
-        self._topic_subscribers: dict[str, list] = {}
-
-    def subscribe(self, topic: str, handler):
-        self._topic_subscribers.setdefault(topic, []).append(handler)
-
-    def route(self, message: AgentMessage):
-        if message.recipient == &quot;broadcast&quot;:
-            for handlers in self._topic_subscribers.values():
-                for h in handlers:
-                    h(message)
-        else:
-            for h in self._topic_subscribers.get(message.recipient, []):
-                h(message)</code></pre>
-<ol>
-<li><strong>Garantir la delivery</strong> — Choisis la garantie adaptée au contexte : <strong>at-most-once</strong> (fire-and-forget, acceptable pour les heartbeats), <strong>at-least-once</strong> (retry automatique, nécessite idempotency côté récepteur), <strong>exactly-once</strong> (idempotency key + deduplication store, obligatoire pour les mutations financières ou critiques). Implémente les idempotency keys en stockant les <code>message_id</code> déjà traités dans un set ou Redis avec TTL.</li>
-</ol>
-<ol>
-<li><strong>Ordonner les messages</strong> — Selon le besoin : <strong>FIFO</strong> simple avec une <code>deque</code> ou une queue Redis LIFO, <strong>priority queue</strong> (<code>heapq</code> Python, priorité 0–9), <strong>causal ordering</strong> via vector clocks (chaque agent maintient un vecteur d'horloge logique), <strong>timestamp-based</strong> (attention aux dérives d'horloge dans les systèmes distribués). Pour la plupart des cas, FIFO avec priorité suffit.</li>
-</ol>
-<ol>
-<li><strong>Sérialiser et versionner</strong> — Préfère <strong>JSON</strong> pour la lisibilité et le debugging, <strong>MessagePack</strong> pour la performance, <strong>Protobuf</strong> pour les contrats stricts entre équipes. Inclure toujours <code>schema_version</code> dans chaque message. Maintenir la <strong>backward compatibility</strong> : ajouter des champs optionnels, ne jamais supprimer de champs sans version bump. Utilise <code>pydantic</code> pour la validation automatique des schémas.</li>
-</ol>
+<h3>2. Typer les messages — un type = un schéma</h3>
+<p>Chaque type possède un schéma de <code>payload</code> documenté et validé via Pydantic :</p>
 <pre><code class="lang-python">from pydantic import BaseModel, Field
 
 class TaskRequestPayload(BaseModel):
     task_id: str
     task_type: str
     input_data: dict
+    priority: int = Field(default=5, ge=0, le=9)
     deadline_seconds: int | None = None
-    priority: int = Field(default=5, ge=0, le=9)</code></pre>
-<ol>
-<li><strong>Implémenter ACK/NACK</strong> — Tout message de type <code>task_request</code> doit recevoir un accusé de réception explicite. L'émetteur attend un <code>ACK</code> (message reçu et accepté) ou <code>NACK</code> (refus avec raison). Si aucun ACK n'est reçu dans le délai <code>ack_timeout_seconds</code>, l'émetteur doit re-router ou escalader. Stocke les messages en attente d'ACK dans un dictionnaire <code>pending_acks[correlation_id]</code>.</li>
-</ol>
-<ol>
-<li><strong>Structurer les messages d'erreur</strong> — Un message de type <code>error</code> doit contenir : <code>error_code</code> (string normalisé, ex. <code>&quot;TIMEOUT&quot;</code>, <code>&quot;VALIDATION_FAILED&quot;</code>), <code>error_message</code> (description humaine), <code>stack_trace</code> (optionnel, pour debugging), <code>retry_hint</code> (booléen indiquant si le retry est possible), <code>retry_after_seconds</code> (délai suggéré), <code>fallback_suggestion</code> (action alternative recommandée).</li>
-</ol>
-<ol>
-<li><strong>Choisir le middleware</strong> — Pour un <strong>agent in-process</strong> : <code>asyncio.Queue</code> Python suffit. Pour <strong>multi-process local</strong> : Redis Streams (<code>XADD</code>/<code>XREAD</code>) ou RabbitMQ (topics, dead-letter queues). Pour <strong>distribué</strong> : Kafka pour le volume élevé. Implémente toujours une <strong>dead-letter queue</strong> (DLQ) où atterrissent les messages non traités après N retries.</li>
-</ol>
+
+class TaskResultPayload(BaseModel):
+    task_id: str
+    status: str  # &quot;success&quot; | &quot;partial&quot; | &quot;failed&quot;
+    output_data: dict
+    duration_ms: int
+
+class ErrorPayload(BaseModel):
+    error_code: str          # &quot;TIMEOUT&quot; | &quot;VALIDATION_FAILED&quot; | &quot;AGENT_UNAVAILABLE&quot;
+    error_message: str
+    retry_hint: bool
+    retry_after_seconds: int | None = None
+    fallback_suggestion: str | None = None
+    stack_trace: str | None = None  # debug only, masquer en prod</code></pre>
+<p><strong>Ne jamais réutiliser un type pour deux sémantiques différentes.</strong> Si le payload diverge, crée un nouveau type.</p>
+<h3>3. Choisir le routing pattern</h3>
+<table><thead><tr><th>Pattern</th><th>Quand l'utiliser</th><th>Coût</th></tr></thead><tbody><tr><td><strong>Direct</strong></td><td>Destinataire connu statiquement</td><td>Très faible</td></tr><tr><td><strong>Broadcast</strong></td><td>Signal à tous les agents (ex. shutdown)</td><td>Faible</td></tr><tr><td><strong>Topic-based</strong></td><td>Abonnement par catégorie (<code>results.summarizer</code>)</td><td>Moyen</td></tr><tr><td><strong>Content-based</strong></td><td>Le routeur inspecte le payload pour décider</td><td>Élevé (CPU)</td></tr></tbody></table>
+<pre><code class="lang-python">class MessageRouter:
+    def __init__(self):
+        self._handlers: dict[str, list] = {}
+
+    def subscribe(self, topic: str, handler):
+        self._handlers.setdefault(topic, []).append(handler)
+
+    def route(self, message: AgentMessage):
+        targets = (
+            [h for hs in self._handlers.values() for h in hs]
+            if message.recipient == &quot;broadcast&quot;
+            else self._handlers.get(message.recipient, [])
+        )
+        for h in targets:
+            h(message)</code></pre>
+<p><strong>Critère de décision</strong> : préfère topic-based si les agents changent fréquemment ; content-based uniquement si la destination dépend de données dans le payload.</p>
+<h3>4. Garantir la delivery</h3>
+<table><thead><tr><th>Garantie</th><th>Usage typique</th><th>Contrainte côté récepteur</th></tr></thead><tbody><tr><td><strong>At-most-once</strong></td><td>Heartbeats, métriques</td><td>Aucune</td></tr><tr><td><strong>At-least-once</strong></td><td>Résultats de tâches</td><td>Handler idempotent obligatoire</td></tr><tr><td><strong>Exactly-once</strong></td><td>Mutations financières, critiques</td><td>Idempotency key + dedup store</td></tr></tbody></table>
+<p>Implémentation de la déduplication (at-least-once → exactly-once) :</p>
 <pre><code class="lang-python">import redis.asyncio as aioredis
 
-async def publish_message(r: aioredis.Redis, stream: str, message: AgentMessage):
-    await r.xadd(stream, {&quot;data&quot;: message.model_dump_json()}, maxlen=10_000)
+async def is_duplicate(r: aioredis.Redis, message_id: str, ttl: int = 3600) -&gt; bool:
+    key = f&quot;processed:{message_id}&quot;
+    was_set = await r.set(key, &quot;1&quot;, nx=True, ex=ttl)
+    return was_set is None  # None = clé déjà existante = doublon</code></pre>
+<h3>5. Ordonner les messages</h3>
+<ul>
+<li><strong>FIFO</strong> : <code>asyncio.Queue</code> ou <code>deque</code> — couvre 80 % des cas.</li>
+<li><strong>Priority queue</strong> : <code>asyncio.PriorityQueue</code> avec priorité 0–9 (0 = urgent).</li>
+<li><strong>Causal ordering</strong> : vector clocks (chaque agent maintient un vecteur logique). À réserver aux systèmes fortement distribués.</li>
+<li><strong>Timestamp-based</strong> : éviter en distribué (dérives d'horloge NTP).</li>
+</ul>
+<pre><code class="lang-python">import asyncio
 
-async def consume_messages(r: aioredis.Redis, stream: str, group: str, consumer: str):
-    await r.xgroup_create(stream, group, id=&quot;0&quot;, mkstream=True)
+# Priority queue : tuple (priorité, AgentMessage)
+pq: asyncio.PriorityQueue = asyncio.PriorityQueue()
+await pq.put((2, message_normal))
+await pq.put((0, message_urgent))  # traité en premier</code></pre>
+<h3>6. Sérialiser et versionner</h3>
+<table><thead><tr><th>Format</th><th>Avantage</th><th>Inconvénient</th></tr></thead><tbody><tr><td><strong>JSON</strong></td><td>Lisible, debug facile</td><td>Verbeux</td></tr><tr><td><strong>MessagePack</strong></td><td>~2× plus compact que JSON</td><td>Moins lisible</td></tr><tr><td><strong>Protobuf</strong></td><td>Contrat strict, multi-langues</td><td>Tooling plus lourd</td></tr></tbody></table>
+<p>Règles de compatibilité :</p>
+<ul>
+<li><strong>Ajouter</strong> des champs optionnels → backward compatible.</li>
+<li><strong>Supprimer</strong> un champ → version bump obligatoire (<code>schema_version</code>).</li>
+<li><strong>Renommer</strong> un champ → jamais sans version bump.</li>
+</ul>
+<pre><code class="lang-python"># Validation à la réception
+def parse_message(raw: dict) -&gt; AgentMessage:
+    version = raw.get(&quot;schema_version&quot;, &quot;1.0&quot;)
+    if version != &quot;1.0&quot;:
+        raise ValueError(f&quot;Unsupported schema version: {version}&quot;)
+    return AgentMessage(**raw)</code></pre>
+<h3>7. Implémenter ACK / NACK</h3>
+<p>Tout <code>task_request</code> doit recevoir un accusé explicite. L'émetteur maintient un dictionnaire <code>pending_acks</code> :</p>
+<pre><code class="lang-python">import asyncio
+from typing import Callable
+
+class AckTracker:
+    def __init__(self, timeout: float = 5.0):
+        self._pending: dict[str, asyncio.Future] = {}
+        self._timeout = timeout
+
+    def expect(self, correlation_id: str) -&gt; asyncio.Future:
+        fut = asyncio.get_event_loop().create_future()
+        self._pending[correlation_id] = fut
+        return fut
+
+    def acknowledge(self, correlation_id: str, result: dict):
+        fut = self._pending.pop(correlation_id, None)
+        if fut and not fut.done():
+            fut.set_result(result)
+
+    async def wait(self, correlation_id: str) -&gt; dict:
+        fut = self.expect(correlation_id)
+        try:
+            return await asyncio.wait_for(fut, timeout=self._timeout)
+        except asyncio.TimeoutError:
+            self._pending.pop(correlation_id, None)
+            raise TimeoutError(f&quot;No ACK received for {correlation_id}&quot;)</code></pre>
+<p><strong>NACK</strong> → l'agent récepteur renvoie un message <code>error</code> avec <code>error_code=&quot;NACK&quot;</code> et <code>retry_hint=True/False</code>.</p>
+<h3>8. Choisir le middleware</h3>
+<table><thead><tr><th>Contexte</th><th>Solution recommandée</th><th>Snippet clé</th></tr></thead><tbody><tr><td>In-process, async</td><td><code>asyncio.Queue</code></td><td><code>queue = asyncio.Queue(maxsize=1000)</code></td></tr><tr><td>Multi-process local</td><td>Redis Streams</td><td><code>XADD</code> / <code>XREADGROUP</code></td></tr><tr><td>Distribué modéré</td><td>RabbitMQ (topics + DLQ)</td><td>Exchange type <code>topic</code></td></tr><tr><td>Volume élevé</td><td>Kafka / Redpanda</td><td>Consumer groups, partitions</td></tr></tbody></table>
+<pre><code class="lang-python"># Redis Streams — publish / consume
+async def publish(r: aioredis.Redis, stream: str, msg: AgentMessage):
+    await r.xadd(stream, {&quot;data&quot;: msg.model_dump_json()}, maxlen=10_000)
+
+async def consume(r: aioredis.Redis, stream: str, group: str, consumer: str):
+    try:
+        await r.xgroup_create(stream, group, id=&quot;0&quot;, mkstream=True)
+    except Exception:
+        pass  # groupe déjà existant
     while True:
         results = await r.xreadgroup(group, consumer, {stream: &quot;&gt;&quot;}, count=10, block=1000)
         for _, messages in results:
             for msg_id, fields in messages:
-                yield msg_id, fields
+                yield msg_id, AgentMessage(**json.loads(fields[b&quot;data&quot;]))
                 await r.xack(stream, group, msg_id)</code></pre>
-<ol>
-<li><strong>Monitorer le système de messagerie</strong> — Expose les métriques suivantes : <strong>throughput</strong> (messages/seconde par type), <strong>latence</strong> (temps entre emission et traitement, percentiles p50/p95/p99), <strong>dead-letter count</strong> (messages en DLQ), <strong>pending queue depth</strong> (messages en attente d'ACK), <strong>consumer lag</strong> (retard d'un agent sur le flux). Utilise <code>prometheus_client</code> ou des logs structurés JSON pour l'ingestion dans un dashboard.</li>
-</ol>
-<h2>Anti-patterns</h2>
+<p><strong>Dead-Letter Queue (DLQ)</strong> : tout message non traité après N retries (max 3) doit atterrir dans une DLQ séparée pour analyse post-mortem.</p>
+<pre><code class="lang-python">MAX_RETRIES = 3
+DLQ_STREAM = &quot;agents:dlq&quot;
+
+async def process_with_retry(r, stream, group, consumer, handler):
+    async for msg_id, message in consume(r, stream, group, consumer):
+        retries = int(message.payload.get(&quot;_retries&quot;, 0))
+        try:
+            await handler(message)
+        except Exception as e:
+            if retries &gt;= MAX_RETRIES:
+                message.payload[&quot;_error&quot;] = str(e)
+                await publish(r, DLQ_STREAM, message)
+            else:
+                message.payload[&quot;_retries&quot;] = retries + 1
+                await publish(r, stream, message)</code></pre>
+<h3>9. Structurer les messages d'erreur</h3>
+<pre><code class="lang-python"># Exemple complet d'un message d'erreur bien formé
+error_msg = AgentMessage(
+    sender=&quot;agent-ocr&quot;,
+    recipient=&quot;agent-orchestrator&quot;,
+    type=&quot;error&quot;,
+    correlation_id=&quot;&lt;id-du-task_request-original&gt;&quot;,
+    payload=ErrorPayload(
+        error_code=&quot;VALIDATION_FAILED&quot;,
+        error_message=&quot;Champ 'document_type' manquant dans input_data&quot;,
+        retry_hint=False,
+        fallback_suggestion=&quot;Utiliser agent-fallback-ocr avec paramètres par défaut&quot;,
+    ).model_dump(),
+)</code></pre>
+<h3>10. Monitorer le système de messagerie</h3>
+<p>Métriques minimales à exposer (Prometheus ou logs JSON structurés) :</p>
+<table><thead><tr><th>Métrique</th><th>Description</th></tr></thead><tbody><tr><td><code>msg_throughput{type}</code></td><td>Messages/seconde par type</td></tr><tr><td><code>msg_latency_ms{p50,p95,p99}</code></td><td>Délai émission → traitement</td></tr><tr><td><code>msg_dlq_count</code></td><td>Messages en DLQ (alarme si &gt; 0)</td></tr><tr><td><code>msg_pending_acks</code></td><td>Messages en attente d'ACK</td></tr><tr><td><code>consumer_lag{agent}</code></td><td>Retard d'un agent sur le flux</td></tr></tbody></table>
+<pre><code class="lang-python">from prometheus_client import Counter, Histogram
+
+messages_processed = Counter(&quot;agent_messages_total&quot;, &quot;Total messages&quot;, [&quot;type&quot;, &quot;status&quot;])
+processing_latency = Histogram(&quot;agent_message_latency_seconds&quot;, &quot;Latency&quot;, [&quot;type&quot;])
+
+# Dans le handler
+with processing_latency.labels(type=message.type).time():
+    await handler(message)
+messages_processed.labels(type=message.type, status=&quot;success&quot;).inc()</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td><strong>Messages sans <code>correlation_id</code></strong></td><td>Impossible de relier réponse à requête en async</td><td>Toujours copier le <code>message_id</code> de la requête dans <code>correlation_id</code> de la réponse</td></tr><tr><td><strong>Fire-and-forget pour tâches critiques</strong></td><td>Mutations perdues sans trace</td><td>Attendre ACK ; déclencher retry ou alerte si timeout</td></tr><tr><td><strong>Absence de <code>schema_version</code></strong></td><td>Erreurs silencieuses lors d'un déploiement mixte</td><td>Inclure dès le premier message ; valider côté récepteur</td></tr><tr><td><strong>Payloads trop volumineux</strong> (contexte LLM complet)</td><td>Dégradation des performances, explosion mémoire</td><td>Stocker le contexte dans un state store ; passer uniquement une <code>context_ref</code></td></tr><tr><td><strong>Handler non idempotent en at-least-once</strong></td><td>Effets de bord doublés (double paiement, double écriture)</td><td>Déduplication via <code>message_id</code> dans Redis/DB avant traitement</td></tr><tr><td><strong>Pas de DLQ</strong></td><td>Messages perdus sans visibilité</td><td>Configurer DLQ dès le départ, monitorer son contenu</td></tr><tr><td><strong>Types de messages ambigus</strong></td><td>Logique conditionnelle complexe côté récepteur</td><td>Un type = un schéma = un handler ; jamais de <code>if payload.get(&quot;mode&quot;)</code> pour bifurquer</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li><strong>Messages sans <code>correlation_id</code></strong> — Sans cet identifiant, il est impossible de relier une réponse à sa requête dans un flux asynchrone. Tout échange requête/réponse doit utiliser le même <code>correlation_id</code>.</li>
-<li><strong>Fire-and-forget pour les tâches critiques</strong> — Ne jamais envoyer un <code>task_request</code> sans attendre d'ACK lorsque la tâche a des effets de bord (écriture en base, appel API externe). L'absence d'ACK doit déclencher un retry ou une alerte.</li>
-<li><strong>Absence de schema versioning</strong> — Déployer deux versions d'un agent avec des formats de payload incompatibles provoque des erreurs silencieuses difficiles à diagnostiquer. Toujours inclure <code>schema_version</code> et valider côté récepteur.</li>
-<li><strong>Payloads trop volumineux</strong> — Inclure le contexte conversationnel entier dans chaque message explose la taille des messages et dégrade les performances. Stocke le contexte dans un state store partagé et passe uniquement une <code>context_ref</code> (identifiant de référence) dans le payload.</li>
+<li><strong>Contract-first</strong> : définis et versionne les schémas Pydantic/Protobuf dans un repo partagé avant de coder les agents. Les agents consomment le package de schémas, pas des dicts libres.</li>
+<li><strong>Observability as code</strong> : les spans OpenTelemetry doivent propager <code>trace_id</code> dans chaque message (champ <code>telemetry.trace_id</code>). Permet le tracing distribué de bout en bout entre agents.</li>
+<li><strong>Graceful degradation</strong> : si le middleware est indisponible, l'agent doit basculer sur une queue locale en mémoire (buffer temporaire), pas tomber en erreur fatale.</li>
+<li><strong>Backpressure</strong> : limite la taille des queues (<code>maxsize</code> ou <code>maxlen</code> Redis). Un agent lent ne doit pas faire exploser la mémoire de l'émetteur.</li>
+<li><strong>Adapte au framework</strong> :</li>
+<ul>
+<li><strong>LangGraph</strong> → <code>Command</code> objects + state graph nativement.</li>
+<li><strong>CrewAI</strong> → retours de <code>tool</code> comme messages structurés.</li>
+<li><strong>AutoGen</strong> → <code>GroupChat</code> + <code>ConversableAgent</code> avec <code>reply_func</code> personnalisés.</li>
+<li><strong>Custom</strong> → <code>MessageBus</code> + <code>asyncio.Queue</code> + dispatcher centralisé.</li>
 </ul>
-<h2>Règles</h2>
-<ol>
-<li><strong>Un message = un type = un schéma</strong> — Chaque type de message possède un schéma de payload documenté et validé. Ne jamais réutiliser le même type pour des sémantiques différentes.</li>
-<li><strong>Toujours inclure <code>correlation_id</code> dans les réponses</strong> — Le <code>correlation_id</code> de la réponse est identique au <code>message_id</code> de la requête originale. C'est la base du pattern request/reply asynchrone.</li>
-<li><strong>Idempotence obligatoire pour at-least-once</strong> — Tout handler de message doit être idempotent : traiter le même message deux fois ne doit pas produire d'effets différents. Utilise le <code>message_id</code> comme clé de déduplication.</li>
-<li><strong>Documente les trade-offs de delivery</strong> — At-most-once est rapide mais perd des messages. Exactly-once est sûr mais coûteux. Choisis explicitement et documente la décision dans l'architecture.</li>
-<li><strong>Adapte au framework</strong> — LangGraph : utilise les <code>Command</code> objects et le state graph. CrewAI : exploite le mécanisme de <code>tool</code> return. AutoGen : utilise les <code>GroupChat</code> messages. Pour du custom, implémente un <code>MessageBus</code> Python avec <code>asyncio.Queue</code> et un dispatcher.</li>
-</ol>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -97,22 +97,171 @@ cp -r claude-skills-collection/skills/database-elasticsearch-guide ~/.claude/ski
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Elasticsearch Guide</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le besoin de recherche</strong> — Identifier le type de recherche requis (full-text, structurée, géospatiale, auto-complétion) et les exigences de pertinence, latence et volume de données.</li>
-<li><strong>Concevoir les mappings</strong> — Définir les types de champs (text, keyword, nested, date, geo_point), les analyseurs personnalisés (tokenizers, filters) et les multi-fields selon les besoins de recherche et d'agrégation.</li>
-<li><strong>Configurer les index</strong> — Définir le nombre de shards et replicas, les templates d'index, les ILM policies (Index Lifecycle Management) et les alias pour gérer le cycle de vie des données.</li>
-<li><strong>Construire les requêtes</strong> — Utiliser les query types appropriés (match, multi_match, bool, nested, function_score) et combiner queries et filters pour optimiser la pertinence et les performances.</li>
-<li><strong>Implémenter les agrégations</strong> — Construire les agrégations (terms, date_histogram, nested, pipeline) pour l'analytique et les tableaux de bord Kibana.</li>
-<li><strong>Optimiser les performances</strong> — Tuner les paramètres de recherche (routing, preference), optimiser les mappings (doc_values, norms, index: false), et dimensionner le cluster selon le débit requis.</li>
-<li><strong>Monitorer le cluster</strong> — Suivre la santé du cluster (vert/jaune/rouge), les métriques JVM, l'utilisation disque, les taux de rejet de threads et les requêtes lentes via les API _cat et _cluster.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Analyser le besoin</h3>
+<p>Avant tout mapping ou requête, répondre à ces questions :</p>
+<table><thead><tr><th>Question</th><th>Impact</th></tr></thead><tbody><tr><td>Full-text ou filtrage exact ?</td><td><code>text</code> vs <code>keyword</code></td></tr><tr><td>Données temporelles (logs, métriques) ?</td><td>ILM + data streams</td></tr><tr><td>Volume par jour / rétention ?</td><td>Nombre de shards, rollover</td></tr><tr><td>Latence cible (&lt;100ms / &lt;1s) ?</td><td>Replicas, routing, cache</td></tr><tr><td>Agrégations nécessaires ?</td><td><code>doc_values: true</code>, <code>fielddata</code> à éviter</td></tr></tbody></table>
+<hr>
+<h3>2. Concevoir le mapping</h3>
+<p><strong>Toujours définir un mapping explicite</strong> — ne jamais laisser Elasticsearch inférer en production.</p>
+<pre><code class="lang-json">PUT /produits
+{
+  &quot;mappings&quot;: {
+    &quot;properties&quot;: {
+      &quot;titre&quot;:        { &quot;type&quot;: &quot;text&quot;, &quot;analyzer&quot;: &quot;french&quot;,
+                        &quot;fields&quot;: { &quot;raw&quot;: { &quot;type&quot;: &quot;keyword&quot; } } },
+      &quot;categorie&quot;:    { &quot;type&quot;: &quot;keyword&quot; },
+      &quot;prix&quot;:         { &quot;type&quot;: &quot;scaled_float&quot;, &quot;scaling_factor&quot;: 100 },
+      &quot;created_at&quot;:   { &quot;type&quot;: &quot;date&quot;, &quot;format&quot;: &quot;strict_date_optional_time&quot; },
+      &quot;tags&quot;:         { &quot;type&quot;: &quot;keyword&quot; },
+      &quot;description&quot;:  { &quot;type&quot;: &quot;text&quot;, &quot;index&quot;: false, &quot;doc_values&quot;: false }
+    }
+  }
+}</code></pre>
+<p><strong>Critères de décision des types :</strong></p>
 <ul>
-<li>Toujours définir un mapping explicite avant d'indexer des données ; ne jamais s'appuyer sur le mapping dynamique en production.</li>
-<li>Utiliser le type keyword pour les champs d'agrégation et de filtrage exact, et le type text uniquement pour la recherche full-text.</li>
-<li>Ne jamais dépasser 50 Go par shard pour maintenir des performances optimales ; planifier le nombre de shards en fonction du volume de données prévu.</li>
-<li>Toujours utiliser des alias d'index pour permettre la réindexation sans interruption de service (zero-downtime reindexing).</li>
-<li>Séparer les noeuds master, data et coordinating dans les clusters de production pour garantir la stabilité et la scalabilité.</li>
+<li><code>text</code> → recherche full-text (tokenisé, analysé)</li>
+<li><code>keyword</code> → filtres, agrégations, tri exact (<code>categorie</code>, <code>status</code>, <code>id</code>)</li>
+<li><code>nested</code> → tableaux d'objets avec relations internes (éviter si possible, coûteux)</li>
+<li><code>flattened</code> → JSON dynamique avec structure inconnue, moindre coût que <code>nested</code></li>
+<li><code>scaled_float</code> → montants monétaires (éviter <code>float</code> pour les arrondis)</li>
+</ul>
+<hr>
+<h3>3. Configurer l'index et l'ILM</h3>
+<pre><code class="lang-json">PUT _ilm/policy/logs-policy
+{
+  &quot;policy&quot;: {
+    &quot;phases&quot;: {
+      &quot;hot&quot;:    { &quot;actions&quot;: { &quot;rollover&quot;: { &quot;max_size&quot;: &quot;50gb&quot;, &quot;max_age&quot;: &quot;7d&quot; } } },
+      &quot;warm&quot;:   { &quot;min_age&quot;: &quot;7d&quot;,  &quot;actions&quot;: { &quot;shrink&quot;: { &quot;number_of_shards&quot;: 1 }, &quot;forcemerge&quot;: { &quot;max_num_segments&quot;: 1 } } },
+      &quot;cold&quot;:   { &quot;min_age&quot;: &quot;30d&quot;, &quot;actions&quot;: { &quot;freeze&quot;: {} } },
+      &quot;delete&quot;: { &quot;min_age&quot;: &quot;90d&quot;, &quot;actions&quot;: { &quot;delete&quot;: {} } }
+    }
+  }
+}</code></pre>
+<p><strong>Règle de sizing des shards :</strong></p>
+<ul>
+<li>Cible : <strong>20–50 Go par shard</strong></li>
+<li>Nombre de shards primaires = volume total estimé / 40 Go (arrondi supérieur)</li>
+<li>Ne jamais sur-sharder : 1 shard suffit pour &lt; 40 Go de données finales</li>
+</ul>
+<p><strong>Alias obligatoire pour zero-downtime reindex :</strong></p>
+<pre><code class="lang-bash">POST _aliases
+{
+  &quot;actions&quot;: [
+    { &quot;add&quot;: { &quot;index&quot;: &quot;produits-v2&quot;, &quot;alias&quot;: &quot;produits&quot;, &quot;is_write_index&quot;: true } },
+    { &quot;remove&quot;: { &quot;index&quot;: &quot;produits-v1&quot;, &quot;alias&quot;: &quot;produits&quot; } }
+  ]
+}</code></pre>
+<hr>
+<h3>4. Construire les requêtes</h3>
+<p><strong>Cas courants :</strong></p>
+<pre><code class="lang-json">// Full-text avec boost et filtre
+GET /produits/_search
+{
+  &quot;query&quot;: {
+    &quot;bool&quot;: {
+      &quot;must&quot;:   [{ &quot;multi_match&quot;: { &quot;query&quot;: &quot;chaussure running&quot;, &quot;fields&quot;: [&quot;titre^3&quot;, &quot;description&quot;] } }],
+      &quot;filter&quot;: [{ &quot;term&quot;: { &quot;categorie&quot;: &quot;sport&quot; } }, { &quot;range&quot;: { &quot;prix&quot;: { &quot;lte&quot;: 150 } } }]
+    }
+  },
+  &quot;sort&quot;: [{ &quot;_score&quot;: &quot;desc&quot; }, { &quot;created_at&quot;: &quot;desc&quot; }]
+}</code></pre>
+<pre><code class="lang-json">// Auto-complétion avec search_as_you_type
+GET /produits/_search
+{
+  &quot;query&quot;: {
+    &quot;multi_match&quot;: {
+      &quot;query&quot;: &quot;chaus&quot;,
+      &quot;type&quot;: &quot;bool_prefix&quot;,
+      &quot;fields&quot;: [&quot;titre&quot;, &quot;titre._2gram&quot;, &quot;titre._3gram&quot;]
+    }
+  }
+}</code></pre>
+<pre><code class="lang-json">// Agrégation : top catégories + prix moyen
+GET /produits/_search
+{
+  &quot;size&quot;: 0,
+  &quot;aggs&quot;: {
+    &quot;par_categorie&quot;: {
+      &quot;terms&quot;: { &quot;field&quot;: &quot;categorie&quot;, &quot;size&quot;: 10 },
+      &quot;aggs&quot;: {
+        &quot;prix_moyen&quot;: { &quot;avg&quot;: { &quot;field&quot;: &quot;prix&quot; } }
+      }
+    }
+  }
+}</code></pre>
+<p><strong>Règle <code>filter</code> vs <code>query</code> :</strong></p>
+<ul>
+<li><code>filter</code> → pas de scoring, mis en cache → <strong>toujours utiliser pour les conditions binaires</strong> (term, range, exists)</li>
+<li><code>must</code> / <code>should</code> → scoring pertinence → uniquement pour le full-text</li>
+</ul>
+<hr>
+<h3>5. Réindexation sans downtime</h3>
+<pre><code class="lang-bash"># 1. Créer le nouvel index avec le mapping corrigé
+PUT /produits-v2 { ... }
+
+# 2. Réindexer
+POST _reindex?wait_for_completion=false
+{
+  &quot;source&quot;: { &quot;index&quot;: &quot;produits-v1&quot; },
+  &quot;dest&quot;:   { &quot;index&quot;: &quot;produits-v2&quot; }
+}
+
+# 3. Suivre la tâche
+GET _tasks/&lt;task_id&gt;
+
+# 4. Basculer l'alias (voir étape 3)</code></pre>
+<hr>
+<h3>6. Optimiser les performances</h3>
+<p><strong>Index settings pour la production :</strong></p>
+<pre><code class="lang-json">PUT /produits/_settings
+{
+  &quot;index&quot;: {
+    &quot;refresh_interval&quot;: &quot;30s&quot;,        // augmenter si ingestion intensive
+    &quot;number_of_replicas&quot;: 1,
+    &quot;translog.durability&quot;: &quot;async&quot;,   // OK si perte de quelques secondes acceptable
+    &quot;translog.sync_interval&quot;: &quot;5s&quot;
+  }
+}</code></pre>
+<p><strong>Désactiver ce qui n'est pas utilisé :</strong></p>
+<pre><code class="lang-json">// Dans le mapping
+&quot;description&quot;: { &quot;type&quot;: &quot;text&quot;, &quot;norms&quot;: false }          // si pas besoin de scoring par longueur
+&quot;identifiant&quot;: { &quot;type&quot;: &quot;keyword&quot;, &quot;doc_values&quot;: false }   // si jamais agrégé/trié</code></pre>
+<p><strong>Bulk indexing :</strong></p>
+<pre><code class="lang-bash">curl -X POST &quot;localhost:9200/_bulk&quot; -H 'Content-Type: application/json' --data-binary @data.ndjson
+# Taille recommandée : 5–15 Mo par batch, 500–1000 docs</code></pre>
+<hr>
+<h3>7. Monitorer le cluster</h3>
+<pre><code class="lang-bash"># Santé globale
+GET _cluster/health?pretty
+
+# Shards non alloués (rouge/jaune)
+GET _cluster/allocation/explain
+
+# Noeuds et utilisation disque
+GET _cat/nodes?v&amp;h=name,heap.percent,disk.used_percent,load_1m
+
+# Requêtes lentes (slow log)
+PUT /produits/_settings
+{
+  &quot;index.search.slowlog.threshold.query.warn&quot;: &quot;2s&quot;,
+  &quot;index.search.slowlog.threshold.fetch.warn&quot;: &quot;1s&quot;
+}
+
+# Thread pools (rejects = problème de charge)
+GET _cat/thread_pool?v&amp;h=name,active,queue,rejected</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Mapping dynamique en prod</td><td>Types inférés incorrectement, impossible à changer</td><td>Mapping explicite toujours</td></tr><tr><td><code>fielddata: true</code> sur <code>text</code></td><td>Explosion mémoire heap</td><td>Utiliser <code>keyword</code> pour les agrégations</td></tr><tr><td>Trop de shards (over-sharding)</td><td>Surcharge CPU/mémoire, latence accrue</td><td>1 shard/40 Go, shrink en warm</td></tr><tr><td><code>_source: false</code> sans réflexion</td><td>Impossible de réindexer, pas de highlight</td><td>Ne désactiver que si cas extrême</td></tr><tr><td><code>nested</code> partout</td><td>Requêtes très lentes, explosion du doc count</td><td>Préférer <code>flattened</code> ou dénormaliser</td></tr><tr><td><code>size: 10000</code> sans pagination</td><td>OOM, timeout</td><td>Utiliser <code>search_after</code> + <code>pit</code></td></tr><tr><td>Pas d'alias</td><td>Réindexation avec coupure de service</td><td>Alias dès le départ, toujours</td></tr><tr><td><code>refresh_interval: 1s</code> en ingestion bulk</td><td>Trop de segments, I/O élevé</td><td>Passer à <code>30s</code> ou <code>-1</code> pendant le bulk</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Data streams</strong> pour tout ce qui est time-series (logs, métriques) — remplace les index alias + ILM manuels.</li>
+<li><strong>ESQL</strong> (Elasticsearch Query Language) disponible depuis 8.11 : syntaxe SQL-like pour l'analytique, plus lisible que le DSL JSON.</li>
+<li><strong>Semantic search</strong> : utiliser <code>semantic_text</code> (8.12+) avec un modèle ELSER pour la recherche sémantique native sans infra vectorielle externe.</li>
+<li><strong>k-NN search</strong> : <code>dense_vector</code> + <code>knn</code> query pour la recherche par similarité (embeddings). Dimensionner HNSW (<code>m</code>, <code>ef_construction</code>) selon le recall cible.</li>
+<li>Toujours tester les requêtes avec <code>_explain</code> et <code>profile: true</code> avant mise en production.</li>
+<li>Snapshots automatiques vers S3/Azure Blob : politique de snapshot au minimum quotidienne en production.</li>
 </ul>
 </article>
 </main>

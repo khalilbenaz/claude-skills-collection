@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ai-ml-model-fine-tuner — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Guide pour le fine-tuning de modèles ML/LLM (LoRA, QLoRA, PEFT, datasets, hyperparamètres)">
+<meta name="description" content="Guide pour le fine-tuning de modèles ML/LLM (LoRA, QLoRA, PEFT, datasets, hyperparamètres) — workflow étape par étape, snippets copiables, critères de choix, anti-patterns 2026">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🧠 AI / ML</span>
 <h1 class="skill-title">ai-ml-model-fine-tuner</h1>
-<p class="lead">Guide pour le fine-tuning de modèles ML/LLM (LoRA, QLoRA, PEFT, datasets, hyperparamètres)</p>
+<p class="lead">Guide pour le fine-tuning de modèles ML/LLM (LoRA, QLoRA, PEFT, datasets, hyperparamètres) — workflow étape par étape, snippets copiables, critères de choix, anti-patterns 2026</p>
 
 
 
@@ -96,83 +96,188 @@ cp -r claude-skills-collection/skills/ai-ml-model-fine-tuner ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Model Fine-Tuner</h1>
-<p>Guide complet pour le fine-tuning de modèles de machine learning et de grands modèles de langage (LLM), en utilisant des techniques efficientes comme LoRA, QLoRA et PEFT.</p>
+<h2>Critères de décision : quelle méthode choisir ?</h2>
+<table><thead><tr><th>Situation</th><th>Méthode recommandée</th></tr></thead><tbody><tr><td>GPU &lt; 24 Go, LLM &gt; 7B</td><td>QLoRA 4-bit</td></tr><tr><td>GPU 24–80 Go, besoin de vitesse</td><td>LoRA bfloat16</td></tr><tr><td>Petite tâche de classification</td><td>Full fine-tune BERT/DeBERTa</td></tr><tr><td>Tâche très spécifique, budget compute</td><td>IA3 ou Prefix Tuning</td></tr><tr><td>Modèle &gt; 70B, multi-GPU</td><td>FSDP + LoRA</td></tr><tr><td>Données &lt; 500 exemples</td><td>Prompt engineering d'abord, fine-tune ensuite</td></tr></tbody></table>
+<hr>
 <h2>Workflow</h2>
-<h3>1. Analyser le cas d'usage et choisir le modèle de base</h3>
+<h3>1. Baseline — mesurer avant de toucher quoi que ce soit</h3>
+<pre><code class="lang-bash"># Exemple : évaluer Mistral-7B zero-shot sur votre tâche
+python eval.py --model mistralai/Mistral-7B-v0.3 --dataset data/test.jsonl --metric f1</code></pre>
+<p>Sans baseline chiffrée, l'amélioration est invérifiable. Loguer la baseline dans MLflow/W&amp;B immédiatement.</p>
+<h3>2. Préparer le dataset</h3>
+<p>Format instruction/response (standard Alpaca / ChatML) :</p>
+<pre><code class="lang-python"># Format Alpaca
+{&quot;instruction&quot;: &quot;Classe cette phrase.&quot;, &quot;input&quot;: &quot;Le produit est excellent.&quot;, &quot;output&quot;: &quot;positif&quot;}
+
+# Format ChatML (préféré pour les LLM modernes)
+{&quot;messages&quot;: [
+  {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;Tu es un classificateur de sentiment.&quot;},
+  {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Le produit est excellent.&quot;},
+  {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;positif&quot;}
+]}</code></pre>
+<p>Validation obligatoire avant entraînement :</p>
+<pre><code class="lang-python">from datasets import load_dataset
+ds = load_dataset(&quot;json&quot;, data_files={&quot;train&quot;: &quot;train.jsonl&quot;, &quot;test&quot;: &quot;test.jsonl&quot;})
+
+# Vérifier la distribution des labels
+from collections import Counter
+Counter(ds[&quot;train&quot;][&quot;label&quot;])
+
+# Vérifier les longueurs de tokens
+from transformers import AutoTokenizer
+tok = AutoTokenizer.from_pretrained(&quot;mistralai/Mistral-7B-v0.3&quot;)
+lengths = [len(tok(x[&quot;instruction&quot;] + x[&quot;output&quot;])[&quot;input_ids&quot;]) for x in ds[&quot;train&quot;]]
+print(f&quot;max={max(lengths)}, p95={sorted(lengths)[int(0.95*len(lengths))]}&quot;)</code></pre>
+<p>Règle : si p95 &gt; <code>max_seq_length</code>, tronquer ou filtrer — ne jamais silencieusement perdre des tokens en production.</p>
+<h3>3. Configurer LoRA / QLoRA</h3>
+<pre><code class="lang-python">from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+from peft import LoraConfig, get_peft_model, TaskType
+import torch
+
+# QLoRA 4-bit (≈ 5 Go pour 7B)
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type=&quot;nf4&quot;,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=True,
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    &quot;mistralai/Mistral-7B-v0.3&quot;,
+    quantization_config=bnb_config,
+    device_map=&quot;auto&quot;,
+)
+
+lora_config = LoraConfig(
+    r=16,              # rang : 8 (léger) → 64 (expressif)
+    lora_alpha=32,     # scaling = alpha/r, garder alpha = 2*r
+    target_modules=[&quot;q_proj&quot;, &quot;k_proj&quot;, &quot;v_proj&quot;, &quot;o_proj&quot;],
+    lora_dropout=0.05,
+    bias=&quot;none&quot;,
+    task_type=TaskType.CAUSAL_LM,
+)
+
+model = get_peft_model(model)
+model.print_trainable_parameters()
+# → &quot;trainable params: 4,194,304 || all params: 3,756,462,080 || trainable%: 0.1117&quot;</code></pre>
+<p>Choix du rang <code>r</code> :</p>
 <ul>
-<li>Identifier la tâche cible (classification, génération, extraction, etc.)</li>
-<li>Sélectionner un modèle pré-entraîné adapté (LLaMA, Mistral, BERT, GPT, etc.)</li>
-<li>Évaluer les performances du modèle de base sur la tâche avant fine-tuning (baseline)</li>
-<li>Vérifier la licence du modèle et les contraintes d'utilisation</li>
+<li><code>r=8</code> : cas courants, peu de données</li>
+<li><code>r=16</code>–<code>32</code> : tâche complexe ou domaine très spécialisé</li>
+<li><code>r=64</code>+ : rarement justifié, coût élevé pour gain marginal</li>
 </ul>
-<h3>2. Préparer et valider le dataset de fine-tuning</h3>
+<h3>4. Hyperparamètres d'entraînement</h3>
+<pre><code class="lang-python">from transformers import TrainingArguments
+from trl import SFTTrainer
+
+args = TrainingArguments(
+    output_dir=&quot;./checkpoints&quot;,
+    num_train_epochs=3,
+    per_device_train_batch_size=4,
+    gradient_accumulation_steps=4,      # batch effectif = 16
+    learning_rate=2e-4,                 # LoRA : 1e-4 à 3e-4 ; full FT : 5e-5
+    lr_scheduler_type=&quot;cosine&quot;,
+    warmup_ratio=0.05,
+    weight_decay=0.01,
+    bf16=True,
+    gradient_checkpointing=True,        # économise ~30 % VRAM
+    logging_steps=10,
+    save_strategy=&quot;epoch&quot;,
+    evaluation_strategy=&quot;epoch&quot;,
+    load_best_model_at_end=True,
+    report_to=&quot;wandb&quot;,                  # ou &quot;mlflow&quot;
+)
+
+trainer = SFTTrainer(
+    model=model,
+    args=args,
+    train_dataset=ds[&quot;train&quot;],
+    eval_dataset=ds[&quot;test&quot;],
+    dataset_text_field=&quot;text&quot;,
+    max_seq_length=2048,
+    peft_config=lora_config,
+)
+trainer.train()</code></pre>
+<p>Référence GPU / batch size pour Mistral-7B QLoRA :</p>
+<table><thead><tr><th>VRAM</th><th>batch_size</th><th>grad_accum</th><th>batch effectif</th></tr></thead><tbody><tr><td>8 Go</td><td>1</td><td>16</td><td>16</td></tr><tr><td>16 Go</td><td>2</td><td>8</td><td>16</td></tr><tr><td>24 Go</td><td>4</td><td>4</td><td>16</td></tr><tr><td>80 Go (A100)</td><td>16</td><td>1</td><td>16</td></tr></tbody></table>
+<h3>5. Monitoring et early stopping</h3>
+<pre><code class="lang-python">from transformers import EarlyStoppingCallback
+
+trainer.add_callback(EarlyStoppingCallback(early_stopping_patience=3))</code></pre>
+<p>Surveiller dans W&amp;B :</p>
 <ul>
-<li>Formater les données selon le format attendu (instruction/response, prompt/completion, etc.)</li>
-<li>Nettoyer les données : supprimer les doublons, corriger les erreurs, gérer les valeurs manquantes</li>
-<li>Créer les splits train/validation/test avec des proportions appropriées (ex: 80/10/10)</li>
-<li>Vérifier la distribution des classes et appliquer un équilibrage si nécessaire</li>
-<li>Tokeniser les données et vérifier la longueur maximale des séquences</li>
+<li><code>eval/loss</code> doit descendre en parallèle de <code>train/loss</code></li>
+<li>Si <code>eval/loss</code> remonte alors que <code>train/loss</code> descend → surapprentissage → stop</li>
+<li>Grad norm instable (&gt; 10) → baisser le LR ou augmenter le warmup</li>
 </ul>
-<h3>3. Configurer la méthode de fine-tuning</h3>
+<h3>6. Évaluation post-entraînement</h3>
+<pre><code class="lang-python"># Métriques standards selon la tâche
+from evaluate import load
+
+# Génération
+rouge = load(&quot;rouge&quot;)
+bleu  = load(&quot;sacrebleu&quot;)
+
+# Classification
+accuracy = load(&quot;accuracy&quot;)
+f1       = load(&quot;f1&quot;)
+
+results = rouge.compute(predictions=preds, references=refs, use_stemmer=True)
+print(results)  # {'rouge1': 0.52, 'rouge2': 0.30, 'rougeL': 0.48, ...}</code></pre>
+<p>Tests manuels indispensables : 20–30 exemples représentatifs + 10 cas limites. Les métriques automatiques ne capturent pas les hallucinations ou les formats cassés.</p>
+<h3>7. Fusion et export</h3>
+<pre><code class="lang-python"># Fusionner l'adaptateur LoRA dans le modèle de base
+from peft import PeftModel
+
+base_model = AutoModelForCausalLM.from_pretrained(
+    &quot;mistralai/Mistral-7B-v0.3&quot;, torch_dtype=torch.bfloat16
+)
+merged = PeftModel.from_pretrained(base_model, &quot;./checkpoints/best&quot;)
+merged = merged.merge_and_unload()
+
+merged.save_pretrained(&quot;./final-model&quot;, safe_serialization=True)
+tokenizer.save_pretrained(&quot;./final-model&quot;)
+
+# Export GGUF pour déploiement CPU/edge (via llama.cpp)
+# python llama.cpp/convert_hf_to_gguf.py ./final-model --outtype q5_k_m</code></pre>
+<h3>8. Itération ciblée</h3>
+<p>Analyser les erreurs par catégorie :</p>
+<pre><code class="lang-python">errors = [(ex[&quot;input&quot;], pred, ref) for pred, ref in zip(preds, refs) if pred != ref]
+# Regrouper par type d'erreur → enrichir le dataset là où ça échoue</code></pre>
+<p>Ajouter des exemples synthétiques (GPT-4o, Claude) pour les cas rares, en vérifiant manuellement un échantillon de 10 %.</p>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<p><strong>Données</strong></p>
 <ul>
-<li>Choisir entre fine-tuning complet, LoRA, QLoRA ou autre méthode PEFT</li>
-<li>Pour LoRA/QLoRA : définir le rang (r), alpha, dropout et les modules cibles</li>
-<li>Configurer la quantification si QLoRA (4-bit, 8-bit, nf4, double quantization)</li>
-<li>Paramétrer le type d'adaptateur selon la tâche (LoraConfig, PrefixTuningConfig, etc.)</li>
+<li>Inclure des exemples du set de test dans le train → métriques gonflées artificiellement.</li>
+<li>Dataset déséquilibré sans rééchantillonnage → modèle qui ignore la classe minoritaire.</li>
+<li>Séquences tronquées silencieusement → le modèle n'apprend que le début.</li>
 </ul>
-<h3>4. Définir les hyperparamètres d'entraînement</h3>
+<p><strong>Entraînement</strong></p>
 <ul>
-<li>Configurer le learning rate (typiquement 1e-4 à 5e-5 pour le fine-tuning)</li>
-<li>Définir le batch size en fonction de la mémoire GPU disponible (utiliser gradient accumulation si nécessaire)</li>
-<li>Paramétrer le nombre d'epochs (généralement 1 à 5 pour les LLM)</li>
-<li>Configurer le scheduler (cosine, linear decay), le warmup ratio et le weight decay</li>
-<li>Activer le gradient checkpointing pour économiser la mémoire</li>
+<li>LR trop élevé (&gt; 5e-4 pour LoRA) → instabilité, loss NaN. Réduire de moitié et reprendre.</li>
+<li>Oublier <code>prepare_model_for_kbit_training()</code> avant LoRA sur un modèle quantifié → erreurs de gradient.</li>
+<li>Gradient checkpointing sans <code>use_reentrant=False</code> sur PyTorch ≥ 2.1 → warning + dégradation perf.</li>
 </ul>
-<h3>5. Lancer l'entraînement avec monitoring</h3>
+<p><strong>Évaluation</strong></p>
 <ul>
-<li>Initialiser le Trainer (HuggingFace Transformers, Axolotl, ou framework custom)</li>
-<li>Configurer le logging vers W&amp;B, MLflow ou TensorBoard</li>
-<li>Surveiller la loss d'entraînement et de validation en temps réel</li>
-<li>Mettre en place l'early stopping pour éviter le surapprentissage</li>
-<li>Sauvegarder les checkpoints régulièrement</li>
+<li>Évaluer uniquement sur le train set → surapprentissage non détecté.</li>
+<li>Utiliser BLEU comme seule métrique pour la génération → ne capte pas la fluidité ni les faits.</li>
 </ul>
-<h3>6. Évaluer le modèle fine-tuné</h3>
+<p><strong>Export</strong></p>
 <ul>
-<li>Calculer les métriques sur le set de test (perplexité, BLEU, ROUGE, accuracy, F1)</li>
-<li>Comparer les performances avec le modèle de base (baseline vs fine-tuné)</li>
-<li>Tester manuellement avec des exemples représentatifs et des cas limites</li>
-<li>Évaluer les biais potentiels et les comportements indésirables</li>
+<li>Déployer l'adaptateur sans fusion → dépendance à la lib PEFT en production, latence supplémentaire.</li>
+<li>Publier le modèle fusionné sans vérifier la licence de la base (ex: LLaMA 3 — usage commercial limité).</li>
 </ul>
-<h3>7. Fusionner et exporter le modèle</h3>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Fusionner les poids de l'adaptateur avec le modèle de base (merge_and_unload)</li>
-<li>Exporter dans le format souhaité (SafeTensors, GGUF, ONNX)</li>
-<li>Quantifier le modèle final si nécessaire pour le déploiement</li>
-<li>Publier sur HuggingFace Hub ou un registry interne avec une model card</li>
+<li><strong>unsloth</strong> : bibliothèque qui accélère QLoRA de 2×, réduit la VRAM de 60 %, compatible HuggingFace. À préférer pour du fine-tuning mono-GPU.</li>
+<li><strong>Flash Attention 2</strong> : activer via <code>attn_implementation=&quot;flash_attention_2&quot;</code> — réduit la VRAM quadratique en linéaire sur les longues séquences.</li>
+<li><strong>DPO / ORPO</strong> après SFT : pour aligner le comportement sur des préférences humaines sans RLHF complet (TRL ≥ 0.9).</li>
+<li><strong>Model card obligatoire</strong> : documenter les données d'entraînement, les limites connues et les métriques avant tout déploiement.</li>
+<li><strong>Reproductibilité</strong> : fixer <code>seed=42</code> dans <code>TrainingArguments</code> et versionner le dataset avec <code>datasets</code> SHA ou DVC.</li>
 </ul>
-<h3>8. Itérer et optimiser</h3>
-<ul>
-<li>Analyser les erreurs du modèle pour identifier les faiblesses</li>
-<li>Enrichir le dataset avec des exemples ciblés sur les cas d'échec</li>
-<li>Ajuster les hyperparamètres en fonction des résultats</li>
-<li>Documenter chaque itération pour la reproductibilité</li>
-</ul>
-<h2>Rules</h2>
-<ol>
-<li><strong>Toujours établir une baseline</strong> : Mesurer les performances du modèle de base avant tout fine-tuning. Sans baseline, il est impossible de quantifier l'amélioration réelle apportée par le fine-tuning.</li>
-</ol>
-<ol>
-<li><strong>Privilégier les méthodes PEFT pour les LLM</strong> : Utiliser LoRA ou QLoRA plutôt qu'un fine-tuning complet sauf si les ressources le permettent et que la tâche l'exige. Cela réduit drastiquement la mémoire et le temps d'entraînement.</li>
-</ol>
-<ol>
-<li><strong>Ne jamais entraîner sans set de validation</strong> : Toujours surveiller la loss de validation pour détecter le surapprentissage. Un modèle qui performe bien sur le train set mais mal sur le validation set est inutilisable en production.</li>
-</ol>
-<ol>
-<li><strong>Versionner chaque expérience</strong> : Enregistrer systématiquement les hyperparamètres, le dataset utilisé, les métriques et les checkpoints. La reproductibilité est essentielle pour comparer et itérer efficacement.</li>
-</ol>
-<ol>
-<li><strong>Vérifier la qualité des données avant tout</strong> : Un dataset de mauvaise qualité produira un modèle de mauvaise qualité, indépendamment de la sophistication de la méthode de fine-tuning. Investir du temps dans la curation des données est toujours rentable.</li>
-</ol>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

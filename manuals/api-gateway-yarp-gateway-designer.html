@@ -96,54 +96,66 @@ cp -r claude-skills-collection/skills/api-gateway-yarp-gateway-designer ~/.claud
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>API Gateway avec YARP</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définir les routes</strong> : mapping des chemins vers les services backend.</li>
-<li><strong>Configurer les clusters</strong> : destinations, health checks, load balancing.</li>
-<li><strong>Appliquer les transformations</strong> : headers, paths, authentification.</li>
-<li><strong>Sécuriser</strong> : rate limiting, CORS, authentification centralisée.</li>
-</ol>
-<h2>Configuration de base</h2>
-<pre><code class="lang-csharp">// Program.cs
-var builder = WebApplication.CreateBuilder(args);
+<h2>Critères de décision</h2>
+<table><thead><tr><th>Besoin</th><th>Recommandation</th></tr></thead><tbody><tr><td>Reverse proxy léger, intégré .NET</td><td>YARP</td></tr><tr><td>Developer portal, quotas avancés, monétisation</td><td>Azure APIM ou Kong</td></tr><tr><td>Multi-tenant avec isolation stricte</td><td>YARP + middleware tenant + JWT claims</td></tr><tr><td>mTLS entre gateway et backends</td><td>YARP + <code>HttpClient</code> custom avec cert</td></tr></tbody></table>
+<h2>Workflow en 6 étapes</h2>
+<h3>1. Installer le package</h3>
+<pre><code class="lang-bash">dotnet add package Yarp.ReverseProxy
+# Dernière version stable : 2.2.0 (LTS .NET 8/9)</code></pre>
+<h3>2. Enregistrer YARP dans Program.cs</h3>
+<pre><code class="lang-csharp">var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection(&quot;ReverseProxy&quot;));
 
+// Optionnel : rate limiting (Microsoft.AspNetCore.RateLimiting)
+builder.Services.AddRateLimiter(options =&gt;
+{
+    options.AddFixedWindowLimiter(&quot;api-limit&quot;, opt =&gt;
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 10;
+    });
+    options.RejectionStatusCode = 429;
+});
+
 var app = builder.Build();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
 app.MapReverseProxy();
 app.Run();</code></pre>
-<h3>appsettings.json</h3>
+<h3>3. Déclarer les routes et clusters (appsettings.json)</h3>
 <pre><code class="lang-json">{
   &quot;ReverseProxy&quot;: {
     &quot;Routes&quot;: {
       &quot;payments-route&quot;: {
         &quot;ClusterId&quot;: &quot;payments-cluster&quot;,
-        &quot;Match&quot;: {
-          &quot;Path&quot;: &quot;/api/payments/{**catch-all}&quot;
-        },
+        &quot;Match&quot;: { &quot;Path&quot;: &quot;/api/payments/{**catch-all}&quot; },
         &quot;Transforms&quot;: [
-          { &quot;PathRemovePrefix&quot;: &quot;/api/payments&quot; }
-        ]
+          { &quot;PathRemovePrefix&quot;: &quot;/api/payments&quot; },
+          { &quot;RequestHeader&quot;: &quot;X-Gateway-Source&quot;, &quot;Set&quot;: &quot;yarp-gw&quot; }
+        ],
+        &quot;RateLimiterPolicy&quot;: &quot;api-limit&quot;,
+        &quot;AuthorizationPolicy&quot;: &quot;anonymous&quot;
       },
       &quot;orders-route&quot;: {
         &quot;ClusterId&quot;: &quot;orders-cluster&quot;,
         &quot;Match&quot;: {
-          &quot;Path&quot;: &quot;/api/orders/{**catch-all}&quot;
+          &quot;Path&quot;: &quot;/api/orders/{**catch-all}&quot;,
+          &quot;Headers&quot;: [{ &quot;Name&quot;: &quot;X-Api-Version&quot;, &quot;Values&quot;: [&quot;v2&quot;], &quot;Mode&quot;: &quot;ExactHeader&quot; }]
         },
         &quot;Transforms&quot;: [
-          { &quot;PathRemovePrefix&quot;: &quot;/api/orders&quot; },
-          { &quot;RequestHeader&quot;: &quot;X-Forwarded-Service&quot;, &quot;Set&quot;: &quot;orders&quot; }
+          { &quot;PathRemovePrefix&quot;: &quot;/api/orders&quot; }
         ],
-        &quot;AuthorizationPolicy&quot;: &quot;authenticated&quot;
+        &quot;AuthorizationPolicy&quot;: &quot;authenticated&quot;,
+        &quot;RateLimiterPolicy&quot;: &quot;api-limit&quot;
       }
     },
     &quot;Clusters&quot;: {
       &quot;payments-cluster&quot;: {
-        &quot;Destinations&quot;: {
-          &quot;primary&quot;: { &quot;Address&quot;: &quot;https://payment-service:8080&quot; },
-          &quot;secondary&quot;: { &quot;Address&quot;: &quot;https://payment-service-2:8080&quot; }
-        },
         &quot;LoadBalancingPolicy&quot;: &quot;RoundRobin&quot;,
         &quot;HealthCheck&quot;: {
           &quot;Active&quot;: {
@@ -151,53 +163,101 @@ app.Run();</code></pre>
             &quot;Interval&quot;: &quot;00:00:30&quot;,
             &quot;Timeout&quot;: &quot;00:00:10&quot;,
             &quot;Path&quot;: &quot;/health&quot;
-          }
+          },
+          &quot;Passive&quot;: { &quot;Enabled&quot;: true }
+        },
+        &quot;Destinations&quot;: {
+          &quot;primary&quot;:   { &quot;Address&quot;: &quot;https://payment-svc-1:8080&quot; },
+          &quot;secondary&quot;: { &quot;Address&quot;: &quot;https://payment-svc-2:8080&quot; }
         }
       },
       &quot;orders-cluster&quot;: {
+        &quot;LoadBalancingPolicy&quot;: &quot;LeastRequests&quot;,
         &quot;Destinations&quot;: {
-          &quot;primary&quot;: { &quot;Address&quot;: &quot;https://order-service:8080&quot; }
+          &quot;primary&quot;: { &quot;Address&quot;: &quot;https://order-svc:8080&quot; }
         }
       }
     }
   }
 }</code></pre>
-<h2>Configuration avancée (code)</h2>
+<h3>4. Ajouter des transformations par code (claims, tenant, corrélation)</h3>
 <pre><code class="lang-csharp">builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection(&quot;ReverseProxy&quot;))
-    .AddTransforms(transforms =&gt;
+    .AddTransforms(ctx =&gt;
     {
-        transforms.AddRequestTransform(async context =&gt;
+        // Injecter le tenant depuis le JWT dans chaque requête proxiée
+        ctx.AddRequestTransform(async reqCtx =&gt;
         {
-            // Ajouter un header avec le tenant
-            var tenantId = context.HttpContext.User.FindFirst(&quot;tenant_id&quot;)?.Value;
-            if (tenantId != null)
-            {
-                context.ProxyRequest.Headers.Add(&quot;X-Tenant-Id&quot;, tenantId);
-            }
-        });
-    });
+            var tenantId = reqCtx.HttpContext.User.FindFirst(&quot;tenant_id&quot;)?.Value;
+            if (tenantId is not null)
+                reqCtx.ProxyRequest.Headers.TryAddWithoutValidation(&quot;X-Tenant-Id&quot;, tenantId);
 
-// Rate limiting par route
-builder.Services.AddRateLimiter(options =&gt;
-{
-    options.AddPolicy(&quot;api-limit&quot;, context =&gt;
-        RateLimitPartition.GetFixedWindowLimiter(
-            context.Connection.RemoteIpAddress?.ToString() ?? &quot;unknown&quot;,
-            _ =&gt; new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 100,
-                Window = TimeSpan.FromMinutes(1)
-            }));
-});</code></pre>
-<h2>Patterns courants</h2>
-<table><thead><tr><th>Pattern</th><th>Configuration YARP</th></tr></thead><tbody><tr><td><strong>Path-based routing</strong></td><td><code>Match.Path: &quot;/api/service/{**catch-all}&quot;</code></td></tr><tr><td><strong>Header-based routing</strong></td><td><code>Match.Headers</code> avec conditions</td></tr><tr><td><strong>Load balancing</strong></td><td><code>LoadBalancingPolicy: &quot;RoundRobin&quot;</code> / <code>&quot;LeastRequests&quot;</code></td></tr><tr><td><strong>Circuit breaker</strong></td><td>Intégration Polly via middleware</td></tr><tr><td><strong>Auth centralisée</strong></td><td><code>AuthorizationPolicy</code> sur les routes</td></tr><tr><td><strong>Rate limiting</strong></td><td><code>RateLimiterPolicy</code> sur les routes</td></tr></tbody></table>
-<h2>Règles</h2>
+            // Corrélation
+            var correlationId = reqCtx.HttpContext.TraceIdentifier;
+            reqCtx.ProxyRequest.Headers.TryAddWithoutValidation(&quot;X-Correlation-Id&quot;, correlationId);
+        });
+
+        // Masquer les headers internes sur la réponse
+        ctx.AddResponseTransform(async respCtx =&gt;
+        {
+            respCtx.ProxyResponse?.Headers.Remove(&quot;X-Internal-Node&quot;);
+            await Task.CompletedTask;
+        });
+    });</code></pre>
+<h3>5. Health check passif + circuit breaker (Polly)</h3>
+<pre><code class="lang-csharp">// Besoin : Microsoft.Extensions.Http.Resilience
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection(&quot;ReverseProxy&quot;))
+    .ConfigureHttpClient((ctx, handler) =&gt;
+    {
+        // Timeout global par requête proxiée
+        handler.ActivityHeadersPropagator = null;
+    })
+    .AddResilienceHandler(&quot;circuit-breaker&quot;, builder =&gt;
+    {
+        builder.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+        {
+            SamplingDuration = TimeSpan.FromSeconds(30),
+            FailureRatio = 0.5,
+            MinimumThroughput = 10,
+            BreakDuration = TimeSpan.FromSeconds(15)
+        });
+        builder.AddTimeout(TimeSpan.FromSeconds(5));
+    });</code></pre>
+<h3>6. Rechargement à chaud (hot reload) sans restart</h3>
+<pre><code class="lang-csharp">// Recharger les routes/clusters depuis n'importe quelle source dynamique
+var proxyConfig = app.Services.GetRequiredService&lt;InMemoryConfigProvider&gt;();
+proxyConfig.Update(newRoutes, newClusters);
+// Pas besoin de redémarrer le process — YARP recharge instantanément.</code></pre>
+<p>Pour un chargement depuis une base de données ou un API config, implémenter <code>IProxyConfigProvider</code>.</p>
+<h2>Patterns de routing courants</h2>
+<table><thead><tr><th>Cas</th><th>Config YARP</th></tr></thead><tbody><tr><td>Path prefix routing</td><td><code>Match.Path: &quot;/api/svc/{**catch-all}&quot;</code> + <code>PathRemovePrefix</code></td></tr><tr><td>Header-based routing (versioning)</td><td><code>Match.Headers[].Values</code> + <code>Mode: ExactHeader</code></td></tr><tr><td>Query string routing</td><td><code>Match.QueryParameters[].Values</code></td></tr><tr><td>Host-based routing (multi-tenant)</td><td><code>Match.Hosts: [&quot;tenant1.api.com&quot;]</code></td></tr><tr><td>Weighted routing (canary)</td><td>Deux destinations, <code>Weight</code> dans les clusters</td></tr><tr><td>Rewrite complet de chemin</td><td><code>PathPattern: &quot;/v2/{**catch-all}&quot;</code></td></tr></tbody></table>
+<h2>Politiques de load balancing</h2>
+<table><thead><tr><th>Politique</th><th>Usage</th></tr></thead><tbody><tr><td><code>RoundRobin</code></td><td>Distribution uniforme, cas général</td></tr><tr><td><code>LeastRequests</code></td><td>Backends hétérogènes (latence variable)</td></tr><tr><td><code>Random</code></td><td>Tests, benchmarks</td></tr><tr><td><code>PowerOfTwoChoices</code></td><td>Haute charge, meilleure distribution que RoundRobin</td></tr><tr><td><code>FirstAlphabetical</code></td><td>Failover ordonné, actif/passif</td></tr></tbody></table>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne pas faire :</strong></p>
 <ul>
-<li>YARP est un <strong>reverse proxy</strong>, pas un API management — pour des besoins avancés (quotas, developer portal), considérer Kong ou Azure APIM.</li>
-<li>Toujours configurer des <strong>health checks actifs</strong> sur les clusters.</li>
-<li>Les <strong>transformations de headers</strong> ne doivent pas exposer d'informations internes.</li>
-<li>Centraliser l'<strong>authentification</strong> dans la gateway, pas dans chaque service.</li>
+<li>Laisser les routes sans <code>AuthorizationPolicy</code> sur des endpoints sensibles (oubli silencieux — YARP ne bloque rien par défaut).</li>
+<li>Utiliser YARP comme orchestrateur BFF complexe avec logique métier — garder la gateway dumb, les services smart.</li>
+<li>Oublier <code>PassiveHealthCheck</code> : sans lui, un backend tombé reste dans la rotation jusqu'au prochain active check.</li>
+<li>Configurer <code>HttpClient</code> timeout à l'infini — toujours positionner un timeout explicite (<code>AddTimeout</code>).</li>
+<li>Exposer des headers internes (<code>X-Internal-*</code>, <code>Server</code>, <code>X-Powered-By</code>) aux clients — les supprimer dans <code>AddResponseTransform</code>.</li>
+<li>Stocker les secrets de cluster (mots de passe mTLS, tokens) dans <code>appsettings.json</code> — utiliser <code>IConfiguration</code> + Azure Key Vault / environment variables.</li>
+</ul>
+<p><strong>Pièges courants :</strong></p>
+<ul>
+<li><code>PathRemovePrefix</code> est case-sensitive — tester avec <code>/Api/Payments</code> vs <code>/api/payments</code> si les clients varient.</li>
+<li>L'ordre des routes dans le JSON n'est pas garanti en .NET &lt; 8 — utiliser <code>Order</code> explicite sur chaque route si la priorité compte.</li>
+<li><code>AddReverseProxy().LoadFromConfig()</code> et <code>AddTransforms()</code> doivent être chaînés sur le <strong>même</strong> <code>IReverseProxyBuilder</code>, sinon les transforms ne s'appliquent pas.</li>
+<li>Le rate limiting <code>UseRateLimiter()</code> doit être appelé <strong>avant</strong> <code>MapReverseProxy()</code> dans le pipeline.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Observabilité</strong> : YARP expose des métriques OpenTelemetry natives (<code>Yarp.ReverseProxy</code> activity source) — les brancher sur Prometheus/Grafana ou Azure Monitor.</li>
+<li><strong>mTLS inter-services</strong> : configurer <code>SocketsHttpHandler</code> avec le certificat client dans <code>ConfigureHttpClient</code>.</li>
+<li><strong>Configuration dynamique</strong> : préférer <code>IProxyConfigProvider</code> avec rechargement depuis un config store (Consul, Azure App Configuration) plutôt que des restart.</li>
+<li><strong>Versioning</strong> : router par header <code>Accept-Version</code> ou par host <code>v2.api.company.com</code> plutôt que par path quand les backends sont stables.</li>
+<li><strong>Tests</strong> : utiliser <code>Microsoft.AspNetCore.TestHost</code> + <code>WebApplicationFactory</code> pour tester les routes YARP sans démarrer de vrai serveur backend (mocker les destinations avec <code>WireMock.Net</code>).</li>
 </ul>
 </article>
 </main>

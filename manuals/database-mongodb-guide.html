@@ -97,22 +97,156 @@ cp -r claude-skills-collection/skills/database-mongodb-guide ~/.claude/skills/</
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>MongoDB Guide</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Comprendre le domaine métier</strong> — Analyser les entités, les relations et les patterns d'accès aux données pour orienter la modélisation (embedding vs referencing).</li>
-<li><strong>Concevoir le schéma</strong> — Appliquer les patterns de modélisation MongoDB (Subset, Computed, Bucket, Outlier, Extended Reference) selon les besoins de lecture et d'écriture.</li>
-<li><strong>Optimiser les requêtes</strong> — Construire des aggregation pipelines efficaces en plaçant $match et $project le plus tôt possible, et en utilisant les stages appropriés.</li>
-<li><strong>Créer les index</strong> — Définir les index simples, composés, multikey, text et géospatiaux en respectant la règle ESR (Equality, Sort, Range).</li>
-<li><strong>Configurer le sharding</strong> — Choisir la shard key optimale en analysant la cardinalité, la distribution et la fréquence des requêtes pour garantir un balancement uniforme.</li>
-<li><strong>Mettre en place la réplication</strong> — Configurer le replica set avec le nombre approprié de membres, les priorités et les tags pour la haute disponibilité et la lecture distribuée.</li>
-<li><strong>Monitorer les performances</strong> — Utiliser mongotop, mongostat, le profiler de base de données et les métriques Atlas pour identifier les opérations lentes.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Analyser les patterns d'accès</h3>
+<p>Avant tout schéma, lister les requêtes réelles : quelles entités sont lues ensemble ? À quelle fréquence ? Ratio lecture/écriture ?</p>
+<p>Critères de décision <strong>embed vs reference</strong> :</p>
+<table><thead><tr><th>Critère</th><th>Embed</th><th>Reference</th></tr></thead><tbody><tr><td>Données toujours lues ensemble</td><td>✅</td><td>❌</td></tr><tr><td>Taille du tableau bornée (&lt;100 éléments)</td><td>✅</td><td>❌</td></tr><tr><td>Données partagées entre plusieurs parents</td><td>❌</td><td>✅</td></tr><tr><td>Mise à jour fréquente de sous-documents</td><td>❌</td><td>✅</td></tr><tr><td>Document proche de 16 Mo</td><td>❌</td><td>✅</td></tr></tbody></table>
+<h3>2. Concevoir le schéma</h3>
+<p><strong>Patterns courants :</strong></p>
 <ul>
-<li>Toujours modéliser en fonction des patterns d'accès, pas en fonction des relations entre entités comme en relationnel.</li>
-<li>Limiter la taille des documents embarqués pour rester sous la limite de 16 Mo et éviter la croissance non bornée des tableaux.</li>
-<li>Ne jamais utiliser $where ou des opérations JavaScript côté serveur en production pour des raisons de performance et de sécurité.</li>
-<li>Toujours valider le plan d'exécution avec explain(&quot;executionStats&quot;) avant de déployer une nouvelle requête ou un nouvel index.</li>
-<li>Prévoir une stratégie de migration de schéma progressive (versionning de documents) plutôt que des migrations destructives.</li>
+<li><strong>Subset</strong> : n'embarquer que les N derniers éléments (ex. 10 derniers avis)</li>
+<li><strong>Computed</strong> : stocker un agrégat précalculé (total, moyenne) mis à jour à l'écriture</li>
+<li><strong>Bucket</strong> : regrouper des séries temporelles par période (ex. mesures IoT par heure)</li>
+<li><strong>Extended Reference</strong> : dupliquer les champs les plus lus du document référencé</li>
+<li><strong>Outlier</strong> : gérer les documents « hors-norme » via un flag + collection overflow</li>
+</ul>
+<p>Exemple schéma <strong>Computed</strong> (compteur dénormalisé) :</p>
+<pre><code class="lang-js">// À l'écriture d'un avis :
+db.products.updateOne(
+  { _id: productId },
+  {
+    $push: { latestReviews: { $each: [review], $slice: -10 } },
+    $inc: { reviewCount: 1, ratingSum: review.rating }
+  }
+)
+// reviewCount et ratingSum toujours à jour, aucun $lookup nécessaire</code></pre>
+<h3>3. Construire les aggregation pipelines</h3>
+<p>Règles d'ordre obligatoires :</p>
+<ol>
+<li><code>$match</code> le plus tôt possible (utilise les index)</li>
+<li><code>$project</code> / <code>$unset</code> pour réduire la taille des documents en transit</li>
+<li><code>$sort</code> + <code>$limit</code> avant <code>$lookup</code> pour limiter les jointures</li>
+</ol>
+<pre><code class="lang-js">db.orders.aggregate([
+  { $match: { status: &quot;shipped&quot;, createdAt: { $gte: ISODate(&quot;2026-01-01&quot;) } } },
+  { $project: { customerId: 1, totalAmount: 1, _id: 0 } },
+  { $group: { _id: &quot;$customerId&quot;, totalSpent: { $sum: &quot;$totalAmount&quot; } } },
+  { $sort: { totalSpent: -1 } },
+  { $limit: 20 },
+  { $lookup: {
+      from: &quot;customers&quot;,
+      localField: &quot;_id&quot;,
+      foreignField: &quot;_id&quot;,
+      as: &quot;customer&quot;,
+      pipeline: [{ $project: { name: 1, email: 1 } }]
+  }},
+  { $unwind: &quot;$customer&quot; }
+])</code></pre>
+<p>Stages utiles souvent oubliés :</p>
+<ul>
+<li><code>$facet</code> : plusieurs agrégations en une passe</li>
+<li><code>$setWindowFields</code> : calculs de type window function (rang, cumul)</li>
+<li><code>$merge</code> : écriture du résultat dans une collection (matérialisation)</li>
+</ul>
+<h3>4. Créer les index (règle ESR)</h3>
+<p>Construire les index composés dans l'ordre <strong>Equality → Sort → Range</strong> :</p>
+<pre><code class="lang-js">// Requête : status = &quot;active&quot; AND createdAt &gt;= X ORDER BY score DESC
+db.users.createIndex({ status: 1, score: -1, createdAt: 1 })
+//                     ^Equality   ^Sort       ^Range</code></pre>
+<p>Types d'index et cas d'usage :</p>
+<pre><code class="lang-js">// Multikey (tableau) — index sur chaque élément du tableau
+db.products.createIndex({ tags: 1 })
+
+// Text — recherche full-text avec scoring
+db.articles.createIndex({ title: &quot;text&quot;, body: &quot;text&quot; }, { weights: { title: 3 } })
+
+// Partiel — indexer uniquement un sous-ensemble de documents
+db.orders.createIndex({ userId: 1 }, { partialFilterExpression: { status: &quot;active&quot; } })
+
+// TTL — suppression automatique après expiration
+db.sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+
+// Wildcard — champs dynamiques inconnus
+db.metrics.createIndex({ &quot;attributes.$**&quot;: 1 })</code></pre>
+<p>Valider avant déploiement :</p>
+<pre><code class="lang-js">db.orders.find({ status: &quot;shipped&quot; }).explain(&quot;executionStats&quot;)
+// Vérifier : IXSCAN (pas COLLSCAN), totalDocsExamined ≈ nReturned</code></pre>
+<h3>5. Configurer le replica set</h3>
+<pre><code class="lang-js">// Initialisation
+rs.initiate({
+  _id: &quot;rs0&quot;,
+  members: [
+    { _id: 0, host: &quot;mongo1:27017&quot;, priority: 2 },
+    { _id: 1, host: &quot;mongo2:27017&quot;, priority: 1 },
+    { _id: 2, host: &quot;mongo3:27017&quot;, priority: 0, hidden: true, votes: 1 }
+  ]
+})
+
+// Lecture depuis les secondaires (lecture éventuelle acceptable)
+db.getMongo().setReadPref(&quot;secondaryPreferred&quot;)
+
+// Write concern fort pour données critiques
+db.orders.insertOne(doc, { writeConcern: { w: &quot;majority&quot;, wtimeout: 5000 } })</code></pre>
+<h3>6. Configurer le sharding</h3>
+<p>Critères pour la shard key :</p>
+<ul>
+<li><strong>Cardinalité haute</strong> : éviter les clés booléennes ou à faible distribution</li>
+<li><strong>Distribution uniforme</strong> : éviter les hotspots (ex. timestamp seul)</li>
+<li><strong>Alignée avec les requêtes</strong> : la shard key doit être dans les filtres les plus fréquents</li>
+</ul>
+<pre><code class="lang-js">// Activer le sharding sur une base
+sh.enableSharding(&quot;mydb&quot;)
+
+// Shard key composée (userId + timestamp) — bonne distribution + requêtes ciblées
+sh.shardCollection(&quot;mydb.events&quot;, { userId: 1, createdAt: 1 })
+
+// Vérifier la distribution des chunks
+db.adminCommand({ listShards: 1 })
+sh.status()</code></pre>
+<h3>7. Monitorer et diagnostiquer</h3>
+<pre><code class="lang-bash"># Opérations en cours et verrous
+mongosh --eval &quot;db.currentOp({ active: true, secs_running: { \$gt: 5 } })&quot;
+
+# Statistiques temps réel
+mongostat --uri &quot;mongodb://user:pass@host:27017&quot;
+mongotop --uri &quot;mongodb://user:pass@host:27017&quot; 10
+
+# Activer le profiler (level 2 = toutes les ops, 1 = slow queries)
+db.setProfilingLevel(1, { slowms: 100 })
+db.system.profile.find().sort({ ts: -1 }).limit(5).pretty()</code></pre>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Pièges fréquents :</strong></p>
+<ul>
+<li><strong>Tableaux non bornés</strong> : un champ <code>comments: []</code> qui grandit à l'infini fait exploser la taille du document et dégrade les performances de mise à jour. Utiliser le pattern Subset ou une collection séparée.</li>
+<li><strong>$lookup systématique</strong> : en MongoDB, <code>$lookup</code> n'est pas gratuit. Si vous faites des jointures sur toutes les requêtes, remettre en question le schéma (embed les données).</li>
+<li><strong>Index sur champ de faible cardinalité seul</strong> : un index <code>{ isDeleted: 1 }</code> sur un booléen est inutile ; le combiner : <code>{ isDeleted: 1, createdAt: -1 }</code>.</li>
+<li><strong>Pas de writeConcern sur données critiques</strong> : le défaut <code>w: 1</code> ne garantit pas la durabilité sur un replica set. Utiliser <code>w: &quot;majority&quot;</code> pour les transactions financières.</li>
+<li><strong>Transactions trop larges</strong> : les transactions multi-documents ont un timeout de 60 s par défaut et génèrent des conflits sous charge. Réduire le périmètre ou repenser le modèle.</li>
+<li><strong>$where et $function en production</strong> : évaluation JavaScript côté serveur, pas d'index, injection possible. Utiliser les opérateurs natifs.</li>
+<li><strong>Absence de schema validation</strong> : sans JSON Schema, des documents malformés s'insèrent silencieusement. Définir des règles minimales.</li>
+</ul>
+<pre><code class="lang-js">// Schema validation — exemple
+db.createCollection(&quot;users&quot;, {
+  validator: {
+    $jsonSchema: {
+      bsonType: &quot;object&quot;,
+      required: [&quot;email&quot;, &quot;createdAt&quot;],
+      properties: {
+        email: { bsonType: &quot;string&quot;, pattern: &quot;^.+@.+$&quot; },
+        createdAt: { bsonType: &quot;date&quot; }
+      }
+    }
+  },
+  validationAction: &quot;error&quot;
+})</code></pre>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Atlas Search</strong> : préférer aux index <code>text</code> natifs pour la recherche full-text — meilleure pertinence, fuzzy search, facets, highlighting.</li>
+<li><strong>Queryable Encryption</strong> : chiffrement côté client avec possibilité de requêter sur données chiffrées (MongoDB 8+) pour conformité PCI/HIPAA.</li>
+<li><strong>Time Series Collections</strong> : utiliser <code>timeseries: { timeField, metaField, granularity }</code> pour les séries temporelles ; compression automatique et index optimisé.</li>
+<li><strong>Versioning de schéma</strong> : ajouter un champ <code>schemaVersion: 1</code> dans chaque document et gérer la migration lazy (à la lecture) plutôt que batch.</li>
+<li><strong>Connection pooling</strong> : configurer <code>maxPoolSize</code> selon le nombre de workers applicatifs ; ne jamais créer un nouveau <code>MongoClient</code> par requête.</li>
+<li><strong>Aggregation <code>$merge</code> planifiée</strong> : matérialiser des vues complexes en collection pour éviter les re-calculs à chaque lecture (pattern CQRS léger).</li>
 </ul>
 </article>
 </main>

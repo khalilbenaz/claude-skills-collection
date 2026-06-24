@@ -96,26 +96,148 @@ cp -r claude-skills-collection/skills/career-linkedin-optimizer ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>LinkedIn Optimizer</h1>
-<h2>Workflow</h2>
+<h2>Étape 0 — Cadrage (obligatoire)</h2>
+<p>Avant toute optimisation, poser ces 3 questions :</p>
 <ol>
-<li><strong>Objectif</strong> : trouver un job, attirer des clients, réseauter, personal branding ?</li>
-<li><strong>Audit</strong> section par section :</li>
-<ul>
-<li><strong>Photo &amp; bannière</strong> : conseils</li>
-<li><strong>Headline</strong> : 3 propositions optimisées avec mots-clés</li>
-<li><strong>À propos</strong> : réécriture storytelling (hook + parcours + valeur + CTA)</li>
-<li><strong>Expériences</strong> : reformulation orientée résultats</li>
-<li><strong>Compétences</strong> : sélection stratégique</li>
-<li><strong>Recommandations</strong> : qui solliciter et comment</li>
-</ul>
-<li><strong>Mots-clés</strong> : liste de mots-clés à intégrer pour le SEO LinkedIn.</li>
-<li><strong>Checklist</strong> : score d'optimisation section par section.</li>
+<li><strong>Objectif principal</strong> : recrutement actif / personal branding / prospection B2B / réseautage ?</li>
+<li><strong>Cible</strong> : entreprises FR, international, freelance, investisseurs ?</li>
+<li><strong>Matière première</strong> : l'utilisateur colle le contenu de son profil actuel, ou section par section.</li>
 </ol>
-<h2>Règles</h2>
+<p>Adapter le ton et les mots-clés selon la cible avant de produire quoi que ce soit.</p>
+<hr>
+<h2>Étape 1 — Photo &amp; Bannière</h2>
+<p><strong>Photo</strong> (critères non-négociables) :</p>
 <ul>
-<li>N'invente rien — optimise ce qui existe.</li>
-<li>Adapte au marché cible (français, international, bilingue).</li>
-<li>Ton professionnel mais humain.</li>
+<li>Fond neutre, visage occupant 60-70% du cadre, sourire naturel.</li>
+<li>Résolution min. 400×400 px, format carré.</li>
+<li>Pas de selfie, pas de photo de groupe recadrée.</li>
+</ul>
+<p><strong>Bannière</strong> (1584×396 px) :</p>
+<ul>
+<li>Bannière personnalisée &gt; fond bleu par défaut (signal sérieux vs passif).</li>
+<li>Contenu utile : titre/domaine + lien vers portfolio, site, Calendly.</li>
+<li>Outil gratuit : Canva &gt; &quot;LinkedIn Banner&quot; (templates prêts).</li>
+</ul>
+<hr>
+<h2>Étape 2 — Headline (220 caractères max)</h2>
+<p><strong>Structure recommandée</strong> :</p>
+<pre><code>[Titre métier] | [Valeur ajoutée spécifique] | [Mot-clé secondaire]</code></pre>
+<p><strong>Exemples concrets</strong> :</p>
+<pre><code># Développeur backend
+Avant : &quot;Software Engineer at Acme&quot;
+Après  : &quot;Backend Engineer (Java/Spring) | Systèmes haute dispo 99,9% | Open to remote&quot;
+
+# Consultant indépendant
+Avant : &quot;Consultant IT&quot;
+Après  : &quot;Consultant Cloud &amp; DevOps | AWS/Azure | Réduit le time-to-deploy de 40%&quot;
+
+# En recherche d'emploi
+Avant : &quot;En recherche d'opportunités&quot;
+Après  : &quot;Product Manager | SaaS B2B | 8 ans e-commerce | Open to Work&quot;</code></pre>
+<p><strong>Règles headline</strong> :</p>
+<ul>
+<li>Jamais &quot;Passionné par...&quot; en headline — ça ne se scanne pas.</li>
+<li>Inclure au moins 2 mots-clés recruteurs (chercher les intitulés dans les offres cibles).</li>
+<li>En recherche active : activer <strong>&quot;Open to Work&quot;</strong> (mode visible recruteurs seulement ou public).</li>
+</ul>
+<hr>
+<h2>Étape 3 — Section &quot;À propos&quot; (2 600 caractères max)</h2>
+<p><strong>Structure en 4 blocs</strong> :</p>
+<pre><code>[Hook — 1 phrase accrocheuse]
+[Parcours — 2-3 phrases, faits concrets]
+[Valeur ajoutée — ce que tu apportes à une équipe/client]
+[CTA — comment te contacter ou voir ton travail]</code></pre>
+<p><strong>Exemple de hook</strong> :</p>
+<pre><code># Mauvais
+&quot;Je suis un développeur passionné avec 5 ans d'expérience.&quot;
+
+# Bon
+&quot;J'ai réduit de 60% le temps de déploiement d'une plateforme SaaS traitant 2M requêtes/jour —
+en repassant de monolithe à microservices en 6 mois.&quot;</code></pre>
+<p><strong>Règles</strong> :</p>
+<ul>
+<li>Première ligne visible sans &quot;Voir plus&quot; : doit accrocher.</li>
+<li>Écrire à la 1ère personne (&quot;Je&quot;, pas &quot;Khalil est...&quot;).</li>
+<li>Terminer par un CTA concret : email, lien portfolio, Calendly.</li>
+<li>Intégrer 5-8 mots-clés sectoriels naturellement dans le texte.</li>
+</ul>
+<hr>
+<h2>Étape 4 — Expériences</h2>
+<p><strong>Format par poste</strong> :</p>
+<pre><code>[Intitulé exact du poste]
+[Entreprise] · [Type contrat] · [Dates] · [Localisation]
+
+• Résultat chiffré : [action] → [impact mesurable]
+• Résultat chiffré : [action] → [impact mesurable]
+• Technologie/méthode clé utilisée</code></pre>
+<p><strong>Reformulation orientée résultats</strong> :</p>
+<pre><code># Mauvais
+&quot;Développement et maintenance d'applications web.&quot;
+
+# Bon
+&quot;Migré l'API REST vers GraphQL → réduction 35% des appels réseau côté mobile.
+Mis en place CI/CD GitHub Actions → délai livraison passé de 2 semaines à 2 jours.&quot;</code></pre>
+<p><strong>Règle des 3</strong> : 3 bullet points minimum par poste récent, 1-2 pour les anciens.</p>
+<hr>
+<h2>Étape 5 — Compétences (top 5 critiques)</h2>
+<ul>
+<li>LinkedIn affiche les 3 premières compétences sans clic — les choisir avec soin.</li>
+<li>Ordre : compétences avec le plus d'endorsements + les plus recherchées pour la cible.</li>
+<li>Supprimer les skills génériques (&quot;Microsoft Office&quot;, &quot;Travail en équipe&quot;).</li>
+<li>Viser 20-30 compétences techniques précises (ex: &quot;Apache Kafka&quot; &gt; &quot;Messaging&quot;).</li>
+<li>Demander endorsements à 3-5 collègues sur les compétences clés (message type ci-dessous).</li>
+</ul>
+<p><strong>Message endorsement (à copier-coller)</strong> :</p>
+<pre><code>Bonjour [Prénom], si tu as eu l'occasion de travailler avec moi sur [projet/contexte],
+pourrais-tu valider ma compétence [X] sur LinkedIn ? Je fais de même pour toi bien sûr.
+Merci !</code></pre>
+<hr>
+<h2>Étape 6 — Recommandations</h2>
+<ul>
+<li>Minimum 3 recommandations visibles pour le &quot;All-Star&quot; LinkedIn.</li>
+<li>Priorité : managers &gt; collègues &gt; clients.</li>
+<li>Rédiger un brouillon pour l'autre personne (facilite leur tâche, augmente la précision).</li>
+</ul>
+<p><strong>Message de sollicitation</strong> :</p>
+<pre><code>Bonjour [Prénom], je mets à jour mon profil LinkedIn et je pense à notre collaboration sur [projet].
+Si tu es d'accord pour rédiger une recommandation, je peux te préparer un brouillon basé sur [résultat concret].
+Dis-moi si ça te convient !</code></pre>
+<hr>
+<h2>Étape 7 — SEO LinkedIn (algorithme 2026)</h2>
+<p><strong>Mots-clés à placer dans cet ordre de priorité</strong> :</p>
+<ol>
+<li>Headline (poids max)</li>
+<li>Titre de poste actuel</li>
+<li>Section &quot;À propos&quot; (2-3 fois)</li>
+<li>Intitulés de postes passés</li>
+<li>Section Compétences</li>
+</ol>
+<p><strong>Trouver les bons mots-clés</strong> :</p>
+<ul>
+<li>Chercher 10 offres d'emploi cibles → noter les termes récurrents.</li>
+<li>Utiliser la barre de recherche LinkedIn pour voir l'auto-complétion.</li>
+<li>Vérifier le profil des &quot;top voices&quot; du secteur (titres, mots utilisés).</li>
+</ul>
+<p><strong>Activité = signal de visibilité</strong> :</p>
+<ul>
+<li>1 post/semaine minimum pour rester dans le feed des connexions.</li>
+<li>Commenter des posts pertinents (algorithme booste les profils actifs).</li>
+<li>URL personnalisée : <code>linkedin.com/in/prenom-nom</code> (Settings &gt; Edit public profile &amp; URL).</li>
+</ul>
+<hr>
+<h2>Checklist Score &quot;All-Star&quot;</h2>
+<table><thead><tr><th>Section</th><th>Critère</th><th>OK?</th></tr></thead><tbody><tr><td>Photo</td><td>Pro, bien cadrée</td><td>☐</td></tr><tr><td>Bannière</td><td>Personnalisée</td><td>☐</td></tr><tr><td>Headline</td><td>2+ mots-clés, valeur ajoutée</td><td>☐</td></tr><tr><td>À propos</td><td>Hook + parcours + CTA</td><td>☐</td></tr><tr><td>Expérience actuelle</td><td>3+ bullets avec chiffres</td><td>☐</td></tr><tr><td>Formation</td><td>Complète</td><td>☐</td></tr><tr><td>Compétences</td><td>20+ pertinentes, top 3 choisis</td><td>☐</td></tr><tr><td>Recommandations</td><td>3+ reçues</td><td>☐</td></tr><tr><td>URL personnalisée</td><td>Configurée</td><td>☐</td></tr><tr><td>Open to Work</td><td>Activé si recherche active</td><td>☐</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns / Pièges fréquents</h2>
+<ul>
+<li><strong>Headline générique</strong> : &quot;Software Engineer at [Entreprise]&quot; — invisible au recruteur externe.</li>
+<li><strong>&quot;En recherche d'opportunités&quot;</strong> sans détail — ne dit rien sur ce que tu cherches.</li>
+<li><strong>À propos vide ou copié du CV</strong> — section la plus sous-exploitée, plus haute en conversion.</li>
+<li><strong>Dates manquantes</strong> : LinkedIn déclasse les profils incomplets dans les recherches.</li>
+<li><strong>Photo inexistante</strong> : réduit le taux de réponse de ~70% selon les études recruteurs.</li>
+<li><strong>Compétences non endorsées</strong> : moins de poids dans l'algorithme ; 5 endorsements = seuil visible.</li>
+<li><strong>Connexions privées</strong> : profil en mode privé = invisible en recherche recruteurs.</li>
+<li><strong>Postuler sans optimiser</strong> : les ATS LinkedIn filtrent sur le profil, pas seulement la candidature.</li>
 </ul>
 </article>
 </main>

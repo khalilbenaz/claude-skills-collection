@@ -97,48 +97,153 @@ cp -r claude-skills-collection/skills/agent-customer-support-agent ~/.claude/ski
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Customer Support Agent</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill pour concevoir un agent de support client capable de répondre aux questions fréquentes, consulter une base de connaissance via RAG, gérer les conversations avec empathie, escalader intelligemment vers un agent humain et s'intégrer avec un CRM pour le suivi des tickets. S'applique aux chatbots de support SaaS, e-commerce, télécoms, services financiers ou tout contexte de relation client à fort volume.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Architecture générale</strong> — Définis les cinq composantes : (a) moteur RAG sur la knowledge base (LLM + embeddings + vector store), (b) gestionnaire de conversation (state machine, historique), (c) moteur de classification d'intention, (d) moteur d'escalade, (e) intégration CRM/ticketing. Choisis entre architecture synchrone (chat temps réel) et asynchrone (email/ticket).</li>
-</ol>
-<ol>
-<li><strong>Knowledge base et pipeline RAG</strong> — Ingère et indexe toute la documentation : articles d'aide, FAQ, guides produit, politiques de remboursement, notes de version. Utilise <code>LlamaIndex</code> ou <code>LangChain</code> pour le pipeline RAG : chunking sémantique (500-1000 tokens avec overlap), embeddings (OpenAI <code>text-embedding-3-small</code> ou Cohere), vector store (Pinecone, Weaviate, pgvector). Met à jour l'index automatiquement à chaque modification de la doc.</li>
-</ol>
-<p>   ```python    from llama_index.core import VectorStoreIndex, SimpleDirectoryReader    documents = SimpleDirectoryReader(&quot;./knowledge_base&quot;).load_data()    index = VectorStoreIndex.from_documents(documents)    query_engine = index.as_query_engine(similarity_top_k=5)    response = query_engine.query(user_question)    ```</p>
-<ol>
-<li><strong>Classification d'intention et routing</strong> — Entraîne ou prompt un classifieur pour détecter : (a) le sujet (facturation, bug, fonctionnalité, compte, livraison…), (b) le sentiment (positif / neutre / frustré / furieux), (c) l'urgence (bloquant / important / faible), (d) le type de réponse attendu (information, action, escalade). Utilise cette classification pour router vers le bon flow de conversation.</li>
-</ol>
-<ol>
-<li><strong>Design de la conversation</strong> — Structure chaque interaction en 5 phases : (1) Accueil personnalisé (nom du client, contexte compte), (2) Compréhension de la demande (reformulation, questions clarifiantes si ambiguïté), (3) Résolution (réponse RAG + actions disponibles), (4) Confirmation (la réponse a-t-elle résolu le problème ?), (5) Clôture (feedback, ticket créé si nécessaire). Implémente un state machine explicite.</li>
-</ol>
-<ol>
-<li><strong>Personnalisation contextuelle</strong> — À chaque conversation, l'agent récupère le contexte client depuis le CRM : historique des tickets précédents, produits achetés, date d'inscription, statut (free/premium/enterprise), préférences de communication, dernières interactions. Injecte ce contexte dans le prompt système pour des réponses adaptées. Mémorise les préférences au fil des interactions.</li>
-</ol>
-<p>   ```python    customer_context = crm.get_customer(customer_id)    system_prompt = f&quot;&quot;&quot;Tu es l'assistant support de {company_name}.    Client : {customer_context['name']} (plan {customer_context['plan']})    Historique : {customer_context['last_3_tickets']}    Traite-le avec le niveau de service approprié à son plan.&quot;&quot;&quot;    ```</p>
-<ol>
-<li><strong>Règles d'escalade intelligente</strong> — Escalade vers un humain si : (a) score de confiance de la réponse RAG &lt; 0.7, (b) sentiment détecté = furieux après 2 échanges sans résolution, (c) sujet sensible (remboursement &gt; seuil, données personnelles, problème légal, menace de churn), (d) l'utilisateur demande explicitement un humain, (e) même problème signalé &gt; 3 fois. Transmets un résumé structuré à l'agent humain : historique, intention, tentatives de résolution.</li>
-</ol>
-<ol>
-<li><strong>Support multi-canal</strong> — L'agent opère sur plusieurs canaux avec une cohérence totale : chat web (widget), email (via Sendgrid/Mailgun), Slack (pour le support B2B), API REST (pour intégrations tierces), WhatsApp Business. Partage le même état de conversation et le même historique cross-canal via un identifiant client unique. Adapte le format de la réponse au canal (markdown pour chat, HTML pour email).</li>
-</ol>
-<ol>
-<li><strong>Intégration CRM et ticketing</strong> — Connecte-toi à Zendesk, Intercom, Freshdesk, HubSpot ou Salesforce via leurs APIs REST. Actions disponibles : créer/mettre à jour un ticket, associer une conversation à un contact, logger une activité, mettre à jour le statut d'un ordre, déclencher un remboursement (avec approbation humaine). Documente chaque action avec un audit trail.</li>
-</ol>
-<p>   ```python    # Création d'un ticket Zendesk    ticket = zendesk.tickets.create({        &quot;subject&quot;: f&quot;[Agent] {intent} - {customer_name}&quot;,        &quot;comment&quot;: {&quot;body&quot;: conversation_summary},        &quot;priority&quot;: urgency_level,        &quot;tags&quot;: [intent_tag, sentiment_tag]    })    ```</p>
-<ol>
-<li><strong>Tone of voice et brand guardrails</strong> — Le system prompt définit la personnalité de l'agent : ton (formel / conversationnel / chaleureux), vocabulaire spécifique à éviter ou à utiliser, règles de communication (ne jamais promettre ce qu'on ne peut pas tenir, ne jamais dénigrer la concurrence, toujours s'excuser pour les bugs). Implémente des guardrails avec un LLM de vérification ou des règles regex pour filtrer les réponses hors charte.</li>
-</ol>
-<ol>
-<li><strong>Métriques clés de succès</strong> — Instrumente l'agent pour mesurer en continu : taux de résolution autonome (containment rate, cible &gt; 70%), CSAT (score de satisfaction post-résolution), First Response Time (FRT), Average Handle Time (AHT), taux d'escalade vers humain, taux de faux positifs de la classification d'intention. Alerte si une métrique dégrade de &gt; 10% sur 7 jours.</li>
-</ol>
-<h2>Règles</h2>
+<p>Conçois un agent de support client autonome qui répond aux questions fréquentes via RAG, classe les intentions, gère l'empathie conversationnelle, escalade vers un humain selon des règles explicites, et s'intègre au CRM/ticketing. Applicable à tout secteur à fort volume : SaaS, e-commerce, télécoms, fintech, services.</p>
+<h2>Stack de référence 2026</h2>
+<table><thead><tr><th>Couche</th><th>Options recommandées</th></tr></thead><tbody><tr><td>Orchestration</td><td>LangGraph, Rasa Pro, CrewAI</td></tr><tr><td>RAG</td><td>LlamaIndex + pgvector, Weaviate, Pinecone</td></tr><tr><td>Embeddings</td><td><code>text-embedding-3-small</code> (OpenAI), Cohere <code>embed-v4</code></td></tr><tr><td>LLM réponse rapide</td><td>Claude Haiku 3.5</td></tr><tr><td>LLM question complexe</td><td>Claude Sonnet 4</td></tr><tr><td>CRM/Ticketing</td><td>Zendesk, Intercom, Freshdesk, HubSpot</td></tr><tr><td>Canaux</td><td>Chat web, Email (Sendgrid), WhatsApp Business, Slack B2B</td></tr></tbody></table>
+<h2>Workflow en étapes</h2>
+<h3>1. Définir l'architecture (Jour 1)</h3>
+<p>Cinq composantes obligatoires :</p>
 <ul>
-<li><strong>L'empathie avant la solution</strong> : le premier message après une plainte doit toujours reconnaître le problème et s'excuser si nécessaire, avant de proposer une solution. Un agent froid qui cite directement la documentation sans empathie génère de la frustration.</li>
-<li><strong>Ne jamais inventer une réponse</strong> : si la knowledge base ne contient pas la réponse avec suffisamment de confiance, l'agent doit l'admettre et proposer l'escalade vers un humain plutôt que de fournir une information incorrecte.</li>
-<li><strong>Escalade rapide sur les sujets sensibles</strong> : rembourser, traiter des données personnelles, des litiges légaux ou des menaces de résiliation ne doit jamais être géré seul par l'agent. Escalade immédiate obligatoire sur ces topics.</li>
-<li><strong>Cohérence cross-canal</strong> : l'historique de conversation doit être partagé entre tous les canaux. Un client qui a déjà expliqué son problème par email ne doit jamais avoir à tout répéter sur le chat.</li>
-<li><strong>Frameworks recommandés</strong> : <a href="https://rasa.com/" target="_blank" rel="noopener">Rasa</a> pour les flows structurés, <a href="https://langchain-ai.github.io/langgraph/" target="_blank" rel="noopener">LangGraph</a> pour les agents complexes, <a href="https://www.voiceflow.com/" target="_blank" rel="noopener">Voiceflow</a> pour le design no-code, <a href="https://www.zendesk.fr/" target="_blank" rel="noopener">Zendesk Sunshine</a> pour l'intégration CRM. Modèles conseillés : Claude Haiku (réponses rapides) + Claude Sonnet (questions complexes).</li>
+<li><strong>RAG</strong> : pipeline d'indexation + query sur la knowledge base</li>
+<li><strong>State machine</strong> : gestion de l'état de conversation (topic, turns, résolution)</li>
+<li><strong>Classifieur d'intention</strong> : sujet + sentiment + urgence</li>
+<li><strong>Moteur d'escalade</strong> : règles déterministes + score de confiance</li>
+<li><strong>Connecteur CRM</strong> : lecture contexte client + écriture ticket/activité</li>
+</ul>
+<p>Choix d'architecture selon le cas d'usage :</p>
+<table><thead><tr><th>Besoin</th><th>Architecture</th></tr></thead><tbody><tr><td>Chat temps réel (&lt; 2 s)</td><td>Synchrone, streaming LLM, Haiku en front</td></tr><tr><td>Email/ticket async</td><td>Queue (Redis/SQS) + worker LLM</td></tr><tr><td>Mix canal</td><td>Gateway unifié + state partagé (Redis)</td></tr></tbody></table>
+<h3>2. Construire le pipeline RAG</h3>
+<p>Sources à ingérer : articles d'aide, FAQ, politiques de remboursement, notes de version, guides produit.</p>
+<pre><code class="lang-python">from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
+from llama_index.core.node_parser import SentenceSplitter
+
+# Chunking sémantique : 800 tokens, overlap 100
+parser = SentenceSplitter(chunk_size=800, chunk_overlap=100)
+documents = SimpleDirectoryReader(&quot;./knowledge_base&quot;).load_data()
+index = VectorStoreIndex.from_documents(documents, transformations=[parser])
+query_engine = index.as_query_engine(
+    similarity_top_k=5,
+    response_mode=&quot;compact&quot;
+)
+
+def retrieve_answer(question: str) -&gt; tuple[str, float]:
+    response = query_engine.query(question)
+    score = response.source_nodes[0].score if response.source_nodes else 0.0
+    return str(response), score</code></pre>
+<p>Mise à jour de l'index : webhook sur chaque commit de la doc → re-indexation incrémentale, pas full rebuild.</p>
+<h3>3. Classification d'intention</h3>
+<p>Prompt de classification structuré (JSON forcé) :</p>
+<pre><code class="lang-python">CLASSIFY_PROMPT = &quot;&quot;&quot;
+Analyse ce message client et retourne UNIQUEMENT ce JSON :
+{
+  &quot;topic&quot;: &quot;billing|bug|feature|account|shipping|legal|other&quot;,
+  &quot;sentiment&quot;: &quot;positive|neutral|frustrated|angry&quot;,
+  &quot;urgency&quot;: &quot;blocking|high|low&quot;,
+  &quot;response_type&quot;: &quot;information|action|escalate&quot;
+}
+Message : {message}
+&quot;&quot;&quot;</code></pre>
+<p>Règle de routing rapide :</p>
+<ul>
+<li><code>sentiment=angry</code> + <code>urgency=blocking</code> → escalade immédiate</li>
+<li><code>topic=legal</code> ou <code>topic=billing</code> (montant &gt; seuil) → escalade immédiate</li>
+<li><code>response_type=information</code> + score RAG ≥ 0.75 → réponse autonome</li>
+<li>score RAG &lt; 0.60 → admettre l'ignorance + escalade proposée</li>
+</ul>
+<h3>4. State machine de conversation</h3>
+<p>5 états séquentiels avec transitions explicites :</p>
+<pre><code>WELCOME → UNDERSTAND → RESOLVE → CONFIRM → CLOSE
+                ↓ (ambiguïté)
+           CLARIFY → RESOLVE
+                          ↓ (non résolu × 2)
+                      ESCALATE</code></pre>
+<p>Implémentation LangGraph :</p>
+<pre><code class="lang-python">from langgraph.graph import StateGraph, END
+
+builder = StateGraph(ConversationState)
+builder.add_node(&quot;welcome&quot;, welcome_node)
+builder.add_node(&quot;understand&quot;, understand_node)
+builder.add_node(&quot;resolve&quot;, resolve_node)
+builder.add_node(&quot;confirm&quot;, confirm_node)
+builder.add_node(&quot;escalate&quot;, escalate_node)
+builder.add_node(&quot;close&quot;, close_node)
+
+builder.add_conditional_edges(&quot;understand&quot;, route_after_understand)
+builder.add_conditional_edges(&quot;resolve&quot;, route_after_resolve)
+builder.set_entry_point(&quot;welcome&quot;)
+graph = builder.compile()</code></pre>
+<h3>5. Personnalisation contextuelle via CRM</h3>
+<pre><code class="lang-python">def build_system_prompt(customer_id: str, company: str) -&gt; str:
+    ctx = crm.get_customer(customer_id)
+    tickets = crm.get_recent_tickets(customer_id, limit=3)
+    return f&quot;&quot;&quot;Tu es l'assistant support de {company}.
+Client : {ctx['name']} — Plan : {ctx['plan']} — Inscrit depuis : {ctx['since']}
+Derniers tickets : {tickets}
+Adapte ton niveau de service au plan. Ne répète pas ce que le client a déjà dit.&quot;&quot;&quot;</code></pre>
+<p>Données utiles à injecter : plan (free/premium/enterprise), historique tickets (3 derniers), produits actifs, préférences langue, SLA applicable.</p>
+<h3>6. Règles d'escalade (déterministes en priorité)</h3>
+<p>Escalade <strong>immédiate</strong> (sans LLM) :</p>
+<ul>
+<li>Sujet = <code>legal</code>, <code>churn_threat</code>, <code>data_privacy</code></li>
+<li>Remboursement &gt; seuil configuré (ex. 200 €)</li>
+<li>Client demande explicitement un humain</li>
+<li>Même problème signalé ≥ 3 fois sans résolution</li>
+</ul>
+<p>Escalade <strong>automatique</strong> (basée sur scoring) :</p>
+<ul>
+<li>Score de confiance RAG &lt; 0.60 après 2 tentatives</li>
+<li>Sentiment <code>angry</code> persistant après 2 échanges sans résolution</li>
+<li>Aucune réponse satisfaisante après 4 turns</li>
+</ul>
+<pre><code class="lang-python">def should_escalate(state: ConversationState) -&gt; bool:
+    return (
+        state.intent.topic in ESCALATE_TOPICS
+        or state.rag_score &lt; 0.60 and state.turns &gt;= 2
+        or state.sentiment == &quot;angry&quot; and state.unresolved_turns &gt;= 2
+        or state.explicit_human_request
+    )</code></pre>
+<p>Handoff vers humain : envoyer résumé structuré (intention, sentiment, tentatives, contexte client, historique complet).</p>
+<h3>7. Intégration CRM et ticketing</h3>
+<pre><code class="lang-python"># Zendesk — création ticket à la clôture ou escalade
+def create_ticket(conv: Conversation) -&gt; dict:
+    return zendesk.tickets.create({
+        &quot;subject&quot;: f&quot;[Agent] {conv.intent.topic} — {conv.customer_name}&quot;,
+        &quot;comment&quot;: {&quot;body&quot;: conv.summary()},
+        &quot;priority&quot;: &quot;urgent&quot; if conv.intent.urgency == &quot;blocking&quot; else &quot;normal&quot;,
+        &quot;tags&quot;: [conv.intent.topic, conv.intent.sentiment, &quot;auto-agent&quot;],
+        &quot;custom_fields&quot;: [{&quot;id&quot;: FIELD_AGENT_HANDLED, &quot;value&quot;: not conv.escalated}]
+    })</code></pre>
+<p>Connecteurs disponibles : Zendesk REST API v2, Intercom API v2.11, Freshdesk v2, HubSpot Conversations API. Actions autorisées par défaut : créer/lire/MAJ ticket, logger activité CRM, envoyer email de suivi. Actions nécessitant approbation humaine : remboursement, suppression compte, modification contrat.</p>
+<h3>8. Guardrails et tone of voice</h3>
+<p>System prompt à toujours inclure :</p>
+<pre><code>INTERDIT : inventer une information, promettre un délai non confirmé,
+dénigrer la concurrence, divulguer des données d'autres clients,
+répondre à une question hors support (politique, religion, etc.).
+En cas de doute : escalade, ne pas improviser.</code></pre>
+<p>Filtre de sortie (post-LLM) : regex sur numéros de carte, mots interdits, mentions de noms d'employés internes. Logge chaque réponse filtrée pour audit.</p>
+<h3>9. Métriques et alertes</h3>
+<table><thead><tr><th>Métrique</th><th>Cible</th><th>Alerte si</th></tr></thead><tbody><tr><td>Containment rate</td><td>&gt; 70 %</td><td>&lt; 60 % sur 7 j</td></tr><tr><td>CSAT post-agent</td><td>&gt; 4.0 / 5</td><td>&lt; 3.5</td></tr><tr><td>First Response Time</td><td>&lt; 10 s</td><td>&gt; 30 s</td></tr><tr><td>Taux d'escalade</td><td>&lt; 25 %</td><td>&gt; 40 %</td></tr><tr><td>Faux positifs classification</td><td>&lt; 5 %</td><td>&gt; 10 %</td></tr></tbody></table>
+<p>Instrumente avec OpenTelemetry : trace par conversation, span par étape (RAG query, classify, CRM call, LLM call).</p>
+<h2>Anti-patterns et pièges</h2>
+<ul>
+<li><strong>Confiance aveugle dans le RAG</strong> : un score élevé ne garantit pas la pertinence si la question est ambiguë. Ajoute toujours une étape de reformulation avant la query.</li>
+<li><strong>State machine implicite</strong> : gérer l'état dans le prompt seul (sans structure externe) mène à des incohérences sur les conversations longues. Utilise un store explicite (Redis, DB).</li>
+<li><strong>Escalade trop tardive</strong> : ne pas escalader par peur de &quot;gaspiller&quot; un agent humain coûte plus cher en CSAT dégradé. Calibre les seuils sur données réelles, pas au doigt mouillé.</li>
+<li><strong>Pas de handoff structuré</strong> : l'agent humain qui reçoit la conversation sans résumé perd du temps et redemande au client. Le résumé est obligatoire.</li>
+<li><strong>Guardrails uniquement côté prompt</strong> : un prompt peut être contourné. Ajoute un filtre de sortie programmatique pour les données sensibles.</li>
+<li><strong>Index RAG jamais rafraîchi</strong> : une base de connaissance obsolète de 3 mois génère des réponses erronées. Automatise la re-indexation sur chaque push docs.</li>
+<li><strong>Même modèle pour tout</strong> : Haiku pour les questions simples et le streaming, Sonnet pour l'analyse complexe et la classification. Mixer économise 60-70 % de coût LLM.</li>
+</ul>
+<h2>Checklist de mise en production</h2>
+<ul>
+<li>[ ] Index RAG validé sur 50 questions de test avec score ≥ 0.75</li>
+<li>[ ] Classifieur testé sur 200 messages réels (precision ≥ 90 %)</li>
+<li>[ ] Règles d'escalade relues par l'équipe support métier</li>
+<li>[ ] Guardrails filtre de sortie activé et loggé</li>
+<li>[ ] Intégration CRM testée : lecture + écriture ticket en staging</li>
+<li>[ ] Métriques Prometheus/Grafana opérationnelles</li>
+<li>[ ] Plan de rollback : fallback vers formulaire statique si agent down</li>
+<li>[ ] Revue RGPD : aucune donnée client stockée dans les logs LLM bruts</li>
 </ul>
 </article>
 </main>

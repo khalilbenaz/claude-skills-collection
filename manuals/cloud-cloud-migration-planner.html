@@ -96,24 +96,108 @@ cp -r claude-skills-collection/skills/cloud-cloud-migration-planner ~/.claude/sk
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Cloud Migration Planner</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Réaliser l'inventaire applicatif</strong> — Cartographier l'ensemble des applications, leurs dépendances, les flux de données et les composants d'infrastructure on-premise existants</li>
-<li><strong>Évaluer la compatibilité cloud (assessment)</strong> — Analyser chaque application selon des critères de complexité, criticité, dépendances techniques et contraintes réglementaires</li>
-<li><strong>Déterminer la stratégie par application (6 R's)</strong> — Classifier chaque workload selon les 6 R's : Rehost (lift-and-shift), Replatform, Refactor, Repurchase, Retire ou Retain</li>
-<li><strong>Définir l'architecture cloud cible</strong> — Concevoir l'infrastructure cloud cible en tenant compte des services managés, du réseau hybride, de la sécurité et de la conformité</li>
-<li><strong>Planifier les vagues de migration</strong> — Organiser les migrations en vagues successives en priorisant les applications à faible risque pour les premières itérations</li>
-<li><strong>Préparer la connectivité hybride</strong> — Mettre en place les connexions réseau entre l'environnement on-premise et le cloud (VPN, ExpressRoute, Direct Connect, Interconnect)</li>
-<li><strong>Exécuter et valider la migration</strong> — Migrer les workloads par vague, effectuer les tests de validation fonctionnelle et de performance, puis basculer le trafic progressivement</li>
-<li><strong>Optimiser post-migration</strong> — Ajuster le dimensionnement des ressources, activer les services cloud-native et décommissionner les infrastructures on-premise obsolètes</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Inventaire applicatif</h3>
+<p>Cartographier chaque application : stack technique, dépendances inter-services, flux réseau, volumes de données, SLAs.</p>
+<p>Outils recommandés :</p>
 <ul>
-<li>Toujours réaliser un assessment complet avant de choisir une stratégie de migration pour chaque application</li>
-<li>Privilégier une approche incrémentale par vagues plutôt qu'une migration big-bang pour limiter les risques</li>
-<li>Prévoir un plan de rollback documenté et testé pour chaque vague de migration</li>
-<li>Ne jamais négliger la formation des équipes aux nouvelles technologies cloud avant et pendant la migration</li>
-<li>Valider la conformité réglementaire (RGPD, souveraineté des données) du cloud cible avant toute migration de données sensibles</li>
+<li><strong>AWS</strong> : AWS Application Discovery Service (<code>aws discovery start-import-task</code>)</li>
+<li><strong>Azure</strong> : Azure Migrate (<code>az migrate project create</code>)</li>
+<li><strong>GCP</strong> : Migrate to Virtual Machines + Service Catalog</li>
+</ul>
+<p>Livrable minimal : tableur avec colonnes <code>App | Stack | Deps | Trafic (Go/mois) | RTO | RPO | Owner</code>.</p>
+<hr>
+<h3>2. Assessment de compatibilité</h3>
+<p>Pour chaque application, évaluer sur 4 axes (noter de 1 à 5) :</p>
+<table><thead><tr><th>Axe</th><th>Questions clés</th></tr></thead><tbody><tr><td>Complexité technique</td><td>Couplage fort ? API propriétaire ? OS obsolète ?</td></tr><tr><td>Criticité métier</td><td>Impact si down &gt; 1h ? Régulé ?</td></tr><tr><td>Dépendances</td><td>Combien de services liés ? Dépendances cycliques ?</td></tr><tr><td>Portabilité</td><td>Stateless ? Containerisable ? Licences cloud-compatible ?</td></tr></tbody></table>
+<p>Score ≤ 8/20 → candidat Retire/Retain. Score ≥ 15/20 → candidat Refactor.</p>
+<hr>
+<h3>3. Stratégie par application (6 R's)</h3>
+<table><thead><tr><th>Stratégie</th><th>Quand choisir</th><th>Effort</th><th>Gain cloud</th></tr></thead><tbody><tr><td><strong>Rehost</strong> (lift-and-shift)</td><td>VM legacy, contrainte temps</td><td>Faible</td><td>Faible</td></tr><tr><td><strong>Replatform</strong></td><td>DB vers RDS/Managed, peu de code</td><td>Moyen</td><td>Moyen</td></tr><tr><td><strong>Refactor</strong></td><td>App stratégique, cloud-native cible</td><td>Élevé</td><td>Fort</td></tr><tr><td><strong>Repurchase</strong></td><td>Remplacer par SaaS (ex. CRM → Salesforce)</td><td>Moyen</td><td>Variable</td></tr><tr><td><strong>Retire</strong></td><td>App inutilisée ou redondante</td><td>Minimal</td><td>—</td></tr><tr><td><strong>Retain</strong></td><td>App réglementée ou trop risquée pour migrer</td><td>—</td><td>—</td></tr></tbody></table>
+<blockquote>Règle empirique 2026 : 40-50 % Rehost pour la 1ère vague, puis réduire à mesure que les équipes montent en compétence.</blockquote>
+<hr>
+<h3>4. Architecture cloud cible</h3>
+<p>Concevoir avant de migrer. Points incontournables :</p>
+<p><strong>Réseau</strong> :</p>
+<pre><code>On-premise ──[ VPN IPSec / ExpressRoute / Direct Connect ]──► VPC/VNet
+                                                              ├── Subnet public (Load Balancer, Bastion)
+                                                              ├── Subnet privé (App Tier)
+                                                              └── Subnet data (DB, Cache)</code></pre>
+<p><strong>Sécurité</strong> :</p>
+<ul>
+<li>IAM : principe du moindre privilège, rôles par environnement</li>
+<li>Chiffrement at-rest (KMS/CMK) et in-transit (TLS 1.2+)</li>
+<li>WAF + DDoS protection dès la 1ère vague</li>
+</ul>
+<p><strong>Conformité RGPD</strong> : choisir une région EU (<code>eu-west-*</code>, <code>westeurope</code>, <code>europe-west1</code>). Activer audit logs.</p>
+<hr>
+<h3>5. Planification des vagues</h3>
+<p>Critères de priorisation d'une vague :</p>
+<ol>
+<li>Faible dépendance aux autres apps</li>
+<li>Criticité métier modérée (pas de cœur de métier en V1)</li>
+<li>Équipe applicative disponible pour les tests</li>
+</ol>
+<p>Structure type :</p>
+<pre><code>Vague 1 (semaines 1-4)  : apps Rehost stateless, non critiques
+Vague 2 (semaines 5-10) : apps Replatform (DB managées, queues)
+Vague 3 (semaines 11+)  : apps Refactor, services critiques</code></pre>
+<p>Créer une fiche de vague avec : <code>Apps migrées | Date bascule | Rollback deadline | Owner</code>.</p>
+<hr>
+<h3>6. Connectivité hybride</h3>
+<p><strong>AWS</strong> :</p>
+<pre><code class="lang-bash">aws ec2 create-vpn-connection \
+  --type ipsec.1 \
+  --customer-gateway-id cgw-xxx \
+  --vpn-gateway-id vgw-xxx</code></pre>
+<p><strong>Azure</strong> :</p>
+<pre><code class="lang-bash">az network vpn-connection create \
+  --name onprem-to-azure \
+  --resource-group rg-migration \
+  --vnet-gateway1 vgw-prod \
+  --local-gateway2 lng-onprem \
+  --shared-key &quot;ChangeMe!2026&quot;</code></pre>
+<p><strong>GCP</strong> :</p>
+<pre><code class="lang-bash">gcloud compute vpn-tunnels create onprem-tunnel \
+  --peer-address=&lt;IP_ONPREM&gt; \
+  --shared-secret=&lt;SECRET&gt; \
+  --target-vpn-gateway=vpn-gw-prod \
+  --region=europe-west1</code></pre>
+<p>Valider avec un ping entre sous-réseaux avant toute migration de données.</p>
+<hr>
+<h3>7. Exécution et validation</h3>
+<p>Checklist par application avant bascule :</p>
+<ul>
+<li>[ ] Tests fonctionnels smoke OK en environnement cloud staging</li>
+<li>[ ] Latence P95 ≤ SLA défini</li>
+<li>[ ] Logs et métriques remontés dans l'observability stack (CloudWatch / Azure Monitor / Cloud Logging)</li>
+<li>[ ] Certificats TLS valides</li>
+<li>[ ] DNS TTL abaissé à 60s au moins 24h avant la bascule</li>
+<li>[ ] Plan de rollback testé (snapshot VM ou Blue/Green)</li>
+</ul>
+<p>Bascule progressive recommandée : 5 % → 25 % → 100 % via weighted DNS ou load balancer rules.</p>
+<hr>
+<h3>8. Optimisation post-migration</h3>
+<p>Actions systématiques à J+30 :</p>
+<ul>
+<li><strong>Right-sizing</strong> : analyser CPU/RAM réelle sur 2 semaines, redimensionner</li>
+<li><strong>Reserved Instances / Savings Plans</strong> : committer sur les workloads stables (économies 30-60 %)</li>
+<li><strong>Auto-scaling</strong> : remplacer les instances fixes par des groupes auto-scalants</li>
+<li><strong>Désinstallation on-premise</strong> : décommissionner les serveurs migrés après 30 jours de stabilité cloud</li>
+</ul>
+<pre><code class="lang-bash"># AWS — rapport de recommandations de sizing
+aws compute-optimizer get-ec2-instance-recommendations \
+  --filters Name=Finding,Values=OVER_PROVISIONED</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td>Migration big-bang de tout le SI</td><td>Incident majeur, rollback impossible</td><td>Toujours par vagues</td></tr><tr><td>Lift-and-shift d'une DB Oracle sans license check</td><td>Facture x10</td><td>Vérifier BYOL vs License Included avant</td></tr><tr><td>Ouvrir les security groups trop large (<code>0.0.0.0/0</code>)</td><td>Exposition critique</td><td>Principe du moindre privilège dès le départ</td></tr><tr><td>Ignorer les egress costs</td><td>Surprise de facturation</td><td>Chiffrer les flux inter-régions/inter-clouds</td></tr><tr><td>Migrer sans monitoring</td><td>Impossible de détecter régressions</td><td>Observability stack AVANT la 1ère vague</td></tr><tr><td>Oublier les secrets dans le code (env vars hardcodées)</td><td>Fuite de credentials</td><td>Scan automatique (GitGuardian, truffleHog) + Secrets Manager</td></tr><tr><td>Négliger la formation des équipes</td><td>Dette opérationnelle</td><td>FinOps + CloudOps training dès la vague 1</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>FinOps dès le jour 1</strong> : tagging systématique (<code>env</code>, <code>team</code>, <code>app</code>, <code>cost-center</code>) — sans tags, pas de chargeback possible.</li>
+<li><strong>Infrastructure as Code obligatoire</strong> : Terraform ou Bicep pour tout ce qui est créé (pas de clic console en production).</li>
+<li><strong>GitOps pour les déploiements</strong> : pipelines CI/CD cloud-native (GitHub Actions, Azure DevOps, Cloud Build) dès la vague 1.</li>
+<li><strong>Zero Trust Networking</strong> : segmenter par workload, pas par périmètre réseau.</li>
+<li><strong>Sustainability</strong> : choisir des régions à faible PUE / énergie renouvelable si SLA le permet (ex. <code>northeurope</code>, <code>us-west-2</code>).</li>
 </ul>
 </article>
 </main>

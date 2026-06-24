@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>agent-multi-agent-orchestrator — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Conception de systèmes multi-agents avec patterns d'orchestration (supervisor, swarm, hierarchy, voting). Coordination entre agents spécialisés.">
+<meta name="description" content="Conception de systèmes multi-agents avec patterns d'orchestration (supervisor, swarm, hierarchy, voting). Coordination entre agents spécialisés, routing sémantique, gestion d'état distribué, error handling.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🤖 Agents IA</span>
 <h1 class="skill-title">agent-multi-agent-orchestrator</h1>
-<p class="lead">Conception de systèmes multi-agents avec patterns d'orchestration (supervisor, swarm, hierarchy, voting). Coordination entre agents spécialisés.</p>
+<p class="lead">Conception de systèmes multi-agents avec patterns d'orchestration (supervisor, swarm, hierarchy, voting). Coordination entre agents spécialisés, routing sémantique, gestion d'état distribué, error handling.</p>
 
 
 
@@ -97,47 +97,144 @@ cp -r claude-skills-collection/skills/agent-multi-agent-orchestrator ~/.claude/s
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Multi-Agent Orchestrator</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill lorsque tu dois concevoir un système où plusieurs agents IA collaborent pour résoudre une tâche complexe. Il s'applique dès qu'une tâche bénéficie d'une décomposition en sous-tâches spécialisées, d'un routage intelligent entre agents, ou d'un mécanisme de consensus/vote. Idéal pour les architectures supervisor/worker, les pipelines de recherche parallèle et les systèmes de débat multi-agents.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyse du problème</strong> — Décompose la tâche principale en sous-tâches atomiques et indépendantes. Identifie les spécialisations requises (recherche, rédaction, validation, exécution de code, etc.) et les dépendances entre sous-tâches pour déterminer ce qui peut s'exécuter en parallèle.</li>
-</ol>
-<ol>
-<li><strong>Design des agents</strong> — Définis le rôle, les capabilities et les limites de chaque agent. Rédige un system prompt spécialisé pour chacun. Maintiens des agents focused (un agent = une responsabilité claire) plutôt que des agents généraux.</li>
-</ol>
-<ol>
-<li><strong>Pattern de coordination</strong> — Choisis le pattern adapté : <code>supervisor/router</code> (un agent central distribue et consolide), <code>peer-to-peer</code> (agents qui se contactent directement), <code>hierarchical</code> (niveaux d'agents), <code>swarm</code> (agents autonomes avec règles locales), <code>debate</code> (agents contradicteurs + arbitre).</li>
-</ol>
-<ol>
-<li><strong>Communication inter-agents</strong> — Implémente le mécanisme d'échange : shared state (dictionnaire commun), message passing (queue de messages), blackboard (tableau d'affichage partagé), ou event-based (pub/sub). Standardise le format des messages entre agents.</li>
-</ol>
-<ol>
-<li><strong>Routing et dispatch</strong> — Implémente la logique de sélection d'agent : semantic routing (embedding de la requête vs profils agents), intent classification (LLM classifier), capability matching (tags/métadonnées). Exemple en Python :</li>
-</ol>
-<p>   ```python    def route_task(task: str, agents: list[Agent]) -&gt; Agent:        scores = [(agent, cosine_sim(embed(task), agent.embedding)) for agent in agents]        return max(scores, key=lambda x: x[1])[0]    ```</p>
-<ol>
-<li><strong>Gestion des conflits</strong> — Prévois une stratégie quand des agents produisent des résultats contradictoires : vote majoritaire, vote pondéré par confiance, consensus LLM (un agent arbitre), priority rules (agent de référence), ou escalade humaine. Documente les règles de tie-breaking.</li>
-</ol>
-<ol>
-<li><strong>State management partagé</strong> — Maintiens un état global (task graph, statut de chaque sous-tâche, résultats intermédiaires, contexte de conversation). Utilise un objet thread-safe en mémoire pour les systèmes synchrones, Redis ou une base de données pour les systèmes distribués.</li>
-</ol>
-<ol>
-<li><strong>Error handling distribué</strong> — Gère les pannes d'agents : timeout avec valeur par défaut, retry exponentiel, circuit breaker (désactiver un agent défaillant), fallback vers un agent généraliste. Loggue chaque erreur avec l'identifiant d'agent, la tâche et le contexte.</li>
-</ol>
-<p>   ```python    async def safe_agent_call(agent, task, retries=3):        for attempt in range(retries):            try:                return await asyncio.wait_for(agent.run(task), timeout=30)            except asyncio.TimeoutError:                if attempt == retries - 1:                    return agent.fallback_response(task)    ```</p>
-<ol>
-<li><strong>Scaling</strong> — Exécute les agents indépendants en parallèle (<code>asyncio.gather</code> ou <code>ThreadPoolExecutor</code>). Implémente un agent pool pour réutiliser les instances coûteuses. Utilise une queue de travail (Celery, RQ) pour les tâches longues en arrière-plan.</li>
-</ol>
-<ol>
-<li><strong>Monitoring</strong> — Instrumente chaque agent : temps d'exécution, taux de réussite, coût en tokens, nombre de retries, fréquence d'utilisation. Identifie les goulots d'étranglement (agent le plus lent) et les agents sous-utilisés. Mets en place des alertes sur les taux d'erreur.</li>
-</ol>
-<h2>Règles</h2>
+<p>Utilise ce skill dès qu'une tâche gagne à être décomposée en sous-tâches spécialisées et exécutées par des agents distincts : pipelines de recherche parallèle, systèmes supervisor/worker, débats multi-agents, workflows ETL IA, etc.</p>
+<p><strong>Seuil de déclenchement</strong> — un seul agent suffit si la tâche est linéaire et tient en un contexte. Passe en multi-agent si :</p>
 <ul>
-<li><strong>Un agent = une responsabilité</strong> : un agent trop généraliste dégrade la qualité ; préfère la composition à la complexité interne.</li>
-<li><strong>Anti-pattern — cascade de dépendances</strong> : évite les chaînes linéaires A→B→C→D où chaque échec bloque tout ; prévois toujours un fallback ou une exécution parallèle quand possible.</li>
-<li><strong>Idempotence</strong> : les appels d'agents doivent être idempotents pour permettre les retries sans effets de bord.</li>
-<li><strong>Transparence des coûts</strong> : chaque invocation d'agent a un coût en tokens/argent ; implante un budget global et interromps le workflow si le budget est dépassé.</li>
-<li><strong>Testabilité</strong> : chaque agent doit être testable en isolation avec des inputs/outputs mockés, indépendamment de l'orchestrateur.</li>
+<li>la tâche nécessite des spécialisations différentes (recherche + rédaction + validation),</li>
+<li>des sous-tâches peuvent s'exécuter en parallèle,</li>
+<li>la fenêtre de contexte d'un agent unique serait saturée.</li>
+</ul>
+<hr>
+<h2>Choix du pattern (critères de décision)</h2>
+<table><thead><tr><th>Pattern</th><th>Quand l'utiliser</th><th>Complexité</th></tr></thead><tbody><tr><td><strong>Supervisor / Router</strong></td><td>Tâche décomposable en N sous-tâches distinctes ; résultats à consolider</td><td>Faible</td></tr><tr><td><strong>Pipeline séquentiel</strong></td><td>Sous-tâches avec dépendances strictes A→B→C</td><td>Faible</td></tr><tr><td><strong>Parallel fan-out</strong></td><td>Sous-tâches indépendantes, latence critique</td><td>Moyenne</td></tr><tr><td><strong>Hiérarchique</strong></td><td>Organisation de type chef de projet → équipes → exécutants</td><td>Moyenne</td></tr><tr><td><strong>Swarm</strong></td><td>Exploration large, diversité de solutions, pas de dépendances</td><td>Haute</td></tr><tr><td><strong>Debate / Voting</strong></td><td>Décisions à fort enjeu, besoin de consensus ou de validation croisée</td><td>Haute</td></tr></tbody></table>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Décomposition de la tâche</h3>
+<p>Identifie les sous-tâches atomiques et leurs dépendances. Produis un graphe orienté (DAG) avant tout code.</p>
+<pre><code>tâche principale
+├── sous-tâche A (indépendante)
+├── sous-tâche B (indépendante)
+└── sous-tâche C (dépend de A + B)</code></pre>
+<p>Règle : si deux sous-tâches n'ont aucune dépendance, elles doivent s'exécuter en parallèle.</p>
+<h3>2. Définition des agents</h3>
+<p>Un agent = un rôle unique + un system prompt ciblé. Évite les agents &quot;couteau suisse&quot;.</p>
+<pre><code class="lang-python">AGENTS = {
+    &quot;researcher&quot;: Agent(
+        system=&quot;Tu es un agent de recherche. Tu extrais des faits vérifiables. &quot;
+               &quot;Retourne TOUJOURS un JSON {facts: [], sources: []}.&quot;,
+        tools=[web_search, fetch_url],
+    ),
+    &quot;writer&quot;: Agent(
+        system=&quot;Tu es un rédacteur. Tu transformes des faits structurés en prose claire.&quot;,
+        tools=[],
+    ),
+    &quot;validator&quot;: Agent(
+        system=&quot;Tu es un agent de validation. Tu détectes les affirmations non sourcées.&quot;,
+        tools=[],
+    ),
+}</code></pre>
+<h3>3. Routing sémantique</h3>
+<p>Pour router dynamiquement une requête vers l'agent le plus adapté :</p>
+<pre><code class="lang-python">import numpy as np
+
+def cosine_sim(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+def route(task: str, agents: dict[str, Agent]) -&gt; Agent:
+    task_vec = embed(task)
+    scores = {
+        name: cosine_sim(task_vec, agent.profile_embedding)
+        for name, agent in agents.items()
+    }
+    best = max(scores, key=scores.get)
+    return agents[best]</code></pre>
+<p>Alternative légère : classification d'intention via LLM avec un prompt de routing dédié.</p>
+<h3>4. Exécution parallèle</h3>
+<pre><code class="lang-python">import asyncio
+
+async def run_parallel(tasks: list[tuple[Agent, str]]) -&gt; list[str]:
+    coros = [agent.run(task) for agent, task in tasks]
+    return await asyncio.gather(*coros, return_exceptions=True)
+
+# Usage
+results = await run_parallel([
+    (agents[&quot;researcher&quot;], &quot;Recherche les faits sur X&quot;),
+    (agents[&quot;researcher&quot;], &quot;Recherche les faits sur Y&quot;),
+])</code></pre>
+<p>Pour des workers synchrones lourds, utilise <code>concurrent.futures.ThreadPoolExecutor</code>.</p>
+<h3>5. État partagé</h3>
+<p>Centralise l'état dans un objet mutable accessible à tous les agents de l'orchestrateur :</p>
+<pre><code class="lang-python">from dataclasses import dataclass, field
+
+@dataclass
+class WorkflowState:
+    task_id: str
+    inputs: dict = field(default_factory=dict)
+    results: dict = field(default_factory=dict)   # {agent_name: output}
+    errors: list = field(default_factory=list)
+    token_budget_used: int = 0
+    token_budget_max: int = 50_000</code></pre>
+<p>Pour un système distribué : Redis (HSET par <code>task_id</code>) ou une table SQL.</p>
+<h3>6. Error handling et résilience</h3>
+<pre><code class="lang-python">async def safe_call(agent: Agent, task: str, retries: int = 3) -&gt; str:
+    backoff = 1
+    for attempt in range(retries):
+        try:
+            return await asyncio.wait_for(agent.run(task), timeout=30)
+        except asyncio.TimeoutError:
+            pass
+        except Exception as e:
+            state.errors.append({&quot;agent&quot;: agent.name, &quot;error&quot;: str(e), &quot;task&quot;: task})
+        await asyncio.sleep(backoff)
+        backoff *= 2
+    return agent.fallback_response(task)   # réponse dégradée</code></pre>
+<p>Stratégies de fallback (par ordre de préférence) :</p>
+<ol>
+<li>Retry avec backoff exponentiel</li>
+<li>Agent de remplacement (généraliste)</li>
+<li>Valeur par défaut documentée</li>
+<li>Escalade humaine (webhook / notification)</li>
+</ol>
+<h3>7. Consolidation et vote</h3>
+<p>Quand plusieurs agents produisent des réponses concurrentes :</p>
+<pre><code class="lang-python">def majority_vote(responses: list[str], arbitrator: Agent) -&gt; str:
+    if len(set(responses)) == 1:
+        return responses[0]
+    # Désaccord → arbitrage LLM
+    prompt = f&quot;Voici {len(responses)} réponses d'agents. Choisis la plus correcte et justifie.\n\n&quot;
+    for i, r in enumerate(responses, 1):
+        prompt += f&quot;Agent {i}: {r}\n&quot;
+    return arbitrator.run(prompt)</code></pre>
+<p>Vote pondéré : attribue un poids de confiance à chaque agent selon son historique (<code>success_rate</code>, latence, spécialisation).</p>
+<h3>8. Budget tokens et coût</h3>
+<pre><code class="lang-python">def check_budget(state: WorkflowState, agent: Agent, estimated_tokens: int):
+    if state.token_budget_used + estimated_tokens &gt; state.token_budget_max:
+        raise BudgetExceededError(
+            f&quot;Budget {state.token_budget_max} tokens atteint après {state.token_budget_used}&quot;
+        )</code></pre>
+<p>Règle : définis un budget global par workflow, pas par agent. Loggue chaque appel avec son coût réel.</p>
+<h3>9. Monitoring</h3>
+<p>Instrumente chaque agent call :</p>
+<pre><code class="lang-python">import time
+
+async def instrumented_call(agent, task, state):
+    t0 = time.perf_counter()
+    result = await safe_call(agent, task)
+    elapsed = time.perf_counter() - t0
+    metrics.record(agent=agent.name, latency=elapsed, tokens=result.usage.total_tokens)
+    return result</code></pre>
+<p>Métriques clés à suivre : latence p50/p95, taux de retry, taux d'erreur, coût par workflow, agent le plus sollicité.</p>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correctif</th></tr></thead><tbody><tr><td><strong>Cascade linéaire</strong></td><td>Un agent lent bloque tout</td><td>Fan-out parallèle + timeout par étape</td></tr><tr><td><strong>Agent trop généraliste</strong></td><td>Qualité médiocre sur toutes les tâches</td><td>Diviser en agents spécialisés</td></tr><tr><td><strong>Contexte non partagé</strong></td><td>Agents qui se répètent ou se contredisent</td><td>State centralisé, passé explicitement</td></tr><tr><td><strong>Pas d'idempotence</strong></td><td>Retries créent des effets de bord</td><td>Rendre chaque appel idempotent (ID de tâche unique)</td></tr><tr><td><strong>Boucle infinie agent→agent</strong></td><td>Stack overflow ou coût infini</td><td>Limite de profondeur (<code>max_depth=5</code>) + détection de cycle</td></tr><tr><td><strong>Absence de fallback</strong></td><td>Panne d'un agent = panne totale</td><td>Fallback systématique + circuit breaker</td></tr><tr><td><strong>Confiance aveugle</strong></td><td>Hallucinations propagées</td><td>Agent validateur indépendant obligatoire</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Contrats d'interface</strong> : définit un schéma JSON strict pour chaque output d'agent (Pydantic, JSON Schema). Les agents en aval valident l'input avant de l'utiliser.</li>
+<li><strong>Observabilité distribuée</strong> : trace chaque appel avec un <code>trace_id</code> propagé (OpenTelemetry). Indispensable pour déboguer les chaînes longues.</li>
+<li><strong>Tests d'isolation</strong> : chaque agent doit être testable seul avec des inputs mockés. Un test d'intégration couvre le workflow complet avec des LLM stubs.</li>
+<li><strong>Versioning d'agents</strong> : versionne les system prompts comme du code (git). Un changement de prompt = une nouvelle version d'agent, pas un patch silencieux.</li>
+<li><strong>Human-in-the-loop ciblé</strong> : n'interromps l'humain qu'aux points de décision critique (validation finale, escalade budget), jamais en milieu de workflow.</li>
 </ul>
 </article>
 </main>

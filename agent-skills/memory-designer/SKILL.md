@@ -6,53 +6,219 @@ description: Architecture de mémoire pour agents IA — short-term, long-term, 
 # Agent Memory Designer
 
 ## Quand utiliser ce skill
-Utilise ce skill lorsque tu dois concevoir ou améliorer le système de mémoire d'un agent IA. Il s'applique dès que l'agent doit se souvenir d'informations au-delà d'une seule conversation, gérer un historique long qui dépasse la fenêtre de contexte, ou partager une base de connaissances entre plusieurs agents. Couvre aussi bien la mémoire éphémère (session) que la mémoire persistante (cross-session).
 
-## Workflow
+Utilise ce skill pour concevoir ou améliorer le système de mémoire d'un agent IA dès que :
+- l'agent doit se souvenir d'informations au-delà d'une seule conversation ;
+- l'historique de conversation dépasse ou menace de dépasser la fenêtre de contexte ;
+- plusieurs agents doivent partager une base de connaissance commune ;
+- l'utilisateur se plaint que "l'agent ne se souvient pas".
 
-1. **Types de mémoire** — Identifie les besoins selon les quatre types : `short-term/working` (contexte de la conversation en cours), `long-term/semantic` (faits et connaissances durables), `episodic` (expériences passées horodatées), `procedural` (comment accomplir des tâches, workflows mémorisés). Chaque type a un backend et une stratégie de retrieval différents.
+---
 
-2. **Short-term memory** — Implémente un buffer de conversation avec gestion du token budget : sliding window (garder les N derniers messages), summarization progressive (résumer les anciens messages plutôt que les tronquer), ou importance-based pruning (supprimer les messages peu importants).
-   ```python
-   def trim_history(messages: list, max_tokens: int, llm) -> list:
-       while count_tokens(messages) > max_tokens:
-           summary = llm.summarize(messages[:len(messages)//2])
-           messages = [{"role": "system", "content": f"Résumé: {summary}"}] + messages[len(messages)//2:]
-       return messages
-   ```
+## Étape 1 — Diagnostic des besoins
 
-3. **Long-term memory avec vector stores** — Stocke les informations importantes sous forme d'embeddings dans un vector store (ChromaDB, Pinecone, Weaviate, pgvector). À chaque tour, encode la requête et effectue une recherche par similarité pour injecter les souvenirs pertinents.
+Avant de choisir un backend, réponds à ces questions :
 
-4. **Episodic memory** — Enregistre les interactions passées complètes avec horodatage, contexte et résultat. Permet à l'agent de retrouver "la dernière fois que j'ai aidé cet utilisateur avec X". Implémente un retrieval par similarité sémantique + filtrage temporel.
-   ```python
-   def store_episode(user_id: str, task: str, result: str, vector_store):
-       episode = {"task": task, "result": result, "timestamp": datetime.now().isoformat(), "user_id": user_id}
-       embedding = embed(f"{task} {result}")
-       vector_store.upsert(id=str(uuid4()), vector=embedding, metadata=episode)
-   ```
+| Question | Réponse → choix |
+|---|---|
+| Les souvenirs doivent-ils survivre au redémarrage du processus ? | Oui → persistence ; Non → in-memory suffit |
+| Plusieurs sessions/utilisateurs partagent-ils la mémoire ? | Oui → backend centralisé (DB/cloud) |
+| Le volume de souvenirs dépasse-t-il 10 k entrées ? | Oui → vector store dédié (Pinecone, Weaviate) |
+| La latence de retrieval est-elle critique (< 100 ms) ? | Oui → Redis ou FAISS local |
+| Confidentialité par utilisateur requise ? | Oui → namespace/user_id strict obligatoire |
 
-5. **Memory indexing et retrieval** — Combine plusieurs stratégies de recherche : `dense retrieval` (similarité vectorielle), `sparse retrieval` (BM25/keyword), `hybrid search` (fusion des deux). Applique un re-ranking (cross-encoder) pour améliorer la précision. Intègre un time-decay pour favoriser les souvenirs récents.
+---
 
-6. **Memory management** — Préviens la dégradation par accumulation : compaction périodique (fusionner les souvenirs similaires), summarization (résumer les épisodes anciens), garbage collection (supprimer les souvenirs inutilisés depuis longtemps), limites de capacité par utilisateur/session.
+## Étape 2 — Choisir les types de mémoire à implémenter
 
-7. **Persistence** — Choisis le backend selon les contraintes : `SQLite/PostgreSQL` pour les données structurées, `ChromaDB/FAISS` pour les embeddings locaux, `Pinecone/Weaviate` pour la production scalable, `Redis` pour le cache court terme, fichiers JSON pour le prototypage. Assure la cohérence entre le vector store et le stockage de métadonnées.
+Chaque type a un rôle distinct ; ne pas tout mettre dans le même bucket.
 
-8. **Memory injection dans le prompt** — Assemble le contexte mémorisé intelligemment : récupère les N souvenirs les plus pertinents, ordonne par priorité (récence, score de similarité, importance), formate pour le LLM, et respecte un budget de tokens strict pour la section mémoire.
-   ```python
-   def build_memory_context(query: str, vector_store, max_tokens: int = 500) -> str:
-       memories = vector_store.query(embed(query), top_k=5)
-       context = "\n".join([f"- {m['content']}" for m in memories])
-       return truncate_to_tokens(context, max_tokens)
-   ```
+| Type | Durée | Contenu typique | Backend |
+|---|---|---|---|
+| **Working / short-term** | Session en cours | Messages de la conversation | Buffer in-process |
+| **Episodic** | Long terme | Interactions passées horodatées | Vector store + metadata |
+| **Semantic** | Long terme | Faits, préférences utilisateur | Vector store ou SQL |
+| **Procedural** | Persistant | Workflows mémorisés, "comment faire X" | Fichier structuré ou DB |
 
-9. **Shared memory multi-agent** — Pour les systèmes multi-agents, implémente un `blackboard` partagé (espace de travail commun en lecture/écriture), une `shared knowledge base` (faits partagés, mis à jour consensuellement), ou une `entity memory` (état par entité : utilisateur, projet, document).
+Règle de sélection : implémente **working** en priorité, puis **episodic** si l'utilisateur a besoin de continuité cross-session, **semantic** si l'agent doit raisonner sur des faits durables.
 
-10. **Évaluation** — Mesure la qualité de la mémoire : `recall accuracy` (l'agent retrouve-t-il les bons souvenirs ?), `relevancy` (les souvenirs injectés sont-ils pertinents ?), `hallucination from stale memory` (vieilles infos contradisant la réalité actuelle), latence du retrieval, utilisation du budget de tokens.
+---
 
-## Règles
+## Étape 3 — Working memory (gestion de la fenêtre de contexte)
 
-- **Anti-pattern — tout mémoriser** : stocker chaque message sans sélection crée du bruit et ralentit le retrieval ; implémente un filtre d'importance avant stockage.
-- **Versioning des souvenirs** : une information peut devenir obsolète ; horodates et si possible invalide les anciens souvenirs contradictoires plutôt que de les laisser coexister.
-- **Privacy by design** : chaque souvenir doit être associé à un user_id ; n'injecte jamais la mémoire d'un utilisateur dans le contexte d'un autre.
-- **Graceful degradation** : si le vector store est indisponible, l'agent doit fonctionner sans mémoire long-terme plutôt que de tomber en erreur.
-- **Token budget strict** : la section mémoire du prompt ne doit jamais dépasser un pourcentage fixe (ex: 20%) de la fenêtre de contexte disponible.
+Objectif : maintenir un historique utile sans dépasser le budget de tokens.
+
+**Stratégie 1 — Sliding window (simple, prototypage)**
+```python
+def sliding_window(messages: list, max_messages: int = 20) -> list:
+    system = [m for m in messages if m["role"] == "system"]
+    rest = [m for m in messages if m["role"] != "system"]
+    return system + rest[-max_messages:]
+```
+
+**Stratégie 2 — Summarization progressive (recommandée en production)**
+```python
+def compress_history(messages: list, max_tokens: int, llm) -> list:
+    while count_tokens(messages) > max_tokens:
+        # Résume la première moitié, garde la seconde intacte
+        mid = len(messages) // 2
+        summary = llm.invoke(f"Résume cette conversation en 3 phrases max :\n{format(messages[:mid])}")
+        messages = [{"role": "system", "content": f"[Résumé antérieur] {summary}"}] + messages[mid:]
+    return messages
+```
+
+**Stratégie 3 — Importance-based pruning**
+Score chaque message (longueur, présence d'entités nommées, marqueur "IMPORTANT:"), supprime les messages au score le plus bas.
+
+Règle : réserve **max 20 %** du budget de tokens pour la mémoire injectée.
+
+---
+
+## Étape 4 — Long-term memory avec vector store
+
+### Pattern de base (ChromaDB local)
+
+```python
+import chromadb
+from sentence_transformers import SentenceTransformer
+
+client = chromadb.PersistentClient(path="./memory_db")
+collection = client.get_or_create_collection("agent_memory")
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+def remember(user_id: str, content: str, metadata: dict = {}):
+    vec = model.encode(content).tolist()
+    collection.add(
+        ids=[f"{user_id}_{hash(content)}"],
+        embeddings=[vec],
+        documents=[content],
+        metadatas=[{"user_id": user_id, "ts": datetime.utcnow().isoformat(), **metadata}]
+    )
+
+def recall(user_id: str, query: str, top_k: int = 5) -> list[str]:
+    vec = model.encode(query).tolist()
+    results = collection.query(
+        query_embeddings=[vec],
+        n_results=top_k,
+        where={"user_id": user_id}  # isolation par utilisateur
+    )
+    return results["documents"][0]
+```
+
+### Critères de choix du backend
+
+| Backend | Usage | Avantages |
+|---|---|---|
+| ChromaDB | Dev/local | Zéro config, Python natif |
+| pgvector | Production SQL existante | Transactionnel, SQL standard |
+| Pinecone | Production scalable cloud | Managed, low-latency |
+| Weaviate | Hybrid search natif | BM25 + dense intégré |
+| FAISS | Batch/offline | Très rapide, in-memory |
+| Redis (RedisVL) | Cache + vector | Sub-ms, TTL natif |
+
+---
+
+## Étape 5 — Episodic memory
+
+Enregistre les interactions complètes pour permettre à l'agent de retrouver "la dernière fois que j'ai fait X pour cet utilisateur".
+
+```python
+from uuid import uuid4
+
+def store_episode(user_id: str, task: str, result: str, outcome: str = "success"):
+    content = f"Tâche: {task} | Résultat: {result}"
+    remember(
+        user_id=user_id,
+        content=content,
+        metadata={"type": "episode", "outcome": outcome}
+    )
+
+def get_similar_episodes(user_id: str, current_task: str) -> str:
+    episodes = recall(user_id, current_task, top_k=3)
+    if not episodes:
+        return ""
+    return "Épisodes similaires passés :\n" + "\n".join(f"- {e}" for e in episodes)
+```
+
+---
+
+## Étape 6 — Injection dans le prompt
+
+Assemble le contexte mémorisé de manière structurée :
+
+```python
+def build_system_with_memory(base_system: str, user_id: str, query: str, token_budget: int = 400) -> str:
+    memories = recall(user_id, query, top_k=5)
+    if not memories:
+        return base_system
+    mem_block = "\n".join(f"- {m}" for m in memories)
+    mem_block = truncate_to_tokens(mem_block, token_budget)
+    return f"{base_system}\n\n[Mémoire pertinente]\n{mem_block}"
+```
+
+Ordre de priorité dans le prompt : `system` → `mémoire injectée` → `historique court-terme` → `message utilisateur`.
+
+---
+
+## Étape 7 — Shared memory multi-agent
+
+Trois patterns selon le niveau de coordination :
+
+**Blackboard** — espace partagé en lecture/écriture, tous les agents y accèdent :
+```python
+# Redis comme blackboard partagé
+redis_client.set(f"blackboard:{session_id}:{key}", value, ex=3600)
+value = redis_client.get(f"blackboard:{session_id}:{key}")
+```
+
+**Entity memory** — un enregistrement par entité (utilisateur, projet, document) mis à jour par n'importe quel agent :
+```python
+def update_entity(entity_type: str, entity_id: str, field: str, value: str):
+    key = f"entity:{entity_type}:{entity_id}"
+    redis_client.hset(key, field, value)
+```
+
+**Consensus KB** — les agents votent avant d'écrire un fait durable (évite les contradictions).
+
+---
+
+## Étape 8 — Maintenance et compaction
+
+Sans maintenance, la mémoire se dégrade. Automatise ces opérations :
+
+```python
+def compact_memories(user_id: str, llm, threshold_days: int = 30):
+    # Récupérer les vieux souvenirs, les fusionner/résumer
+    old = collection.get(where={"user_id": user_id, "age_days": {"$gt": threshold_days}})
+    if len(old["documents"]) > 10:
+        summary = llm.invoke(f"Résume ces souvenirs en bullet points concis :\n{old['documents']}")
+        # Supprimer les anciens, stocker le résumé
+        collection.delete(ids=old["ids"])
+        remember(user_id, summary, {"type": "summary"})
+```
+
+Fréquence recommandée : quotidienne pour les agents actifs, hebdomadaire pour les autres.
+
+---
+
+## Anti-patterns et pièges
+
+- **Tout mémoriser** : sans filtre d'importance, le retrieval se noie dans le bruit. Applique un seuil de score de similarité minimum (ex: > 0.7) avant de stocker.
+- **Mémoire sans user_id** : mélange les données entre utilisateurs. Toujours namespaced.
+- **Souvenirs obsolètes non invalidés** : une information peut changer. Ajoute un TTL ou un champ `valid_until` ; invalide explicitement les faits remplacés.
+- **Latence retrieval synchrone** : ne bloque pas le pipeline principal. Lancer le recall en parallèle du traitement de la requête (`asyncio.gather`).
+- **Embeddings incohérents** : utiliser des modèles d'embedding différents entre `remember` et `recall` casse le retrieval. Versionner et figer le modèle d'embedding.
+- **Pas de fallback** : si le vector store est indisponible, l'agent doit continuer à fonctionner sans mémoire long-terme plutôt que planter.
+- **Injection illimitée** : injecter trop de mémoire pousse les instructions system et le message utilisateur hors de la fenêtre. Budget de tokens strict : 15–20 % max pour la mémoire.
+
+---
+
+## Checklist de livraison
+
+- [ ] Types de mémoire identifiés et documentés
+- [ ] Backend choisi selon les contraintes (latence, volume, persistence)
+- [ ] Isolation par user_id implémentée
+- [ ] Budget de tokens pour la section mémoire défini et respecté
+- [ ] Stratégie de compaction/expiration définie
+- [ ] Fallback si backend indisponible implémenté
+- [ ] Métriques de qualité mesurées (recall accuracy, relevancy, latence)

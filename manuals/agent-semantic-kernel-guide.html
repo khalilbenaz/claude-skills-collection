@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>agent-semantic-kernel-guide — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Développement d'agents IA avec Microsoft Semantic Kernel en .NET/C# et Python. Plugins natifs, plugins prompts, planners et intégration enterprise Azure.">
+<meta name="description" content="Développement d'agents IA avec Microsoft Semantic Kernel en .NET/C# et Python. Plugins natifs, plugins prompts, planners, filters, AgentGroupChat et intégration enterprise Azure.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🤖 Agents IA</span>
 <h1 class="skill-title">agent-semantic-kernel-guide</h1>
-<p class="lead">Développement d'agents IA avec Microsoft Semantic Kernel en .NET/C# et Python. Plugins natifs, plugins prompts, planners et intégration enterprise Azure.</p>
+<p class="lead">Développement d'agents IA avec Microsoft Semantic Kernel en .NET/C# et Python. Plugins natifs, plugins prompts, planners, filters, AgentGroupChat et intégration enterprise Azure.</p>
 
 
 
@@ -97,314 +97,227 @@ cp -r claude-skills-collection/skills/agent-semantic-kernel-guide ~/.claude/skil
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Semantic Kernel Guide — Agents IA Enterprise Microsoft</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utiliser ce skill quand l'utilisateur développe des applications IA en .NET/C# et veut intégrer des LLMs avec un framework enterprise-grade supportant l'injection de dépendances, les tests unitaires et l'intégration Azure. Également pertinent pour Python quand l'utilisateur a besoin de plugins structurés, de planification automatique (planners), ou d'une intégration profonde avec l'écosystème Microsoft (Azure AI, Cosmos DB, Azure Search). Semantic Kernel est le choix naturel pour les équipes .NET souhaitant adopter l'IA générative.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Setup et installation</strong></li>
-<ul>
-<li><strong>.NET/C#</strong> : <code>dotnet add package Microsoft.SemanticKernel</code> (version 1.30.0+)</li>
-<li><strong>Python</strong> : <code>pip install semantic-kernel==1.14.0</code></li>
-<li>Structure de projet recommandée (.NET) :</li>
-</ul>
-</ol>
-<p>     ```      MyAIApp/      ├── Plugins/      │   ├── WeatherPlugin.cs      │   └── Prompts/      │       └── Summarize/      │           ├── skprompt.txt      │           └── config.json      ├── Program.cs      └── appsettings.json      ```</p>
-<ol>
-<li><strong>Configuration du Kernel</strong></li>
-<ul>
-<li>Le <code>Kernel</code> est le conteneur central — il orchestre les services IA et les plugins :</li>
-</ul>
-</ol>
-<p>     ```csharp      using Microsoft.SemanticKernel;</p>
-<p>     var builder = Kernel.CreateBuilder();</p>
-<p>     // Azure OpenAI (recommandé enterprise)      builder.AddAzureOpenAIChatCompletion(          deploymentName: &quot;gpt-4o&quot;,          endpoint: Environment.GetEnvironmentVariable(&quot;AZURE_OPENAI_ENDPOINT&quot;)!,          apiKey: Environment.GetEnvironmentVariable(&quot;AZURE_OPENAI_API_KEY&quot;)!      );</p>
-<p>     // Ou OpenAI direct      builder.AddOpenAIChatCompletion(          modelId: &quot;gpt-4o&quot;,          apiKey: Environment.GetEnvironmentVariable(&quot;OPENAI_API_KEY&quot;)!      );</p>
-<p>     // Injection de dépendances      builder.Services.AddLogging(c =&gt; c.AddConsole().SetMinimumLevel(LogLevel.Information));</p>
-<p>     var kernel = builder.Build();      ```</p>
-<ol>
-<li><strong>Plugins natifs (KernelFunction)</strong></li>
-<ul>
-<li>Les plugins natifs sont des classes C# avec des méthodes annotées :</li>
-</ul>
-</ol>
-<p>     ```csharp      using Microsoft.SemanticKernel;      using System.ComponentModel;</p>
-<p>     public class WeatherPlugin      {          [KernelFunction(&quot;get_weather&quot;)]          [Description(&quot;Obtient la météo actuelle pour une ville donnée&quot;)]          public async Task&lt;string&gt; GetWeatherAsync(              [Description(&quot;Le nom de la ville&quot;)] string city,              [Description(&quot;L'unité : celsius ou fahrenheit&quot;)] string unit = &quot;celsius&quot;)          {              // Appel API météo réel ici              return $&quot;La météo à {city} est de 22°{(unit == &quot;celsius&quot; ? &quot;C&quot; : &quot;F&quot;)}, ensoleillé.&quot;;          }</p>
-<p>         [KernelFunction(&quot;list_cities&quot;)]          [Description(&quot;Liste les villes disponibles pour la météo&quot;)]          public List&lt;string&gt; GetAvailableCities() =&gt;              [&quot;Paris&quot;, &quot;Lyon&quot;, &quot;Marseille&quot;, &quot;Bordeaux&quot;];      }</p>
-<p>     // Enregistrement du plugin      kernel.Plugins.AddFromType&lt;WeatherPlugin&gt;(&quot;Weather&quot;);      ```</p>
-<ol>
-<li><strong>Plugins prompts (Prompt Templates)</strong></li>
-<ul>
-<li>Définir dans des fichiers <code>.txt</code> + <code>config.json</code> pour une organisation claire</li>
-<li><code>skprompt.txt</code> :</li>
-</ul>
-</ol>
-<p>     ```      Vous êtes un assistant expert en synthèse. Résumez le texte suivant en {{$max_words}} mots maximum.      Conservez les points clés et le ton original.</p>
-<p>     TEXTE :      {{$input}}</p>
-<p>     RÉSUMÉ :      ```</p>
-<ul>
-<li><code>config.json</code> :</li>
-</ul>
-<p>     ```json      {        &quot;schema&quot;: 1,        &quot;name&quot;: &quot;Summarize&quot;,        &quot;description&quot;: &quot;Résume un texte en un nombre de mots donné&quot;,        &quot;execution_settings&quot;: {          &quot;default&quot;: {            &quot;max_tokens&quot;: 500,            &quot;temperature&quot;: 0.3          }        },        &quot;input_variables&quot;: [          {&quot;name&quot;: &quot;input&quot;, &quot;description&quot;: &quot;Texte à résumer&quot;, &quot;is_required&quot;: true},          {&quot;name&quot;: &quot;max_words&quot;, &quot;description&quot;: &quot;Nombre de mots max&quot;, &quot;default&quot;: &quot;100&quot;}        ]      }      ```</p>
-<ul>
-<li>Chargement : <code>kernel.ImportPluginFromPromptDirectory(&quot;./Plugins/Prompts&quot;)</code></li>
-</ul>
-<ol>
-<li><strong>Function Calling et invocation</strong></li>
-<ul>
-<li>Invocation directe d'une fonction :</li>
-</ul>
-</ol>
-<p>     ```csharp      var result = await kernel.InvokeAsync(&quot;Weather&quot;, &quot;get_weather&quot;,          new KernelArguments { [&quot;city&quot;] = &quot;Paris&quot;, [&quot;unit&quot;] = &quot;celsius&quot; });      Console.WriteLine(result.GetValue&lt;string&gt;());      ```</p>
-<ul>
-<li>Auto-invoke avec function calling activé :</li>
-</ul>
-<p>     ```csharp      var settings = new OpenAIPromptExecutionSettings      {          ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions      };      var chatService = kernel.GetRequiredService&lt;IChatCompletionService&gt;();      var history = new ChatHistory(&quot;Vous êtes un assistant météo.&quot;);      history.AddUserMessage(&quot;Quelle est la météo à Paris et Lyon ?&quot;);      var response = await chatService.GetChatMessageContentAsync(history, settings, kernel);      ```</p>
-<ol>
-<li><strong>Planners — exécution automatique de plans</strong></li>
-<ul>
-<li><strong>Handlebars Planner</strong> : génère un plan Handlebars template puis l'exécute</li>
-</ul>
-</ol>
-<p>     ```csharp      using Microsoft.SemanticKernel.Planning.Handlebars;</p>
-<p>     var planner = new HandlebarsPlanner(new HandlebarsPlannerOptions      {          MaxTokens = 4000,      });      var plan = await planner.CreatePlanAsync(kernel, &quot;Résume ce document et envoie par email&quot;);      var result = await plan.InvokeAsync(kernel, new KernelArguments { [&quot;document&quot;] = text });      ```</p>
-<ul>
-<li><strong>Function Calling Planner</strong> : utilise le function calling natif du LLM comme mécanisme de planning (recommandé pour GPT-4o+)</li>
-<li>Piège : les planners peuvent appeler des fonctions non souhaitées — restreindre avec <code>ExcludedPlugins</code></li>
-</ul>
-<ol>
-<li><strong>Memory et embeddings</strong></li>
-<ul>
-<li>Semantic Kernel Memory pour la recherche sémantique :</li>
-</ul>
-</ol>
-<p>     ```csharp      // Installation : dotnet add package Microsoft.SemanticKernel.Plugins.Memory      var memoryBuilder = new MemoryBuilder();      memoryBuilder.WithOpenAITextEmbeddingGeneration(&quot;text-embedding-3-small&quot;, apiKey);      memoryBuilder.WithMemoryStore(new VolatileMemoryStore()); // ou Azure AI Search      var memory = memoryBuilder.Build();</p>
-<p>     await memory.SaveInformationAsync(&quot;docs&quot;, id: &quot;doc1&quot;,          text: &quot;Semantic Kernel est un framework open-source Microsoft...&quot;);</p>
-<p>     var results = await memory.SearchAsync(&quot;docs&quot;, &quot;Microsoft AI framework&quot;, limit: 3);      ```</p>
-<ul>
-<li>Pour la production : <code>AzureAISearchMemoryStore</code>, <code>QdrantMemoryStore</code>, <code>ChromaMemoryStore</code></li>
-</ul>
-<ol>
-<li><strong>Agents (ChatCompletionAgent et OpenAIAssistantAgent)</strong></li>
-<ul>
-<li><strong>ChatCompletionAgent</strong> : agent léger basé sur le chat completion</li>
-</ul>
-</ol>
-<p>     ```csharp      using Microsoft.SemanticKernel.Agents;</p>
-<p>     var agent = new ChatCompletionAgent      {          Name = &quot;AnalystAgent&quot;,          Instructions = &quot;Vous êtes un analyste financier expert. Analysez les données fournies.&quot;,          Kernel = kernel,          Arguments = new KernelArguments(new OpenAIPromptExecutionSettings          {              ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions          }),      };</p>
-<p>     var thread = new ChatHistory();      thread.AddUserMessage(&quot;Analysez ces résultats financiers : ...&quot;);      await foreach (var response in agent.InvokeAsync(thread))          Console.Write(response.Content);      ```</p>
-<ul>
-<li><strong>AgentGroupChat</strong> : plusieurs agents qui collaborent avec des stratégies de sélection et de terminaison</li>
-</ul>
-<ol>
-<li><strong>Filters et middleware</strong></li>
-<ul>
-<li>Les filters interceptent les invocations pour logging, validation, cache :</li>
-</ul>
-</ol>
-<p>     ```csharp      public class LoggingFilter : IFunctionInvocationFilter      {          public async Task OnFunctionInvocationAsync(              FunctionInvocationContext context,              Func&lt;FunctionInvocationContext, Task&gt; next)          {              Console.WriteLine($&quot;[AVANT] {context.Function.Name}&quot;);              await next(context); // exécution de la fonction              Console.WriteLine($&quot;[APRÈS] {context.Function.Name}: {context.Result?.GetValue&lt;string&gt;()}&quot;);          }      }</p>
-<p>     kernel.FunctionInvocationFilters.Add(new LoggingFilter());      ```</p>
-<ul>
-<li><code>IPromptRenderFilter</code> : intercepte avant le rendu du prompt (modifier dynamiquement le contexte)</li>
-<li>Utilisation : logging, rate limiting, content safety, A/B testing de prompts</li>
-</ul>
-<ol>
-<li><strong>Intégration enterprise</strong></li>
-<ul>
-<li><strong>Azure AI Foundry</strong> : <code>AddAzureOpenAIChatCompletion</code> avec Managed Identity (sans API key !)</li>
-<li><strong>Azure AI Search</strong> : memory store pour RAG avec indexation et recherche vectorielle</li>
-<li><strong>Cosmos DB</strong> : persistance de l'état des agents et historiques de conversation</li>
-<li><strong>Dependency Injection</strong> : <code>services.AddKernel()</code> avec <code>IKernelBuilder</code> dans ASP.NET Core</li>
-<li><strong>Testing</strong> : mocker <code>IChatCompletionService</code> avec <code>Moq</code> pour des tests unitaires déterministes</li>
-</ul>
-</ol>
-<h2>Exemples de code</h2>
-<h3>Application complète C# — Agent avec plugins et function calling automatique</h3>
+<p>Utiliser quand l'utilisateur développe des applications IA en .NET/C# ou Python avec un besoin d'architecture structurée : plugins typés, planification automatique, injection de dépendances, tests unitaires, ou intégration Azure (Azure OpenAI, Azure AI Search, Cosmos DB). SK est le choix naturel pour les équipes .NET adoptant l'IA générative en production.</p>
+<p><strong>Ne pas utiliser SK si</strong> : projet Python pur sans besoin enterprise → LangChain ou LlamaIndex suffisent. Script one-shot sans plugins → appel API direct suffit.</p>
+<h2>Workflow en étapes</h2>
+<h3>1. Installation et structure de projet</h3>
+<pre><code class="lang-bash"># .NET (recommandé : toujours figer la version)
+dotnet add package Microsoft.SemanticKernel --version 1.30.0
+dotnet add package Microsoft.SemanticKernel.Agents.Core
+dotnet add package Microsoft.SemanticKernel.Plugins.Memory  # si RAG
+
+# Python
+pip install &quot;semantic-kernel==1.14.0&quot;</code></pre>
+<p>Structure .NET recommandée :</p>
+<pre><code>MyAIApp/
+├── Plugins/
+│   ├── WeatherPlugin.cs
+│   └── Prompts/
+│       └── Summarize/
+│           ├── skprompt.txt
+│           └── config.json
+├── Filters/
+│   └── LoggingFilter.cs
+├── Program.cs
+└── appsettings.json</code></pre>
+<h3>2. Configuration du Kernel</h3>
 <pre><code class="lang-csharp">using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
+
+var builder = Kernel.CreateBuilder();
+
+// Azure OpenAI avec Managed Identity (recommandé production — pas de clé API en dur)
+builder.AddAzureOpenAIChatCompletion(
+    deploymentName: &quot;gpt-4o&quot;,
+    endpoint: config[&quot;AzureOpenAI:Endpoint&quot;]!,
+    credential: new DefaultAzureCredential()  // Managed Identity
+);
+
+// Fallback : clé API (dev/test seulement)
+// builder.AddOpenAIChatCompletion(&quot;gpt-4o&quot;, Environment.GetEnvironmentVariable(&quot;OPENAI_API_KEY&quot;)!);
+
+builder.Services.AddLogging(c =&gt; c.AddConsole().SetMinimumLevel(LogLevel.Warning));
+
+var kernel = builder.Build();</code></pre>
+<p><strong>ASP.NET Core</strong> — ne jamais instancier <code>Kernel</code> manuellement :</p>
+<pre><code class="lang-csharp">// Program.cs
+builder.Services.AddKernel()
+    .AddAzureOpenAIChatCompletion(deploymentName, endpoint, credential);
+builder.Services.AddSingleton&lt;WeatherPlugin&gt;();
+builder.Services.AddFromType&lt;WeatherPlugin&gt;(&quot;Weather&quot;);</code></pre>
+<h3>3. Plugins natifs — règles critiques</h3>
+<p>Les <code>[Description]</code> sont lues par le LLM pour choisir quelle fonction appeler. <strong>Des descriptions vagues = appels incorrects.</strong></p>
+<pre><code class="lang-csharp">using Microsoft.SemanticKernel;
 using System.ComponentModel;
 
-// ===== PLUGINS =====
-public class MathPlugin
+public class WeatherPlugin
 {
-    [KernelFunction(&quot;calculate&quot;)]
-    [Description(&quot;Effectue un calcul mathématique et retourne le résultat numérique&quot;)]
-    public double Calculate(
-        [Description(&quot;L'expression mathématique, ex: '15 * 23 + 7'&quot;)] string expression)
+    private readonly IHttpClientFactory _httpFactory;
+    public WeatherPlugin(IHttpClientFactory httpFactory) =&gt; _httpFactory = httpFactory;
+
+    [KernelFunction(&quot;get_current_weather&quot;)]
+    [Description(&quot;Obtient la météo actuelle (température, conditions) pour une ville. N'utiliser que pour des informations météo en temps réel.&quot;)]
+    public async Task&lt;string&gt; GetWeatherAsync(
+        [Description(&quot;Nom de la ville, ex: 'Paris', 'Lyon'&quot;)] string city,
+        [Description(&quot;Unité de température : 'celsius' (défaut) ou 'fahrenheit'&quot;)] string unit = &quot;celsius&quot;)
     {
-        // Utiliser un parser en production (ex: NCalc)
-        return new System.Data.DataTable().Compute(expression, null) is double r ? r : 0;
-    }
-}
-
-public class DatePlugin
-{
-    [KernelFunction(&quot;get_date&quot;)]
-    [Description(&quot;Retourne la date et l'heure actuelles&quot;)]
-    public string GetCurrentDate() =&gt;
-        DateTime.Now.ToString(&quot;dddd d MMMM yyyy 'à' HH:mm&quot;, new System.Globalization.CultureInfo(&quot;fr-FR&quot;));
-
-    [KernelFunction(&quot;days_until&quot;)]
-    [Description(&quot;Calcule le nombre de jours jusqu'à une date&quot;)]
-    public int DaysUntil(
-        [Description(&quot;La date cible au format YYYY-MM-DD&quot;)] string targetDate)
-    {
-        var target = DateOnly.Parse(targetDate);
-        return target.DayNumber - DateOnly.FromDateTime(DateTime.Now).DayNumber;
-    }
-}
-
-// ===== PROGRAMME PRINCIPAL =====
-class Program
-{
-    static async Task Main()
-    {
-        // Configuration du kernel
-        var builder = Kernel.CreateBuilder();
-        builder.AddOpenAIChatCompletion(
-            modelId: &quot;gpt-4o&quot;,
-            apiKey: Environment.GetEnvironmentVariable(&quot;OPENAI_API_KEY&quot;)!
-        );
-
-        var kernel = builder.Build();
-
-        // Enregistrement des plugins
-        kernel.Plugins.AddFromType&lt;MathPlugin&gt;(&quot;Math&quot;);
-        kernel.Plugins.AddFromType&lt;DatePlugin&gt;(&quot;Date&quot;);
-
-        // Configuration : function calling automatique
-        var executionSettings = new OpenAIPromptExecutionSettings
+        try
         {
-            ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
-            Temperature = 0.1,
-            MaxTokens = 1000,
-        };
-
-        var chatService = kernel.GetRequiredService&lt;IChatCompletionService&gt;();
-        var history = new ChatHistory();
-        history.AddSystemMessage(
-            &quot;Vous êtes un assistant intelligent qui peut effectuer des calculs &quot; +
-            &quot;et répondre aux questions sur les dates. Répondez toujours en français.&quot;
-        );
-
-        // Boucle de conversation interactive
-        Console.WriteLine(&quot;=== Assistant Semantic Kernel ===&quot;);
-        Console.WriteLine(&quot;Tapez 'quit' pour quitter.\n&quot;);
-
-        while (true)
+            // Appel API réel
+            var client = _httpFactory.CreateClient(&quot;weather&quot;);
+            var response = await client.GetStringAsync($&quot;/weather?city={city}&amp;unit={unit}&quot;);
+            return response;
+        }
+        catch (HttpRequestException ex)
         {
-            Console.Write(&quot;Vous : &quot;);
-            var input = Console.ReadLine();
-            if (input?.ToLower() == &quot;quit&quot;) break;
-            if (string.IsNullOrWhiteSpace(input)) continue;
-
-            history.AddUserMessage(input);
-
-            try
-            {
-                var response = await chatService.GetChatMessageContentAsync(
-                    history, executionSettings, kernel);
-
-                Console.WriteLine($&quot;Assistant : {response.Content}\n&quot;);
-                history.AddAssistantMessage(response.Content!);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($&quot;Erreur : {ex.Message}&quot;);
-            }
+            // Toujours retourner une string — ne jamais lever une exception vers le LLM
+            return $&quot;Impossible d'obtenir la météo pour {city} : {ex.Message}&quot;;
         }
     }
+}
+
+// Enregistrement
+kernel.Plugins.AddFromType&lt;WeatherPlugin&gt;(&quot;Weather&quot;);
+// Ou depuis une instance (avec DI)
+kernel.Plugins.AddFromObject(new WeatherPlugin(httpFactory), &quot;Weather&quot;);</code></pre>
+<h3>4. Plugins prompts — template fichier</h3>
+<p><code>Plugins/Prompts/Summarize/skprompt.txt</code> :</p>
+<pre><code>Résumez le texte suivant en {{$max_words}} mots maximum. Conservez les points clés et le ton original.
+
+TEXTE :
+{{$input}}
+
+RÉSUMÉ :</code></pre>
+<p><code>Plugins/Prompts/Summarize/config.json</code> :</p>
+<pre><code class="lang-json">{
+  &quot;schema&quot;: 1,
+  &quot;name&quot;: &quot;Summarize&quot;,
+  &quot;description&quot;: &quot;Résume un texte en un nombre maximum de mots&quot;,
+  &quot;execution_settings&quot;: {
+    &quot;default&quot;: { &quot;max_tokens&quot;: 500, &quot;temperature&quot;: 0.3 }
+  },
+  &quot;input_variables&quot;: [
+    {&quot;name&quot;: &quot;input&quot;, &quot;description&quot;: &quot;Texte à résumer&quot;, &quot;is_required&quot;: true},
+    {&quot;name&quot;: &quot;max_words&quot;, &quot;description&quot;: &quot;Nombre de mots maximum&quot;, &quot;default&quot;: &quot;100&quot;}
+  ]
 }</code></pre>
-<h3>Python — Semantic Kernel avec AgentGroupChat</h3>
-<pre><code class="lang-python">import asyncio
-import os
-from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from semantic_kernel.agents import ChatCompletionAgent, AgentGroupChat
-from semantic_kernel.agents.strategies import (
-    KernelFunctionSelectionStrategy,
-    KernelFunctionTerminationStrategy,
-)
-from semantic_kernel.functions import KernelFunctionFromPrompt, kernel_function
-from semantic_kernel.contents import ChatMessageContent, AuthorRole
+<p>Chargement :</p>
+<pre><code class="lang-csharp">kernel.ImportPluginFromPromptDirectory(&quot;./Plugins/Prompts&quot;);
+var result = await kernel.InvokeAsync(&quot;Summarize&quot;, &quot;Summarize&quot;,
+    new KernelArguments { [&quot;input&quot;] = longText, [&quot;max_words&quot;] = &quot;50&quot; });</code></pre>
+<h3>5. Function Calling — deux modes</h3>
+<pre><code class="lang-csharp">var chatService = kernel.GetRequiredService&lt;IChatCompletionService&gt;();
+var history = new ChatHistory(&quot;Vous êtes un assistant expert.&quot;);
+history.AddUserMessage(&quot;Quelle est la météo à Paris et Lyon ?&quot;);
 
-# --- Configuration ---
-kernel_writer = Kernel()
-kernel_writer.add_service(OpenAIChatCompletion(
-    ai_model_id=&quot;gpt-4o&quot;,
-    api_key=os.environ[&quot;OPENAI_API_KEY&quot;],
-    service_id=&quot;writer_service&quot;,
-))
+// Mode AUTO : le LLM choisit et exécute les fonctions automatiquement
+var autoSettings = new OpenAIPromptExecutionSettings
+{
+    ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions,
+    Temperature = 0.1,
+    MaxTokens = 1000,
+};
+var response = await chatService.GetChatMessageContentAsync(history, autoSettings, kernel);
 
-kernel_reviewer = Kernel()
-kernel_reviewer.add_service(OpenAIChatCompletion(
-    ai_model_id=&quot;gpt-4o-mini&quot;,
-    api_key=os.environ[&quot;OPENAI_API_KEY&quot;],
-    service_id=&quot;reviewer_service&quot;,
-))
+// Mode MANUEL : récupérer les tool calls et les traiter soi-même
+var manualSettings = new OpenAIPromptExecutionSettings
+{
+    ToolCallBehavior = ToolCallBehavior.EnableKernelFunctions,
+};</code></pre>
+<p><strong>Critère de choix</strong> : utiliser <code>AutoInvoke</code> pour les agents conversationnels. Utiliser <code>EnableKernelFunctions</code> (manuel) si besoin de validation, d'audit, ou de contrôle des coûts par appel.</p>
+<h3>6. Agents et AgentGroupChat</h3>
+<pre><code class="lang-csharp">using Microsoft.SemanticKernel.Agents;
 
-# --- Agents ---
-writer_agent = ChatCompletionAgent(
-    service_id=&quot;writer_service&quot;,
-    kernel=kernel_writer,
-    name=&quot;Rédacteur&quot;,
-    instructions=(
-        &quot;Vous êtes un rédacteur créatif expert. &quot;
-        &quot;Rédigez du contenu de qualité selon les demandes. &quot;
-        &quot;Incorporez les retours du réviseur dans vos révisions.&quot;
-    ),
-)
+var agent = new ChatCompletionAgent
+{
+    Name = &quot;AnalystAgent&quot;,
+    Instructions = &quot;Vous êtes un analyste financier. Analysez les données avec précision et citez vos sources.&quot;,
+    Kernel = kernel,
+    Arguments = new KernelArguments(new OpenAIPromptExecutionSettings
+    {
+        ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+    }),
+};
 
-reviewer_agent = ChatCompletionAgent(
-    service_id=&quot;reviewer_service&quot;,
-    kernel=kernel_reviewer,
-    name=&quot;Réviseur&quot;,
-    instructions=(
-        &quot;Vous êtes un éditeur exigeant. Donnez un feedback précis et constructif. &quot;
-        &quot;Si le texte est satisfaisant, terminez votre message par [APPROUVÉ]. &quot;
-        &quot;Sinon, listez les améliorations nécessaires.&quot;
-    ),
-)
+// Invocation streaming
+var thread = new ChatHistory();
+thread.AddUserMessage(&quot;Analysez ces résultats : ...&quot;);
+await foreach (var chunk in agent.InvokeStreamingAsync(thread))
+    Console.Write(chunk.Content);</code></pre>
+<p><strong>AgentGroupChat</strong> — plusieurs agents collaborant :</p>
+<pre><code class="lang-csharp">var chat = new AgentGroupChat(writerAgent, reviewerAgent)
+{
+    ExecutionSettings = new AgentGroupChatSettings
+    {
+        SelectionStrategy = new SequentialSelectionStrategy(),
+        TerminationStrategy = new RegexTerminationStrategy(&quot;[APPROUVÉ]&quot;) { MaximumIterations = 6 },
+    }
+};
+await chat.AddChatMessageAsync(new ChatMessageContent(AuthorRole.User, &quot;Rédigez un article sur...&quot;));
+await foreach (var msg in chat.InvokeAsync())
+    Console.WriteLine($&quot;[{msg.AuthorName}] {msg.Content}&quot;);</code></pre>
+<h3>7. Filters — middleware d'interception</h3>
+<pre><code class="lang-csharp">// Logging + sécurité sur chaque appel de fonction
+public class SafetyFilter : IFunctionInvocationFilter
+{
+    public async Task OnFunctionInvocationAsync(
+        FunctionInvocationContext context,
+        Func&lt;FunctionInvocationContext, Task&gt; next)
+    {
+        var fnName = context.Function.PluginName + &quot;.&quot; + context.Function.Name;
+        Console.WriteLine($&quot;[CALL] {fnName} — args: {JsonSerializer.Serialize(context.Arguments)}&quot;);
 
-# --- Group Chat ---
-async def run_writing_session(topic: str):
-    chat = AgentGroupChat(agents=[writer_agent, reviewer_agent])
+        await next(context);  // exécution effective
 
-    await chat.add_chat_message(
-        ChatMessageContent(role=AuthorRole.USER, content=f&quot;Rédigez un paragraphe sur : {topic}&quot;)
-    )
+        Console.WriteLine($&quot;[DONE] {fnName} — result: {context.Result?.GetValue&lt;string&gt;()?.Substring(0, 100)}&quot;);
+    }
+}
 
-    print(f&quot;\n=== Session de rédaction : {topic} ===\n&quot;)
-    max_rounds = 6
-    rounds = 0
+kernel.FunctionInvocationFilters.Add(new SafetyFilter());
+// Également disponible : IPromptRenderFilter (intercepte avant rendu du prompt)</code></pre>
+<h3>8. Memory et RAG</h3>
+<pre><code class="lang-csharp">// dotnet add package Microsoft.SemanticKernel.Plugins.Memory
+var memoryBuilder = new MemoryBuilder();
+memoryBuilder.WithAzureOpenAITextEmbeddingGeneration(
+    &quot;text-embedding-3-small&quot;, endpoint, credential);
 
-    async for message in chat.invoke():
-        print(f&quot;[{message.name}] : {message.content}\n{'-'*50}&quot;)
-        rounds += 1
+// Dev : in-memory. Production : AzureAISearchMemoryStore, QdrantMemoryStore
+memoryBuilder.WithMemoryStore(new VolatileMemoryStore());
+var memory = memoryBuilder.Build();
 
-        # Terminer si approuvé ou max rounds atteint
-        if &quot;[APPROUVÉ]&quot; in (message.content or &quot;&quot;) or rounds &gt;= max_rounds:
-            break
+await memory.SaveInformationAsync(&quot;docs&quot;, id: &quot;doc1&quot;, text: &quot;Contenu du document...&quot;);
+var results = await memory.SearchAsync(&quot;docs&quot;, &quot;question utilisateur&quot;, limit: 3, minRelevanceScore: 0.7);
+foreach (var r in results)
+    Console.WriteLine($&quot;Score: {r.Relevance:F2} — {r.Metadata.Text}&quot;);</code></pre>
+<p><strong>Stores production recommandés</strong> : Azure AI Search (intégration native Azure), Qdrant (self-hosted open-source), Redis (faible latence).</p>
+<h3>9. Intégration enterprise</h3>
+<table><thead><tr><th>Besoin</th><th>Solution SK</th></tr></thead><tbody><tr><td>Auth sans clé API</td><td><code>DefaultAzureCredential</code> + Managed Identity</td></tr><tr><td>Persistance historique</td><td>Cosmos DB + <code>ISemanticTextMemory</code></td></tr><tr><td>RAG vectoriel</td><td>Azure AI Search <code>AzureAISearchMemoryStore</code></td></tr><tr><td>Observabilité</td><td><code>IFunctionInvocationFilter</code> + OpenTelemetry</td></tr><tr><td>Tests unitaires</td><td>Mock <code>IChatCompletionService</code> avec Moq</td></tr></tbody></table>
+<p>Test unitaire sans appel LLM réel :</p>
+<pre><code class="lang-csharp">var mockChat = new Mock&lt;IChatCompletionService&gt;();
+mockChat.Setup(s =&gt; s.GetChatMessageContentsAsync(It.IsAny&lt;ChatHistory&gt;(), It.IsAny&lt;PromptExecutionSettings&gt;(), It.IsAny&lt;Kernel&gt;(), It.IsAny&lt;CancellationToken&gt;()))
+    .ReturnsAsync([new ChatMessageContent(AuthorRole.Assistant, &quot;réponse mockée&quot;)]);
 
-    print(f&quot;\n=== Terminé après {rounds} échanges ===&quot;)
-
-if __name__ == &quot;__main__&quot;:
-    asyncio.run(run_writing_session(&quot;Les avantages de l'intelligence artificielle dans l'éducation&quot;))</code></pre>
-<h2>Règles</h2>
-<ol>
-<li><strong>Utiliser les descriptions <code>[Description]</code> avec précision</strong> — Le LLM choisit quelle fonction appeler uniquement sur la base des descriptions. Des descriptions vagues ou ambiguës provoquent des appels incorrects. Décrivez précisément ce que fait la fonction, ses paramètres et quand l'utiliser.</li>
-</ol>
-<ol>
-<li><strong>Préférer <code>ToolCallBehavior.AutoInvokeKernelFunctions</code> pour les agents</strong> — Ce mode délègue au LLM le choix et l'exécution automatique des fonctions. Pour les cas nécessitant un contrôle manuel, utiliser <code>EnableKernelFunctions</code> et traiter les tool calls manuellement.</li>
-</ol>
-<ol>
-<li><strong>Utiliser l'injection de dépendances dans ASP.NET Core</strong> — Ne jamais instancier <code>Kernel</code> manuellement dans une application web. Utiliser <code>services.AddKernel()</code> et <code>IKernelBuilder</code> pour un cycle de vie correct et une testabilité maximale.</li>
-</ol>
-<ol>
-<li><strong>Versionner les prompt templates avec Git</strong> — Les fichiers <code>skprompt.txt</code> + <code>config.json</code> sont du code au même titre que le C#. Les stocker dans le repo, les versionner, les tester avec des prompts de validation automatisés dans la CI/CD.</li>
-</ol>
-<ol>
-<li><strong>Gérer les erreurs de function calling explicitement</strong> — Les appels de fonctions peuvent échouer (timeout, API externe down). Toujours encapsuler les <code>KernelFunction</code> dans des try/catch et retourner des messages d'erreur descriptifs plutôt que de lever des exceptions qui interrompent le flow du LLM.</li>
-</ol>
+var kernel = Kernel.CreateBuilder()
+    .Build();
+kernel.GetAllServices&lt;IChatCompletionService&gt;(); // injecter le mock</code></pre>
+<h2>Garde-fous et anti-patterns</h2>
+<ul>
+<li><strong>Descriptions <code>[Description]</code> vagues</strong> → le LLM appelle la mauvaise fonction ou hallucine des paramètres. Toujours être précis et inclure un exemple dans la description si le format est non-trivial.</li>
+<li><strong>Exception non catchée dans un <code>KernelFunction</code></strong> → interrompt le loop du LLM. Toujours retourner une <code>string</code> d'erreur descriptive.</li>
+<li><strong><code>Kernel</code> instancié <code>new Kernel()</code> dans ASP.NET Core</strong> → pas de cycle de vie, pas de DI, pas testable. Utiliser <code>services.AddKernel()</code>.</li>
+<li><strong>Planner sans restriction de plugins</strong> → un <code>HandlebarsPlanner</code> ou <code>FunctionCallingPlanner</code> peut appeler n'importe quelle fonction enregistrée, y compris destructives. Filtrer avec <code>ExcludedPlugins</code> ou des kernel séparés par scope.</li>
+<li><strong><code>ToolCallBehavior.AutoInvokeKernelFunctions</code> sans timeout</strong> → boucle infinie possible si le LLM ne sait pas quand s'arrêter. Ajouter <code>MaxAutoInvokeAttempts = 5</code> dans <code>OpenAIPromptExecutionSettings</code>.</li>
+<li><strong>Versionner les prompts comme du texte</strong> → les fichiers <code>skprompt.txt</code> et <code>config.json</code> sont du code. Les inclure dans la CI, les tester avec des cas de régression automatisés.</li>
+<li><strong>Memory store volatile en production</strong> → <code>VolatileMemoryStore</code> ne persiste pas entre les redémarrages. Remplacer par un store durable dès le premier déploiement.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Utiliser <strong>SK 1.30+</strong> : l'API <code>Agents</code> est stable, <code>AgentGroupChat</code> est en GA.</li>
+<li>Préférer <strong>GPT-4o</strong> + <code>AutoInvokeKernelFunctions</code> aux anciens planners (StepwisePlanner déprécié).</li>
+<li>Activer <strong>OpenTelemetry</strong> : SK émet des spans pour chaque invocation de fonction — intégrer avec Azure Monitor ou Jaeger.</li>
+<li><strong>Séparer les kernels par agent</strong> dans un <code>AgentGroupChat</code> : chaque agent peut avoir son propre modèle et ses propres plugins sans interférence.</li>
+<li><strong><code>KernelArguments</code> est thread-safe</strong> : réutiliser les instances entre requêtes, mais créer un <code>ChatHistory</code> par session utilisateur.</li>
+<li>Définir <code>MaxTokens</code> dans chaque <code>execution_settings</code> des prompts templates — sans limite, un résumé peut consommer tout le contexte.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

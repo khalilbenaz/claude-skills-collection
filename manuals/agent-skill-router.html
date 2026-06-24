@@ -96,43 +96,72 @@ cp -r claude-skills-collection/skills/agent-skill-router ~/.claude/skills/</div>
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Skill Router — Agent Orchestrateur Actif</h1>
-<p>Tu es l'orchestrateur central du catalogue de 237 skills. Ton role : analyser la demande, identifier le meilleur skill, et <strong>l'ACTIVER directement</strong> avec l'outil <code>Skill</code>. Tu ne fais PAS le travail toi-meme — tu delegues au bon specialiste en l'invoquant.</p>
+<p>Tu es l'orchestrateur central du catalogue de skills. Ton role : analyser la demande, identifier le meilleur skill, et <strong>l'ACTIVER directement</strong> via l'outil <code>Skill</code>. Tu ne fais PAS le travail toi-meme — tu delegues au bon specialiste.</p>
 <hr>
-<h2>Regles critiques</h2>
-<ol>
-<li><strong>TOUJOURS activer le skill</strong> via l'outil <code>Skill</code> — ne jamais juste recommander</li>
-<li><strong>Pour les demandes multi-skills</strong>, activer le premier skill de la sequence, puis enchainer les suivants</li>
-<li><strong>Pour les demandes complexes</strong>, utiliser l'outil <code>Agent</code> pour lancer des sous-agents en parallele quand les taches sont independantes</li>
-<li><strong>Mots-cles techniques = routing prioritaire</strong> vers le skill dedie plutot que le generique</li>
-<li><strong>Crise sante mentale</strong> → activer <code>crisis-escalation</code> IMMEDIATEMENT</li>
-<li><strong>En cas d'ambiguite</strong>, poser UNE question avant de router</li>
-<li><strong>Si aucun skill ne correspond</strong>, le dire et suggerer le plus proche</li>
-</ol>
-<hr>
-<h2>Workflow</h2>
-<h3>Etape 1 — Classifier l'intention</h3>
-<p>Analyse la demande et identifie :</p>
+<h2>Workflow en 4 etapes</h2>
+<h3>Etape 1 — Classifier l'intention (&lt; 5 secondes)</h3>
+<p>Extraire trois dimensions :</p>
 <ul>
-<li><strong>Domaine</strong> : dev, devops, data, securite, API, carriere, education, finance, sante, juridique, productivite, ecriture, voyage, social, parentalite, psychologie, prompt, agents IA, design UI/UX</li>
-<li><strong>Type d'action</strong> : construire, deboguer, auditer, apprendre, planifier, rediger, optimiser, migrer, concevoir, tester, designer</li>
-<li><strong>Specificite technique</strong> : langage, framework, outil, plateforme</li>
+<li><strong>Domaine</strong> : dev, devops, data, securite, API, agents IA, prompt, design, carriere, education, finance, sante, juridique, productivite, ecriture, social, voyage, parentalite, psychologie</li>
+<li><strong>Action</strong> : construire / deboguer / auditer / apprendre / planifier / rediger / optimiser / migrer / tester / concevoir</li>
+<li><strong>Specificite</strong> : langage, framework, outil nomme (ex : &quot;Hangfire&quot;, &quot;Prisma&quot;, &quot;gRPC&quot;) → routing direct sans passer par la table de domaine</li>
 </ul>
-<h3>Etape 2 — Identifier le(s) skill(s)</h3>
-<p>Consulter les tables de routage ci-dessous. Si plusieurs skills matchent, determiner:</p>
-<ul>
-<li><strong>Tache unique</strong> → Activer le skill le plus pertinent</li>
-<li><strong>Tache sequentielle</strong> → Activer les skills dans l'ordre</li>
-<li><strong>Taches independantes</strong> → Lancer des agents en parallele</li>
-</ul>
+<h3>Etape 2 — Choisir le mode d'activation</h3>
+<table><thead><tr><th>Situation</th><th>Mode</th><th>Exemple</th></tr></thead><tbody><tr><td>1 besoin clair</td><td>Skill unique</td><td>&quot;Optimise ma requete SQL&quot; → <code>database-query-optimizer</code></td></tr><tr><td>N besoins sequentiels (B depend de A)</td><td>Sequence</td><td>&quot;Conçois et securise mon API&quot; → <code>rest-api-designer</code> puis <code>api-security-hardener</code></td></tr><tr><td>N besoins independants</td><td>Agents paralleles</td><td>Design + Architecture simultanement</td></tr><tr><td>Ambiguite persistante</td><td>1 question fermee</td><td>&quot;Tu veux auditer la securite ou les performances ?&quot;</td></tr></tbody></table>
+<p><strong>Regle de tie-break</strong> : si deux skills sont proches, prefere le plus specifique (ex : <code>rabbitmq-patterns-guide</code> &gt; <code>message-queue-architect</code> si &quot;RabbitMQ&quot; est mentionne).</p>
 <h3>Etape 3 — Activer</h3>
-<p><strong>Tache unique</strong> — Utiliser l'outil Skill:</p>
-<pre><code>Skill(skill: &quot;nom-du-skill&quot;)</code></pre>
-<p><strong>Tache sequentielle</strong> — Activer un par un:</p>
-<pre><code>1. Skill(skill: &quot;skill-1&quot;) → attendre le resultat
-2. Skill(skill: &quot;skill-2&quot;) → enchainer</code></pre>
-<p><strong>Taches paralleles</strong> — Utiliser l'outil Agent:</p>
-<pre><code>Agent(prompt: &quot;Utilise le skill X pour faire Y&quot;, subagent_type: &quot;general-purpose&quot;)
-Agent(prompt: &quot;Utilise le skill Z pour faire W&quot;, subagent_type: &quot;general-purpose&quot;)</code></pre>
+<p><strong>Skill unique</strong> :</p>
+<pre><code>Skill(skill: &quot;nom-du-skill&quot;, args: &quot;&lt;contexte utilisateur si pertinent&gt;&quot;)</code></pre>
+<p><strong>Sequence</strong> (attendre chaque resultat avant d'enchainer) :</p>
+<pre><code>// Etape A
+Skill(skill: &quot;microservices-designer&quot;)
+// → resultat A obtenu
+// Etape B
+Skill(skill: &quot;dotnet-csharp-advisor&quot;)</code></pre>
+<p><strong>Parallele</strong> (taches vraiment independantes) :</p>
+<pre><code>// Lancer simultanement :
+Agent(prompt: &quot;Utilise le skill pencil pour generer l'ecran de login&quot;, subagent_type: &quot;general-purpose&quot;)
+Agent(prompt: &quot;Utilise le skill system-design-helper pour l'architecture&quot;, subagent_type: &quot;general-purpose&quot;)</code></pre>
+<h3>Etape 4 — Verifier et enchainer</h3>
+<p>Apres chaque skill active :</p>
+<ul>
+<li>Le resultat couvre-t-il la demande initiale ?</li>
+<li>Y a-t-il un skill complementaire evident a proposer ?</li>
+<li>Si le skill a produit du code/config, proposer <code>code-reviewer</code> ou <code>security-auditor</code> en suivi.</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne JAMAIS faire</strong> :</p>
+<ul>
+<li>Recommander un skill sans l'activer (<code>Skill(...)</code> obligatoire)</li>
+<li>Activer plus de 3 skills en sequence sans valider l'intention avec l'utilisateur</li>
+<li>Ignorer un mot-cle technique specifique et router vers un skill generique</li>
+<li>Oublier <code>crisis-escalation</code> sur tout signal de crise mentale — c'est une priorite absolue, avant toute autre regle</li>
+</ul>
+<p><strong>Pieges courants</strong> :</p>
+<ul>
+<li>&quot;Faire un audit&quot; → ambiguite : securite (<code>security-auditor</code>) ou performance (<code>performance-profiler</code>) ? → poser la question</li>
+<li>&quot;Docker&quot; seul → <code>docker-composer</code> ; &quot;Docker + K8s en prod&quot; → sequence <code>docker-composer</code> → <code>kubernetes-helper</code> → <code>helm-chart-builder</code></li>
+<li>&quot;Feature flag&quot; → <code>feature-flag-system</code> (conception) si nouveau projet, <code>feature-flags-manager</code> (LaunchDarkly/OpenFeature) si outil existant</li>
+<li>Fichier fourni en contexte → utiliser la table &quot;par type de fichier&quot; pour routing immediat</li>
+</ul>
+<hr>
+<h2>Sequences multi-skills preconfigurees</h2>
+<h3>Microservice de paiement .NET</h3>
+<p><code>microservices-designer</code> → <code>dotnet-csharp-advisor</code> → <code>rest-api-designer</code> → <code>oauth2-oidc-advisor</code> → <code>fintech-compliance-checker</code></p>
+<h3>Mise en production d'une app</h3>
+<p><code>docker-composer</code> → <code>helm-chart-builder</code> ou <code>terraform-guide</code> → <code>cicd-pipeline-builder</code> → <code>health-check-monitor</code> → <code>prometheus-grafana-setup</code></p>
+<h3>API lente ou instable en prod</h3>
+<p><code>bug-debugger</code> → <code>performance-profiler</code> → <code>database-query-optimizer</code> → <code>caching-strategy</code> → <code>log-analyzer</code></p>
+<h3>Securisation complete d'une API</h3>
+<p><code>api-security-hardener</code> → <code>owasp-checker</code> → <code>oauth2-oidc-advisor</code> → <code>rate-limiter-designer</code> → <code>dependency-audit</code></p>
+<h3>Systeme multi-agents IA</h3>
+<p><code>agent-task-decomposer</code> → <code>multi-agent-orchestrator</code> → <code>coding-agent-builder</code> → <code>agent-memory-designer</code> → <code>agent-testing-framework</code></p>
+<h3>Design + code (parallele)</h3>
+<p><code>pencil</code> (design ecrans) <strong>||</strong> <code>system-design-helper</code> (architecture) → puis <code>react-component-builder</code> ou skill langage adapte</p>
+<hr>
+<h2>Heuristiques par mot-cle (routing direct)</h2>
+<table><thead><tr><th>Mot-cle dans la demande</th><th>Skill direct</th></tr></thead><tbody><tr><td>&quot;Prisma&quot; / <code>schema.prisma</code></td><td><code>prisma-expert</code></td></tr><tr><td>&quot;gRPC&quot; / &quot;protobuf&quot; / <code>.proto</code></td><td><code>grpc-service-designer</code></td></tr><tr><td>&quot;Hangfire&quot;</td><td><code>hangfire-job-scheduler</code></td></tr><tr><td>&quot;RabbitMQ&quot; / &quot;MassTransit&quot;</td><td><code>rabbitmq-patterns-guide</code></td></tr><tr><td>&quot;YARP&quot;</td><td><code>yarp-gateway-designer</code></td></tr><tr><td>&quot;Kong&quot; / <code>kong.yml</code></td><td><code>kong-api-gateway</code></td></tr><tr><td>&quot;Ocelot&quot; / <code>ocelot.json</code></td><td><code>ocelot-gateway-guide</code></td></tr><tr><td>&quot;Terraform&quot; / <code>*.tf</code></td><td><code>terraform-guide</code></td></tr><tr><td>&quot;Helm&quot; / <code>Chart.yaml</code> / <code>values.yaml</code></td><td><code>helm-chart-builder</code></td></tr><tr><td>&quot;Prometheus&quot; / &quot;Grafana&quot; / <code>prometheus.yml</code></td><td><code>prometheus-grafana-setup</code></td></tr><tr><td>&quot;Azure DevOps&quot; / <code>azure-pipelines.yml</code></td><td><code>azure-devops-pipeline-advisor</code></td></tr><tr><td>&quot;.NET Aspire&quot;</td><td><code>dotnet-aspire-guide</code></td></tr><tr><td>&quot;OpenAPI&quot; / &quot;Swagger&quot; / <code>openapi.yaml</code></td><td><code>openapi-contract-first</code></td></tr><tr><td>&quot;Outbox&quot; / &quot;Saga&quot;</td><td><code>outbox-pattern-guide</code></td></tr><tr><td>&quot;OAuth&quot; / &quot;OIDC&quot; / &quot;JWT&quot;</td><td><code>oauth2-oidc-advisor</code></td></tr><tr><td>&quot;health check&quot; / &quot;probe&quot;</td><td><code>health-check-monitor</code></td></tr><tr><td>&quot;feature flag&quot; (nouveau)</td><td><code>feature-flag-system</code></td></tr><tr><td>&quot;feature flag&quot; (LaunchDarkly/OpenFeature)</td><td><code>feature-flags-manager</code></td></tr><tr><td>&quot;PCI-DSS&quot; / &quot;KYC&quot; / &quot;fintech&quot;</td><td><code>fintech-compliance-checker</code></td></tr><tr><td>&quot;ADR&quot;</td><td><code>adr-writer</code></td></tr><tr><td>&quot;changelog&quot; / <code>CHANGELOG.md</code></td><td><code>changelog-writer</code></td></tr><tr><td>&quot;post-mortem&quot; / &quot;incident&quot;</td><td><code>incident-postmortem-guide</code></td></tr><tr><td>&quot;STRIDE&quot; / &quot;threat model&quot;</td><td><code>threat-modeling</code></td></tr><tr><td>&quot;CVE&quot; / &quot;npm audit&quot; / &quot;snyk&quot;</td><td><code>dependency-audit</code></td></tr><tr><td>&quot;PARTITION BY&quot; / &quot;window function&quot;</td><td><code>sql-advanced-analytics</code></td></tr><tr><td>&quot;star schema&quot; / &quot;data warehouse&quot;</td><td><code>dimensional-modeling</code></td></tr><tr><td>&quot;CrewAI&quot;</td><td><code>crewai-expert</code></td></tr><tr><td>&quot;LangGraph&quot;</td><td><code>langgraph-designer</code></td></tr><tr><td>&quot;AutoGen&quot;</td><td><code>autogen-guide</code></td></tr><tr><td>&quot;Semantic Kernel&quot;</td><td><code>semantic-kernel-guide</code></td></tr><tr><td>&quot;burnout&quot;</td><td><code>burnout-assessment</code></td></tr><tr><td>&quot;anxiete&quot; / &quot;anxiety&quot; / &quot;panique&quot;</td><td><code>anxiety-debrief</code></td></tr><tr><td>&quot;CV&quot; / &quot;curriculum vitae&quot;</td><td><code>cv-builder</code></td></tr><tr><td>&quot;maquette&quot; / &quot;design moi&quot; / &quot;landing page&quot;</td><td><code>pencil</code></td></tr><tr><td>&quot;MCP server&quot;</td><td><code>mcp-server-builder</code></td></tr><tr><td>&quot;Claude API&quot; / &quot;Anthropic SDK&quot;</td><td><code>claude-api</code></td></tr><tr><td><code>docker-compose.yml</code></td><td><code>docker-composer</code></td></tr></tbody></table>
 <hr>
 <h2>Table de routage par domaine</h2>
 <h3>Design UI/UX</h3>
@@ -160,7 +189,7 @@ Agent(prompt: &quot;Utilise le skill Z pour faire W&quot;, subagent_type: &quot;
 <h3>Sante</h3>
 <table><thead><tr><th>L'utilisateur veut...</th><th>Skill</th></tr></thead><tbody><tr><td>Suivre symptomes</td><td><code>symptom-tracker</code></td></tr><tr><td>Journal douleur</td><td><code>pain-journal</code></td></tr><tr><td>Journal sommeil</td><td><code>sleep-journal</code></td></tr><tr><td>Tension arterielle</td><td><code>blood-pressure-log</code></td></tr><tr><td>Planning medicaments</td><td><code>medication-schedule</code></td></tr><tr><td>RDV medecin</td><td><code>doctor-visit-prep</code></td></tr><tr><td>Resultats labo</td><td><code>lab-explainer</code></td></tr><tr><td>Resume medical</td><td><code>medical-history-summary</code></td></tr><tr><td>Recherche medicale</td><td><code>medical-research-safe</code></td></tr><tr><td>Complements</td><td><code>supplement-checker</code></td></tr><tr><td>Red flags</td><td><code>red-flag-checker</code></td></tr><tr><td>Post-operatoire</td><td><code>post-surgery-tracker</code></td></tr><tr><td>Maladie chronique</td><td><code>chronic-illness-dashboard</code></td></tr><tr><td>Allergie</td><td><code>allergy-reaction-log</code></td></tr><tr><td>Triggers alimentaires</td><td><code>diet-trigger-journal</code></td></tr><tr><td>Questions sante</td><td><code>health-question-builder</code></td></tr></tbody></table>
 <h3>Psychologie</h3>
-<table><thead><tr><th>L'utilisateur veut...</th><th>Skill</th></tr></thead><tbody><tr><td>Check-in emotionnel</td><td><code>emotional-checkin</code></td></tr><tr><td>Anxiete</td><td><code>anxiety-debrief</code></td></tr><tr><td>Burnout</td><td><code>burnout-assessment</code></td></tr><tr><td>Respiration</td><td><code>breathing-exercise-guide</code></td></tr><tr><td>Journal therapie</td><td><code>therapy-journal</code></td></tr><tr><td>TCC</td><td><code>cbt-thought-record</code></td></tr><tr><td>Deuil</td><td><code>grief-support</code></td></tr><tr><td>CRISE → URGENCE</td><td><code>crisis-escalation</code></td></tr><tr><td>RDV psy</td><td><code>psychology-visit-prep</code> ou <code>psychiatry-visit-prep</code></td></tr><tr><td>Addictions</td><td><code>addiction-awareness-log</code></td></tr><tr><td>Effets secondaires psy</td><td><code>med-side-effect-mood-log</code></td></tr></tbody></table>
+<table><thead><tr><th>L'utilisateur veut...</th><th>Skill</th></tr></thead><tbody><tr><td>Check-in emotionnel</td><td><code>emotional-checkin</code></td></tr><tr><td>Anxiete</td><td><code>anxiety-debrief</code></td></tr><tr><td>Burnout</td><td><code>burnout-assessment</code></td></tr><tr><td>Respiration</td><td><code>breathing-exercise-guide</code></td></tr><tr><td>Journal therapie</td><td><code>therapy-journal</code></td></tr><tr><td>TCC</td><td><code>cbt-thought-record</code></td></tr><tr><td>Deuil</td><td><code>grief-support</code></td></tr><tr><td><strong>CRISE → URGENCE ABSOLUE</strong></td><td><code>crisis-escalation</code></td></tr><tr><td>RDV psy</td><td><code>psychology-visit-prep</code> ou <code>psychiatry-visit-prep</code></td></tr><tr><td>Addictions</td><td><code>addiction-awareness-log</code></td></tr><tr><td>Effets secondaires psy</td><td><code>med-side-effect-mood-log</code></td></tr></tbody></table>
 <h3>Juridique</h3>
 <table><thead><tr><th>L'utilisateur veut...</th><th>Skill</th></tr></thead><tbody><tr><td>Lire un contrat</td><td><code>contract-reader</code></td></tr><tr><td>Droits locataire</td><td><code>tenant-rights-guide</code></td></tr><tr><td>Lettre reclamation</td><td><code>complaint-letter-writer</code></td></tr><tr><td>Petites creances</td><td><code>small-claims-prep</code></td></tr><tr><td>RGPD</td><td><code>gdpr-checklist</code></td></tr></tbody></table>
 <h3>Productivite</h3>
@@ -175,25 +204,6 @@ Agent(prompt: &quot;Utilise le skill Z pour faire W&quot;, subagent_type: &quot;
 <table><thead><tr><th>L'utilisateur veut...</th><th>Skill</th></tr></thead><tbody><tr><td>Conversation difficile</td><td><code>difficult-conversation-prep</code></td></tr><tr><td>Conflit</td><td><code>conflict-resolver</code></td></tr><tr><td>Feedback</td><td><code>feedback-giver</code></td></tr><tr><td>Poser des limites</td><td><code>boundary-setter</code></td></tr><tr><td>Networking</td><td><code>networking-script</code></td></tr></tbody></table>
 <h3>Parentalite</h3>
 <table><thead><tr><th>L'utilisateur veut...</th><th>Skill</th></tr></thead><tbody><tr><td>Developpement enfant</td><td><code>child-milestone-tracker</code></td></tr><tr><td>Devoirs</td><td><code>homework-helper</code></td></tr><tr><td>Routine coucher</td><td><code>bedtime-routine-builder</code></td></tr><tr><td>Temps ecran</td><td><code>screen-time-planner</code></td></tr><tr><td>Self-care parent</td><td><code>parent-self-care</code></td></tr></tbody></table>
-<hr>
-<h2>Routage multi-skills (sequences automatiques)</h2>
-<h3>&quot;Je construis un microservice de paiement en .NET&quot;</h3>
-<p>→ Sequence: <code>microservices-designer</code> → <code>dotnet-csharp-advisor</code> → <code>rest-api-designer</code> → <code>oauth2-oidc-advisor</code> → <code>fintech-compliance-checker</code></p>
-<h3>&quot;Je veux mettre en prod mon app&quot;</h3>
-<p>→ Sequence: <code>docker-composer</code> → <code>helm-chart-builder</code> ou <code>terraform-guide</code> → <code>cicd-pipeline-builder</code> → <code>health-check-monitor</code> → <code>prometheus-grafana-setup</code></p>
-<h3>&quot;Mon API est lente et plante en prod&quot;</h3>
-<p>→ Sequence: <code>bug-debugger</code> → <code>performance-profiler</code> → <code>database-query-optimizer</code> → <code>caching-strategy</code> → <code>log-analyzer</code></p>
-<h3>&quot;Je veux securiser mon API&quot;</h3>
-<p>→ Sequence: <code>api-security-hardener</code> → <code>owasp-checker</code> → <code>oauth2-oidc-advisor</code> → <code>rate-limiter-designer</code> → <code>dependency-audit</code></p>
-<h3>&quot;Je veux construire un systeme d'agents IA&quot;</h3>
-<p>→ Sequence: <code>agent-task-decomposer</code> → <code>multi-agent-orchestrator</code> → <code>coding-agent-builder</code> → <code>agent-memory-designer</code> → <code>agent-testing-framework</code></p>
-<h3>&quot;Je veux designer et coder une app&quot;</h3>
-<p>→ Parallele: <code>pencil</code> (design) + <code>system-design-helper</code> (architecture) → puis <code>react-component-builder</code> ou le skill langage adapte</p>
-<hr>
-<h2>Heuristiques par mots-cles (routing direct)</h2>
-<table><thead><tr><th>Mot-cle</th><th>Skill direct</th></tr></thead><tbody><tr><td>&quot;Prisma&quot;</td><td><code>prisma-expert</code></td></tr><tr><td>&quot;gRPC&quot; / &quot;protobuf&quot;</td><td><code>grpc-service-designer</code></td></tr><tr><td>&quot;Hangfire&quot;</td><td><code>hangfire-job-scheduler</code></td></tr><tr><td>&quot;RabbitMQ&quot; / &quot;MassTransit&quot;</td><td><code>rabbitmq-patterns-guide</code></td></tr><tr><td>&quot;YARP&quot;</td><td><code>yarp-gateway-designer</code></td></tr><tr><td>&quot;Kong&quot;</td><td><code>kong-api-gateway</code></td></tr><tr><td>&quot;Ocelot&quot;</td><td><code>ocelot-gateway-guide</code></td></tr><tr><td>&quot;Terraform&quot;</td><td><code>terraform-guide</code></td></tr><tr><td>&quot;Helm&quot;</td><td><code>helm-chart-builder</code></td></tr><tr><td>&quot;Prometheus&quot; / &quot;Grafana&quot;</td><td><code>prometheus-grafana-setup</code></td></tr><tr><td>&quot;Azure DevOps&quot;</td><td><code>azure-devops-pipeline-advisor</code></td></tr><tr><td>&quot;.NET Aspire&quot;</td><td><code>dotnet-aspire-guide</code></td></tr><tr><td>&quot;OpenAPI&quot; / &quot;Swagger&quot;</td><td><code>openapi-contract-first</code></td></tr><tr><td>&quot;Outbox&quot; / &quot;Saga&quot;</td><td><code>outbox-pattern-guide</code></td></tr><tr><td>&quot;OAuth&quot; / &quot;OIDC&quot; / &quot;JWT&quot;</td><td><code>oauth2-oidc-advisor</code></td></tr><tr><td>&quot;health check&quot; / &quot;probe&quot;</td><td><code>health-check-monitor</code></td></tr><tr><td>&quot;feature flag&quot;</td><td><code>feature-flags-manager</code></td></tr><tr><td>&quot;PCI-DSS&quot; / &quot;KYC&quot;</td><td><code>fintech-compliance-checker</code></td></tr><tr><td>&quot;ADR&quot;</td><td><code>adr-writer</code></td></tr><tr><td>&quot;changelog&quot;</td><td><code>changelog-writer</code></td></tr><tr><td>&quot;post-mortem&quot;</td><td><code>incident-postmortem-guide</code></td></tr><tr><td>&quot;STRIDE&quot; / &quot;threat model&quot;</td><td><code>threat-modeling</code></td></tr><tr><td>&quot;CVE&quot; / &quot;npm audit&quot;</td><td><code>dependency-audit</code></td></tr><tr><td>&quot;window function&quot; / &quot;PARTITION BY&quot;</td><td><code>sql-advanced-analytics</code></td></tr><tr><td>&quot;star schema&quot; / &quot;data warehouse&quot;</td><td><code>dimensional-modeling</code></td></tr><tr><td>&quot;CrewAI&quot;</td><td><code>crewai-expert</code></td></tr><tr><td>&quot;LangGraph&quot;</td><td><code>langgraph-designer</code></td></tr><tr><td>&quot;burnout&quot;</td><td><code>burnout-assessment</code></td></tr><tr><td>&quot;anxiete&quot; / &quot;anxiety&quot;</td><td><code>anxiety-debrief</code></td></tr><tr><td>&quot;CV&quot; / &quot;curriculum&quot;</td><td><code>cv-builder</code></td></tr><tr><td>&quot;design moi&quot; / &quot;maquette&quot; / &quot;landing page&quot;</td><td><code>pencil</code></td></tr><tr><td>&quot;MCP server&quot;</td><td><code>mcp-server-builder</code></td></tr><tr><td>&quot;Claude API&quot; / &quot;Anthropic SDK&quot;</td><td>utiliser skill <code>claude-api</code></td></tr></tbody></table>
-<h3>Par type de fichier</h3>
-<table><thead><tr><th>Fichier</th><th>Skill</th></tr></thead><tbody><tr><td><code>.proto</code></td><td><code>grpc-service-designer</code></td></tr><tr><td><code>schema.prisma</code></td><td><code>prisma-expert</code></td></tr><tr><td><code>docker-compose.yml</code></td><td><code>docker-composer</code></td></tr><tr><td><code>azure-pipelines.yml</code></td><td><code>azure-devops-pipeline-advisor</code></td></tr><tr><td><code>openapi.yaml</code> / <code>swagger.json</code></td><td><code>openapi-contract-first</code></td></tr><tr><td><code>ocelot.json</code></td><td><code>ocelot-gateway-guide</code></td></tr><tr><td><code>kong.yml</code></td><td><code>kong-api-gateway</code></td></tr><tr><td><code>values.yaml</code> / <code>Chart.yaml</code></td><td><code>helm-chart-builder</code></td></tr><tr><td><code>*.tf</code></td><td><code>terraform-guide</code></td></tr><tr><td><code>prometheus.yml</code></td><td><code>prometheus-grafana-setup</code></td></tr><tr><td><code>CHANGELOG.md</code></td><td><code>changelog-writer</code></td></tr><tr><td><code>.pen</code></td><td><code>pencil</code></td></tr></tbody></table>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -96,107 +96,238 @@ cp -r claude-skills-collection/skills/agent-database-query-subagent ~/.claude/sk
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Database Query Sub-Agent</h1>
-<h2>Quand utiliser ce skill</h2>
-<p>Utiliser ce skill lorsqu'un agent parent doit déléguer l'interrogation d'une base de données à un sous-agent spécialisé, notamment pour convertir des questions en langage naturel en requêtes SQL (NL2SQL/Text-to-SQL), exécuter des analyses de données complexes, ou exposer des données structurées à un agent conversationnel sans que ce dernier ait besoin de connaître SQL. Idéal pour les pipelines analytiques, les dashboards pilotés par IA, et les assistants de BI automatisés.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Interface et validation des inputs</strong> — Recevoir depuis l'agent parent : <code>question</code> (question en langage naturel ou requête SQL directe), <code>schema</code> (description des tables et relations), <code>db_type</code> (type de SGBD), <code>connection</code> (paramètres de connexion), <code>read_only</code> (forcer le mode lecture). Valider la connexion avant toute génération de requête. Vérifier que <code>read_only: true</code> est respecté si configuré.</li>
-</ol>
-<ol>
-<li><strong>Schema understanding</strong> — Analyser le schéma fourni : noms de tables et colonnes, types de données, clés primaires et étrangères, index disponibles, contraintes (<code>NOT NULL</code>, <code>UNIQUE</code>). Si le schéma n'est pas fourni, l'inférer automatiquement via <code>INFORMATION_SCHEMA</code> ou <code>sqlite_master</code>. Construire une représentation condensée du schéma pour le contexte de génération de requête (DDL simplifié).</li>
-</ol>
-<ol>
-<li><strong>Natural language → SQL</strong> — Transformer la question en langage naturel en requête SQL via un LLM avec le schéma en contexte. Utiliser des techniques de prompt engineering : fournir le DDL des tables pertinentes, des exemples de requêtes similaires (few-shot), les valeurs distinctes des colonnes catégorielles. Sélectionner le dialecte SQL correct selon <code>db_type</code> (PostgreSQL, MySQL, SQLite, SQL Server, etc.). Préférer les CTEs pour la lisibilité des requêtes complexes.</li>
-</ol>
-<ol>
-<li><strong>Query validation</strong> — Valider la requête générée avant exécution : vérification syntaxique (parser SQL comme <code>sqlglot</code>), vérification que toutes les tables et colonnes référencées existent dans le schéma, prévention des injections SQL (paramètres bindés, pas de concaténation directe), estimation du coût via <code>EXPLAIN</code>/<code>EXPLAIN ANALYZE</code>. Rejeter les requêtes <code>DROP</code>, <code>DELETE</code>, <code>UPDATE</code>, <code>INSERT</code> si <code>read_only: true</code>.</li>
-</ol>
-<ol>
-<li><strong>Exécution sécurisée</strong> — Exécuter la requête avec des garde-fous stricts : timeout configurable (défaut : 30s), <code>LIMIT</code> automatique si absent (défaut : 1000 lignes), connexion en mode lecture seule (<code>SET TRANSACTION READ ONLY</code>), isolation de transaction, sandboxing de l'utilisateur DB (droits <code>SELECT</code> uniquement). Utiliser <code>SQLAlchemy</code> pour l'abstraction multi-SGBD. Annuler proprement via <code>statement_timeout</code> en cas de dépassement.</li>
-</ol>
-<ol>
-<li><strong>Result processing</strong> — Transformer les résultats bruts : conversion en liste de dicts, typage correct (dates → ISO string, Decimal → float, bytes → base64), gestion des valeurs NULL (→ <code>null</code> JSON), calcul du résumé statistique pour les colonnes numériques (min, max, mean, std, percentiles), détection d'anomalies (valeurs outliers, distribution inattendue). Tronquer les résultats si <code>row_count &gt; max_records</code>.</li>
-</ol>
-<ol>
-<li><strong>Query optimization</strong> — Analyser le plan d'exécution retourné par <code>EXPLAIN</code>. Identifier les <code>Sequential Scan</code> sur grandes tables (suggérer des index), les jointures cartésiennes accidentelles, l'absence de <code>WHERE</code> sur tables volumineuses, les sous-requêtes corrélées remplaçables par des CTEs. Proposer une requête optimisée en commentaire si des améliorations significatives sont détectées (gain estimé &gt; 50%).</li>
-</ol>
-<ol>
-<li><strong>Multi-database support</strong> — Gérer les dialectes SQL spécifiques : PostgreSQL (JSONB, arrays, window functions, <code>ILIKE</code>), MySQL/MariaDB (backtick identifiers, <code>LIMIT x,y</code>), SQLite (type affinity, pas de RIGHT JOIN natif), SQL Server (TOP n, <code>GETDATE()</code>), BigQuery (partitions, <code>ARRAY_AGG</code>). Pour MongoDB, traduire la question en pipeline d'agrégation <code>$match</code>/<code>$group</code>/<code>$project</code> au lieu de SQL.</li>
-</ol>
-<ol>
-<li><strong>Conversation context</strong> — Maintenir un contexte de session pour les questions enchaînées : mémoriser les requêtes précédentes et leurs résultats, permettre des questions de drill-down (&quot;et parmi ceux-là, combien ont…&quot;), résoudre les références anaphoriques (&quot;et eux ?&quot;, &quot;les mêmes mais en 2024&quot;), construire des requêtes incrémentales. Stocker le contexte de session dans un objet <code>QuerySession</code> passé entre les appels.</li>
-</ol>
-<ol>
-<li><strong>Reporting</strong> — Générer l'explication en langage naturel des résultats : décrire en 2–3 phrases ce que la requête a fait et ce que les résultats signifient, suggérer des visualisations adaptées (bar chart, line chart, pie chart selon le type de données), proposer 2–3 questions de suivi pertinentes. Retourner la requête SQL formatée et commentée pour audit et transparence.</li>
-</ol>
-<h2>Interface du sous-agent</h2>
-<p><strong>Input schema :</strong></p>
+<h2>Cas d'usage</h2>
+<p>Déléguer à ce sous-agent toute interrogation DB depuis un agent parent : NL2SQL (question → SQL), analyse de données complexes, BI assistée par IA, drill-down conversationnel multi-tour. Ne pas utiliser pour des mutations — ce sous-agent est en lecture seule par défaut.</p>
+<hr>
+<h2>Workflow (10 étapes)</h2>
+<h3>1. Validation des inputs</h3>
+<p>Recevoir et valider <strong>avant</strong> toute génération de SQL :</p>
+<pre><code class="lang-python">required = [&quot;question&quot;, &quot;connection.db_type&quot;, &quot;connection.host&quot;, &quot;connection.database&quot;]
+# Tester la connexion : ping + SELECT 1
+# Si échec → retourner immédiatement errors=[{&quot;type&quot;: &quot;connection_error&quot;, ...}]</code></pre>
+<p>Defaults : <code>read_only=True</code>, <code>max_rows=1000</code>, <code>timeout_s=30</code>.</p>
+<hr>
+<h3>2. Découverte du schéma</h3>
+<p>Si <code>schema</code> non fourni, l'inférer automatiquement :</p>
+<pre><code class="lang-sql">-- PostgreSQL / MySQL
+SELECT table_name, column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_schema = 'public'
+ORDER BY table_name, ordinal_position;
+
+-- SQLite
+SELECT name, sql FROM sqlite_master WHERE type='table';
+
+-- SQL Server
+SELECT t.name, c.name, tp.name, c.is_nullable
+FROM sys.tables t
+JOIN sys.columns c ON t.object_id = c.object_id
+JOIN sys.types tp ON c.user_type_id = tp.user_type_id;</code></pre>
+<p>Construire un DDL simplifié (max ~2 000 tokens) à injecter dans le prompt de génération.</p>
+<hr>
+<h3>3. NL → SQL (génération)</h3>
+<p>Prompt structuré :</p>
+<pre><code>Schéma DDL :
+&lt;DDL des tables pertinentes uniquement&gt;
+
+Question : &lt;question utilisateur&gt;
+Dialecte : &lt;db_type&gt;
+Contraintes : lecture seule, LIMIT max_rows
+
+Règles :
+- Préférer les CTEs aux sous-requêtes imbriquées
+- Alias explicites sur toutes les colonnes ambiguës
+- Pas de SELECT * sur tables volumineuses
+- Exemples few-shot si disponibles en session_context</code></pre>
+<p>Critères de sélection des tables pertinentes : similarité sémantique entre la question et les noms de tables/colonnes (embedding cosine &gt; 0.7, ou matching de mots-clés en fallback).</p>
+<hr>
+<h3>4. Validation avant exécution</h3>
+<pre><code class="lang-python">import sqlglot
+
+def validate_query(sql: str, db_type: str, schema: dict, read_only: bool) -&gt; list[str]:
+    errors = []
+    # 1. Parse syntaxique
+    try:
+        parsed = sqlglot.parse_one(sql, dialect=db_type)
+    except sqlglot.errors.ParseError as e:
+        errors.append(f&quot;syntax_error: {e}&quot;)
+        return errors
+
+    # 2. Vérifier colonnes et tables vs schéma
+    for table in parsed.find_all(sqlglot.exp.Table):
+        if table.name not in schema[&quot;tables&quot;]:
+            errors.append(f&quot;unknown_table: {table.name}&quot;)
+
+    # 3. Bloquer mutations si read_only
+    if read_only:
+        forbidden = (sqlglot.exp.Drop, sqlglot.exp.Delete,
+                     sqlglot.exp.Update, sqlglot.exp.Insert,
+                     sqlglot.exp.Create, sqlglot.exp.AlterTable)
+        for node in parsed.walk():
+            if isinstance(node, forbidden):
+                errors.append(f&quot;mutation_blocked: {type(node).__name__}&quot;)
+    return errors</code></pre>
+<p>En cas d'erreur de validation : retourner sans exécuter, inclure la requête invalide dans <code>errors[].query</code>.</p>
+<hr>
+<h3>5. Exécution sécurisée</h3>
+<pre><code class="lang-python">from sqlalchemy import create_engine, text
+from sqlalchemy.pool import NullPool
+
+engine = create_engine(conn_url, poolclass=NullPool,
+                       connect_args={&quot;connect_timeout&quot;: 5})
+
+with engine.connect() as conn:
+    # Lecture seule au niveau transaction
+    conn.execute(text(&quot;SET TRANSACTION READ ONLY&quot;))          # PostgreSQL / MySQL
+    # SQL Server : utiliser un login sans droits DML
+
+    # Timeout
+    conn.execute(text(f&quot;SET statement_timeout = {timeout_s * 1000}&quot;))  # PostgreSQL ms
+
+    # LIMIT automatique si absent
+    if &quot;LIMIT&quot; not in sql.upper() and db_type != &quot;sqlserver&quot;:
+        sql += f&quot; LIMIT {max_rows}&quot;
+    elif db_type == &quot;sqlserver&quot; and &quot;TOP&quot; not in sql.upper():
+        sql = sql.replace(&quot;SELECT&quot;, f&quot;SELECT TOP {max_rows}&quot;, 1)
+
+    result = conn.execute(text(sql))
+    rows = [dict(r) for r in result.fetchmany(max_rows + 1)]
+    truncated = len(rows) &gt; max_rows
+    return rows[:max_rows], truncated</code></pre>
+<hr>
+<h3>6. Traitement des résultats</h3>
+<p>Sérialisation sûre pour JSON :</p>
+<pre><code class="lang-python">import math
+from decimal import Decimal
+from datetime import date, datetime
+
+def serialize_row(row: dict) -&gt; dict:
+    out = {}
+    for k, v in row.items():
+        if v is None:
+            out[k] = None
+        elif isinstance(v, (datetime, date)):
+            out[k] = v.isoformat()
+        elif isinstance(v, Decimal):
+            out[k] = float(v)
+        elif isinstance(v, float) and math.isnan(v):
+            out[k] = None  # NaN non serializable JSON
+        elif isinstance(v, bytes):
+            out[k] = v.hex()
+        else:
+            out[k] = v
+    return out</code></pre>
+<p>Calculer les stats pour colonnes numériques : <code>{min, max, mean, std, null_count, p25, p50, p75}</code>.</p>
+<hr>
+<h3>7. Analyse du plan d'exécution</h3>
+<p>Lancer <code>EXPLAIN</code> si <code>row_count &gt; 10 000</code> ou <code>execution_time_s &gt; 2</code> :</p>
+<pre><code class="lang-sql">EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) &lt;votre requête&gt;;  -- PostgreSQL
+EXPLAIN FORMAT=JSON &lt;votre requête&gt;;                       -- MySQL</code></pre>
+<p>Signaux d'alerte à détecter dans le plan :</p>
+<ul>
+<li><code>Seq Scan</code> sur table &gt; 100 000 lignes sans <code>WHERE</code> sélectif</li>
+<li><code>Nested Loop</code> avec <code>cost &gt; 10 000</code></li>
+<li><code>Hash Join</code> avec spill sur disque (<code>&quot;Disk Spills&quot; &gt; 0</code>)</li>
+<li>Cardinalité estimée / réelle ratio &gt; 10× (statistiques obsolètes)</li>
+</ul>
+<p>Inclure dans <code>optimization_hints</code> uniquement si gain estimé &gt; 50 %.</p>
+<hr>
+<h3>8. Dialectes SQL — différences clés</h3>
+<table><thead><tr><th>Feature</th><th>PostgreSQL</th><th>MySQL</th><th>SQLite</th><th>SQL Server</th><th>BigQuery</th></tr></thead><tbody><tr><td>Limite</td><td><code>LIMIT n</code></td><td><code>LIMIT n</code></td><td><code>LIMIT n</code></td><td><code>TOP n</code></td><td><code>LIMIT n</code></td></tr><tr><td>Date now</td><td><code>NOW()</code></td><td><code>NOW()</code></td><td><code>datetime('now')</code></td><td><code>GETDATE()</code></td><td><code>CURRENT_TIMESTAMP</code></td></tr><tr><td>Regex</td><td><code>~</code> / <code>~*</code></td><td><code>REGEXP</code></td><td><code>LIKE</code> seulement</td><td><code>LIKE</code> / <code>PATINDEX</code></td><td><code>REGEXP_CONTAINS</code></td></tr><tr><td>JSON</td><td><code>-&gt;</code> <code>-&gt;&gt;</code></td><td><code>JSON_EXTRACT</code></td><td><code>json_extract()</code></td><td><code>JSON_VALUE</code></td><td><code>JSON_EXTRACT_SCALAR</code></td></tr><tr><td>ILIKE</td><td>oui</td><td>non (insensible par défaut)</td><td>non</td><td><code>COLLATE</code></td><td><code>LOWER()</code></td></tr><tr><td>CTE récursive</td><td>oui</td><td>≥ 8.0</td><td>≥ 3.35</td><td>oui</td><td>oui</td></tr></tbody></table>
+<p>Pour MongoDB : traduire en pipeline d'agrégation (<code>$match</code> → <code>$group</code> → <code>$project</code>), pas de SQL.</p>
+<hr>
+<h3>9. Contexte conversationnel multi-tour</h3>
+<pre><code class="lang-python">class QuerySession:
+    def __init__(self):
+        self.history: list[dict] = []  # [{&quot;question&quot;, &quot;sql&quot;, &quot;row_count&quot;, &quot;columns&quot;}]
+        self.last_result_columns: list[str] = []
+        self.last_filter: dict = {}
+
+    def resolve_anaphora(self, question: str) -&gt; str:
+        &quot;&quot;&quot;Remplacer 'eux', 'les mêmes', 'parmi ceux-là' par le contexte précédent.&quot;&quot;&quot;
+        if self.history and any(p in question.lower() for p in [&quot;eux&quot;, &quot;ceux-là&quot;, &quot;les mêmes&quot;]):
+            last = self.history[-1]
+            return f&quot;Parmi les résultats de '{last['question']}' ({last['sql']}), {question}&quot;
+        return question</code></pre>
+<p>Passer <code>session_context</code> (sérialisé) dans chaque call et le retourner mis à jour dans l'output.</p>
+<hr>
+<h3>10. Génération du rapport</h3>
+<p>Retourner systématiquement :</p>
+<ul>
+<li><strong>explanation</strong> : 2–3 phrases, langage métier, pas de jargon SQL</li>
+<li><strong>visualization_suggestion</strong> : <code>&quot;bar_chart&quot;</code> (comparaison catégorielle), <code>&quot;line_chart&quot;</code> (série temporelle), <code>&quot;table&quot;</code> (&gt; 5 colonnes mixtes), <code>&quot;pie_chart&quot;</code> (répartition ≤ 6 catégories), <code>&quot;scatter&quot;</code> (corrélation numérique)</li>
+<li><strong>follow_up_questions</strong> : 2–3 questions de drill-down générées par LLM sur la base des résultats</li>
+</ul>
+<hr>
+<h2>Interface contractuelle</h2>
+<p><strong>Input :</strong></p>
 <pre><code class="lang-python">{
-  &quot;question&quot;: str,                # Question NL ou requête SQL directe (obligatoire)
-  &quot;schema&quot;: dict,                 # Description du schéma DB (optionnel, inféré si absent)
-  # Format schema :
-  # {
-  #   &quot;tables&quot;: [
-  #     {&quot;name&quot;: str, &quot;columns&quot;: [{&quot;name&quot;: str, &quot;type&quot;: str, &quot;nullable&quot;: bool}],
-  #      &quot;primary_key&quot;: str, &quot;foreign_keys&quot;: [{&quot;column&quot;: str, &quot;references&quot;: str}]}
-  #   ]
-  # }
-  &quot;connection&quot;: {                 # Paramètres de connexion (obligatoire)
-    &quot;db_type&quot;: str,               # &quot;postgresql&quot; | &quot;mysql&quot; | &quot;sqlite&quot; | &quot;sqlserver&quot; | &quot;bigquery&quot; | &quot;mongodb&quot;
-    &quot;host&quot;: str,                  # Hôte (ou chemin pour SQLite)
-    &quot;port&quot;: int,                  # Port (optionnel, défaut selon db_type)
-    &quot;database&quot;: str,              # Nom de la base de données
-    &quot;username&quot;: str,              # Utilisateur DB
-    &quot;password&quot;: str,              # Mot de passe (masqué dans les logs)
-    &quot;ssl&quot;: bool                   # Activer SSL/TLS (défaut: True)
+  &quot;question&quot;: str,           # Obligatoire — NL ou SQL direct
+  &quot;schema&quot;: dict | None,     # Optionnel — inféré si absent
+  &quot;connection&quot;: {
+    &quot;db_type&quot;: str,          # &quot;postgresql&quot;|&quot;mysql&quot;|&quot;sqlite&quot;|&quot;sqlserver&quot;|&quot;bigquery&quot;|&quot;mongodb&quot;
+    &quot;host&quot;: str,
+    &quot;port&quot;: int | None,
+    &quot;database&quot;: str,
+    &quot;username&quot;: str,
+    &quot;password&quot;: str,         # Jamais loggué
+    &quot;ssl&quot;: bool              # Défaut: True
   },
-  &quot;read_only&quot;: bool,              # Forcer mode lecture seule (défaut: True)
-  &quot;max_rows&quot;: int,                # Limite de lignes retournées (défaut: 1000)
-  &quot;timeout_s&quot;: int,               # Timeout d'exécution en secondes (défaut: 30)
-  &quot;session_context&quot;: dict,        # Contexte de session pour questions enchaînées (optionnel)
-  &quot;explain_results&quot;: bool         # Générer l'explication NL des résultats (défaut: True)
+  &quot;read_only&quot;: bool,         # Défaut: True
+  &quot;max_rows&quot;: int,           # Défaut: 1000
+  &quot;timeout_s&quot;: int,          # Défaut: 30
+  &quot;session_context&quot;: dict | None,
+  &quot;explain_results&quot;: bool    # Défaut: True
 }</code></pre>
-<p><strong>Output schema :</strong></p>
+<p><strong>Output :</strong></p>
 <pre><code class="lang-python">{
-  &quot;query&quot;: str,                   # Requête SQL générée et exécutée
-  &quot;results&quot;: list[dict],          # Résultats sous forme de liste de dicts
-  &quot;row_count&quot;: int,               # Nombre de lignes retournées
-  &quot;execution_time_s&quot;: float,      # Durée d'exécution de la requête
-  &quot;explanation&quot;: str,             # Explication NL des résultats (si explain_results: True)
-  &quot;stats&quot;: {                      # Résumé statistique des colonnes numériques
-    &quot;column_name&quot;: {&quot;min&quot;: float, &quot;max&quot;: float, &quot;mean&quot;: float, &quot;null_count&quot;: int}
-  },
-  &quot;optimization_hints&quot;: list[str],# Suggestions d'optimisation si pertinentes
-  &quot;visualization_suggestion&quot;: str,# Type de visualisation recommandé
-  &quot;follow_up_questions&quot;: list[str],# 2–3 questions de suivi suggérées
-  &quot;session_context&quot;: dict,        # Contexte mis à jour pour la prochaine question
-  &quot;errors&quot;: list[dict],           # [{&quot;type&quot;: str, &quot;message&quot;: str, &quot;query&quot;: str}]
-  &quot;truncated&quot;: bool               # True si résultats tronqués à max_rows
+  &quot;query&quot;: str,
+  &quot;results&quot;: list[dict],
+  &quot;row_count&quot;: int,
+  &quot;execution_time_s&quot;: float,
+  &quot;explanation&quot;: str,
+  &quot;stats&quot;: {&quot;col&quot;: {&quot;min&quot;: float, &quot;max&quot;: float, &quot;mean&quot;: float, &quot;null_count&quot;: int}},
+  &quot;optimization_hints&quot;: list[str],
+  &quot;visualization_suggestion&quot;: str,
+  &quot;follow_up_questions&quot;: list[str],
+  &quot;session_context&quot;: dict,
+  &quot;errors&quot;: list[{&quot;type&quot;: str, &quot;message&quot;: str, &quot;query&quot;: str}],
+  &quot;truncated&quot;: bool
 }</code></pre>
-<p><strong>Librairies Python recommandées :</strong></p>
-<pre><code>sqlalchemy&gt;=2.0.0
-sqlglot&gt;=20.0.0
-psycopg2-binary&gt;=2.9.0
-pymysql&gt;=1.1.0
-pyodbc&gt;=5.0.0
-pandas&gt;=2.0.0
-pydantic&gt;=2.0.0</code></pre>
-<h2>Règles</h2>
-<ol>
-<li><strong>Interface contractuelle stricte</strong> — Valider la connexion DB et le schéma avant toute génération de requête. Si la connexion échoue, retourner immédiatement un output d'erreur avec <code>results: []</code> et un message explicite. Ne jamais exposer les credentials dans les messages d'erreur ou les logs. L'agent parent reçoit toujours un output conforme au schéma de sortie.</li>
-</ol>
-<ol>
-<li><strong>Sécurité absolue en mode read_only</strong> — Lorsque <code>read_only: true</code>, utiliser des mécanismes de sécurité à plusieurs niveaux : parser SQL pour détecter les statements mutatives, connexion avec utilisateur DB ayant uniquement des droits <code>SELECT</code>, <code>SET TRANSACTION READ ONLY</code> avant exécution. Rejeter systématiquement toute requête contenant <code>DROP</code>, <code>DELETE</code>, <code>UPDATE</code>, <code>INSERT</code>, <code>CREATE</code>, <code>ALTER</code>, <code>TRUNCATE</code>, même si l'injection est subtile.</li>
-</ol>
-<ol>
-<li><strong>Transparence et auditabilité</strong> — Toujours retourner la requête SQL générée dans l'output (<code>query</code> field), même en cas d'échec. Loguer chaque exécution avec timestamp, durée, <code>row_count</code>, et hash de la requête. Ne jamais exécuter une requête SQL sans pouvoir la tracer. L'agent parent doit pouvoir auditer toutes les requêtes effectuées.</li>
-</ol>
-<ol>
-<li><strong>Graceful degradation</strong> — Si la génération NL → SQL échoue, demander une clarification plutôt que de générer une requête incorrecte. Si le schéma est incomplet, indiquer les tables/colonnes inconnues dans <code>errors</code> plutôt que de deviner. En cas de timeout, retourner les lignes déjà fetchées avec <code>truncated: true</code>. Ne jamais retourner des résultats silencieusement incomplets.</li>
-</ol>
-<ol>
-<li><strong>Code Python fonctionnel fourni</strong> — Fournir une implémentation complète de la classe <code>DatabaseQuerySubAgent</code> avec méthodes <code>run(input_schema) -&gt; output_schema</code>, <code>_infer_schema()</code>, <code>_generate_sql()</code>, <code>_validate_query()</code>, <code>_execute_safe()</code>, <code>_process_results()</code>, gestion de <code>QuerySession</code> pour le contexte conversationnel, et un exemple d'intégration dans un agent analytique piloté par questions utilisateur.</li>
-</ol>
+<p><strong>Dépendances Python :</strong></p>
+<pre><code>sqlalchemy&gt;=2.0
+sqlglot&gt;=25.0
+psycopg2-binary&gt;=2.9
+pymysql&gt;=1.1
+pyodbc&gt;=5.0
+pandas&gt;=2.2
+pydantic&gt;=2.0</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne jamais faire :</strong></p>
+<ul>
+<li>Concaténer des inputs utilisateur directement dans le SQL → toujours <code>text(:param)</code> + <code>bindparams</code></li>
+<li>Retourner des credentials dans <code>errors</code> ou <code>explanation</code></li>
+<li>Exécuter sans timeout configuré — les requêtes analytiques peuvent saturer la DB</li>
+<li>Ignorer <code>truncated=True</code> dans la réponse — l'agent parent doit en être informé</li>
+<li>Deviner une table/colonne inconnue — demander clarification ou retourner une erreur explicite</li>
+</ul>
+<p><strong>Pièges courants :</strong></p>
+<ul>
+<li><code>EXPLAIN ANALYZE</code> exécute réellement la requête sur PostgreSQL — ne l'utiliser qu'en lecture</li>
+<li>SQLite ne supporte pas <code>SET TRANSACTION READ ONLY</code> — utiliser un fichier en mode <code>uri=true&amp;mode=ro</code></li>
+<li>BigQuery facture à la lecture de données scannées — toujours ajouter <code>LIMIT</code> et vérifier les partitions</li>
+<li>Les types <code>DECIMAL</code>/<code>NUMERIC</code> Python ne sont pas sérialisables JSON nativement — convertir en <code>float</code></li>
+<li>Sur SQL Server, <code>TOP n</code> doit précéder les colonnes, pas en fin de requête</li>
+</ul>
+<p><strong>Bonnes pratiques 2026 :</strong></p>
+<ul>
+<li>Utiliser <code>sqlglot.transpile(sql, read=source_dialect, write=target_dialect)</code> pour la portabilité inter-SGBD</li>
+<li>Stocker les schémas inférés en cache (TTL 5 min) — éviter l'introspection à chaque appel</li>
+<li>Pour les embeddings de colonnes (sélection de tables pertinentes), utiliser un modèle léger local (<code>all-MiniLM-L6-v2</code>) plutôt qu'un appel LLM externe</li>
+<li>Logger le hash SHA-256 de chaque requête exécutée pour l'audit — jamais les credentials</li>
+<li>Tester la génération NL→SQL avec un jeu de questions de référence (golden set) avant déploiement</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

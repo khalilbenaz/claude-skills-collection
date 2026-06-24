@@ -96,36 +96,86 @@ cp -r claude-skills-collection/skills/career-transition-planner ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Career Transition Planner</h1>
-<h2>Workflow</h2>
+<h2>Étape 1 — Bilan de situation actuelle</h2>
+<p>Commence toujours par une grille de lecture rapide :</p>
+<table><thead><tr><th>Axe</th><th>Questions clés</th></tr></thead><tbody><tr><td>Satisfaction</td><td>Qu'est-ce qui t'énerve le lundi matin ? Qu'est-ce qui te donne de l'énergie ?</td></tr><tr><td>Compétences</td><td>Quelles compétences pourrais-tu utiliser dans un autre contexte ?</td></tr><tr><td>Valeurs</td><td>Autonomie, impact, sécurité, créativité, management, technique ?</td></tr><tr><td>Contraintes</td><td>Mobilité géographique, salaire plancher, charge familiale ?</td></tr></tbody></table>
+<p><strong>Output attendu :</strong> une liste de 3-5 compétences transférables et 2-3 valeurs non négociables.</p>
+<hr>
+<h2>Étape 2 — Exploration des options</h2>
+<h3>Critères de décision pour shortlister des métiers cibles</h3>
 <ol>
-<li><strong>Bilan actuel</strong> :</li>
-<ul>
-<li>Ce qui plaît dans le job actuel</li>
-<li>Ce qui ne plaît plus</li>
-<li>Compétences transférables</li>
-<li>Valeurs professionnelles (autonomie, impact, sécurité, créativité…)</li>
-</ul>
-<li><strong>Exploration</strong> :</li>
-<ul>
-<li>Secteurs et métiers alignés avec les compétences et valeurs</li>
-<li>Passerelles possibles depuis le métier actuel</li>
-<li>Formations nécessaires vs compétences déjà acquises</li>
-</ul>
-<li><strong>Plan d'action</strong> :</li>
-<ul>
-<li>Phase 1 : exploration (informational interviews, recherche)</li>
-<li>Phase 2 : formation ou montée en compétences</li>
-<li>Phase 3 : transition (candidatures, réseau, side projects)</li>
-</ul>
-<li><strong>Risques et réalités</strong> : finances, durée, marché de l'emploi.</li>
-<li><strong>Timeline</strong> : plan réaliste sur 3-12 mois.</li>
+<li><strong>Chevauchement compétences</strong> ≥ 60 % → transition rapide (&lt;12 mois)</li>
+<li><strong>Chevauchement</strong> 30-60 % → requalification partielle (12-24 mois, bootcamp ou formation courte)</li>
+<li><strong>Chevauchement</strong> &lt; 30 % → reconversion profonde (&gt;24 mois, diplôme ou alternance)</li>
 </ol>
-<h2>Règles</h2>
+<h3>Passerelles courantes par profil</h3>
+<table><thead><tr><th>Profil actuel</th><th>Pivots courants (2026)</th></tr></thead><tbody><tr><td>Dev backend</td><td>AI/ML Engineer, Platform Engineer, Tech Lead, Solution Architect</td></tr><tr><td>Dev frontend</td><td>Product Designer, Developer Advocate, Technical PM</td></tr><tr><td>Consultant IT</td><td>Product Manager, Freelance Coach, Directeur de projets</td></tr><tr><td>Ingénieur industriel</td><td>DevOps/SRE, Data Engineer, Lean Coach</td></tr><tr><td>Commercial B2B</td><td>Account Executive SaaS, Sales Engineer, Customer Success</td></tr><tr><td>RH / Recruteur</td><td>People Ops, RevOps, Learning &amp; Development Manager</td></tr></tbody></table>
+<h3>Validation de l'hypothèse cible</h3>
+<p>Avant de s'engager, valider avec au moins <strong>2 sur 3</strong> :</p>
 <ul>
-<li>Ne pousse pas vers une décision — aide à clarifier.</li>
-<li>Reste réaliste sur les délais et les difficultés.</li>
-<li>Valorise les compétences transférables.</li>
-<li>Propose des petits pas avant un grand saut.</li>
+<li>[ ] Entretien informationnel avec quelqu'un du métier cible (≥ 30 min)</li>
+<li>[ ] Stage / mission freelance courte (&lt;1 mois) ou projet perso publié</li>
+<li>[ ] Offres d'emploi sur le marché local cohérentes avec le profil visé</li>
+</ul>
+<hr>
+<h2>Étape 3 — Plan d'action en phases</h2>
+<h3>Phase 1 — Exploration (semaines 1-6)</h3>
+<pre><code>Actions concrètes :
+- Contacter 5 personnes sur LinkedIn dans le métier cible (message court, 3 lignes max)
+- Lire 2-3 rapports sectoriels récents (ex. State of AI Jobs 2026, LinkedIn Jobs Report)
+- Lister 10 offres d'emploi cibles → extraire les compétences récurrentes
+- Identifier 1 formation ou certification courte (Coursera, RNCP, bootcamp)</code></pre>
+<h3>Phase 2 — Montée en compétences (mois 2-6)</h3>
+<pre><code>Actions concrètes :
+- Choisir une formation ciblée (critère : durée ≤6 mois, ROI prouvé, reconnu marché)
+- Lancer 1 side project public (GitHub, portfolio, newsletter, mission micro-freelance)
+- Construire/refaire le CV et le profil LinkedIn pour le nouveau métier
+- Identifier 3 entreprises cibles (culture, taille, secteur alignés avec valeurs)</code></pre>
+<h3>Phase 3 — Transition active (mois 6-12)</h3>
+<pre><code>Actions concrètes :
+- Candidatures ciblées (qualité &gt; quantité, 10-20 candidatures max)
+- Activer le réseau : anciens collègues, alumni, communautés Slack/Discord du secteur
+- Préparer 3 histoires STAR pour les compétences transférables clés
+- Négocier salaire en tenant compte de la courbe d'apprentissage (attente réaliste : -10/20 % initial)</code></pre>
+<hr>
+<h2>Étape 4 — Analyse de risque financier</h2>
+<p><strong>Calcul minimal avant de sauter :</strong></p>
+<pre><code>Runway = Épargne disponible / Dépenses mensuelles fixes
+→ Runway ≥ 6 mois : transition sereine
+→ Runway 3-6 mois : transition possible avec revenus d'appoint (freelance, temps partiel)
+→ Runway &lt; 3 mois : préparation nécessaire avant de quitter le poste actuel</code></pre>
+<p><strong>Sources de financement à explorer (France 2026) :</strong></p>
+<ul>
+<li>CPF (Compte Personnel de Formation) — budget disponible sur moncompteformation.gouv.fr</li>
+<li>Projet de Transition Professionnelle (PTP / ancien CIF) — maintien de salaire jusqu'à 2 ans</li>
+<li>Aide à la reconversion Pôle Emploi / France Travail si démission légitime</li>
+<li>OPCO de la branche actuelle pour formations en alternance</li>
+</ul>
+<hr>
+<h2>Étape 5 — Timeline réaliste</h2>
+<pre><code>Semaines 1-2   : Bilan + shortlist de 2-3 métiers cibles
+Semaines 3-6   : Validation par entretiens informationnels
+Mois 2-3       : Formation ou side project lancé
+Mois 4-6       : CV/LinkedIn refait, premières candidatures exploratoires
+Mois 6-9       : Candidatures actives + entretiens
+Mois 9-12      : Offre acceptée ou ajustement de cap</code></pre>
+<hr>
+<h2>Anti-patterns et pièges courants</h2>
+<ul>
+<li><strong>Quitter sans filet</strong> : démission impulsive sans runway ni cible claire → éviter.</li>
+<li><strong>Over-formation</strong> : accumuler des certifications sans side project ni réseau → signal faible pour les recruteurs.</li>
+<li><strong>Métier fantasmé</strong> : choisir un métier sur l'image (dev, designer, PM) sans validation terrain → toujours faire au moins 1 entretien informationnel avant de s'engager.</li>
+<li><strong>Comparaison salariale brute</strong> : comparer son salaire actuel (senior) au salaire d'entrée dans le nouveau domaine → intégrer la courbe de progression à 2-3 ans.</li>
+<li><strong>Réseau négligé</strong> : envoyer uniquement des candidatures à froid → 60-70 % des postes se pourvoient via le réseau.</li>
+<li><strong>Attendre d'être &quot;prêt&quot;</strong> : la transition parfaite n'existe pas — commencer par un petit pas (entretien informationnel, side project) est toujours mieux que d'attendre.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Les recruteurs vérifient GitHub, LinkedIn et portfolio <strong>avant</strong> le CV.</li>
+<li>Les transitions réussies combinent toujours 3 éléments : preuve (projet/mission), réseau (référence), récit (comment tu racontes le changement).</li>
+<li>Les bootcamps intensifs (3-6 mois) ont remplacé les masters 2 ans pour la plupart des pivots tech.</li>
+<li>L'IA augmente la demande en profils hybrides (tech + domaine métier) — valoriser sa double compétence plutôt que de l'effacer.</li>
 </ul>
 </article>
 </main>

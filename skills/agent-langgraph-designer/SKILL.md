@@ -7,353 +7,288 @@ description: Conception de graphes d'agents avec LangGraph pour workflows comple
 
 ## Quand utiliser ce skill
 
-Utiliser ce skill quand l'utilisateur a besoin d'un workflow d'agent avec un contrôle fin du flux d'exécution : branchements conditionnels, cycles (l'agent peut revenir en arrière), persistance d'état entre sessions, ou interruptions pour validation humaine. LangGraph est préférable à LangChain LCEL ou CrewAI quand le workflow n'est pas strictement linéaire et que l'état doit être géré explicitement. Idéal pour : agents ReAct complexes, pipelines Plan-and-Execute, workflows avec retry logic, chatbots avec mémoire persistante.
+LangGraph est pertinent quand **au moins une** de ces conditions est vraie :
+- Le workflow n'est pas linéaire (branches, cycles, retry)
+- L'état doit persister entre plusieurs appels ou sessions
+- Une validation humaine doit interrompre l'exécution
+- Plusieurs agents spécialisés doivent se coordonner
 
-## Workflow
+**Alternatives** : LangChain LCEL pour les pipelines linéaires simples, CrewAI si tu veux une abstraction haut niveau sans gérer le state manuellement.
 
-1. **Concepts fondamentaux de LangGraph**
-   - `StateGraph` : le graphe principal qui orchestre les nœuds et transitions
-   - `Node` : une fonction Python qui reçoit le state et retourne un state modifié
-   - `Edge` : connexion directe entre deux nœuds (toujours exécutée)
-   - `Conditional Edge` : connexion avec une fonction de routing qui choisit le prochain nœud
-   - `START` et `END` : nœuds spéciaux pour l'entrée et la sortie du graphe
-   - Installation : `pip install langgraph==0.2.70 langchain-openai==0.2.14`
+---
 
-2. **Définition du State (TypedDict)**
-   - Le State est le schéma partagé entre tous les nœuds :
-     ```python
-     from typing import TypedDict, Annotated
-     import operator
+## Workflow en étapes
 
-     class AgentState(TypedDict):
-         messages: Annotated[list, operator.add]  # reducer: append
-         next_step: str
-         iteration_count: int
-         final_answer: str | None
-     ```
-   - `Annotated[list, operator.add]` : reducer qui **ajoute** au lieu de **remplacer** (crucial pour les messages)
-   - Sans reducer, chaque nœud **remplace** la valeur (comportement par défaut)
-   - Utiliser `MessagesState` (classe prête à l'emploi) pour les applications de chat
+### 1. Installation et imports
 
-3. **Création des nœuds**
-   - Un nœud est une fonction synchrone ou async qui reçoit le state et retourne un dict partiel :
-     ```python
-     from langchain_openai import ChatOpenAI
-     from langchain_core.messages import SystemMessage
+```bash
+pip install langgraph>=0.3.0 langchain-openai>=0.2.0
+# Persistance PostgreSQL (prod) :
+pip install langgraph-checkpoint-postgres psycopg[binary]
+```
 
-     llm = ChatOpenAI(model="gpt-4o", temperature=0)
+```python
+from langgraph.graph import StateGraph, START, END
+from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.checkpoint.memory import MemorySaver
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import HumanMessage, BaseMessage
+from typing import TypedDict, Annotated
+import operator
+```
 
-     def agent_node(state: AgentState) -> dict:
-         messages = state["messages"]
-         response = llm.invoke(messages)
-         return {"messages": [response]}  # sera ajouté grâce au reducer
+### 2. Définir le State (TypedDict)
 
-     def tool_node(state: AgentState) -> dict:
-         # Exécution des tool calls du dernier message
-         last_message = state["messages"][-1]
-         results = execute_tools(last_message.tool_calls)
-         return {"messages": results}
-     ```
-   - Les nœuds ne retournent que les **clés modifiées** du state (partial update)
+Le State est le schéma partagé entre tous les nœuds. **Règle critique : toujours annoter les listes avec un reducer.**
 
-4. **Configuration des edges**
-   - Edge simple : `graph.add_edge("node_a", "node_b")`
-   - Edge depuis START : `graph.add_edge(START, "first_node")`
-   - Edge vers END : `graph.add_edge("last_node", END)`
-   - Conditional edge :
-     ```python
-     def should_continue(state: AgentState) -> str:
-         last_message = state["messages"][-1]
-         if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-             return "tools"  # continuer avec les outils
-         return END         # terminer
+```python
+from langgraph.graph.message import add_messages  # reducer officiel pour messages
 
-     graph.add_conditional_edges(
-         "agent",
-         should_continue,
-         {"tools": "tool_node", END: END},
-     )
-     ```
+class AgentState(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]  # append, déduplique par id
+    iteration_count: int        # compteur anti-boucle infinie
+    final_answer: str | None
+```
 
-5. **Persistence et checkpointing**
-   - Permet de reprendre un graphe depuis n'importe quel point :
-     ```python
-     from langgraph.checkpoint.sqlite import SqliteSaver
-     from langgraph.checkpoint.memory import MemorySaver
+Critères de choix du reducer :
+| Besoin | Reducer |
+|--------|---------|
+| Accumuler des messages | `add_messages` |
+| Accumuler une liste générique | `operator.add` |
+| Remplacer la valeur | Aucun (défaut) |
+| Valeur max/min | `lambda a, b: max(a, b)` |
 
-     # En mémoire (dev/test)
-     memory = MemorySaver()
+Raccourci pour chatbots purs : `from langgraph.graph import MessagesState` (hérite déjà de `add_messages`).
 
-     # SQLite (persistance locale)
-     with SqliteSaver.from_conn_string("checkpoints.db") as checkpointer:
-         app = graph.compile(checkpointer=checkpointer)
+### 3. Créer les nœuds
 
-     # Chaque run nécessite un thread_id unique
-     config = {"configurable": {"thread_id": "session-user-123"}}
-     result = app.invoke({"messages": [...]}, config=config)
-     ```
-   - `PostgresSaver` pour la production à grande échelle (nécessite `psycopg`)
+Un nœud est une **fonction pure** : reçoit le state complet, retourne un dict partiel (seules les clés modifiées).
 
-6. **Human-in-the-loop (HIL)**
-   - Interrompre **avant** un nœud : `graph.compile(interrupt_before=["human_review"])`
-   - Interrompre **après** un nœud : `graph.compile(interrupt_after=["agent"])`
-   - Reprendre avec modification du state :
-     ```python
-     # Lancer jusqu'à l'interruption
-     app.invoke(inputs, config=config)
+```python
+llm = ChatOpenAI(model="gpt-4o", temperature=0)
+llm_with_tools = llm.bind_tools(tools)
 
-     # Inspecter le state actuel
-     current_state = app.get_state(config)
-     print(current_state.values)
+def agent_node(state: AgentState) -> dict:
+    response = llm_with_tools.invoke(state["messages"])
+    return {
+        "messages": [response],
+        "iteration_count": state["iteration_count"] + 1,
+    }
 
-     # Modifier le state si nécessaire
-     app.update_state(config, {"next_step": "approved"})
+# ToolNode gère automatiquement l'exécution des tool_calls
+tool_node = ToolNode(tools)
+```
 
-     # Reprendre l'exécution (None = continuer depuis l'interruption)
-     app.invoke(None, config=config)
-     ```
+### 4. Construire le graphe et les edges
 
-7. **Sub-graphs et composition**
-   - Un graphe peut être utilisé comme nœud dans un graphe parent :
-     ```python
-     sub_app = sub_graph.compile()
-     main_graph.add_node("subprocess", sub_app)
-     ```
-   - **Multi-agent supervisor** : un agent superviseur route vers des agents spécialisés (sous-graphes)
-   - **Graph as tool** : compiler un graphe et l'encapsuler comme tool LangChain
-   - Les sous-graphes héritent du checkpointer parent si partagé
+```python
+builder = StateGraph(AgentState)
 
-8. **Streaming**
-   - Mode `"values"` : retourne l'état complet après chaque nœud
-   - Mode `"updates"` : retourne seulement les deltas après chaque nœud (plus efficace)
-   - Mode `"messages"` : streaming token par token des messages LLM
-     ```python
-     async for chunk in app.astream(inputs, config=config, stream_mode="messages"):
-         if chunk[1].get("langgraph_node") == "agent":
-             print(chunk[0].content, end="", flush=True)
-     ```
-   - Combiner plusieurs modes : `stream_mode=["updates", "messages"]`
+# Ajout des nœuds
+builder.add_node("agent", agent_node)
+builder.add_node("tools", tool_node)
 
-9. **Patterns architecturaux**
-   - **ReAct Agent** : nœud agent → conditional edge (tools ou END) → nœud tools → retour agent
-   - **Plan-and-Execute** : nœud planner → nœud executor (loop) → nœud replanner → END
-   - **Reflection** : nœud génération → nœud critique → nœud révision (N tours max)
-   - **Multi-agent Supervisor** : nœud supervisor → conditional edges vers agents spécialisés → retour supervisor
-   - **Map-Reduce** : fan-out vers nœuds parallèles → nœud agrégation (avec `Send` API)
+# Edges
+builder.add_edge(START, "agent")
 
-10. **Déploiement**
-    - **LangGraph Platform** (anciennement LangGraph Cloud) : hébergement managé avec API, UI Studio, persistence intégrée
-    - **Self-hosted** : `langgraph up` avec Docker Compose (nécessite LangSmith API key)
-    - **FastAPI wrapper** : exposer le graphe comme API REST avec streaming SSE
-    - **LangGraph Studio** : interface de debug locale pour visualiser et inspecter les graphes
+# Conditional edge : tools_condition vérifie si des tool_calls sont présents
+builder.add_conditional_edges(
+    "agent",
+    tools_condition,           # retourne "tools" ou END
+)
+builder.add_edge("tools", "agent")  # cycle : retour à l'agent
+```
 
-## Exemples de code
+Conditional edge personnalisé :
 
-### Agent ReAct avec outils et persistance
+```python
+MAX_ITER = 10
+
+def router(state: AgentState) -> str:
+    if state["iteration_count"] >= MAX_ITER:
+        return END                          # garde-fou anti-boucle
+    last = state["messages"][-1]
+    if hasattr(last, "tool_calls") and last.tool_calls:
+        return "tools"
+    return END
+
+builder.add_conditional_edges(
+    "agent",
+    router,
+    {"tools": "tools", END: END},  # mapping explicite (optionnel mais lisible)
+)
+```
+
+### 5. Compiler avec checkpointer
+
+```python
+# Dev / tests
+memory = MemorySaver()
+app = builder.compile(checkpointer=memory)
+
+# SQLite (local, persist entre process)
+from langgraph.checkpoint.sqlite import SqliteSaver
+with SqliteSaver.from_conn_string("app.db") as cp:
+    app = builder.compile(checkpointer=cp)
+
+# PostgreSQL (production)
+from langgraph.checkpoint.postgres import PostgresSaver
+with PostgresSaver.from_conn_string(os.environ["DATABASE_URL"]) as cp:
+    cp.setup()   # crée les tables si besoin
+    app = builder.compile(checkpointer=cp)
+```
+
+Chaque run utilise un `thread_id` pour isoler les sessions :
+
+```python
+config = {"configurable": {"thread_id": "user-abc-session-1"}}
+result = app.invoke({"messages": [HumanMessage(content="...")], "iteration_count": 0}, config=config)
+```
+
+### 6. Human-in-the-loop (HIL)
+
+```python
+# Interrompre avant un nœud critique
+app = builder.compile(checkpointer=memory, interrupt_before=["executor"])
+
+# Lancer jusqu'à l'interruption
+app.invoke(initial_state, config=config)
+
+# Inspecter et modifier le state
+current = app.get_state(config)
+print(current.values["plan"])
+
+# Corriger si besoin
+app.update_state(config, {"plan": ["étape 1 modifiée", "étape 2"]})
+
+# Reprendre (None = continuer depuis le point d'interruption)
+final = app.invoke(None, config=config)
+```
+
+### 7. Streaming
+
+```python
+# Token par token (UIs chat)
+async for chunk, metadata in app.astream(inputs, config=config, stream_mode="messages"):
+    if metadata.get("langgraph_node") == "agent":
+        print(chunk.content, end="", flush=True)
+
+# Deltas d'état (progression)
+for update in app.stream(inputs, config=config, stream_mode="updates"):
+    node_name, state_delta = next(iter(update.items()))
+    print(f"[{node_name}] {state_delta}")
+```
+
+### 8. Sub-graphs et Multi-agent
+
+```python
+# Compiler un sous-graphe et l'utiliser comme nœud
+sub_app = sub_builder.compile()
+main_builder.add_node("specialist", sub_app)
+
+# Pattern Supervisor : router vers agents spécialisés
+def supervisor_router(state) -> str:
+    # Le LLM décide quel agent appeler
+    return state["next_agent"]  # "researcher" | "coder" | END
+
+main_builder.add_conditional_edges("supervisor", supervisor_router)
+```
+
+---
+
+## Exemples complets
+
+### Agent ReAct minimal avec persistance
 
 ```python
 import os
 from typing import TypedDict, Annotated
-import operator
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import ToolNode
 
-os.environ["OPENAI_API_KEY"] = "votre-clé"
+class State(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]
+    iteration_count: int
 
-# --- State ---
-class AgentState(TypedDict):
-    messages: Annotated[list[BaseMessage], operator.add]
-
-# --- Outils ---
 @tool
 def calculator(expression: str) -> str:
-    """Évalue une expression mathématique Python."""
+    """Évalue une expression mathématique Python sûre."""
     try:
-        result = eval(expression, {"__builtins__": {}})
-        return f"Résultat : {result}"
+        return str(eval(expression, {"__builtins__": {}}))
     except Exception as e:
-        return f"Erreur : {e}"
+        return f"Erreur: {e}"
 
-@tool
-def get_current_date() -> str:
-    """Retourne la date et l'heure actuelles."""
-    from datetime import datetime
-    return datetime.now().strftime("Nous sommes le %d/%m/%Y à %H:%M")
+tools = [calculator]
+llm = ChatOpenAI(model="gpt-4o", temperature=0).bind_tools(tools)
 
-tools = [calculator, get_current_date]
-tool_node = ToolNode(tools)  # nœud prêt à l'emploi pour exécuter les tools
+MAX_ITER = 8
 
-# --- LLM avec tools ---
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
-llm_with_tools = llm.bind_tools(tools)
+def agent(state: State) -> dict:
+    return {"messages": [llm.invoke(state["messages"])], "iteration_count": state["iteration_count"] + 1}
 
-# --- Nœuds ---
-def agent(state: AgentState) -> dict:
-    """Nœud agent principal : appelle le LLM."""
-    response = llm_with_tools.invoke(state["messages"])
-    return {"messages": [response]}
+def should_continue(state: State) -> str:
+    if state["iteration_count"] >= MAX_ITER:
+        return END
+    return tools_condition(state)
 
-def should_continue(state: AgentState) -> str:
-    """Routing : continuer avec les outils ou terminer."""
-    last_message = state["messages"][-1]
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
-    return END
-
-# --- Construction du graphe ---
-builder = StateGraph(AgentState)
-
+builder = StateGraph(State)
 builder.add_node("agent", agent)
-builder.add_node("tools", tool_node)
-
+builder.add_node("tools", ToolNode(tools))
 builder.add_edge(START, "agent")
-builder.add_conditional_edges(
-    "agent",
-    should_continue,
-    {"tools": "tools", END: END},
-)
-builder.add_edge("tools", "agent")  # retour vers l'agent après les tools
+builder.add_conditional_edges("agent", should_continue)
+builder.add_edge("tools", "agent")
 
-# Compilation avec checkpointer pour la persistance
-memory = MemorySaver()
-app = builder.compile(checkpointer=memory)
+app = builder.compile(checkpointer=MemorySaver())
 
-# --- Utilisation ---
-if __name__ == "__main__":
-    config = {"configurable": {"thread_id": "conversation-1"}}
-
-    # Tour 1
-    result = app.invoke(
-        {"messages": [HumanMessage(content="Quelle est la date aujourd'hui ?")]},
-        config=config,
-    )
-    print(result["messages"][-1].content)
-
-    # Tour 2 — le contexte est mémorisé grâce au thread_id
-    result = app.invoke(
-        {"messages": [HumanMessage(content="Et combien font 1337 * 42 ?")]},
-        config=config,
-    )
-    print(result["messages"][-1].content)
-
-    # Inspecter l'historique complet
-    state = app.get_state(config)
-    print(f"\nNombre de messages dans la session : {len(state.values['messages'])}")
+config = {"configurable": {"thread_id": "demo-1"}}
+r = app.invoke({"messages": [HumanMessage("Combien font 1337 * 42 ?")], "iteration_count": 0}, config)
+print(r["messages"][-1].content)
 ```
 
-### Workflow Plan-and-Execute avec human-in-the-loop
+### Visualiser le graphe (debug local)
 
 ```python
-from typing import TypedDict, Annotated, List
-import operator
-from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.memory import MemorySaver
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
+# Générer un PNG du graphe (nécessite pygraphviz ou pillow)
+from IPython.display import Image
+Image(app.get_graph().draw_mermaid_png())
 
-llm = ChatOpenAI(model="gpt-4o", temperature=0)
-
-class PlanState(TypedDict):
-    objective: str
-    plan: List[str]
-    completed_steps: Annotated[List[str], operator.add]
-    current_step_index: int
-    result: str
-    human_approved: bool
-
-def planner(state: PlanState) -> dict:
-    """Génère un plan d'action détaillé."""
-    response = llm.invoke([
-        SystemMessage(content="Vous êtes un planificateur expert. Créez un plan en 3-5 étapes numérotées."),
-        HumanMessage(content=f"Objectif : {state['objective']}"),
-    ])
-    # Parser le plan (simplification — en prod, utiliser structured output)
-    steps = [line.strip() for line in response.content.split("\n") if line.strip().startswith(tuple("123456789"))]
-    return {"plan": steps, "current_step_index": 0}
-
-def executor(state: PlanState) -> dict:
-    """Exécute l'étape courante du plan."""
-    if state["current_step_index"] >= len(state["plan"]):
-        return {"result": "Toutes les étapes sont complétées."}
-
-    current_step = state["plan"][state["current_step_index"]]
-    response = llm.invoke([
-        SystemMessage(content="Exécutez cette étape de manière concrète et détaillée."),
-        HumanMessage(content=f"Étape : {current_step}\nObjectif global : {state['objective']}"),
-    ])
-    return {
-        "completed_steps": [f"Étape {state['current_step_index']+1}: {response.content}"],
-        "current_step_index": state["current_step_index"] + 1,
-    }
-
-def should_continue_plan(state: PlanState) -> str:
-    """Continue le plan ou termine."""
-    if state["current_step_index"] >= len(state["plan"]):
-        return "synthesize"
-    return "executor"
-
-def synthesizer(state: PlanState) -> dict:
-    """Synthétise les résultats de toutes les étapes."""
-    all_steps = "\n".join(state["completed_steps"])
-    response = llm.invoke([
-        SystemMessage(content="Synthétisez les résultats en une réponse cohérente."),
-        HumanMessage(content=f"Objectif : {state['objective']}\n\nÉtapes complétées :\n{all_steps}"),
-    ])
-    return {"result": response.content}
-
-# Construction du graphe
-builder = StateGraph(PlanState)
-builder.add_node("planner", planner)
-builder.add_node("executor", executor)
-builder.add_node("synthesizer", synthesizer)
-
-builder.add_edge(START, "planner")
-# Interruption après le planning pour validation humaine
-builder.add_edge("planner", "executor")
-builder.add_conditional_edges("executor", should_continue_plan)
-builder.add_edge("synthesizer", END)
-
-memory = MemorySaver()
-# interrupt_after=["planner"] : pause après le plan pour validation
-app = builder.compile(checkpointer=memory, interrupt_after=["planner"])
-
-if __name__ == "__main__":
-    config = {"configurable": {"thread_id": "plan-exec-1"}}
-    initial_state = {"objective": "Créer une stratégie marketing pour un SaaS B2B", "human_approved": False}
-
-    # Phase 1 : génération du plan (s'arrête après le planner)
-    app.invoke(initial_state, config=config)
-    state = app.get_state(config)
-    print("Plan généré :")
-    for i, step in enumerate(state.values["plan"], 1):
-        print(f"  {i}. {step}")
-
-    # Validation humaine (ici automatique pour l'exemple)
-    user_input = input("\nApprouver ce plan ? (o/n) : ")
-    if user_input.lower() == "o":
-        # Reprendre l'exécution
-        final = app.invoke(None, config=config)
-        print("\n=== RÉSULTAT FINAL ===")
-        print(final["result"])
-    else:
-        print("Plan rejeté. Modifier l'objectif et relancer.")
+# Afficher en Mermaid (texte, pas de dépendances)
+print(app.get_graph().draw_mermaid())
 ```
 
-## Règles
+---
 
-1. **Toujours définir un reducer pour les listes** — Sans `Annotated[list, operator.add]`, chaque nœud **remplace** la liste entière au lieu d'y ajouter. C'est l'erreur la plus fréquente avec LangGraph. Pour les messages, utiliser `MessagesState` ou `Annotated[list[BaseMessage], add_messages]`.
+## Garde-fous / Anti-patterns / Pièges
 
-2. **Utiliser `thread_id` unique par conversation** — Le checkpointer utilise le `thread_id` pour isoler les sessions. Toujours générer un UUID par utilisateur/session en production. Ne jamais réutiliser le même thread_id pour des conversations différentes.
+**Reducer manquant sur les listes** — Sans `Annotated[list, add_messages]`, chaque nœud remplace la liste entière. Résultat : l'historique de messages disparaît après le premier nœud. Toujours annoter.
 
-3. **Limiter les cycles avec un compteur d'itérations** — Les graphes avec des cycles peuvent boucler indéfiniment. Toujours inclure un `iteration_count` dans le state et une condition de sortie dans le conditional edge : `if state["iteration_count"] >= MAX_ITER: return END`.
+**Boucle infinie** — Un cycle `agent → tools → agent` sans condition de sortie tourne indéfiniment si le LLM appelle toujours un tool. Ajouter `iteration_count` + seuil dans chaque router conditionnel.
 
-4. **Préférer `stream_mode="updates"` pour les UIs temps réel** — Le mode `"values"` retourne l'état complet à chaque nœud (verbeux). `"updates"` ne retourne que les changements, ce qui est plus efficace pour les interfaces utilisateur qui affichent la progression.
+**Réutilisation du thread_id** — Partager un `thread_id` entre utilisateurs différents mélange les states. Générer un UUID par session utilisateur : `thread_id = str(uuid.uuid4())`.
 
-5. **Tester avec LangGraph Studio avant de déployer** — LangGraph Studio offre une visualisation interactive du graphe, des breakpoints et l'inspection du state nœud par nœud. C'est l'outil de debug indispensable avant tout déploiement en production.
+**Muter le state directement** — Ne jamais faire `state["messages"].append(...)` dans un nœud. Toujours retourner un dict partiel : `return {"messages": [new_msg]}`.
+
+**MemorySaver en production** — `MemorySaver` est in-process et non partageable. Utiliser `PostgresSaver` (ou Redis via un plugin custom) dès qu'il y a plusieurs workers ou que la persistance doit survivre aux redémarrages.
+
+**Oublier `cp.setup()`** — Avec `PostgresSaver`, appeler `.setup()` une fois avant de compiler pour créer les tables de checkpoint. Sans ça, le premier invoke lève une exception.
+
+**Sub-graph sans checkpointer partagé** — Un sous-graphe compilé sans checkpointer ne persiste pas son état entre les appels. Passer le checkpointer du graphe parent si la persistance est nécessaire dans le sous-graphe.
+
+---
+
+## Bonnes pratiques 2026
+
+- **`interrupt_before` plutôt que `interrupt_after`** : interrompre avant l'action critique (écriture DB, envoi email) permet de valider et d'annuler sans effet de bord.
+- **Structured output pour le routing** : utiliser `llm.with_structured_output(RouteSchema)` dans les nœuds de décision plutôt que de parser du texte libre — évite les erreurs de parsing.
+- **LangSmith tracing** : activer `LANGCHAIN_TRACING_V2=true` + `LANGCHAIN_API_KEY` dès le développement pour déboguer les runs complexes avec une UI dédiée.
+- **LangGraph Studio** : outil de debug local indispensable — visualise le graphe, inspecte le state nœud par nœud, rejoue des runs. Lancer avec `langgraph dev` (nécessite `langgraph.json`).
+- **Tester les nœuds isolément** : chaque nœud étant une fonction pure, les unit tests sont directs — passer un state dict en entrée, asserter le dict de sortie.
+- **Versionner le schéma du State** : si le schéma évolue, les checkpoints persistés peuvent être incompatibles. Prévoir une migration ou inclure un champ `schema_version` dans le State.
 
 
 ## Communication Rules — MANDATORY

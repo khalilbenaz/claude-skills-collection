@@ -97,45 +97,124 @@ cp -r claude-skills-collection/skills/agent-prompt-tuner ~/.claude/skills/</div>
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent Prompt Tuner</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill lorsqu'un agent produit des résultats incorrects, incohérents ou sous-optimaux et que tu dois diagnostiquer et corriger ses prompts. Il s'applique aussi lors de la création d'un nouvel agent pour structurer ses instructions dès le départ, ou lors d'une migration vers un nouveau modèle LLM nécessitant une recalibration.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Mesure de la baseline</strong> — Définir et mesurer les métriques de performance actuelles avant toute modification : taux de succès par type de tâche, fréquence des erreurs, coût moyen par requête, latence P50/P95. Constituer un dataset d'évaluation de 50 à 200 exemples représentatifs. Cette baseline est le point de référence absolu pour toute amélioration.</li>
-</ol>
-<ol>
-<li><strong>Analyse des erreurs</strong> — Classifier les échecs observés en catégories distinctes : erreurs de formatage (sortie mal structurée), erreurs de raisonnement (logique incorrecte), hallucinations (faits inventés), mauvais usage des outils (appel au mauvais outil ou mauvais arguments), hors-domaine (refus inapproprié ou réponse hors-scope). Quantifier chaque catégorie pour prioriser les corrections.</li>
-</ol>
-<ol>
-<li><strong>Structure du system prompt</strong> — Revoir l'architecture du system prompt selon l'ordre optimal : définition du rôle et de la persona, liste des capacités disponibles, contraintes et interdictions explicites, format de sortie attendu avec exemples, gestion des cas d'erreur. Chaque section doit être délimitée clairement. Supprimer les instructions redondantes ou contradictoires.</li>
-</ol>
-<ol>
-<li><strong>Ingénierie des few-shot examples</strong> — Sélectionner les exemples les plus représentatifs et diversifiés : couvrir les variations d'input, les cas difficiles et les edge cases critiques. Format recommandé : 3 à 8 exemples pour les tâches complexes, 1 à 3 pour les tâches simples. Chaque exemple doit illustrer exactement le comportement désiré, incluant la structure de la réponse et le niveau de détail attendu.</li>
-</ol>
-<ol>
-<li><strong>Chain-of-thought tuning</strong> — Décider quand imposer un raisonnement explicite (scratchpad, étapes numérotées) vs réponse directe. Pour les tâches de raisonnement multi-étapes : forcer <code>&lt;thinking&gt;...&lt;/thinking&gt;</code> avant la réponse finale. Pour les tâches de classification simples : réponse directe plus efficace. Calibrer la profondeur du raisonnement selon la complexité de la tâche.</li>
-</ol>
-<ol>
-<li><strong>Optimisation des descriptions d'outils</strong> — Réécrire chaque description d'outil pour maximiser la clarté : nom explicite, description en une phrase, paramètres documentés avec types et exemples, indication explicite des cas d'usage et de non-usage. Exemple : &quot;Utilise <code>search_web</code> UNIQUEMENT pour des informations récentes ou factuelles externes. N'utilise PAS pour des calculs ou des tâches de transformation de données.&quot;</li>
-</ol>
-<ol>
-<li><strong>Guardrails dans le prompt</strong> — Intégrer des instructions de validation et de récupération d'erreur directement dans le prompt : &quot;Si tu n'es pas sûr, réponds UNCERTAIN plutôt que d'inventer&quot;, &quot;Vérifie toujours le format JSON avant de retourner&quot;, &quot;En cas d'outil non disponible, explique ce que tu aurais fait&quot;. Définir le comportement attendu pour chaque classe d'erreur anticipée.</li>
-</ol>
-<ol>
-<li><strong>A/B testing systématique</strong> — Créer des variantes de prompt (généralement 2 à 4) et les évaluer sur le dataset de référence. Mesurer la significativité statistique des différences (test de Student, intervalle de confiance à 95 %). Ne déployer une variante que si l'amélioration est statistiquement significative ET si le gain justifie l'éventuelle augmentation de coût ou latence.</li>
-</ol>
-<ol>
-<li><strong>Versionnage des prompts</strong> — Gérer les prompts comme du code : commits git avec messages explicatifs, branches pour les expérimentations, tags pour les versions stables. Maintenir un <code>CHANGELOG.md</code> des prompts avec : date, auteur, modification, métriques avant/après. Permettre le rollback immédiat vers n'importe quelle version précédente en cas de régression.</li>
-</ol>
-<ol>
-<li><strong>Amélioration continue</strong> — Mettre en place une boucle de feedback : collecter les échecs en production via logging, les analyser hebdomadairement, identifier les patterns, mettre à jour le dataset d'évaluation et relancer un cycle d'optimisation. Planifier des réévaluations périodiques lors des mises à jour de modèles LLM ou des changements de cas d'usage.</li>
-</ol>
-<h2>Règles</h2>
 <ul>
-<li><strong>Mesurer avant de modifier</strong> : toute optimisation sans baseline mesurée est une intuition, pas une amélioration. Constituer le dataset d'évaluation avant d'écrire la première ligne de prompt révisé.</li>
-<li><strong>Une variable à la fois</strong> : modifier un seul aspect du prompt par itération (structure, few-shots, format, instructions d'outils) pour isoler l'effet de chaque changement et interpréter correctement les résultats.</li>
-<li><strong>Spécificité des instructions</strong> : les instructions vagues (&quot;réponds bien&quot;, &quot;sois précis&quot;) sont moins efficaces que les instructions spécifiques (&quot;réponds en 3 phrases maximum&quot;, &quot;inclus toujours une source&quot;). Chaque instruction doit être vérifiable.</li>
-<li><strong>Trade-offs documentés</strong> : documenter explicitement les compromis de chaque décision de prompt (longueur vs coût, raisonnement explicite vs latence, strictesse vs flexibilité) pour faciliter les décisions futures de l'équipe.</li>
-<li><strong>Ne pas sur-optimiser</strong> : un prompt trop spécifique au dataset de test généralise mal en production. Valider toujours sur un ensemble de données hors du dataset d'optimisation avant le déploiement.</li>
+<li>Agent produit des sorties incorrectes, incohérentes ou mal formatées</li>
+<li>Taux d'erreur en production dépasse un seuil acceptable</li>
+<li>Migration vers un nouveau modèle LLM (recalibration nécessaire)</li>
+<li>Création d'un nouvel agent : structurer les instructions dès le départ</li>
+<li>Coût ou latence trop élevés sans gain de qualité</li>
+</ul>
+<h2>Workflow</h2>
+<h3>1. Constituer la baseline</h3>
+<p>Avant toute modification, mesurer les métriques actuelles :</p>
+<pre><code>taux_succes   = nb_sorties_correctes / nb_total  (par catégorie de tâche)
+hallucination = nb_faits_inventés / nb_total
+tool_error    = nb_mauvais_appels_outils / nb_appels
+latence_p95   = percentile 95 du temps de réponse
+coût/req      = tokens_in * prix_in + tokens_out * prix_out</code></pre>
+<p>Constituer un dataset d'évaluation de <strong>50 à 200 cas</strong> représentatifs avant d'écrire la première ligne révisée. Sans baseline, toute modification est une intuition.</p>
+<h3>2. Classifier les erreurs</h3>
+<p>Trier les échecs dans ces catégories (quantifier chacune) :</p>
+<table><thead><tr><th>Catégorie</th><th>Symptôme typique</th><th>Priorité si fréquent</th></tr></thead><tbody><tr><td>Formatage</td><td>JSON invalide, champs manquants</td><td>Haute</td></tr><tr><td>Raisonnement</td><td>Logique fausse, mauvaise inférence</td><td>Haute</td></tr><tr><td>Hallucination</td><td>Faits inventés, sources inexistantes</td><td>Critique</td></tr><tr><td>Mauvais outil</td><td>Mauvais tool appelé, mauvais args</td><td>Haute</td></tr><tr><td>Hors-domaine</td><td>Refus inapproprié, réponse off-topic</td><td>Moyenne</td></tr><tr><td>Verbosité</td><td>Réponse trop longue ou trop courte</td><td>Basse</td></tr></tbody></table>
+<h3>3. Restructurer le system prompt</h3>
+<p>Ordre optimal des sections (ne pas mélanger) :</p>
+<pre><code>1. Rôle / persona (1-2 phrases max)
+2. Capacités disponibles (liste des outils, contexte)
+3. Contraintes et interdictions EXPLICITES
+4. Format de sortie attendu + exemple inline
+5. Comportement sur erreur / cas ambigus</code></pre>
+<p>Exemple concret (agent de support) :</p>
+<pre><code>Tu es un agent de support bancaire. Tu traites UNIQUEMENT les demandes
+liées aux comptes, virements et cartes.
+
+Outils disponibles : get_account_balance, list_transactions, open_ticket.
+
+INTERDIT : donner des conseils d'investissement ou des informations
+sur des tiers non liés au compte du client.
+
+Format de réponse :
+{&quot;status&quot;: &quot;ok|error|escalate&quot;, &quot;message&quot;: &quot;...&quot;, &quot;ticket_id&quot;: null|&quot;XXX&quot;}
+
+Si la demande est ambiguë : réponds avec status=&quot;escalate&quot; et explique
+pourquoi dans &quot;message&quot;. Ne devine jamais.</code></pre>
+<h3>4. Few-shot examples</h3>
+<ul>
+<li>Tâches simples : 1-3 exemples</li>
+<li>Tâches complexes ou multi-étapes : 3-8 exemples</li>
+<li>Couvrir : cas nominal, cas limites, cas d'erreur/refus</li>
+</ul>
+<p>Structure recommandée par exemple :</p>
+<pre><code>&lt;example&gt;
+&lt;input&gt;Quel est le solde de mon compte 123456 ?&lt;/input&gt;
+&lt;thinking&gt;L'utilisateur demande un solde. J'appelle get_account_balance.&lt;/thinking&gt;
+&lt;output&gt;{&quot;status&quot;:&quot;ok&quot;,&quot;message&quot;:&quot;Votre solde est de 1 240,50 €.&quot;,&quot;ticket_id&quot;:null}&lt;/output&gt;
+&lt;/example&gt;</code></pre>
+<h3>5. Chain-of-thought : quand l'imposer</h3>
+<table><thead><tr><th>Imposer <code>&lt;thinking&gt;</code></th><th>Réponse directe</th></tr></thead><tbody><tr><td>Raisonnement multi-étapes</td><td>Classification binaire</td></tr><tr><td>Sélection d'outil ambiguë</td><td>Extraction de champ</td></tr><tr><td>Calcul ou comparaison</td><td>Reformulation simple</td></tr><tr><td>Décision avec conditions</td><td>Réponse factuelle courte</td></tr></tbody></table>
+<p>Forcer le scratchpad uniquement quand nécessaire : chaque token de thinking augmente latence et coût.</p>
+<h3>6. Descriptions d'outils</h3>
+<p>Modèle à suivre pour chaque outil :</p>
+<pre><code class="lang-python">{
+  &quot;name&quot;: &quot;search_transactions&quot;,
+  &quot;description&quot;: (
+    &quot;Recherche des transactions sur un compte. &quot;
+    &quot;UTILISER pour : retrouver un virement, vérifier un débit. &quot;
+    &quot;NE PAS UTILISER pour : calculs, infos non transactionnelles.&quot;
+  ),
+  &quot;parameters&quot;: {
+    &quot;account_id&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;example&quot;: &quot;123456&quot;},
+    &quot;date_from&quot;:  {&quot;type&quot;: &quot;string&quot;, &quot;format&quot;: &quot;YYYY-MM-DD&quot;},
+    &quot;limit&quot;:      {&quot;type&quot;: &quot;integer&quot;, &quot;default&quot;: 20, &quot;max&quot;: 100}
+  }
+}</code></pre>
+<p>Règle : si l'agent appelle le mauvais outil, la description est insuffisante — réécrire avant de chercher ailleurs.</p>
+<h3>7. Guardrails dans le prompt</h3>
+<p>Instructions de récupération à intégrer directement :</p>
+<pre><code>- Si tu n'es pas sûr à plus de 80%, réponds UNCERTAIN au lieu d'inventer.
+- Valide le JSON de sortie avant de retourner (structure, types, champs requis).
+- Si un outil retourne une erreur, retente une seule fois avec des args corrigés,
+  puis escalade avec status=&quot;error&quot;.
+- Ne concatène jamais d'informations de comptes différents dans une même réponse.</code></pre>
+<h3>8. A/B testing</h3>
+<pre><code>variante_A = prompt actuel (contrôle)
+variante_B = prompt modifié (une seule variable changée)
+
+Evaluer sur le dataset d'évaluation :
+- taux_succes_A vs taux_succes_B
+- p-value &lt; 0.05 requis pour déployer (test de proportion z-test)
+- si delta &lt; 2% : ne pas déployer, bruit statistique
+
+# Exemple Python rapide (z-test sur taux de succès)
+from statsmodels.stats.proportion import proportions_ztest
+stat, p = proportions_ztest([ok_B, ok_A], [n_B, n_A])
+print(f&quot;p={p:.4f} — {'DEPLOY' if p &lt; 0.05 else 'SKIP'}&quot;)</code></pre>
+<p>Ne déployer une variante que si l'amélioration est significative ET si le gain justifie l'éventuelle augmentation de coût/latence.</p>
+<h3>9. Versionnage</h3>
+<p>Gérer les prompts comme du code :</p>
+<pre><code class="lang-bash"># Commit après chaque expérimentation
+git add prompts/agent_support_v2.txt
+git commit -m &quot;prompt: ajouter guardrail hallucination — +4.2% accuracy&quot;
+
+# Tag de version stable
+git tag prompt-support-v2.1-stable</code></pre>
+<p>Maintenir un <code>PROMPT_CHANGELOG.md</code> minimal :</p>
+<pre><code>## 2026-06-24 — v2.1
+Auteur : k.benazzouz
+Change : ajout guardrail UNCERTAIN + exemple edge case solde nul
+Métriques : accuracy 81% → 85.2%, hallucination 6% → 1.8%</code></pre>
+<h3>10. Boucle d'amélioration continue</h3>
+<pre><code>Production → logging des échecs → analyse hebdo → update dataset → nouveau cycle</code></pre>
+<p>Déclencher un cycle forcé lors de : mise à jour du modèle LLM, changement de cas d'usage, dérive de performance &gt; 5% sur 2 semaines.</p>
+<h2>Critères de décision rapide</h2>
+<table><thead><tr><th>Symptôme</th><th>Action en premier</th></tr></thead><tbody><tr><td>JSON invalide en sortie</td><td>Ajouter exemple de format dans le prompt</td></tr><tr><td>Outil appelé avec mauvais args</td><td>Réécrire description de l'outil</td></tr><tr><td>Hallucination fréquente</td><td>Ajouter instruction UNCERTAIN + guardrail</td></tr><tr><td>Refus excessifs</td><td>Assouplir les contraintes, ajouter few-shots positifs</td></tr><tr><td>Coût trop élevé</td><td>Réduire thinking obligatoire, raccourcir few-shots</td></tr><tr><td>Latence trop haute</td><td>Passer à réponse directe sur tâches simples</td></tr></tbody></table>
+<h2>Anti-patterns / pièges</h2>
+<ul>
+<li><strong>Modifier plusieurs variables simultanément</strong> : impossible d'identifier la cause de l'amélioration ou de la régression.</li>
+<li><strong>Instructions vagues</strong> : &quot;sois précis&quot; ne change rien. Remplacer par &quot;réponds en 2 phrases maximum, chiffres inclus&quot;.</li>
+<li><strong>Over-fitting au dataset de test</strong> : un prompt parfait sur 50 exemples peut échouer en production sur les variantes non représentées. Toujours valider sur un ensemble holdout séparé.</li>
+<li><strong>Few-shots contradictoires</strong> : deux exemples qui montrent des formats de sortie différents créent de la confusion. Uniformiser avant d'ajouter.</li>
+<li><strong>Ignorer le coût des guardrails</strong> : chaque instruction de validation ajoutée consomme des tokens. Grouper les guardrails en bloc unique plutôt qu'instructions dispersées.</li>
+<li><strong>Pas de rollback prévu</strong> : déployer sans tag git ou sauvegarde du prompt précédent = incapacité à revenir en arrière rapidement en cas d'incident.</li>
 </ul>
 </article>
 </main>

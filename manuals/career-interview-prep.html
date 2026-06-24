@@ -96,26 +96,116 @@ cp -r claude-skills-collection/skills/career-interview-prep ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Interview Prep</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Contexte</strong> : poste, entreprise, type d'entretien (RH, technique, manager).</li>
-<li><strong>Questions probables</strong> : générer 15-20 questions adaptées au poste :</li>
+<h2>Étape 1 — Collecte du contexte</h2>
+<p>Demander (toujours en une seule fois) :</p>
 <ul>
-<li>Classiques (&quot;parlez-moi de vous&quot;, forces/faiblesses)</li>
-<li>Comportementales (méthode STAR)</li>
-<li>Techniques (si pertinent)</li>
-<li>Pièges courants</li>
+<li>Intitulé du poste + niveau (junior / confirmé / lead / manager)</li>
+<li>Entreprise (taille, secteur, produit)</li>
+<li>Type d'entretien : RH screening | technique (coding / system design / live coding) | manager | panel | cas business</li>
+<li>Stack / domaine technique si applicable</li>
+<li>Point faible à anticiper (gap de compétence, départ précédent, changement de secteur)</li>
 </ul>
-<li><strong>Réponses guidées</strong> : structure STAR pour chaque question comportementale.</li>
-<li><strong>Questions à poser</strong> : 5-7 questions intelligentes à poser au recruteur.</li>
-<li><strong>Pitch</strong> : version 30s, 1min et 2min de &quot;parlez-moi de vous&quot;.</li>
-<li><strong>Checklist</strong> : logistique, tenue, documents, recherche entreprise.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Étape 2 — Cartographie des questions probables</h2>
+<p>Générer 15-20 questions réparties en 4 catégories :</p>
+<h3>2a. Questions classiques (ouverture/clôture)</h3>
 <ul>
-<li>Adapte au niveau du poste et au secteur.</li>
-<li>Encourage l'authenticité — pas de réponses robotiques.</li>
-<li>Propose des réponses structurées, pas des scripts à réciter.</li>
+<li>&quot;Présentez-vous en 2 minutes.&quot;</li>
+<li>&quot;Pourquoi quittez-vous votre poste actuel ?&quot;</li>
+<li>&quot;Où vous voyez-vous dans 3 ans ?&quot;</li>
+<li>&quot;Quels sont vos points forts / axes de progression ?&quot;</li>
+</ul>
+<h3>2b. Questions comportementales (méthode STAR)</h3>
+<p>Template STAR à appliquer pour chaque réponse :</p>
+<pre><code>Situation  : contexte bref (1-2 phrases)
+Tâche      : votre rôle / responsabilité
+Action     : ce que VOUS avez fait (verbes d'action, pas &quot;on a&quot;)
+Résultat   : mesurable si possible (%, €, délai, NPS...)</code></pre>
+<p>Exemples fréquents :</p>
+<ul>
+<li>&quot;Décrivez un conflit avec un collègue et comment vous l'avez résolu.&quot;</li>
+<li>&quot;Parlez d'un projet raté et ce que vous en avez tiré.&quot;</li>
+<li>&quot;Donnez un exemple où vous avez dû prioriser sous pression.&quot;</li>
+</ul>
+<h3>2c. Questions techniques (adapter au poste)</h3>
+<p><strong>Dev backend / fullstack :</strong></p>
+<pre><code>- Expliquez-moi la différence entre PUT et PATCH.
+- Comment gérez-vous la cohérence dans une architecture microservices ?
+- Quelle stratégie de retry utilisez-vous côté API ?</code></pre>
+<p><strong>System design :</strong></p>
+<pre><code>- Concevez un système de notification à 10M d'utilisateurs.
+- Comment scaler une API de paiement avec une contrainte d'idempotence ?</code></pre>
+<p><strong>Data / BI :</strong></p>
+<pre><code>- Différence entre OLAP et OLTP — exemple concret ?
+- Comment optimisez-vous une requête SQL lente ?</code></pre>
+<h3>2d. Questions pièges (à désamorcer)</h3>
+<ul>
+<li>&quot;Quel est votre salaire actuel ?&quot; — répondre par la fourchette attendue, pas l'historique.</li>
+<li>&quot;Vous êtes surqualifié, non ?&quot; — montrer l'alignement projet / long terme.</li>
+<li>&quot;Pourquoi avez-vous mis 8 mois sans travailler ?&quot; — préparer une réponse factuelle, sans sur-justifier.</li>
+<li>&quot;Votre plus grande faiblesse ?&quot; — choisir une vraie faiblesse avec le plan d'amélioration concret.</li>
+</ul>
+<h2>Étape 3 — Pitch &quot;Présentez-vous&quot;</h2>
+<p>Générer 3 versions calibrées :</p>
+<table><thead><tr><th>Version</th><th>Durée</th><th>Usage</th></tr></thead><tbody><tr><td>Flash</td><td>30 s</td><td>Screening téléphonique</td></tr><tr><td>Standard</td><td>90 s</td><td>Premier entretien RH</td></tr><tr><td>Développée</td><td>3 min</td><td>Entretien manager / panel</td></tr></tbody></table>
+<p>Structure recommandée :</p>
+<pre><code>1. Accroche : compétence-clé ou résultat marquant
+2. Parcours : fil conducteur en 2-3 étapes logiques
+3. Maintenant : pourquoi ce poste, pourquoi cette entreprise</code></pre>
+<h2>Étape 4 — Questions à poser au recruteur</h2>
+<p>Préparer 5-7 questions, classées par priorité :</p>
+<ol>
+<li><strong>Critiques</strong> (à poser systématiquement) :</li>
+<ul>
+<li>&quot;Quel est le principal défi que la personne recrutée devra relever dans les 90 premiers jours ?&quot;</li>
+<li>&quot;Comment mesurez-vous le succès sur ce poste après 6 mois ?&quot;</li>
+</ul>
+<li><strong>Équipe / culture</strong> :</li>
+<ul>
+<li>&quot;Comment l'équipe gère-t-elle les désaccords techniques ?&quot;</li>
+<li>&quot;Quelle est la fréquence et le format des code reviews / rétros ?&quot;</li>
+</ul>
+<li><strong>Processus</strong> :</li>
+<ul>
+<li>&quot;Quelles sont les prochaines étapes et le timing de décision ?&quot;</li>
+</ul>
+</ol>
+<h2>Étape 5 — Simulation</h2>
+<p>Proposer un mode simulation : l'utilisateur répond, l'agent évalue sur :</p>
+<ul>
+<li>Clarté et concision (&lt; 2 min par réponse comportementale)</li>
+<li>Présence de métriques chiffrées</li>
+<li>Cohérence STAR</li>
+<li>Absence de critiques non constructives de l'employeur précédent</li>
+</ul>
+<p>Feedback structuré :</p>
+<pre><code>+ Point fort observé
+~ À renforcer : [suggestion précise]
+! À éviter absolument : [anti-pattern]</code></pre>
+<h2>Étape 6 — Checklist logistique (J-1 / Jour J)</h2>
+<p><strong>J-1 :</strong></p>
+<ul>
+<li>[ ] Relire la fiche de poste et noter 3 mots-clés à réutiliser</li>
+<li>[ ] Lire les dernières news de l'entreprise (blog, LinkedIn, Glassdoor)</li>
+<li>[ ] Préparer 2 copies du CV + carnet pour prise de notes</li>
+<li>[ ] Confirmer le lieu / lien visio, tester le son et la caméra</li>
+</ul>
+<p><strong>Jour J :</strong></p>
+<ul>
+<li>[ ] Arriver 10 min en avance (présentiel) ou connecté 5 min avant (visio)</li>
+<li>[ ] Téléphone en mode silencieux</li>
+<li>[ ] Garder un verre d'eau à portée</li>
+<li>[ ] Fermer les onglets inutiles si partage d'écran</li>
+</ul>
+<hr>
+<h2>Anti-patterns courants</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correctif</th></tr></thead><tbody><tr><td>Réponse sans exemple concret</td><td>Perçu comme théorique / non crédible</td><td>Toujours finir par &quot;par exemple, j'ai…&quot;</td></tr><tr><td>Critique de l'ex-employeur</td><td>Signal de maturité faible</td><td>Formuler en opportunité d'apprentissage</td></tr><tr><td>Réponse &gt; 3 min</td><td>Recruteur décroche</td><td>Structurer en STAR max 90 s</td></tr><tr><td>Salaire annoncé trop tôt</td><td>Perte de levier</td><td>Demander la fourchette du poste d'abord</td></tr><tr><td>&quot;Je n'ai pas de faiblesse&quot;</td><td>Manque de self-awareness</td><td>Choisir une faiblesse réelle + plan d'amélioration</td></tr><tr><td>Silence sur les gaps CV</td><td>Suspicion</td><td>Anticiper et expliquer proactivement</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>LinkedIn scraping pré-entretien</strong> : regarder le profil du recruteur (parcours, posts récents) pour personnaliser l'échange.</li>
+<li><strong>Entretiens async vidéo</strong> (HireVue, Willo) : répondre en 2-3 prises max, soigner l'éclairage, éviter les &quot;euh&quot; en début.</li>
+<li><strong>Coding interviews</strong> : utiliser CoderPad / Replit live — penser à voix haute, tester les edge cases avant de coder.</li>
+<li><strong>Préparer des contre-questions sur l'IA</strong> : &quot;Comment l'équipe utilise-t-elle les outils IA au quotidien ?&quot; montre une posture proactive en 2026.</li>
+<li><strong>Glassdoor / Levels.fyi</strong> : calibrer la fourchette salariale avant toute négociation.</li>
 </ul>
 </article>
 </main>

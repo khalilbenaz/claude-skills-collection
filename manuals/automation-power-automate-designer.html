@@ -97,37 +97,133 @@ cp -r claude-skills-collection/skills/automation-power-automate-designer ~/.clau
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Power Automate Designer</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Identifier le besoin d'automatisation</strong> — analyser le processus métier à automatiser, définir le déclencheur (réception d'email, création de fichier SharePoint, soumission de formulaire Forms, événement planifié), et cartographier les étapes manuelles à remplacer.</li>
-</ol>
-<ol>
-<li><strong>Choisir le type de flow</strong> — sélectionner entre Cloud Flow (automatisé, instantané ou planifié), Desktop Flow (RPA pour les applications legacy), ou Business Process Flow (processus guidé multi-étapes), en fonction du scénario et des systèmes impliqués.</li>
-</ol>
-<ol>
-<li><strong>Configurer les connecteurs</strong> — établir les connexions aux services nécessaires (Office 365, SharePoint, Teams, Outlook, Dataverse, SQL Server, services tiers), gérer les authentifications OAuth, et utiliser les connecteurs personnalisés pour les API non couvertes.</li>
-</ol>
-<ol>
-<li><strong>Construire la logique du flow</strong> — assembler les actions séquentiellement, utiliser les conditions (<code>if/else</code>), les boucles (<code>Apply to each</code>, <code>Do until</code>), les actions parallèles (<code>Parallel branch</code>), et le <code>Switch</code> pour les branchements multiples selon la valeur d'une variable.</li>
-</ol>
-<ol>
-<li><strong>Maîtriser les expressions</strong> — utiliser les fonctions d'expression pour manipuler les données : <code>formatDateTime()</code>, <code>concat()</code>, <code>split()</code>, <code>json()</code>, <code>triggerOutputs()</code>, <code>body()</code>, et les fonctions de collection <code>first()</code>, <code>last()</code>, <code>length()</code> pour transformer les données entre les étapes.</li>
-</ol>
-<ol>
-<li><strong>Gérer les erreurs et les retries</strong> — configurer le <code>Configure run after</code> pour chaque action (succeeded, failed, skipped, timed out), implémenter des scopes <code>Try/Catch</code> avec des blocs Scope, définir les politiques de retry, et envoyer des notifications en cas d'échec.</li>
-</ol>
-<ol>
-<li><strong>Tester et déboguer</strong> — utiliser le mode test avec déclenchement manuel, examiner les entrées/sorties de chaque action dans l'historique d'exécution, corriger les expressions avec le testeur d'expressions intégré, et valider les scénarios limites (données manquantes, timeouts).</li>
-</ol>
-<ol>
-<li><strong>Déployer et surveiller</strong> — exporter le flow dans une solution pour le déploiement entre environnements (dev, staging, prod), configurer les alertes de monitoring, vérifier les quotas et limites de l'abonnement, et documenter le flow avec des commentaires et des notes.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Analyser le besoin d'automatisation</h3>
+<p>Cartographier le processus AVANT d'ouvrir Power Automate :</p>
 <ul>
-<li>Toujours utiliser des variables et des expressions nommées explicitement — un flow lisible est un flow maintenable, même six mois plus tard.</li>
-<li>Implémenter systématiquement la gestion d'erreurs avec des scopes Try/Catch — un flow sans gestion d'erreurs échouera silencieusement en production.</li>
-<li>Respecter les limites de l'API (throttling) en ajoutant des délais (<code>Delay</code>) et en paginant les requêtes pour les grandes collections de données.</li>
-<li>Utiliser les solutions Power Platform pour le versioning et le déploiement — ne jamais modifier un flow directement en production.</li>
-<li>Tester avec des données réalistes incluant les cas limites (champs vides, caractères spéciaux, grands volumes) avant la mise en production.</li>
+<li><strong>Déclencheur</strong> : qu'est-ce qui lance le flow ? (email reçu, fichier déposé, formulaire soumis, heure planifiée, appel HTTP)</li>
+<li><strong>Données d'entrée</strong> : quelles informations sont disponibles au déclenchement ?</li>
+<li><strong>Étapes</strong> : quelles actions manuelles remplace-t-on ?</li>
+<li><strong>Sorties</strong> : notifications, fichiers créés, enregistrements mis à jour, appels API</li>
+</ul>
+<p>Critère go/no-go : si le processus contient des décisions subjectives ou nécessite une interface graphique legacy non automatisable par API, préférer un Business Process Flow ou un Desktop Flow.</p>
+<h3>2. Choisir le type de flow</h3>
+<table><thead><tr><th>Type</th><th>Cas d'usage</th><th>Limite clé</th></tr></thead><tbody><tr><td><strong>Cloud Flow automatisé</strong></td><td>Trigger event-driven (email, SharePoint, Teams)</td><td>Dépend de la disponibilité du connecteur</td></tr><tr><td><strong>Cloud Flow instantané</strong></td><td>Déclenché manuellement ou via bouton Teams/mobile</td><td>Nécessite une interaction humaine</td></tr><tr><td><strong>Cloud Flow planifié</strong></td><td>Batch quotidien/hebdomadaire, rapports récurrents</td><td>Pas de réactivité aux événements</td></tr><tr><td><strong>Desktop Flow (RPA)</strong></td><td>Applications sans API (ERP legacy, interfaces Windows)</td><td>Machine cible doit être active + Power Automate Desktop installé</td></tr><tr><td><strong>Business Process Flow</strong></td><td>Guidage étape par étape (onboarding, validation multi-niveaux)</td><td>Uniquement avec Dataverse</td></tr></tbody></table>
+<h3>3. Configurer les connecteurs</h3>
+<p><strong>Connecteurs standard courants</strong> : SharePoint, Outlook, Teams, Excel Online, Forms, Planner, OneDrive, Dataverse.</p>
+<p><strong>Connecteur personnalisé</strong> (API interne ou tierce non couverte) :</p>
+<pre><code class="lang-yaml"># Exemple de définition OpenAPI minimale pour connecteur custom
+openapi: &quot;2.0&quot;
+info:
+  title: Mon API Interne
+  version: &quot;1.0&quot;
+host: api.monentreprise.com
+basePath: /v1
+schemes: [https]
+paths:
+  /orders/{id}:
+    get:
+      operationId: GetOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: OK</code></pre>
+<p>Importer via <strong>Data &gt; Custom connectors &gt; New custom connector &gt; Import an OpenAPI file</strong>.</p>
+<p><strong>Authentification</strong> : préférer OAuth 2.0 ou API Key stockée dans un connecteur custom plutôt qu'un mot de passe hardcodé dans une action HTTP.</p>
+<h3>4. Construire la logique du flow</h3>
+<p><strong>Structures de contrôle essentielles</strong> :</p>
+<pre><code>Condition          → branchement binaire (if/else)
+Switch             → branchement sur valeur (évite les Condition imbriqués)
+Apply to each      → itération sur tableau
+Do until           → boucle conditionnelle (max 60 itérations par défaut)
+Parallel branch    → actions concurrentes (gain de temps si indépendantes)
+Scope              → regroupement logique + Try/Catch</code></pre>
+<p><strong>Déclarer les variables en tête de flow</strong> (toutes en bloc, avant toute logique) :</p>
+<pre><code>Initialize variable — Name: varErrorMessage  Type: String   Value: &quot;&quot;
+Initialize variable — Name: varCounter       Type: Integer  Value: 0
+Initialize variable — Name: varItems         Type: Array    Value: []</code></pre>
+<p><strong>Conseil</strong> : utiliser <code>Compose</code> pour stocker des expressions complexes et les réutiliser par <code>outputs('Compose_NomEtape')</code> — évite la duplication.</p>
+<h3>5. Maîtriser les expressions</h3>
+<p>Fonctions indispensables (syntaxe copiable) :</p>
+<pre><code># Date/heure
+formatDateTime(utcNow(), 'yyyy-MM-dd')
+addDays(utcNow(), -7)
+convertTimeZone(utcNow(), 'UTC', 'Romance Standard Time')
+
+# Chaînes
+concat(triggerBody()?['subject'], ' — traité')
+replace(body('Get_item')?['Title'], ' ', '_')
+toLower(trim(variables('varInput')))
+split(body('Action')?['emails'], ';')
+
+# Collections
+first(body('Get_items')?['value'])
+length(body('Get_items')?['value'])
+join(variables('varItems'), ', ')
+contains(body('Action')?['tags'], 'urgent')
+
+# Conditions inline
+if(equals(body('Action')?['status'], 'active'), 'Actif', 'Inactif')
+coalesce(triggerBody()?['optionalField'], 'valeur_defaut')
+
+# HTTP / JSON
+json(body('HTTP_Call'))
+string(variables('varCounter'))
+base64(concat(variables('user'), ':', variables('password')))</code></pre>
+<p><strong>Accès aux propriétés dynamiques</strong> : utiliser <code>?['champ']</code> (null-safe) plutôt que <code>['champ']</code> pour éviter les erreurs si le champ est absent.</p>
+<h3>6. Gérer les erreurs (pattern Try/Catch)</h3>
+<p>Structure recommandée :</p>
+<pre><code>[Scope] TRY
+  ├── Action 1
+  ├── Action 2
+  └── Action N
+
+[Scope] CATCH
+  Configure run after: TRY → has failed / has timed out / has been skipped
+  ├── Compose — ErrorDetails:
+  │     concat('Erreur: ', result('Scope_TRY')?[0]?['error']?['message'])
+  ├── Send email — notif à l'équipe
+  └── Terminate — Status: Failed, Message: outputs('Compose_ErrorDetails')</code></pre>
+<p><strong>Politique de retry</strong> sur chaque action HTTP/connecteur :</p>
+<ul>
+<li><strong>Default</strong> : 4 retries, intervalles exponentiels — suffisant dans 90 % des cas</li>
+<li><strong>Fixed</strong> : utile pour les APIs avec rate-limiting strict (ex: toutes les 60 s)</li>
+<li><strong>None</strong> : actions idempotentes où un double-appel serait problématique</li>
+</ul>
+<h3>7. Tester et déboguer</h3>
+<ol>
+<li><strong>Test manuel</strong> : déclencher depuis le portail, vérifier chaque entrée/sortie dans l'historique d'exécution (icône &quot;...&quot; &gt; Run history).</li>
+<li><strong>Testeur d'expressions</strong> : dans le champ d'expression, cliquer sur &quot;Peek code&quot; pour valider sans exécuter le flow.</li>
+<li><strong>Compose de debug</strong> : ajouter temporairement un <code>Compose</code> avec <code>outputs()</code> pour inspecter un objet complet.</li>
+<li><strong>Données de test réalistes</strong> : inclure champs vides, caractères spéciaux (<code>&amp;</code>, <code>&lt;</code>, <code>&quot;</code>), tableaux vides, valeurs null.</li>
+<li><strong>Vérifier les limites</strong> : 30 jours de rétention historique (plan standard), 5 minutes max par action (timeout).</li>
+</ol>
+<h3>8. Déployer entre environnements</h3>
+<p>Toujours passer par les <strong>Solutions</strong> (pas les flows standalone) :</p>
+<pre><code>Power Platform Admin Center
+  └── Solutions &gt; New solution
+        ├── Add existing &gt; Cloud flows
+        ├── Add existing &gt; Custom connectors
+        └── Add existing &gt; Connection references  ← clé pour les connexions env-spécifiques</code></pre>
+<p>Export/import entre environnements :</p>
+<pre><code class="lang-bash"># Via Power Platform CLI (pac)
+pac solution export --path ./solution.zip --name MonSolution --managed false
+pac solution import --path ./solution.zip --environment prod-env-id</code></pre>
+<p>Les <strong>Connection References</strong> permettent de pointer vers des connexions différentes par environnement sans modifier le flow.</p>
+<hr>
+<h2>Anti-patterns / Pièges</h2>
+<table><thead><tr><th>Piège</th><th>Impact</th><th>Correction</th></tr></thead><tbody><tr><td><code>Apply to each</code> imbriqués sur grands volumes</td><td>Timeout 30 min, throttling</td><td>Requêtes OData filtrées côté source ; traitement par batch</td></tr><tr><td>Modifier un flow directement en production</td><td>Pas de rollback possible</td><td>Solutions + pipeline ALM (GitHub Actions / Azure DevOps)</td></tr><tr><td>Stocker des credentials dans <code>Compose</code> ou des commentaires</td><td>Fuite de secrets dans l'historique</td><td>Connecteur custom avec API Key, Azure Key Vault via HTTP</td></tr><tr><td>Ignorer <code>Configure run after</code></td><td>Échecs silencieux, données corrompues</td><td>Toujours configurer le CATCH sur chaque scope critique</td></tr><tr><td>Utiliser <code>Get items</code> sans filtre OData</td><td>Quota de 5 000 lignes SharePoint épuisé</td><td>Filtre <code>$filter=Status eq 'Pending'</code> + <code>$top=100</code> avec pagination</td></tr><tr><td>Trigger &quot;When an item is created or modified&quot; en boucle</td><td>Infinite loop si le flow modifie le même item</td><td>Ajouter une colonne <code>FlowProcessed</code> ou vérifier le <code>Modified by</code></td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Nommer toutes les actions</strong> (jamais laisser &quot;Send an email (V2)&quot;) — l'historique et les expressions <code>outputs('NomAction')</code> en dépendent.</li>
+<li><strong>Utiliser les environnements Managed</strong> (Power Platform Managed Environments) pour activer le DLP et les politiques de gouvernance.</li>
+<li><strong>Documenter dans les descriptions</strong> de chaque action — le champ &quot;Note&quot; est consultable sans ouvrir le flow.</li>
+<li><strong>Éviter les connecteurs Premium inutiles</strong> : un connecteur HTTP standard peut remplacer un connecteur Premium si l'API est accessible publiquement.</li>
+<li><strong>Activer le journal d'audit</strong> (Microsoft Purview) pour les flows manipulant des données sensibles.</li>
+<li><strong>Versionner les solutions</strong> avec semantic versioning (1.0.0 → 1.1.0) avant chaque déploiement en production.</li>
 </ul>
 </article>
 </main>

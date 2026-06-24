@@ -97,49 +97,181 @@ cp -r claude-skills-collection/skills/agent-research-agent-designer ~/.claude/sk
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Research Agent Designer</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill pour concevoir un agent capable de mener des recherches autonomes sur le web ou dans des corpus documentaires : interroger des moteurs de recherche, lire des articles, extraire des données structurées, croiser des sources et produire un rapport synthétique. S'applique aux cas d'usage de veille concurrentielle, due diligence, fact-checking, recherche académique ou production de contenu documenté.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Architecture générale</strong> — Définis les quatre composantes : (a) couche de recherche (search tools, web fetcher), (b) couche d'extraction et parsing (HTML, PDF, tableaux), (c) couche d'analyse et synthèse (LLM fort), (d) couche de formatage output. Choisis entre architecture mono-agent avec outils multiples ou pipeline multi-agents (searcher → extractor → synthesizer).</li>
-</ol>
-<ol>
-<li><strong>Tools de recherche</strong> — Intègre les APIs indispensables : Serper/SerpAPI pour Google Search, Tavily pour la recherche web structurée, fetcher d'URL (<code>requests</code> + <code>newspaper3k</code>), lecteur PDF (<code>pypdf2</code>, <code>pdfplumber</code>), Wikipedia API, Semantic Scholar pour la recherche académique. Wrappe chaque tool avec gestion d'erreur et retry.</li>
-</ol>
-<p>   ```python    from tavily import TavilyClient    client = TavilyClient(api_key=&quot;...&quot;)    results = client.search(query=&quot;...&quot;, search_depth=&quot;advanced&quot;, max_results=10)    ```</p>
-<ol>
-<li><strong>Stratégie de recherche itérative</strong> — Implémente un mécanisme de query generation : l'agent génère d'abord 3-5 requêtes initiales, analyse les résultats, identifie les lacunes, génère des requêtes de suivi plus précises (iterative deepening). Applique la triangulation multi-sources : minimum 3 sources indépendantes par claim important.</li>
-</ol>
-<ol>
-<li><strong>Scraping et extraction de contenu</strong> — Extrait le contenu textuel proprement : utilise <code>trafilatura</code> ou <code>readability-lxml</code> pour nettoyer le HTML, <code>camelot</code> pour les tableaux PDF, <code>BeautifulSoup</code> pour les données structurées. Gère les pages JavaScript avec Playwright si nécessaire. Limite la taille du contenu extrait (max 10k tokens par source).</li>
-</ol>
-<p>   ```python    import trafilatura    downloaded = trafilatura.fetch_url(url)    text = trafilatura.extract(downloaded, include_tables=True, include_links=False)    ```</p>
-<ol>
-<li><strong>Évaluation des sources</strong> — Implémente un système de scoring : (a) crédibilité du domaine (whitelists/blacklists, Alexa rank), (b) fraîcheur de la date de publication, (c) détection de biais (opinion vs. fact), (d) cross-référencement (la même info apparaît-elle dans d'autres sources fiables ?). Attribue un score de confiance 0-1 à chaque source.</li>
-</ol>
-<ol>
-<li><strong>Synthèse et analyse</strong> — À partir des documents extraits, l'agent effectue : extraction des thèmes principaux, comparaison des positions entre sources, détection des contradictions, résumé hiérarchique (executive summary + détails). Utilise un LLM avec un prompt structuré qui liste explicitement les sources utilisées.</li>
-</ol>
-<ol>
-<li><strong>Citation et attribution rigoureuse</strong> — Chaque affirmation dans le rapport final doit être liée à sa source originale. Implémente un tracker de citations en JSON : <code>{&quot;claim&quot;: &quot;...&quot;, &quot;source_url&quot;: &quot;...&quot;, &quot;source_date&quot;: &quot;...&quot;, &quot;quote&quot;: &quot;...&quot;}</code>. Formate les références en APA, Chicago ou Markdown selon le besoin.</li>
-</ol>
-<p>   ```python    citation_store = []    citation_store.append({        &quot;claim&quot;: claim_text,        &quot;source_url&quot;: url,        &quot;source_title&quot;: title,        &quot;source_date&quot;: date,        &quot;verbatim_quote&quot;: quote    })    ```</p>
-<ol>
-<li><strong>Formatage de l'output</strong> — Génère un rapport structuré avec : (a) résumé exécutif (200-400 mots), (b) findings détaillés par thème, (c) tableau comparatif si pertinent, (d) niveau de confiance global et par section, (e) liste des sources avec scores. Propose plusieurs niveaux de détail selon le contexte (brief / standard / exhaustif).</li>
-</ol>
-<ol>
-<li><strong>Raffinement itératif</strong> — Après le premier draft, l'agent identifie automatiquement les gaps : questions sans réponse, contradictions non résolues, sujets insuffisamment couverts. Génère une liste de follow-up queries et propose d'approfondir les sections faibles. Implémente un mécanisme de validation humaine avant chaque nouvelle itération coûteuse.</li>
-</ol>
-<ol>
-<li><strong>Guardrails et limites</strong> — Applique des contraintes strictes : max 20-50 sources par recherche, budget temps (timeout global de 5-15 min), profondeur maximale (max 3 niveaux d'itération), restrictions de domaines si nécessaire. Log toutes les URLs visitées. Filtre le contenu inappropriate ou non pertinent avant injection dans le LLM.</li>
-</ol>
-<h2>Règles</h2>
+<p>Conçois un agent de recherche autonome quand le besoin est : chercher sur le web ou un corpus documentaire, croiser des sources, extraire des données structurées et produire un rapport synthétique avec citations. Cas d'usage : veille concurrentielle, due diligence, fact-checking, recherche académique, production de contenu documenté.</p>
+<hr>
+<h2>Critères de choix d'architecture</h2>
+<table><thead><tr><th>Besoin</th><th>Architecture recommandée</th></tr></thead><tbody><tr><td>1 sujet, réponse rapide</td><td>Mono-agent + outils multiples</td></tr><tr><td>Sujets complexes / multi-domaines</td><td>Pipeline multi-agents (searcher → extractor → synthesizer)</td></tr><tr><td>Corpus interne (PDF, SharePoint)</td><td>RAG + search hybride (vector + keyword)</td></tr><tr><td>Fréquence élevée / coût maîtrisé</td><td>Cache Redis des résultats + deduplication URL</td></tr><tr><td>Résultat fiable avec citations</td><td>Toujours : citation tracker JSON obligatoire</td></tr></tbody></table>
+<hr>
+<h2>Workflow en 10 étapes</h2>
+<h3>1. Définir le scope et le budget</h3>
+<p>Avant tout code, fixe trois contraintes explicites :</p>
 <ul>
-<li><strong>Citer systématiquement</strong> : aucune affirmation factuelle sans source. Le rapport final doit permettre à un humain de vérifier chaque claim en cliquant sur un lien.</li>
-<li><strong>Triangulation obligatoire</strong> : ne jamais présenter un fait comme établi s'il ne provient que d'une seule source. Exige minimum 2-3 sources concordantes pour les claims importants.</li>
-<li><strong>Transparence sur la confiance</strong> : inclure toujours un indicateur de confiance (haute / moyenne / basse) par section, basé sur la qualité et la concordance des sources trouvées.</li>
-<li><strong>Limites de budget</strong> : tout agent de recherche doit avoir un budget explicite (nombre de sources, temps, tokens) pour éviter les coûts incontrôlés. Implémente des alertes à 80% du budget consommé.</li>
-<li><strong>Frameworks recommandés</strong> : <a href="https://tavily.com/" target="_blank" rel="noopener">Tavily</a> pour la recherche, <a href="https://langchain-ai.github.io/langgraph/" target="_blank" rel="noopener">LangGraph</a> pour l'orchestration, <a href="https://firecrawl.dev/" target="_blank" rel="noopener">Firecrawl</a> pour l'extraction, <a href="https://docs.perplexity.ai/" target="_blank" rel="noopener">Perplexity API</a> comme alternative tout-en-un. Utilise GPT-4o ou Claude Opus pour la synthèse finale.</li>
+<li><strong>Budget sources</strong> : max 20-50 URLs par run</li>
+<li><strong>Budget temps</strong> : timeout global 5-15 min (configurable)</li>
+<li><strong>Budget tokens</strong> : max 10k tokens par source injectée dans le LLM</li>
 </ul>
+<pre><code class="lang-python">RESEARCH_CONFIG = {
+    &quot;max_sources&quot;: 30,
+    &quot;timeout_s&quot;: 600,
+    &quot;max_tokens_per_source&quot;: 8000,
+    &quot;max_iterations&quot;: 3,
+    &quot;alert_budget_pct&quot;: 0.80,
+}</code></pre>
+<h3>2. Architecturer les quatre couches</h3>
+<p><strong>(a) Recherche</strong> — search tools (Tavily, Serper, SerpAPI) <strong>(b) Extraction</strong> — HTML cleaner (trafilatura), PDF (pdfplumber), JS (Playwright) <strong>(c) Analyse / synthèse</strong> — LLM fort (Claude Opus / GPT-4o) <strong>(d) Output</strong> — rapport structuré avec scores de confiance et citations</p>
+<p>Choisis dès le départ LangGraph ou un simple loop Python ; LangGraph est préférable dès que le flow est conditionnel ou multi-agents.</p>
+<h3>3. Configurer les tools de recherche</h3>
+<pre><code class="lang-python"># Tavily (recommandé — retourne directement le contenu extrait)
+from tavily import TavilyClient
+client = TavilyClient(api_key=os.environ[&quot;TAVILY_API_KEY&quot;])
+results = client.search(
+    query=query,
+    search_depth=&quot;advanced&quot;,   # &quot;basic&quot; pour économiser des tokens
+    max_results=10,
+    include_raw_content=False, # True si tu veux le HTML brut
+)
+
+# Serper (alternative, moindre coût)
+import httpx
+resp = httpx.post(
+    &quot;https://google.serper.dev/search&quot;,
+    json={&quot;q&quot;: query, &quot;num&quot;: 10},
+    headers={&quot;X-API-KEY&quot;: os.environ[&quot;SERPER_API_KEY&quot;]},
+)</code></pre>
+<p>Wrappe <strong>toujours</strong> chaque appel outil dans un bloc try/except avec retry exponentiel (max 3 tentatives).</p>
+<h3>4. Extraction de contenu propre</h3>
+<pre><code class="lang-python">import trafilatura
+
+def fetch_and_clean(url: str, max_tokens: int = 8000) -&gt; str | None:
+    downloaded = trafilatura.fetch_url(url, timeout=15)
+    if not downloaded:
+        return None
+    text = trafilatura.extract(
+        downloaded,
+        include_tables=True,
+        include_links=False,
+        no_fallback=False,
+    )
+    # Tronquer pour respecter le budget tokens (approx 4 chars/token)
+    return text[: max_tokens * 4] if text else None</code></pre>
+<p>Pour les pages JavaScript lourdes (SPA, dashboards), utilise Playwright :</p>
+<pre><code class="lang-python">from playwright.async_api import async_playwright
+
+async def fetch_js_page(url: str) -&gt; str:
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        await page.goto(url, wait_until=&quot;networkidle&quot;, timeout=20000)
+        content = await page.content()
+        await browser.close()
+    return content</code></pre>
+<p>Pour les PDF : <code>pdfplumber</code> (tableaux) ou <code>pypdf</code> (texte brut).</p>
+<h3>5. Stratégie de requêtes itératives (iterative deepening)</h3>
+<p>L'agent génère <strong>3-5 requêtes initiales</strong> → analyse les résultats → identifie les lacunes → génère des requêtes de suivi.</p>
+<pre><code class="lang-python">QUERY_GENERATION_PROMPT = &quot;&quot;&quot;
+Sujet de recherche : {topic}
+Génère 5 requêtes de recherche complémentaires couvrant différents angles.
+Format : JSON list de strings.
+Contraintes : pas de doublons, chaque requête &lt; 12 mots.
+&quot;&quot;&quot;
+
+FOLLOWUP_QUERY_PROMPT = &quot;&quot;&quot;
+Résultats collectés jusqu'ici (résumé) : {summary}
+Questions encore sans réponse : {gaps}
+Génère 3 requêtes de suivi ciblées pour combler ces lacunes.
+Format : JSON list de strings.
+&quot;&quot;&quot;</code></pre>
+<p>Applique <strong>triangulation multi-sources</strong> : minimum 3 sources indépendantes pour tout claim important.</p>
+<h3>6. Scoring de fiabilité des sources</h3>
+<p>Attribue un score 0-1 à chaque source selon quatre critères :</p>
+<pre><code class="lang-python">def score_source(url: str, date: str | None, content: str) -&gt; float:
+    score = 0.5  # base
+
+    # Crédibilité domaine
+    trusted_domains = [&quot;reuters.com&quot;, &quot;bbc.com&quot;, &quot;nature.com&quot;, &quot;arxiv.org&quot;]
+    low_quality = [&quot;blogspot.com&quot;, &quot;wordpress.com&quot;]
+    if any(d in url for d in trusted_domains): score += 0.2
+    if any(d in url for d in low_quality): score -= 0.2
+
+    # Fraîcheur (bonus si &lt; 12 mois)
+    if date and is_recent(date, months=12): score += 0.15
+
+    # Longueur (proxy de profondeur)
+    if len(content) &gt; 2000: score += 0.1
+
+    return min(max(score, 0.0), 1.0)</code></pre>
+<p>Filtre toute source avec score &lt; 0.3 avant injection dans le LLM de synthèse.</p>
+<h3>7. Citation tracker JSON</h3>
+<p>Chaque claim factuel doit être tracé :</p>
+<pre><code class="lang-python">citation_store: list[dict] = []
+
+def add_citation(claim: str, url: str, title: str, date: str, quote: str) -&gt; str:
+    ref_id = f&quot;[{len(citation_store) + 1}]&quot;
+    citation_store.append({
+        &quot;ref_id&quot;: ref_id,
+        &quot;claim&quot;: claim,
+        &quot;source_url&quot;: url,
+        &quot;source_title&quot;: title,
+        &quot;source_date&quot;: date,
+        &quot;verbatim_quote&quot;: quote[:300],
+    })
+    return ref_id  # insérer inline dans le texte généré</code></pre>
+<p>Le rapport final doit inclure une section <code>## Sources</code> avec la liste complète.</p>
+<h3>8. Prompt de synthèse structuré</h3>
+<pre><code class="lang-python">SYNTHESIS_PROMPT = &quot;&quot;&quot;
+Tu es un analyste expert. Synthétise les documents fournis sur le sujet : {topic}
+
+Documents (avec IDs source) :
+{documents}
+
+Produis un rapport structuré :
+1. Résumé exécutif (200-400 mots)
+2. Findings principaux (par thème, avec citations inline [N])
+3. Points de divergence entre sources
+4. Niveau de confiance global : Haute / Moyenne / Basse (justifié)
+5. Gaps identifiés et questions ouvertes
+
+Règle absolue : chaque affirmation factuelle doit citer au moins une source [N].
+Ne jamais inventer ou inférer des faits non présents dans les documents.
+&quot;&quot;&quot;</code></pre>
+<h3>9. Formatage de l'output</h3>
+<p>Propose trois niveaux selon le contexte :</p>
+<table><thead><tr><th>Mode</th><th>Contenu</th><th>Longueur cible</th></tr></thead><tbody><tr><td><code>brief</code></td><td>Résumé exécutif + 3-5 key findings + sources</td><td>~400 mots</td></tr><tr><td><code>standard</code></td><td>Rapport complet structuré + tableau comparatif</td><td>~800-1200 mots</td></tr><tr><td><code>exhaustif</code></td><td>Tout le dessus + annexes par source + contradictions détaillées</td><td>2000+ mots</td></tr></tbody></table>
+<p>Ajoute toujours un <strong>niveau de confiance par section</strong> et la <strong>liste des sources avec scores</strong>.</p>
+<h3>10. Validation itérative et arrêt</h3>
+<p>Après le premier draft, l'agent identifie automatiquement les gaps :</p>
+<pre><code class="lang-python">GAP_ANALYSIS_PROMPT = &quot;&quot;&quot;
+Rapport produit : {draft}
+Sujet initial : {topic}
+
+Identifie :
+1. Les questions du sujet restées sans réponse
+2. Les contradictions non résolues entre sources
+3. Les sections avec seulement 1 source (triangulation insuffisante)
+
+Format : JSON avec clés &quot;unanswered&quot;, &quot;contradictions&quot;, &quot;weak_sections&quot;.
+&quot;&quot;&quot;</code></pre>
+<p>Si des gaps critiques existent et que le budget le permet → nouvelle itération. Sinon → finaliser et remettre le rapport.</p>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<h3>Anti-patterns critiques</h3>
+<ul>
+<li><strong>Hallucination de sources</strong> : ne jamais générer une URL qui n'a pas été réellement visitée. Toujours construire le citation_store depuis les fetches réels.</li>
+<li><strong>Source unique</strong> : présenter un fait comme établi depuis une seule source = erreur. Exige 2-3 sources concordantes.</li>
+<li><strong>Injection de contenu non filtré</strong> : injecter des pages entières dans le LLM sans tronquer → coûts explosifs et hallucinations. Toujours tronquer à <code>max_tokens_per_source</code>.</li>
+<li><strong>Boucle infinie</strong> : sans limite d'itérations, un agent peut looper indéfiniment. Toujours imposer <code>max_iterations</code>.</li>
+<li><strong>Confusion corrélation/causalité</strong> : le LLM de synthèse peut inférer des liens causaux. Le prompt doit interdire explicitement toute inférence non étayée.</li>
+</ul>
+<h3>Pièges courants</h3>
+<ul>
+<li><strong>Contenu paywallé</strong> : Tavily et Serper retournent souvent des snippets plutôt que le contenu complet — vérifie que le contenu est suffisant avant de scorer la source.</li>
+<li><strong>Pages JS-only</strong> : <code>trafilatura</code> retourne <code>None</code> sur les SPA. Détecter et basculer sur Playwright.</li>
+<li><strong>Dates manquantes</strong> : beaucoup de pages n'exposent pas de date. Ne pas pénaliser excessivement ; utiliser la date de fetch comme fallback.</li>
+<li><strong>Résultats redondants</strong> : plusieurs URLs peuvent pointer vers le même contenu (syndication). Déduplique par hash du contenu extrait.</li>
+</ul>
+<hr>
+<h2>Stack recommandée (2026)</h2>
+<table><thead><tr><th>Composante</th><th>Outil privilégié</th><th>Alternative</th></tr></thead><tbody><tr><td>Search web</td><td>Tavily</td><td>Serper, SerpAPI, Perplexity API</td></tr><tr><td>Extraction HTML</td><td>trafilatura</td><td>Firecrawl, readability-lxml</td></tr><tr><td>Pages JS</td><td>Playwright</td><td>Puppeteer (Node)</td></tr><tr><td>PDF</td><td>pdfplumber</td><td>pypdf, LlamaParse</td></tr><tr><td>Orchestration</td><td>LangGraph</td><td>CrewAI, plain Python</td></tr><tr><td>Synthèse LLM</td><td>Claude Opus 4 / GPT-4o</td><td>Gemini 1.5 Pro</td></tr><tr><td>Cache résultats</td><td>Redis + TTL 24h</td><td>SQLite local</td></tr></tbody></table>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

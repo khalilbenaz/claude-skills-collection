@@ -96,38 +96,143 @@ cp -r claude-skills-collection/skills/automation-n8n-workflow-designer ~/.claude
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>n8n Workflow Designer</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Installer et configurer n8n</strong> — choisir le mode de déploiement (Docker, npm, n8n Cloud), configurer les variables d'environnement (<code>N8N_BASIC_AUTH_USER</code>, <code>N8N_ENCRYPTION_KEY</code>, <code>WEBHOOK_URL</code>), paramétrer la base de données (SQLite pour le dev, PostgreSQL pour la production), et sécuriser l'accès avec un reverse proxy.</li>
-</ol>
-<ol>
-<li><strong>Concevoir l'architecture du workflow</strong> — identifier les nœuds trigger (Webhook, Cron, événement applicatif), planifier le flux de données entre les nœuds, anticiper les branchements conditionnels (IF, Switch), et définir la stratégie de gestion d'erreurs.</li>
-</ol>
-<ol>
-<li><strong>Configurer les credentials</strong> — créer et stocker les authentifications pour chaque service externe (OAuth2, API Key, Basic Auth) dans le gestionnaire de credentials n8n, qui les chiffre automatiquement, et tester la connexion avant de les utiliser dans les nœuds.</li>
-</ol>
-<ol>
-<li><strong>Assembler les nœuds du workflow</strong> — connecter les nœuds dans l'éditeur visuel : trigger en entrée, nœuds de traitement (Set, Function, Code pour JavaScript/Python personnalisé), nœuds d'intégration (HTTP Request, base de données, SaaS), et nœuds de contrôle (IF, Switch, Merge, Split In Batches).</li>
-</ol>
-<ol>
-<li><strong>Transformer les données</strong> — utiliser le nœud Code pour les transformations complexes en JavaScript ou Python, le nœud Set pour renommer et restructurer les champs, les expressions <code>{{ $json.field }}</code> pour le mapping dynamique, et le nœud Merge pour combiner les données de branches parallèles.</li>
-</ol>
-<ol>
-<li><strong>Gérer les erreurs et la fiabilité</strong> — activer le Error Trigger pour capturer les échecs globalement, configurer les retry automatiques sur les nœuds critiques, utiliser le nœud Stop and Error pour les validations, et implémenter des notifications (Slack, email) en cas d'échec.</li>
-</ol>
-<ol>
-<li><strong>Tester et itérer</strong> — exécuter le workflow manuellement avec le bouton Execute, inspecter les données de sortie de chaque nœud dans le panneau de résultats, utiliser des données de test réalistes, et corriger les mappings et transformations étape par étape.</li>
-</ol>
-<ol>
-<li><strong>Déployer et maintenir</strong> — activer le workflow en production, configurer les sauvegardes automatiques de la base de données n8n, exporter les workflows en JSON pour le versioning Git, surveiller les exécutions via le tableau de bord, et mettre à jour n8n régulièrement.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en étapes</h2>
+<h3>1. Choisir et déployer le mode d'exécution</h3>
+<p><strong>Critères de décision :</strong></p>
+<table><thead><tr><th>Contexte</th><th>Mode recommandé</th></tr></thead><tbody><tr><td>Prototype / dev local</td><td><code>npx n8n</code> ou Docker simple</td></tr><tr><td>Prod mono-serveur</td><td>Docker + PostgreSQL + reverse proxy</td></tr><tr><td>Prod haute dispo</td><td>n8n Queue Mode (Redis + workers)</td></tr><tr><td>Zéro ops</td><td>n8n Cloud</td></tr></tbody></table>
+<p><strong>Docker Compose minimal pour la prod :</strong></p>
+<pre><code class="lang-yaml">services:
+  n8n:
+    image: n8nio/n8n:latest
+    environment:
+      - N8N_ENCRYPTION_KEY=&lt;clé-aléatoire-32-chars&gt;
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=&lt;mot-de-passe&gt;
+      - WEBHOOK_URL=https://n8n.mondomaine.com/
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=&lt;mot-de-passe&gt;
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168   # 7 jours
+    volumes:
+      - n8n_data:/home/node/.n8n
+    ports:
+      - &quot;5678:5678&quot;
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: n8n
+      POSTGRES_USER: n8n
+      POSTGRES_PASSWORD: &lt;mot-de-passe&gt;
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+volumes:
+  n8n_data:
+  postgres_data:</code></pre>
+<blockquote>Ne jamais exposer le port 5678 directement sur Internet — passer par Nginx/Caddy avec TLS.</blockquote>
+<hr>
+<h3>2. Concevoir l'architecture du workflow</h3>
+<p>Avant de cliquer dans l'éditeur, répondre à ces questions :</p>
 <ul>
-<li>Toujours chiffrer les credentials et ne jamais les coder en dur dans les nœuds Code — utiliser le gestionnaire de credentials intégré pour la sécurité.</li>
-<li>Utiliser le nœud Split In Batches pour traiter les grands volumes de données et respecter les rate limits des API externes.</li>
-<li>Versionner les workflows en JSON dans Git — exporter régulièrement et documenter les changements pour permettre le rollback.</li>
-<li>Séparer les environnements de développement et production — tester les workflows complets en staging avant de les activer en production.</li>
-<li>Monitorer les exécutions et configurer des alertes sur les échecs — un workflow en erreur silencieuse peut avoir des conséquences métier importantes.</li>
+<li><strong>Trigger</strong> : Webhook (push), Cron (pull périodique), ou événement applicatif (ex. n8n trigger interne) ?</li>
+<li><strong>Volume</strong> : traitement unitaire ou batch ? Si &gt; 100 items → prévoir <code>Split In Batches</code>.</li>
+<li><strong>Idempotence</strong> : que se passe-t-il si le workflow tourne deux fois avec les mêmes données ? Ajouter une vérification de doublon si nécessaire.</li>
+<li><strong>Branchements</strong> : IF (2 branches), Switch (n branches), Merge (rejoindre des branches parallèles).</li>
+</ul>
+<p><strong>Squelette type :</strong></p>
+<pre><code>[Trigger] → [Valider/Filtrer] → [Transformer] → [Action principale]
+                                                      ↓ (error path)
+                                              [Notifier erreur]</code></pre>
+<hr>
+<h3>3. Configurer les credentials</h3>
+<p>Toujours passer par <strong>Settings → Credentials → New</strong> — jamais en dur dans un nœud Code.</p>
+<pre><code># Tester une API Key manuellement avant de la sauvegarder :
+curl -H &quot;Authorization: Bearer &lt;TOKEN&gt;&quot; https://api.exemple.com/me</code></pre>
+<p>Pour OAuth2 : renseigner <code>N8N_EDITOR_BASE_URL</code> correctement, sinon le callback échoue.</p>
+<hr>
+<h3>4. Assembler les nœuds</h3>
+<p><strong>Nœuds clés et leurs usages :</strong></p>
+<table><thead><tr><th>Nœud</th><th>Usage typique</th></tr></thead><tbody><tr><td><code>HTTP Request</code></td><td>Appel REST/GraphQL externe</td></tr><tr><td><code>Code</code> (JS ou Python)</td><td>Transformation complexe, logique métier</td></tr><tr><td><code>Set</code></td><td>Renommer, ajouter, supprimer des champs</td></tr><tr><td><code>IF</code> / <code>Switch</code></td><td>Routage conditionnel</td></tr><tr><td><code>Split In Batches</code></td><td>Traitement paginé / rate-limit safe</td></tr><tr><td><code>Merge</code></td><td>Réunir deux branches (Inner Join, Left Join, etc.)</td></tr><tr><td><code>Execute Workflow</code></td><td>Appeler un sous-workflow réutilisable</td></tr><tr><td><code>Wait</code></td><td>Pause temporelle ou attente de webhook de confirmation</td></tr></tbody></table>
+<p><strong>Expressions courantes :</strong></p>
+<pre><code class="lang-js">// Accéder au champ d'un item courant
+{{ $json.email }}
+
+// Accéder à la sortie d'un nœud précis
+{{ $node[&quot;HTTP Request&quot;].json.data.id }}
+
+// Timestamp ISO courant
+{{ new Date().toISOString() }}
+
+// Environnement / variable globale
+{{ $env.MY_SECRET_VAR }}</code></pre>
+<hr>
+<h3>5. Transformer les données avec le nœud Code</h3>
+<pre><code class="lang-js">// Exemple : enrichir chaque item avec un champ calculé
+for (const item of $input.all()) {
+  item.json.fullName = `${item.json.firstName} ${item.json.lastName}`;
+  item.json.processedAt = new Date().toISOString();
+}
+return $input.all();</code></pre>
+<pre><code class="lang-python"># Python (n8n &gt;= 1.0) — même logique
+items = _input.all()
+for item in items:
+    item.json['fullName'] = f&quot;{item.json['firstName']} {item.json['lastName']}&quot;
+return items</code></pre>
+<blockquote>Limiter le nœud Code aux transformations sans effets de bord. Les appels HTTP → nœud <code>HTTP Request</code>.</blockquote>
+<hr>
+<h3>6. Gérer les erreurs et la fiabilité</h3>
+<p><strong>Pattern recommandé :</strong></p>
+<ol>
+<li>Activer le <strong>Error Trigger</strong> (workflow dédié aux erreurs) → envoie un message Slack/email avec <code>{{ $json.execution.url }}</code>.</li>
+<li>Sur les nœuds critiques (HTTP Request, DB) : activer <strong>Retry On Fail</strong> (3 tentatives, délai exponentiel).</li>
+<li>Utiliser <strong>Stop and Error</strong> pour valider les préconditions :</li>
+</ol>
+<pre><code class="lang-js">// Dans un nœud IF ou Code — arrêt explicite si données manquantes
+if (!$json.orderId) {
+  throw new Error('orderId manquant — exécution annulée');
+}</code></pre>
+<ol>
+<li>Activer <code>continueOnFail</code> uniquement quand on veut traiter les erreurs item par item (boucle avec gestion locale).</li>
+</ol>
+<hr>
+<h3>7. Tester et itérer</h3>
+<ul>
+<li>Utiliser <strong>Pin Data</strong> sur un nœud pour fixer des données de test sans ré-exécuter le trigger.</li>
+<li>Inspecter chaque nœud dans le panneau Output — vérifier la structure JSON exacte avant de câbler le nœud suivant.</li>
+<li>Tester les cas limites : liste vide, champ null, rate limit déclenché.</li>
+<li>Valider le comportement du Error Trigger en forçant une erreur volontaire (<code>throw new Error('test')</code>).</li>
+</ul>
+<hr>
+<h3>8. Versionner et déployer</h3>
+<p><strong>Export/import CLI :</strong></p>
+<pre><code class="lang-bash"># Exporter tous les workflows en JSON
+n8n export:workflow --all --output=./workflows/
+
+# Importer depuis un fichier
+n8n import:workflow --input=./workflows/mon-workflow.json</code></pre>
+<p><strong>Intégration Git (recommandé) :</strong></p>
+<ul>
+<li>Activer <strong>Source Control</strong> (Settings → Source Control) pour push/pull natif vers Git.</li>
+<li>Committer chaque modification significative avec un message descriptif.</li>
+<li>Séparer les branches <code>dev</code> / <code>prod</code> et valider en staging avant merge.</li>
+</ul>
+<p><strong>Mise à jour n8n :</strong></p>
+<pre><code class="lang-bash">docker compose pull n8n &amp;&amp; docker compose up -d n8n
+# Vérifier les breaking changes dans https://docs.n8n.io/release-notes/</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Alternative</th></tr></thead><tbody><tr><td>Credentials codés en dur dans Code</td><td>Fuite de secrets dans les logs et exports JSON</td><td>Gestionnaire de credentials n8n</td></tr><tr><td>Workflow monolithique &gt; 50 nœuds</td><td>Impossible à debugger, pas réutilisable</td><td>Découper en sous-workflows (<code>Execute Workflow</code>)</td></tr><tr><td>Pas de gestion d'erreur</td><td>Échecs silencieux, données perdues</td><td>Error Trigger global + retry</td></tr><tr><td>SQLite en production</td><td>Corruption sous charge concurrente</td><td>PostgreSQL</td></tr><tr><td>Traiter 10 000 items sans batch</td><td>Timeout, consommation mémoire</td><td><code>Split In Batches</code> (taille 50-200)</td></tr><tr><td>WEBHOOK_URL mal configuré</td><td>OAuth callbacks cassés, webhooks non reçus</td><td>Vérifier <code>WEBHOOK_URL</code> = URL publique exacte</td></tr><tr><td>Pas de pruning des exécutions</td><td>Disque plein en quelques semaines</td><td><code>EXECUTIONS_DATA_PRUNE=true</code> + <code>MAX_AGE</code></td></tr><tr><td>Mise à jour sans lire les release notes</td><td>Breaking changes sur les expressions</td><td>Toujours lire les notes avant <code>docker pull</code></td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Queue Mode</strong> pour la scalabilité : ajouter des workers n8n indépendants derrière Redis — les webhooks et les exécutions sont découplés.</li>
+<li><strong>Variables d'environnement</strong> pour les valeurs qui changent entre envs (URLs, timeouts) — éviter les valeurs en dur dans les nœuds Set.</li>
+<li><strong>Sous-workflows réutilisables</strong> : extraire la logique commune (authentification, formatage de date, notification d'erreur) en workflows partagés appelés par <code>Execute Workflow</code>.</li>
+<li><strong>Monitoring</strong> : brancher les logs n8n sur un agrégateur (Loki, Datadog) et alerter sur les exécutions en statut <code>error</code> ou <code>crashed</code>.</li>
+<li><strong>Limiter les permissions des credentials</strong> : utiliser des tokens API avec scope minimal (lecture seule si possible).</li>
 </ul>
 </article>
 </main>

@@ -96,15 +96,13 @@ cp -r claude-skills-collection/skills/api-gateway-kong-api-gateway ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Kong API Gateway</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définir les services</strong> : backend APIs à exposer.</li>
-<li><strong>Configurer les routes</strong> : mapping des chemins/hosts vers les services.</li>
-<li><strong>Appliquer les plugins</strong> : sécurité, rate limiting, logging.</li>
-<li><strong>Monitorer</strong> : métriques, logs, health checks.</li>
-</ol>
-<h2>Configuration déclarative (kong.yml)</h2>
+<h2>Workflow en 6 étapes</h2>
+<h3>1. Choisir le mode de déploiement</h3>
+<table><thead><tr><th>Critère</th><th>DB-less (declarative)</th><th>DB (PostgreSQL)</th></tr></thead><tbody><tr><td>Environnement immutable / GitOps</td><td>Oui</td><td>Non</td></tr><tr><td>Portail dev, plugins KonnectCI</td><td>Non</td><td>Oui</td></tr><tr><td>Multi-noeud avec sync dynamique</td><td>Non</td><td>Oui</td></tr><tr><td>Démarrage simple (Docker, K8s)</td><td>Oui</td><td>Non</td></tr></tbody></table>
+<p>Règle : choisir <strong>DB-less</strong> par défaut. Passer en mode DB uniquement si Kong Manager, Konnect, ou des plugins enterprise nécessitent une base.</p>
+<h3>2. Écrire le kong.yml (DB-less)</h3>
 <pre><code class="lang-yaml">_format_version: &quot;3.0&quot;
+_transform: true   # permet d'utiliser des urls courtes (http://host:port)
 
 services:
   - name: payment-service
@@ -117,94 +115,153 @@ services:
       - name: payment-route
         paths:
           - /api/payments
-        methods:
-          - GET
-          - POST
-          - PUT
-          - DELETE
+        methods: [GET, POST, PUT, DELETE]
         strip_path: true
+        preserve_host: false
     plugins:
       - name: rate-limiting
         config:
           minute: 100
           policy: redis
           redis_host: redis
+          redis_port: 6379
       - name: jwt
         config:
-          claims_to_verify:
-            - exp
+          claims_to_verify: [exp]
+          key_claim_name: kid
 
   - name: order-service
     url: http://order-api:8080
     routes:
       - name: order-route
-        paths:
-          - /api/orders
+        paths: [/api/orders]
         strip_path: true
     plugins:
       - name: rate-limiting
         config:
           minute: 200
+          policy: local          # local si pas de Redis, attention au multi-noeud
       - name: cors
         config:
-          origins:
-            - https://app.company.com
-          methods:
-            - GET
-            - POST
-          headers:
-            - Authorization
-            - Content-Type
+          origins: [https://app.company.com]
+          methods: [GET, POST, OPTIONS]
+          headers: [Authorization, Content-Type]
+          exposed_headers: [X-Request-ID]
+          credentials: true
           max_age: 3600
 
-# Plugins globaux
+# Consumers (pour JWT / Key Auth)
+consumers:
+  - username: mobile-app
+    jwt_secrets:
+      - key: mobile-app-key
+        algorithm: RS256
+        rsa_public_key: |
+          -----BEGIN PUBLIC KEY-----
+          ...
+          -----END PUBLIC KEY-----
+
+# Plugins globaux (s'appliquent à toutes les routes)
 plugins:
   - name: prometheus
     config:
       per_consumer: true
-  - name: file-log
-    config:
-      path: /var/log/kong/access.log
-      reopen: true
+      status_code_metrics: true
+      latency_metrics: true
   - name: correlation-id
     config:
       header_name: X-Request-ID
-      generator: uuid</code></pre>
-<h2>Plugins essentiels</h2>
-<table><thead><tr><th>Plugin</th><th>Usage</th><th>Scope</th></tr></thead><tbody><tr><td><strong>rate-limiting</strong></td><td>Limiter les requêtes</td><td>Par route/service/consumer</td></tr><tr><td><strong>jwt</strong> / <strong>oauth2</strong></td><td>Authentification</td><td>Par route/service</td></tr><tr><td><strong>cors</strong></td><td>Cross-Origin requests</td><td>Par route/service</td></tr><tr><td><strong>prometheus</strong></td><td>Métriques</td><td>Global</td></tr><tr><td><strong>file-log</strong> / <strong>http-log</strong></td><td>Logging</td><td>Global/par route</td></tr><tr><td><strong>correlation-id</strong></td><td>Traçabilité</td><td>Global</td></tr><tr><td><strong>request-transformer</strong></td><td>Modifier les requêtes</td><td>Par route</td></tr><tr><td><strong>response-transformer</strong></td><td>Modifier les réponses</td><td>Par route</td></tr><tr><td><strong>ip-restriction</strong></td><td>Whitelist/blacklist IP</td><td>Par route/service</td></tr><tr><td><strong>acl</strong></td><td>Contrôle d'accès par groupe</td><td>Par route</td></tr></tbody></table>
-<h2>Administration</h2>
-<pre><code class="lang-bash"># Vérifier la configuration
+      generator: uuid#counter
+      echo_downstream: true
+  - name: http-log
+    config:
+      http_endpoint: http://log-aggregator:5044
+      timeout: 1000
+      keepalive: 60000</code></pre>
+<h3>3. Valider et appliquer la configuration</h3>
+<pre><code class="lang-bash"># Valider la syntaxe AVANT de déployer
 kong config parse kong.yml
 
-# Appliquer la config déclarative
+# DB-less : rechargement à chaud via Admin API (pas de downtime)
+curl -sX POST http://localhost:8001/config \
+  -F config=@kong.yml
+
+# DB : import initial
 kong config db_import kong.yml
 
-# Admin API
-curl http://localhost:8001/services           # Lister les services
-curl http://localhost:8001/routes             # Lister les routes
-curl http://localhost:8001/plugins            # Lister les plugins
-curl http://localhost:8001/status             # Santé de Kong</code></pre>
-<h2>Docker Compose</h2>
+# Vérifier l'état après rechargement
+curl -s http://localhost:8001/status | jq .</code></pre>
+<h3>4. Démarrer Kong (Docker Compose)</h3>
 <pre><code class="lang-yaml">services:
   kong:
-    image: kong:3.6
+    image: kong:3.9          # version LTS 2026
     environment:
       KONG_DATABASE: &quot;off&quot;
-      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
-      KONG_PROXY_LISTEN: 0.0.0.0:8000
-      KONG_ADMIN_LISTEN: 0.0.0.0:8001
-      KONG_LOG_LEVEL: info
+      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
+      KONG_PROXY_LISTEN: &quot;0.0.0.0:8000, 0.0.0.0:8443 ssl&quot;
+      KONG_ADMIN_LISTEN: &quot;127.0.0.1:8001&quot;   # jamais 0.0.0.0 en prod
+      KONG_LOG_LEVEL: warn
+      KONG_NGINX_WORKER_PROCESSES: auto
+      KONG_PLUGINS: bundled              # ou liste explicite
     ports:
-      - &quot;8000:8000&quot;   # Proxy
-      - &quot;8001:8001&quot;   # Admin API
+      - &quot;8000:8000&quot;    # HTTP proxy
+      - &quot;8443:8443&quot;    # HTTPS proxy
     volumes:
-      - ./kong.yml:/kong/kong.yml:ro</code></pre>
-<h2>Règles</h2>
+      - ./kong.yml:/etc/kong/kong.yml:ro
+    healthcheck:
+      test: [&quot;CMD&quot;, &quot;kong&quot;, &quot;health&quot;]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Redis pour rate-limiting distribué (multi-noeud obligatoire)
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save &quot;&quot; --appendonly no</code></pre>
+<h3>5. Opérations courantes via Admin API</h3>
+<pre><code class="lang-bash"># Lister / inspecter
+curl -s http://localhost:8001/services | jq '.data[].name'
+curl -s http://localhost:8001/routes   | jq '.data[] | {name, paths}'
+curl -s http://localhost:8001/plugins  | jq '.data[] | {name, enabled}'
+
+# Désactiver un plugin à chaud (sans redémarrage)
+PLUGIN_ID=$(curl -s http://localhost:8001/plugins?name=jwt | jq -r '.data[0].id')
+curl -sX PATCH http://localhost:8001/plugins/$PLUGIN_ID \
+  -d enabled=false
+
+# Tester une route (proxy sur port 8000)
+curl -sI -H &quot;Authorization: Bearer &lt;token&gt;&quot; http://localhost:8000/api/payments
+
+# Recharger la config sans downtime (DB-less)
+curl -sX POST http://localhost:8001/config -F config=@kong.yml | jq .</code></pre>
+<h3>6. Monitoring et observabilité</h3>
+<pre><code class="lang-bash"># Métriques Prometheus (scraper sur :8001/metrics)
+curl -s http://localhost:8001/metrics | grep kong_http
+
+# Règle Prometheus à ajouter dans prometheus.yml :
+# - job_name: kong
+#   static_configs:
+#     - targets: ['kong:8001']
+
+# Grafana dashboard ID officiel Kong : 7424</code></pre>
+<h2>Plugins essentiels — tableau de décision</h2>
+<table><thead><tr><th>Plugin</th><th>Quand l'utiliser</th><th>Scope recommandé</th></tr></thead><tbody><tr><td><code>rate-limiting</code></td><td>Toutes les routes publiques</td><td>Par route (sinon trop permissif)</td></tr><tr><td><code>rate-limiting-advanced</code></td><td>Fenêtres glissantes, quotas par consumer</td><td>Par route / consumer</td></tr><tr><td><code>jwt</code></td><td>Auth stateless, microservices</td><td>Par route</td></tr><tr><td><code>oauth2</code></td><td>Auth déléguée, portail dev</td><td>Par service</td></tr><tr><td><code>key-auth</code></td><td>API B2B simple, M2M</td><td>Par route</td></tr><tr><td><code>acl</code></td><td>Restriction par groupe après auth</td><td>Après <code>jwt</code>/<code>key-auth</code></td></tr><tr><td><code>cors</code></td><td>APIs consommées depuis un browser</td><td>Par route</td></tr><tr><td><code>ip-restriction</code></td><td>Whitelist/blacklist CIDRs</td><td>Par route/service</td></tr><tr><td><code>request-transformer</code></td><td>Ajouter/supprimer headers avant upstream</td><td>Par route</td></tr><tr><td><code>response-transformer</code></td><td>Masquer headers internes</td><td>Par route</td></tr><tr><td><code>prometheus</code></td><td>Métriques latence, codes HTTP</td><td>Global</td></tr><tr><td><code>correlation-id</code></td><td>Traçabilité distribuée</td><td>Global (toujours)</td></tr><tr><td><code>http-log</code> / <code>file-log</code></td><td>Centralisation des logs</td><td>Global ou par service</td></tr><tr><td><code>proxy-cache</code></td><td>Réduire la charge upstream (GET)</td><td>Par route</td></tr><tr><td><code>bot-detection</code></td><td>Bloquer les crawlers/bots</td><td>Global</td></tr></tbody></table>
+<h2>Anti-patterns et pièges</h2>
+<p><strong>Rate limiting sans Redis en multi-noeud</strong> : <code>policy: local</code> compte par noeud Kong, pas globalement. Avec 3 réplicas, un client peut envoyer 3× le quota. Toujours utiliser <code>policy: redis</code> dès qu'il y a plus d'une instance.</p>
+<p><strong>Admin API exposée publiquement</strong> : <code>KONG_ADMIN_LISTEN: 0.0.0.0:8001</code> est une faille critique. Restreindre à <code>127.0.0.1</code> ou un réseau interne, puis protéger avec <code>ip-restriction</code> ou mTLS.</p>
+<p>**Plugin <code>cors</code> avec <code>origins: [&quot;*&quot;]</code> et <code>credentials: true</code>** : combinaison invalide côté navigateur (CORS spec). Toujours lister les origines explicitement si <code>credentials: true</code>.</p>
+<p><strong>strip_path mal configuré</strong> : si <code>strip_path: false</code> et que le service upstream ne s'attend pas au préfixe <code>/api/payments</code>, toutes les requêtes retournent 404. Valider avec <code>curl -v</code>.</p>
+<p><strong>Order des plugins</strong> : Kong applique les plugins dans l'ordre de priorité interne (pas l'ordre du YAML). Vérifier avec <code>GET /plugins?size=100</code> pour confirmer que <code>jwt</code> s'exécute avant <code>acl</code>.</p>
+<p><strong>Timeouts trop courts sur des endpoints batch</strong> : <code>read_timeout: 60000</code> (60 s) par défaut. Pour des imports lourds, augmenter explicitement par route avec <code>config.read_timeout</code> dans le plugin <code>request-termination</code> ou via un service dédié.</p>
+<p><strong>Rechargement DB-less sans validation préalable</strong> : <code>POST /config</code> sans <code>kong config parse</code> peut corrompre l'état en mémoire si le YAML est invalide. Toujours valider d'abord.</p>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Préférer le mode <strong>declarative</strong> (DB-less) pour les environnements immutables.</li>
-<li>Les plugins de sécurité (rate limiting, auth) doivent être configurés <strong>par route</strong>, pas globalement.</li>
-<li>Toujours activer le plugin <strong>correlation-id</strong> pour la traçabilité distribuée.</li>
-<li>Exposer l'Admin API uniquement sur un réseau interne, jamais publiquement.</li>
+<li>Fixer la version image (<code>kong:3.9</code>, pas <code>kong:latest</code>) et la mettre à jour via une PR revue.</li>
+<li>Stocker <code>kong.yml</code> en Git, appliquer via CI/CD (<code>kong config parse</code> en étape de lint, <code>POST /config</code> en deploy).</li>
+<li>Pour Kubernetes, utiliser le <strong>Kong Ingress Controller</strong> (KIC 3.x) avec CRDs <code>KongPlugin</code>, <code>KongIngress</code> — évite de gérer le kong.yml manuellement.</li>
+<li>Activer HTTPS côté proxy (<code>8443</code>) avec TLS terminé sur Kong ; ne jamais laisser le trafic entre Kong et le client en HTTP en production.</li>
+<li>Séparer les plugins de sécurité (auth, rate limit) des plugins d'observabilité (logs, metrics) dans la configuration pour faciliter l'audit.</li>
+<li>Tester les règles de routing avec <code>curl -v --resolve</code> avant déploiement pour éviter les surprises <code>strip_path</code> / <code>preserve_host</code>.</li>
 </ul>
 </article>
 </main>

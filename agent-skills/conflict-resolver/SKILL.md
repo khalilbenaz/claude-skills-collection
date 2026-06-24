@@ -1,16 +1,35 @@
 ---
 name: conflict-resolver
-description: Résolution de conflits entre agents ou sous-agents quand les résultats sont contradictoires. Se déclenche avec "conflit agent", "agent conflict", "résultats contradictoires", "agent disagreement", "contradiction agents", "arbitrage agent", "résoudre conflit agents".
+description: Résolution de conflits entre agents ou sous-agents quand les résultats sont contradictoires, avec workflow de détection, arbitrage, merge et feedback loop. Se déclenche avec "conflit agent", "agent conflict", "résultats contradictoires", "agent disagreement", "contradiction agents", "arbitrage agent", "résoudre conflit agents".
 ---
 
 # Agent Conflict Resolver
 
 ## Quand utiliser ce skill
-Utilise ce skill lorsque deux agents ou plus ont produit des résultats contradictoires, incompatibles ou mutuellement exclusifs sur la même question ou la même tâche. Cela arrive typiquement dans les architectures multi-agents parallèles où plusieurs agents traitent la même entrée, dans les pipelines avec validation croisée, ou lorsqu'un agent de vérification contredit le résultat d'un agent de production. L'objectif est de résoudre le conflit de façon traçable et d'alimenter un feedback loop pour prévenir les futurs conflits.
 
-## Workflow
+Utilise ce skill quand deux agents ou plus ont produit des résultats contradictoires, incompatibles ou mutuellement exclusifs sur la même question ou tâche. Typiquement : pipelines parallèles, validation croisée, ou agent de vérification qui contredit l'agent de production.
 
-1. **Détecter le conflit automatiquement** — Implémente une couche de détection qui compare les outputs des agents après chaque étape parallèle. Types de conflits à détecter : **contradiction directe** (agent A dit "vrai", agent B dit "faux"), **incohérence numérique** (agent A retourne 1500€, agent B retourne 2300€ pour le même calcul), **inconsistance logique** (les deux conclusions ne peuvent pas être vraies simultanément), **conflit de priorité** (agent A recommande action X, agent B recommande action Y incompatible avec X).
+**Conditions de déclenchement concrètes :**
+- Agent A retourne `True`, agent B retourne `False` sur le même prédicat
+- Deux agents calculent des montants différents pour la même transaction
+- Deux agents recommandent des actions incompatibles (ex. : "accepter" vs "rejeter")
+- Un agent de vérification invalide le résultat d'un agent de génération
+- N agents en majorité vs minorité sur une classification
+
+---
+
+## Workflow en 10 étapes
+
+### 1. Détecter le conflit
+
+Implémente une couche de comparaison après chaque `gather` parallèle. Classe chaque conflit par **type** et **sévérité** avant toute action.
+
+| Type | Exemple | Sévérité par défaut |
+|---|---|---|
+| `direct_contradiction` | True vs False | critical |
+| `numerical_inconsistency` | 1500€ vs 2300€ (>10%) | major |
+| `logical_conflict` | Deux conclusions mutuellement exclusives | major |
+| `priority_conflict` | Action X incompatible avec action Y | minor → critical selon domaine |
 
 ```python
 from dataclasses import dataclass
@@ -19,8 +38,8 @@ from typing import Any
 @dataclass
 class ConflictDetectionResult:
     has_conflict: bool
-    conflict_type: str  # "direct_contradiction" | "numerical_inconsistency" | "logical_conflict" | "priority_conflict"
-    severity: str       # "critical" | "major" | "minor"
+    conflict_type: str   # "direct_contradiction" | "numerical_inconsistency" | "logical_conflict" | "priority_conflict"
+    severity: str        # "critical" | "major" | "minor"
     agent_a: str
     agent_b: str
     output_a: Any
@@ -31,7 +50,7 @@ def detect_conflict(output_a: Any, agent_a: str, output_b: Any, agent_b: str) ->
     # Détection numérique
     if isinstance(output_a, (int, float)) and isinstance(output_b, (int, float)):
         diff_pct = abs(output_a - output_b) / max(abs(output_a), abs(output_b), 1)
-        if diff_pct > 0.10:  # >10% d'écart
+        if diff_pct > 0.10:
             return ConflictDetectionResult(
                 has_conflict=True, conflict_type="numerical_inconsistency",
                 severity="major" if diff_pct > 0.30 else "minor",
@@ -46,41 +65,58 @@ def detect_conflict(output_a: Any, agent_a: str, output_b: Any, agent_b: str) ->
             agent_a=agent_a, agent_b=agent_b, output_a=output_a, output_b=output_b,
             description=f"{agent_a} dit {output_a}, {agent_b} dit {output_b}"
         )
-    return ConflictDetectionResult(has_conflict=False, conflict_type="none", severity="none",
-                                    agent_a=agent_a, agent_b=agent_b,
-                                    output_a=output_a, output_b=output_b, description="")
+    return ConflictDetectionResult(
+        has_conflict=False, conflict_type="none", severity="none",
+        agent_a=agent_a, agent_b=agent_b, output_a=output_a, output_b=output_b, description=""
+    )
 ```
 
-2. **Classifier le conflit** — Évalue deux dimensions : **nature** (factuel vs opinion — un conflit factuel a une réponse vérifiable, un conflit d'opinion nécessite un jugement) et **criticité** (critique : la décision est irréversible ou à fort impact ; majeur : peut être corrigé mais coûteux ; mineur : acceptable de prendre l'un ou l'autre). Cette classification détermine la stratégie de résolution. Un conflit factuel critique nécessite une vérification externe. Un conflit d'opinion mineur peut se résoudre par majority vote.
+---
 
-3. **Rassembler les preuves** — Avant de résoudre, demande à chaque agent impliqué de **justifier son résultat** : fournir les sources utilisées, le raisonnement étape par étape (chain-of-thought), le score de confiance auto-évalué (0.0–1.0) et les hypothèses ou limites reconnues. Cette étape est critique : souvent, la justification révèle qu'un agent a utilisé des données périmées ou a fait une hypothèse erronée, ce qui simplifie la résolution.
+### 2. Classifier le conflit — matrice de décision
+
+Croise **nature** × **criticité** pour choisir la stratégie :
+
+| | Factuel (réponse vérifiable) | Opinion (jugement) |
+|---|---|---|
+| **Critical** | Vérification source externe obligatoire | Arbitre neutre + escalation humaine |
+| **Major** | Confidence-based ou source externe | Arbitre neutre LLM |
+| **Minor** | Confidence-based | Majority vote (si N≥3) ou default |
+
+---
+
+### 3. Rassembler les preuves
+
+Demande à chaque agent impliqué de **justifier son résultat** : sources, chain-of-thought, score de confiance (0–1), hypothèses. Cette étape révèle souvent la cause (données périmées, hypothèse erronée) et simplifie la résolution.
 
 ```python
 async def gather_evidence(conflict: ConflictDetectionResult, agents: dict) -> dict:
-    evidence_a = await agents[conflict.agent_a].justify(
-        output=conflict.output_a,
-        prompt="Explique ton raisonnement étape par étape, liste tes sources, donne ton score de confiance (0-1) et identifie tes hypothèses."
+    prompt = (
+        "Explique ton raisonnement étape par étape, liste tes sources, "
+        "donne ton score de confiance (0–1) et identifie tes hypothèses."
     )
-    evidence_b = await agents[conflict.agent_b].justify(
-        output=conflict.output_b,
-        prompt="Explique ton raisonnement étape par étape, liste tes sources, donne ton score de confiance (0-1) et identifie tes hypothèses."
-    )
+    evidence_a = await agents[conflict.agent_a].justify(output=conflict.output_a, prompt=prompt)
+    evidence_b = await agents[conflict.agent_b].justify(output=conflict.output_b, prompt=prompt)
     return {
         "agent_a": {"output": conflict.output_a, "evidence": evidence_a},
-        "agent_b": {"output": conflict.output_b, "evidence": evidence_b}
+        "agent_b": {"output": conflict.output_b, "evidence": evidence_b},
     }
 ```
 
-4. **Appliquer la stratégie de résolution adaptée** — Sélectionne selon le type de conflit : **source verification** (conflit factuel → vérifier avec une source externe authoritative), **authority-based** (l'agent avec la plus haute expertise sur ce domaine gagne), **recency-based** (l'agent avec les données les plus récentes gagne, pour les informations temporelles), **majority vote** (si N>2 agents et majorité claire), **arbitration** (agent arbitre neutre, voir étape 5). Applique toujours la stratégie la moins coûteuse en premier.
+---
+
+### 4. Appliquer la stratégie déterministe (coût minimal, toujours en premier)
+
+| Stratégie | Quand l'appliquer | Coût |
+|---|---|---|
+| `source_verification` | Conflit factuel + source externe disponible | Moyen |
+| `recency_based` | Données temporelles (prix, statuts, stocks) | Faible |
+| `authority_based` | Un agent est spécialisé dans ce domaine | Faible |
+| `confidence_based` | Écart de confiance > 0.1 | Faible |
+| `majority_vote` | N ≥ 3 agents, majorité nette | Faible |
 
 ```python
 class ConflictResolutionStrategy:
-    @staticmethod
-    def source_verification(conflict, evidence: dict, external_source) -> dict:
-        ground_truth = external_source.lookup(conflict.output_a, conflict.output_b)
-        winner = "agent_a" if ground_truth == conflict.output_a else "agent_b"
-        return {"winner": winner, "method": "source_verification", "ground_truth": ground_truth}
-
     @staticmethod
     def confidence_based(evidence: dict) -> dict:
         conf_a = evidence["agent_a"]["evidence"].get("confidence", 0.5)
@@ -89,50 +125,125 @@ class ConflictResolutionStrategy:
             return {"winner": None, "method": "confidence_tie", "needs_escalation": True}
         winner = "agent_a" if conf_a > conf_b else "agent_b"
         return {"winner": winner, "method": "confidence_based", "confidence_delta": abs(conf_a - conf_b)}
+
+    @staticmethod
+    def source_verification(conflict: ConflictDetectionResult, external_source) -> dict:
+        ground_truth = external_source.lookup(conflict.output_a, conflict.output_b)
+        winner = "agent_a" if ground_truth == conflict.output_a else "agent_b"
+        return {"winner": winner, "method": "source_verification", "ground_truth": ground_truth}
 ```
 
-5. **Utiliser un agent arbitre (LLM-as-judge)** — Lorsque les stratégies déterministes ne suffisent pas, invoque un **agent arbitre neutre** : un LLM avec un prompt structuré d'évaluation qui reçoit les deux outputs et leurs justifications, applique des critères d'évaluation explicites (exactitude, cohérence, sourcing, raisonnement), et produit un verdict motivé. L'arbitre ne doit pas être l'un des agents en conflit. Utilise un modèle plus puissant que les agents en conflit si possible.
+---
+
+### 5. Arbitrage LLM (fallback si déterministe insuffisant)
+
+L'arbitre doit être **neutre** (pas un agent en conflit), idéalement un modèle plus puissant. Maximum **2 rounds** d'arbitrage — si le conflit persiste, escalation humaine obligatoire.
 
 ```python
 ARBITRATOR_PROMPT = """Tu es un arbitre neutre. Voici deux réponses contradictoires à la même question.
 
-Question: {question}
+Question : {question}
 
-Réponse A (de {agent_a}): {output_a}
-Justification A: {evidence_a}
+Réponse A (de {agent_a}) : {output_a}
+Justification A : {evidence_a}
 
-Réponse B (de {agent_b}): {output_b}
-Justification B: {evidence_b}
+Réponse B (de {agent_b}) : {output_b}
+Justification B : {evidence_b}
 
-Évalue selon ces critères :
+Critères d'évaluation :
 1. Exactitude factuelle (sources vérifiables)
 2. Cohérence du raisonnement
 3. Complétude de la réponse
 4. Score de confiance déclaré
 
-Détermine quelle réponse est la plus fiable, explique ton raisonnement, et fournis un score de confiance dans ta décision (0-1).
-Réponds en JSON : {{"winner": "A"|"B"|"neither", "reasoning": "...", "confidence": 0.0-1.0}}
+Réponds en JSON strict :
+{{"winner": "A"|"B"|"neither", "reasoning": "...", "confidence": 0.0-1.0}}
 """
 ```
 
-6. **Appliquer la stratégie de merge** — Certains conflits ne sont pas de vraies contradictions mais des **résultats complémentaires** : l'agent A a traité une partie du problème, l'agent B une autre. Dans ce cas, merge les outputs plutôt que de choisir un gagnant. Stratégies de merge : **union** (conserver toutes les informations non contradictoires), **intersection** (conserver uniquement les informations partagées), **weighted merge** (chaque champ est pris de l'agent avec la plus haute confiance sur ce champ), **synthesis** (appeler un LLM pour synthétiser les deux en une réponse cohérente).
+---
 
-7. **Définir les règles d'escalation** — Escalade obligatoire si : `confidence_in_resolution < 0.5` (l'arbitre lui-même est incertain), conflit de **criticité critique** sans résolution déterministe, conflit **persistant** (même après arbitrage un agent conteste), ou conflit impliquant des **données sensibles** (financières, médicales, légales). L'escalation vers un superviseur humain doit inclure le résumé du conflit, les deux positions et les preuves rassemblées.
+### 6. Merge si les résultats sont complémentaires
+
+Certains conflits sont de faux positifs : les agents ont traité des sous-ensembles du problème. Dans ce cas, **merge** plutôt que choisir.
+
+| Stratégie merge | Quand | Exemple |
+|---|---|---|
+| `union` | Informations non contradictoires | Listes de recommandations |
+| `intersection` | Conserver uniquement le consensus | Entités extraites par NER |
+| `weighted_merge` | Chaque champ pris de l'agent avec la plus haute confiance | Structures JSON partielles |
+| `synthesis` | LLM synthétise les deux en réponse cohérente | Résumés textuels |
 
 ```python
-def should_escalate(resolution_result: dict, conflict: ConflictDetectionResult) -> bool:
+async def weighted_merge(evidence: dict, llm) -> dict:
+    """Prend chaque champ de l'agent le plus confiant sur ce champ."""
+    merged = {}
+    for field in set(evidence["agent_a"]["output"]) | set(evidence["agent_b"]["output"]):
+        conf_a = evidence["agent_a"]["evidence"].get(f"confidence_{field}", 0.5)
+        conf_b = evidence["agent_b"]["evidence"].get(f"confidence_{field}", 0.5)
+        source = evidence["agent_a"]["output"] if conf_a >= conf_b else evidence["agent_b"]["output"]
+        merged[field] = source.get(field)
+    return merged
+```
+
+---
+
+### 7. Règles d'escalation humaine
+
+Escalation obligatoire si l'une de ces conditions est vraie :
+
+```python
+def should_escalate(resolution: dict, conflict: ConflictDetectionResult) -> bool:
     return (
-        resolution_result.get("confidence", 1.0) < 0.5 or
-        conflict.severity == "critical" and resolution_result.get("method") != "source_verification" or
-        resolution_result.get("needs_escalation", False)
+        resolution.get("confidence", 1.0) < 0.5 or               # Arbitre incertain
+        (conflict.severity == "critical"
+         and resolution.get("method") != "source_verification") or  # Critique sans vérif externe
+        resolution.get("needs_escalation", False) or               # Tie sur confiance
+        resolution.get("arbitration_round", 0) >= 2               # Boucle d'arbitrage
     )
 ```
 
-8. **Logger la résolution** — Chaque résolution de conflit doit être documentée : `conflict_id`, `timestamp`, `agents_involved`, `conflict_type`, `severity`, `outputs_in_conflict`, `evidence_gathered`, `resolution_strategy_used`, `resolution_result`, `winner`, `reasoning`, `confidence_in_resolution`, `escalated` (booléen), `resolution_duration_ms`. Ces logs constituent une base de données précieuse pour analyser les patterns de conflits récurrents.
+Le payload d'escalation doit inclure : résumé du conflit, les deux outputs, les preuves, la stratégie tentée et le score de confiance de la résolution.
 
-9. **Prévenir les futurs conflits** — Analyse les logs de conflits pour identifier les causes racines : **instructions ambiguës** (les deux agents avaient raison selon leur interprétation → clarifier les prompts), **scopes qui se chevauchent** (deux agents traitent la même sous-tâche → mieux décomposer), **données inconsistantes** (les agents utilisaient des versions différentes de la même donnée → state store partagé), **manque de contexte** (un agent manquait d'information → améliorer le context packaging).
+---
 
-10. **Alimenter le feedback loop** — Le résultat de chaque résolution doit informer les futurs dispatches : si l'agent A perd systématiquement sur les questions de type X, réduire sa priorité pour ce type ou mettre à jour son prompt. Implémenter un **performance tracker** par agent et par type de tâche. Utiliser ces métriques dans le routing conditionnel pour favoriser les agents avec le meilleur track record.
+### 8. Logger chaque résolution
+
+Champs obligatoires dans le log :
+
+```json
+{
+  "conflict_id": "uuid",
+  "timestamp": "ISO8601",
+  "agents_involved": ["agent_a", "agent_b"],
+  "conflict_type": "numerical_inconsistency",
+  "severity": "major",
+  "resolution_strategy": "confidence_based",
+  "winner": "agent_a",
+  "confidence_in_resolution": 0.82,
+  "escalated": false,
+  "resolution_duration_ms": 340
+}
+```
+
+Ces logs sont la matière première de l'analyse causale et du feedback loop.
+
+---
+
+### 9. Analyser les causes racines (post-résolution)
+
+Regrouper les conflits par type de cause pour identifier les correctifs systémiques :
+
+| Cause racine | Signal dans les logs | Correctif |
+|---|---|---|
+| Instructions ambiguës | Même type de conflit récurrent sur même tâche | Clarifier le prompt système |
+| Scopes qui se chevauchent | Deux agents traitent la même sous-tâche | Mieux décomposer le plan |
+| Données inconsistantes | Agents utilisent des versions différentes | State store partagé + version tagging |
+| Manque de contexte | Agent perd systématiquement sur un type | Enrichir le context packaging |
+
+---
+
+### 10. Feedback loop — ajuster le routing
 
 ```python
 class AgentPerformanceTracker:
@@ -154,17 +265,40 @@ class AgentPerformanceTracker:
         return wins / total if total > 0 else 0.5
 ```
 
-## Anti-patterns
+Si `win_rate(agent_id) < 0.4` sur un type de tâche → réduire la priorité de dispatch pour ce type ou mettre à jour son prompt.
 
-- **Toujours prendre le premier résultat** — Dans un pipeline parallèle, le premier agent à répondre n'est pas nécessairement le plus fiable. La vitesse ne corrèle pas avec la qualité. Toujours vérifier la présence de conflits avant d'accepter un résultat.
-- **Ignorer les conflits mineurs** — Les conflits classifiés comme "mineurs" révèlent souvent des problèmes systémiques (prompts ambigus, données inconsistantes) qui deviennent critiques si non traités. Logger et analyser tous les conflits, même résolus par défaut.
-- **Boucle de re-resolution infinie** — Si l'arbitre contredit lui-même l'un des agents, ne pas relancer un nouveau cycle d'arbitrage indéfiniment. Maximum 2 rounds d'arbitrage, puis escalation humaine obligatoire.
-- **Absence de logging** — Résoudre un conflit sans le documenter prive le système de la possibilité d'apprendre et de prévenir les récurrences. Chaque résolution, même triviale, doit être loggée.
+---
 
-## Règles
+## Anti-patterns et pièges
 
-1. **Détection automatique obligatoire** — Tout output produit en parallèle par plusieurs agents doit passer par une couche de détection de conflits avant d'être utilisé. Ne jamais merger des résultats sans vérification.
-2. **Stratégie déterministe d'abord** — Tente toujours la résolution déterministe (vérification de source, confiance, autorité) avant de recourir à l'arbitrage LLM, plus coûteux et moins prévisible.
-3. **L'arbitre est neutre** — L'agent arbitre ne doit jamais être l'un des agents en conflit. Utilise un agent dédié ou un modèle distinct pour l'arbitrage.
-4. **Documente les trade-offs** — La résolution par confiance est rapide mais peut être biaisée. La vérification externe est fiable mais lente. L'arbitrage LLM est flexible mais coûteux. Choisis et documente explicitement.
-5. **Adapte au framework** — LangGraph : node de détection + conditional resolution branches. CrewAI : task de validation croisée. AutoGen : agent `ConflictResolver` dans le GroupChat. Custom : middleware de comparaison après `asyncio.gather`.
+| Anti-pattern | Risque | Correctif |
+|---|---|---|
+| Prendre le premier résultat (fastest-wins) | Le plus rapide n'est pas le plus fiable | Toujours comparer après gather |
+| Ignorer les conflits "mineurs" | Révèlent des problèmes systémiques, deviennent critiques | Logger et analyser tous |
+| Boucle d'arbitrage infinie | Coût exponentiel, pas de convergence | Max 2 rounds, puis escalation |
+| Arbitre = agent en conflit | Biais inévitable | Toujours un agent tiers ou modèle distinct |
+| Résolution sans logging | Aucun apprentissage possible | Logger systématiquement, même les triviaux |
+| Merge aveugle | Produit des incohérences silencieuses | Valider la cohérence du résultat mergé |
+| Score de confiance auto-déclaré comme oracle | Les agents sur-évaluent souvent leur confiance | Pondérer avec le win_rate historique |
+
+---
+
+## Adaptation par framework
+
+| Framework | Point d'intégration recommandé |
+|---|---|
+| **LangGraph** | Node `conflict_detector` + branches conditionnelles `resolve` / `escalate` |
+| **CrewAI** | Task de validation croisée après les tasks parallèles |
+| **AutoGen** | Agent `ConflictResolver` dans le `GroupChat` avec rôle d'arbitre |
+| **Custom asyncio** | Middleware de comparaison après `asyncio.gather(*agent_tasks)` |
+| **LangChain LCEL** | Branche `RunnableBranch` avec condition de conflit |
+
+---
+
+## Règles non négociables
+
+1. **Détection systématique** — Tout output parallèle passe par la couche de détection. Pas d'exception.
+2. **Déterministe d'abord** — Source externe > confiance > autorité > vote > arbitre LLM. Dans cet ordre.
+3. **Arbitre neutre** — Jamais un des agents en conflit. Jamais.
+4. **2 rounds max** — Au-delà, l'incertitude est trop haute pour être résolue algorithmiquement.
+5. **Logger tout** — Même les conflits résolus en 50 ms par confiance. Le pattern émerge des logs.

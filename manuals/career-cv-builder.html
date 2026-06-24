@@ -96,34 +96,94 @@ cp -r claude-skills-collection/skills/career-cv-builder ~/.claude/skills/</div><
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>CV Builder</h1>
-<h2>Workflow</h2>
+<h2>Étape 1 — Cadrage (avant de rédiger)</h2>
+<p>Poser ces 4 questions avant tout :</p>
 <ol>
-<li><strong>Poste cible</strong> : quel job ? Quel secteur ? Quel niveau ?</li>
-<li><strong>Inventaire</strong> : collecter expériences, formations, compétences, projets, langues.</li>
-<li><strong>Structure</strong> :</li>
-<ul>
-<li>En-tête (nom, contact, titre pro)</li>
-<li>Résumé professionnel (3-4 lignes)</li>
-<li>Expériences (format STAR : Situation, Tâche, Action, Résultat)</li>
-<li>Formation</li>
-<li>Compétences techniques et soft skills</li>
-<li>Langues et certifications</li>
-</ul>
-<li><strong>Optimisation</strong> :</li>
-<ul>
-<li>Verbes d'action forts</li>
-<li>Chiffres et résultats concrets</li>
-<li>Mots-clés du poste cible</li>
-<li>Suppression du superflu</li>
-</ul>
-<li><strong>2 formats</strong> : version complète + version 1 page condensée.</li>
+<li><strong>Poste cible</strong> : titre exact du poste, secteur, entreprise si connue.</li>
+<li><strong>Niveau</strong> : junior (0-3 ans) / confirmé (3-8 ans) / senior (8+ ans) / manager ?</li>
+<li><strong>Pays/culture</strong> : FR/Maghreb (photo souvent attendue, format Word/PDF), Europe Nord (photo rare, concis), US/Canada (resume 1 page, pas de photo, pas d'âge).</li>
+<li><strong>Contraintes</strong> : passage ATS (Applicant Tracking System) obligatoire ? Candidature directe RH ?</li>
 </ol>
-<h2>Règles</h2>
+<p>Critère clé : un CV ≠ un historique. C'est un <strong>argument de vente ciblé</strong>.</p>
+<hr>
+<h2>Étape 2 — Inventaire des matériaux</h2>
+<p>Collecter brut, sans filtre :</p>
 <ul>
-<li>N'invente aucune expérience.</li>
-<li>Adapte au pays (photo ou non, format, conventions).</li>
-<li>Un CV = un poste cible.</li>
-<li>Privilégie les résultats aux responsabilités.</li>
+<li>Toutes les expériences pro (entreprise, dates, titre, missions principales, outils utilisés)</li>
+<li>Formations (diplômes, certifications, MOOCs pertinents)</li>
+<li>Projets notables (perso, open-source, freelance)</li>
+<li>Compétences techniques (stack, langages, frameworks, outils)</li>
+<li>Soft skills avec preuve concrète (ex : &quot;management de 5 devs&quot; pas juste &quot;leadership&quot;)</li>
+<li>Langues + niveau CECRL (A1→C2) ou certification (TOEIC, DELF…)</li>
+<li>Résultats chiffrés : %, volumes, délais, budgets, taille d'équipe</li>
+</ul>
+<hr>
+<h2>Étape 3 — Structure standard</h2>
+<pre><code>[EN-TÊTE]
+Prénom NOM | Titre pro ciblé
+Email • Téléphone • LinkedIn • GitHub/Portfolio
+Ville (pas d'adresse complète)
+
+[RÉSUMÉ PROFESSIONNEL] — 2-4 lignes
+&quot;Développeur backend Java 6 ans, spécialisé microservices Spring Boot.
+Expérience en fintech (systèmes de paiement, haute dispo). Cherche
+un rôle Senior dans une scale-up B2B.&quot;
+
+[EXPÉRIENCES] — ordre antichronologique
+Titre | Entreprise | Ville | MM/AAAA – MM/AAAA
+• Action forte + contexte + résultat chiffré
+• …
+
+[FORMATION]
+Diplôme | École | Année
+Certifications pertinentes (AWS, Azure, PMP…)
+
+[COMPÉTENCES TECHNIQUES]
+Langages : Java, Python, TypeScript
+Frameworks : Spring Boot, FastAPI, React
+Infra/DevOps : Docker, Kubernetes, GitHub Actions
+BDD : PostgreSQL, Redis, MongoDB
+
+[LANGUES]
+Arabe (natif) • Français (C1) • Anglais (B2 – TOEIC 850)</code></pre>
+<hr>
+<h2>Étape 4 — Rédaction des bullet points (format CAR)</h2>
+<p>Formule : <strong>Contexte → Action → Résultat</strong></p>
+<table><thead><tr><th>❌ Faible</th><th>✅ Fort</th></tr></thead><tbody><tr><td>&quot;Responsable du backend&quot;</td><td>&quot;Conçu et déployé une API REST Spring Boot servant 2 M req/jour avec 99,9 % uptime&quot;</td></tr><tr><td>&quot;Participation au projet migration&quot;</td><td>&quot;Migré 3 bases Oracle vers PostgreSQL, réduisant les coûts infra de 40 % en 6 mois&quot;</td></tr><tr><td>&quot;Travail en équipe agile&quot;</td><td>&quot;Tech lead d'une squad de 4 devs, delivery de 3 sprints consécutifs sans dette critique&quot;</td></tr></tbody></table>
+<p>Verbes d'action à privilégier : <code>Conçu · Développé · Optimisé · Réduit · Automatisé · Déployé · Migré · Encadré · Livré · Augmenté</code></p>
+<hr>
+<h2>Étape 5 — Optimisation ATS</h2>
+<p>Pour passer les filtres automatiques :</p>
+<ul>
+<li>Reprendre les <strong>mots-clés exacts</strong> de l'offre (titre du poste, technologies nommées).</li>
+<li>Éviter les tableaux, colonnes, headers/footers, zones de texte — les ATS ne les lisent pas.</li>
+<li>Format fichier : <strong>PDF</strong> pour candidature directe, <strong>DOCX</strong> si l'offre le demande ou si ATS connu (Workday, Taleo).</li>
+<li>Pas d'image, pas de logo dans le corps du document.</li>
+<li>Tester avec un outil gratuit : <a href="https://resume.io" target="_blank" rel="noopener">resume.io checker</a> ou Jobscan.</li>
+</ul>
+<hr>
+<h2>Étape 6 — Formats livrables</h2>
+<table><thead><tr><th>Format</th><th>Quand</th></tr></thead><tbody><tr><td><strong>1 page</strong></td><td>Moins de 5 ans d'expérience OU marché US/CA</td></tr><tr><td><strong>2 pages</strong></td><td>Profil senior, multiple stacks, certifications nombreuses</td></tr><tr><td><strong>Version longue</strong></td><td>Consulting, académique (CV académique ≠ resume)</td></tr></tbody></table>
+<p>Toujours produire <strong>2 versions</strong> : complète + condensée 1 page.</p>
+<hr>
+<h2>Pièges courants — Anti-patterns</h2>
+<table><thead><tr><th>Piège</th><th>Correction</th></tr></thead><tbody><tr><td>Résumé générique (&quot;passionné, rigoureux, dynamique&quot;)</td><td>Spécifier le secteur, la stack, l'ambition concrète</td></tr><tr><td>Dates en texte (&quot;depuis 2 ans&quot;)</td><td>Toujours MM/AAAA – MM/AAAA</td></tr><tr><td>Compétences sans niveau ni preuve</td><td>Ajouter contexte ou projet associé</td></tr><tr><td>Email non-pro (pseudo gamer, surnom)</td><td>Prénom.Nom@gmail.com</td></tr><tr><td>Photo de mauvaise qualité (selfie, fond coloré)</td><td>Photo pro fond neutre, ou pas de photo (marché anglo)</td></tr><tr><td>Un CV générique envoyé partout</td><td>Adapter le titre pro et résumé à chaque offre</td></tr><tr><td>Mentionner des technos non maîtrisées</td><td>Jamais — le premier entretien le révèle</td></tr><tr><td>Trous non justifiés</td><td>Mentionner brièvement (formation, projet perso, famille)</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>LinkedIn cohérent</strong> : titre et expériences alignés avec le CV — les recruteurs croisent les deux.</li>
+<li><strong>GitHub/Portfolio</strong> : lien dans l'en-tête si profil tech actif (projets épinglés, README propres).</li>
+<li><strong>Certifications cloud</strong> (AWS, Azure, GCP) : très valorisées, à mettre en avant dès que présentes.</li>
+<li><strong>IA déclarée</strong> : si vous avez utilisé des outils IA dans vos projets (Copilot, Claude, LangChain), le mentionner est un plus en 2026 dans les postes tech.</li>
+<li><strong>Mise à jour tous les 6 mois</strong> même sans recherche active.</li>
+</ul>
+<hr>
+<h2>Garde-fous</h2>
+<ul>
+<li>Ne jamais inventer une expérience, une date, un résultat ou une certification.</li>
+<li>Ne pas inclure : numéro de sécu, situation familiale, salaire actuel (sauf si demandé explicitement dans l'offre — rare en France).</li>
+<li>Ne pas dépasser 2 pages sauf profil académique ou consulting senior.</li>
+<li>Adapter systématiquement : un CV générique = taux de réponse proche de zéro.</li>
 </ul>
 </article>
 </main>

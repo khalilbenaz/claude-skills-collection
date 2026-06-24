@@ -97,53 +97,102 @@ cp -r claude-skills-collection/skills/business-it-commercial-proposal ~/.claude/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>IT Commercial Proposal Generator</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Cadrer le besoin client</strong> : Identifier et reformuler le besoin exprimé : contexte métier, problème à résoudre, objectifs attendus, contraintes (budget, délais, stack technique). Si les informations sont incomplètes, générer une liste de questions de cadrage structurées. Un besoin mal cerné = une offre hors cible.</li>
-</ol>
-<ol>
-<li><strong>Structurer l'offre</strong> : Produire une offre organisée en sections claires :</li>
+<h3>Étape 1 — Cadrage du besoin</h3>
+<p>Avant d'écrire une seule ligne, extraire ces informations du client :</p>
+<pre><code>CONTEXTE    : secteur, taille entreprise, périmètre fonctionnel
+PROBLÈME    : pain point actuel, coût de l'inaction
+OBJECTIFS   : KPI cibles (délai de traitement, taux d'erreur, SLA...)
+CONTRAINTES : budget indicatif, deadline, stack imposée, normes (RGPD, PCI-DSS...)
+DÉCIDEURS   : qui signe ? (DG, DSI, DAF) — cela dicte le ton
+AO/GRÉ À GRÉ : réponse à appel d'offres formel (2 enveloppes) ou négociation directe ?</code></pre>
+<p>Si une information manque, générer une liste de questions de cadrage structurées et les poser en bloc — pas au fil de la génération.</p>
+<p><strong>Critère de passage</strong> : ne pas produire l'offre tant que contexte + objectifs + contraintes budget ne sont pas connus.</p>
+<hr>
+<h3>Étape 2 — Structure de l'offre (ordre de rédaction interne)</h3>
+<p>Rédiger dans cet ordre (l'executive summary se place en tête dans le livrable final mais se rédige en dernier) :</p>
+<table><thead><tr><th>#</th><th>Section</th><th>Destinataire principal</th><th>Longueur cible</th></tr></thead><tbody><tr><td>1</td><td>Compréhension du besoin</td><td>Tous</td><td>1/2 page</td></tr><tr><td>2</td><td>Solution proposée + architecture</td><td>DSI / CTO</td><td>1–2 pages</td></tr><tr><td>3</td><td>Méthodologie &amp; livrables</td><td>Chef de projet</td><td>1 page</td></tr><tr><td>4</td><td>Planning (phases + jalons)</td><td>Chef de projet</td><td>tableau</td></tr><tr><td>5</td><td>Équipe projet</td><td>DSI / DRH</td><td>1/2 page</td></tr><tr><td>6</td><td>Chiffrage financier</td><td>DAF / DG</td><td>tableau</td></tr><tr><td>7</td><td>Références similaires</td><td>Tous</td><td>1/2 page</td></tr><tr><td>8</td><td>Conditions contractuelles</td><td>Juridique</td><td>1/2 page</td></tr><tr><td>9</td><td><strong>Executive Summary</strong> (rédigé en dernier)</td><td>DG / DAF</td><td>1/2 page max</td></tr></tbody></table>
+<hr>
+<h3>Étape 3 — Rédiger chaque section</h3>
+<p><strong>Compréhension du besoin</strong> Reformuler mot pour mot ce que le client a exprimé, puis compléter avec les enjeux business sous-jacents. Cela crédibilise l'offre et prouve l'écoute.</p>
+<p><strong>Solution proposée</strong></p>
 <ul>
-<li><strong>Page de couverture</strong> : Nom du prestataire, nom du client, titre de la mission, date, version</li>
-<li><strong>Résumé exécutif</strong> (Executive Summary) : Vision synthétique de la valeur apportée en 5 à 10 lignes, à destination des décideurs non-techniques</li>
-<li><strong>Compréhension du besoin</strong> : Reformulation du contexte client et des enjeux business</li>
-<li><strong>Solution proposée</strong> : Description de l'approche technique et fonctionnelle, architecture cible, technologies utilisées</li>
-<li><strong>Méthodologie</strong> : Organisation du projet (Agile, cycle en V, approche hybride), livrables par phase, gouvernance</li>
-<li><strong>Planning</strong> : Phases et jalons, durée estimée par phase, critères de passage de phase</li>
-<li><strong>Équipe projet</strong> : Profils mobilisés, rôles et responsabilités, CV ou fiches de compétences si nécessaire</li>
-<li><strong>Chiffrage financier</strong> : Détail des coûts par profil/phase, prix total HT et TTC, conditions de facturation</li>
-<li><strong>Références</strong> : Projets similaires réalisés, retours clients</li>
-<li><strong>Conditions contractuelles</strong> : Modalités d'engagement, réversibilité, SLA si applicable</li>
+<li>Décrire l'architecture cible en 3–5 composants clés avec le nom des technologies choisies et la justification du choix (ex. : &quot;PostgreSQL plutôt qu'Oracle : réduction TCO de 60%, compétences internes disponibles&quot;).</li>
+<li>Inclure un schéma textuel ou ASCII si un vrai diagramme n'est pas disponible :</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Adapter le ton et le niveau technique</strong> : Calibrer le niveau de détail selon le destinataire. Pour un DSI ou CTO : privilégier les choix architecturaux, la performance, la maintenabilité. Pour un DG ou DAF : mettre en avant la valeur business, le ROI, la maîtrise des risques et du budget. Pour un chef de projet : détailler le planning, la méthodologie et les livrables.</li>
-</ol>
-<ol>
-<li><strong>Argumenter la valeur différenciante</strong> : Mettre en avant ce qui distingue l'offre de la concurrence : expertise sectorielle (ex. fintech, banque, santé), références similaires, équipe dédiée, rapidité de mise en œuvre, stack technologique moderne. Ne pas lister des fonctionnalités mais des bénéfices concrets pour le client.</li>
-</ol>
-<ol>
-<li><strong>Construire la grille tarifaire</strong> : Proposer un chiffrage transparent :</li>
+<pre><code>[Frontend React] → [API Gateway (Kong)] → [Microservices .NET 8]
+                                                    ↓
+                                          [PostgreSQL 16] + [Redis cache]</code></pre>
+<p><strong>Chiffrage financier — modèle de tableau</strong></p>
+<pre><code>Profil              | TJM (€HT) | Jours Phase 1 | Jours Phase 2 | Total jours | Coût HT
+--------------------|-----------|---------------|---------------|-------------|----------
+Chef de projet      |   800     |      10       |       5       |     15      |  12 000
+Architecte solution |  1 000     |       5       |       2       |      7      |   7 000
+Développeur senior  |   700     |      20       |      30       |     50      |  35 000
+QA / Test           |   600     |       0       |      10       |     10      |   6 000
+TOTAL               |           |              |               |             |  60 000
+TVA 20%             |           |              |               |             |  12 000
+TOTAL TTC           |           |              |               |             |  72 000</code></pre>
+<p>Toujours préciser :</p>
 <ul>
-<li>Décomposer par profil (chef de projet, architecte, développeur senior, QA, etc.) et par phase</li>
-<li>Préciser le mode de facturation (forfait, régie, abonnement)</li>
-<li>Proposer des options ou variantes (MVP, version complète, maintenance)</li>
-<li>Indiquer les exclusions et conditions (voyages, licences, hébergement)</li>
+<li>Mode de facturation : forfait fixe / régie / abonnement mensuel</li>
+<li>Jalons de paiement (ex. : 30% à la commande, 40% à la livraison phase 1, 30% à la recette finale)</li>
+<li>Exclusions explicites : licences tierces, hébergement, déplacements au-delà de 50 km, formations</li>
+<li>Validité de l'offre : 30 ou 60 jours selon le contexte</li>
 </ul>
-</ol>
+<p><strong>Options / variantes (toujours proposer au moins deux)</strong></p>
+<pre><code>Option A — MVP (4 mois)   : 42 000 € HT — fonctionnalités core uniquement
+Option B — Complet (7 mois): 60 000 € HT — intégrations + reporting + maintenance 6 mois incluse</code></pre>
+<p><strong>Executive Summary (rédigé en dernier)</strong></p>
+<p>5 questions auxquelles il doit répondre en moins de 20 lignes :</p>
 <ol>
-<li><strong>Rédiger l'executive summary en dernier</strong> : Il synthétise tout le document en 3 à 5 paragraphes courts. Doit répondre à : Quel est le problème ? Quelle est la solution ? Pourquoi vous ? Quel est le ROI ou la valeur créée ? Quand et combien ?</li>
+<li>Quel est le problème client ?</li>
+<li>Quelle est la solution proposée ?</li>
+<li>Pourquoi nous (différenciation) ?</li>
+<li>Quelle valeur / ROI attendu ?</li>
+<li>Quand et pour quel budget ?</li>
 </ol>
-<ol>
-<li><strong>Relire et qualifier l'offre</strong> : Vérifier la cohérence entre scope, planning et chiffrage. S'assurer que chaque engagement est réaliste et documenté. Adapter la mise en page pour que l'offre soit lisible, professionnelle et structurée. Utiliser des tableaux, des listes et des titres de section clairs.</li>
-</ol>
-<h2>Règles</h2>
+<hr>
+<h3>Étape 4 — Adapter le ton selon le décideur</h3>
+<table><thead><tr><th>Interlocuteur</th><th>Priorités à mettre en avant</th><th>Ce qu'il faut éviter</th></tr></thead><tbody><tr><td>DG / CEO</td><td>ROI, délai de retour sur investissement, risque business</td><td>Détails techniques</td></tr><tr><td>DAF / CFO</td><td>Coût total de possession (TCO), modèle de facturation, risques budgétaires</td><td>Acronymes tech</td></tr><tr><td>DSI / CTO</td><td>Architecture, maintenabilité, sécurité, performance, scalabilité</td><td>Jargon business vague</td></tr><tr><td>Chef de projet</td><td>Planning détaillé, livrables, critères de recette, gouvernance</td><td>ROI financier</td></tr></tbody></table>
+<hr>
+<h3>Étape 5 — Relecture et qualification finale</h3>
+<p>Checklist avant livraison :</p>
 <ul>
-<li><strong>Résumé exécutif toujours en premier</strong> : C'est ce que lit le décideur. Il doit donner envie de lire la suite et convaincre à lui seul.</li>
-<li><strong>Différencier l'offre technique de l'offre financière</strong> : Certains appels d'offres demandent deux enveloppes séparées. Structurer en conséquence.</li>
-<li><strong>Reformuler le besoin avant de proposer</strong> : Montrer qu'on a compris le contexte crédibilise l'offre et rassure le client.</li>
-<li><strong>Proposer des variantes ou des options</strong> : Donner au client le choix entre un MVP et une version complète élargit les chances de signature.</li>
-<li><strong>Soigner la forme autant que le fond</strong> : Une offre bien présentée, sans fautes, avec des visuels clairs reflète le sérieux et le professionnalisme du prestataire.</li>
-<li><strong>Inclure une date de validité</strong> : Toute offre doit préciser sa durée de validité (ex. 30 ou 60 jours) pour créer une incitation à décider rapidement.</li>
+<li>[ ] Chiffrage cohérent avec le planning (nb jours × TJM = total)</li>
+<li>[ ] Aucun engagement hors scope non chiffré</li>
+<li>[ ] Date de validité présente</li>
+<li>[ ] Deux enveloppes séparées si AO formel</li>
+<li>[ ] Orthographe et grammaire irréprochables</li>
+<li>[ ] Executive summary auto-suffisant (peut se lire seul)</li>
+<li>[ ] Variante MVP + variante complète proposées</li>
+<li>[ ] Références client avec secteur + résultat mesurable</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne pas faire</strong></p>
+<ul>
+<li><strong>Lister des fonctionnalités</strong> au lieu de bénéfices : &quot;Nous livrons un module de reporting&quot; → inutile. Dire : &quot;Le reporting temps réel réduit le délai de clôture mensuelle de 3 jours à 4 heures.&quot;</li>
+<li><strong>Chiffrage opaque</strong> : un forfait global sans décomposition est un signal d'alarme pour tout acheteur public ou DSI expérimenté.</li>
+<li><strong>Promettre sans engagement contractuel</strong> : toute promesse de délai ou de performance doit être accompagnée d'un critère de recette mesurable.</li>
+<li><strong>Executive summary générique</strong> : copier-coller un template sans personnaliser au contexte client — se voit immédiatement et disqualifie l'offre.</li>
+<li><strong>Ignorer les contraintes réglementaires</strong> : pour les secteurs banque, santé, assurance — mentionner explicitement la conformité RGPD, PCI-DSS, ISO 27001, etc.</li>
+<li><strong>TJM sans justification pour des profils senior</strong> : si les taux sont élevés, les justifier par la rareté du profil ou la criticité du projet.</li>
+</ul>
+<p><strong>Pièges fréquents</strong></p>
+<ul>
+<li>Oublier la TVA ou le régime fiscal applicable (AO public : HT obligatoire, TVA séparée)</li>
+<li>Ne pas distinguer régie et forfait dans le même document</li>
+<li>Proposer un planning sans marge de risque (ajouter 15–20% de buffer sur les phases d'intégration)</li>
+<li>Référencer des technologies obsolètes ou abandonnées en 2026 (ex. : Angular 1, jQuery comme stack principale)</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>AI-augmented delivery</strong> : si l'équipe utilise des outils IA (GitHub Copilot, Cursor, Claude Code), le mentionner comme accélérateur de productivité — c'est désormais un différenciateur positif attendu par les DSI modernes.</li>
+<li><strong>Green IT</strong> : pour les projets cloud, estimer l'empreinte carbone et proposer des choix d'architecture éco-responsables (régions Azure/AWS à énergie renouvelable, right-sizing, serverless).</li>
+<li><strong>Sécurité by design</strong> : intégrer une section ou un paragraphe dédié à la posture sécurité (SAST/DAST dans la CI, gestion des secrets, politiques RBAC) — désormais exigé dans la majorité des AO publics et grandes entreprises.</li>
+<li><strong>Modèle de facturation flexible</strong> : proposer un abonnement SaaS ou TaaS (Team as a Service) mensuel en alternative au forfait projet — tendance forte en 2025–2026 pour les prestataires IT.</li>
+<li><strong>SLA chiffré</strong> : pour toute offre incluant de la maintenance ou du run, inclure un tableau de SLA avec niveaux de criticité, temps de réponse et pénalités contractuelles.</li>
 </ul>
 </article>
 </main>

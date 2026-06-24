@@ -97,22 +97,117 @@ cp -r claude-skills-collection/skills/cloud-serverless-designer ~/.claude/skills
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Serverless Designer</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Évaluer l'adéquation serverless</strong> — Analyser si le cas d'usage est adapté au serverless (trafic variable, traitements courts, event-driven) ou si une approche conteneurisée serait plus appropriée</li>
-<li><strong>Identifier les événements déclencheurs</strong> — Cartographier tous les événements du système (HTTP, messages, fichiers, timers, streams) et définir les fonctions correspondantes</li>
-<li><strong>Concevoir le découpage fonctionnel</strong> — Structurer les fonctions selon le principe de responsabilité unique, en définissant clairement les entrées, sorties et effets de bord</li>
-<li><strong>Choisir la plateforme et le runtime</strong> — Sélectionner le fournisseur (AWS Lambda, Azure Functions, Cloud Functions) et le langage en fonction des contraintes de cold start et d'écosystème</li>
-<li><strong>Gérer le state et la persistance</strong> — Concevoir la stratégie de gestion d'état avec des services externes (DynamoDB, Cosmos DB, Firestore) car les fonctions sont stateless par nature</li>
-<li><strong>Optimiser les performances (cold start)</strong> — Appliquer les techniques de réduction du cold start : provisioned concurrency, taille mémoire adaptée, dépendances minimales, lazy loading</li>
-<li><strong>Implémenter les patterns d'orchestration</strong> — Utiliser les patterns adaptés (choreography vs orchestration, saga, fan-out/fan-in) avec Step Functions, Durable Functions ou Workflows</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Évaluer l'adéquation serverless</h3>
+<p>Appliquer la grille de décision avant tout design :</p>
+<table><thead><tr><th>Critère</th><th>Serverless ✅</th><th>Conteneur/VM ❌</th></tr></thead><tbody><tr><td>Durée d'exécution</td><td>&lt; 15 min (Lambda), &lt; 10 min (AZ Func)</td><td>Longue durée / streaming</td></tr><tr><td>Trafic</td><td>Très variable, spiky</td><td>Stable et prévisible</td></tr><tr><td>Cold start toléré</td><td>Oui (&lt; 2 s acceptable)</td><td>Non (latence &lt; 50 ms requise)</td></tr><tr><td>État local requis</td><td>Non</td><td>Oui (session, cache local)</td></tr><tr><td>Charge réseau</td><td>Faible à modérée</td><td>Très haute (&gt; 10 K req/s en continu)</td></tr></tbody></table>
+<p>Si 3 critères ou plus sont dans la colonne droite, proposer un déploiement conteneurisé (ECS/AKS/Cloud Run).</p>
+<h3>2. Cartographier les déclencheurs</h3>
+<p>Lister tous les événements et associer chaque source à une fonction :</p>
+<pre><code>HTTP/REST      → API Gateway + Lambda / Azure APIM + Function
+File upload    → S3 Event / Blob Trigger
+Message queue  → SQS / Service Bus → fonction consumer
+Timer/CRON     → EventBridge Scheduler / Timer Trigger
+Stream         → Kinesis / Event Hub → fonction par batch
+Auth event     → Cognito / AAD B2C → Pre/Post trigger</code></pre>
+<p>Documenter le schéma de l'événement d'entrée dès cette étape pour éviter les surprises au déploiement.</p>
+<h3>3. Découper les fonctions (SRP)</h3>
 <ul>
-<li>Garder les fonctions courtes et focalisées sur une seule responsabilité pour faciliter la maintenance et le debugging</li>
-<li>Ne jamais stocker d'état local dans une fonction serverless ; utiliser systématiquement un service de persistance externe</li>
-<li>Implémenter des mécanismes de retry et de dead-letter queue pour gérer les échecs de manière résiliente</li>
-<li>Surveiller activement les coûts car le modèle pay-per-invocation peut devenir onéreux à fort volume</li>
-<li>Limiter la taille des packages de déploiement pour minimiser l'impact du cold start</li>
+<li>1 fonction = 1 responsabilité = 1 déclencheur</li>
+<li>Timeout explicite (ne jamais laisser le défaut)</li>
+<li>Taille de payload max définie (ex. 6 MB Lambda, 100 MB AZ Functions)</li>
+<li>Extraire la logique métier dans des modules testables indépendamment du handler</li>
+</ul>
+<pre><code class="lang-python"># Handler thin — délègue à un module testable
+def handler(event, context):
+    payload = parse_event(event)          # module pur
+    result = process_order(payload)       # logique métier
+    return format_response(result)        # module pur</code></pre>
+<h3>4. Choisir plateforme et runtime</h3>
+<p><strong>Comparatif 2026 rapide :</strong></p>
+<table><thead><tr><th>Plateforme</th><th>Runtime top</th><th>Timeout max</th><th>Cold start typique</th></tr></thead><tbody><tr><td>AWS Lambda</td><td>Python 3.12, Node 22, Java 21</td><td>15 min</td><td>200 ms–1 s (SnapStart Java)</td></tr><tr><td>Azure Functions v4</td><td>.NET 8 Isolated, Node 20</td><td>10 min (Consumption)</td><td>300 ms–2 s</td></tr><tr><td>Google Cloud Functions 2nd gen</td><td>Python 3.12, Go 1.22</td><td>60 min</td><td>100–500 ms</td></tr><tr><td>Cloudflare Workers</td><td>JS/TS (V8 Isolates)</td><td>30 s CPU</td><td>&lt; 5 ms (pas de cold start)</td></tr></tbody></table>
+<p>Cloudflare Workers = meilleur choix si latence critique et logique légère. AWS Lambda SnapStart = meilleur choix Java/JVM pour éliminer le cold start.</p>
+<h3>5. Gérer l'état et la persistance</h3>
+<p>Les fonctions sont stateless — tout état doit être externalisé :</p>
+<pre><code>Session courte     → ElastiCache (Redis) / Azure Cache for Redis
+Données structurées → DynamoDB / Cosmos DB (mode serverless)
+Fichiers           → S3 / Azure Blob Storage
+État de workflow   → Step Functions / Durable Functions
+Compteurs atomiques → DynamoDB atomic increment / Redis INCR</code></pre>
+<p>Pattern recommandé — idempotence :</p>
+<pre><code class="lang-python"># Utiliser un idempotency_key pour éviter les doubles traitements
+def process(event):
+    key = event[&quot;idempotency_key&quot;]
+    if cache.exists(key):
+        return cache.get(key)
+    result = do_work(event)
+    cache.set(key, result, ttl=3600)
+    return result</code></pre>
+<h3>6. Optimiser le cold start</h3>
+<p><strong>Techniques classées par impact :</strong></p>
+<ol>
+<li><strong>Provisioned Concurrency (Lambda) / Premium Plan (AZ Func)</strong> — élimine le cold start sur les fonctions critiques</li>
+</ol>
+<p>   ```bash    aws lambda put-provisioned-concurrency-config \      --function-name my-api \      --qualifier prod \      --provisioned-concurrent-executions 10    ```</p>
+<ol>
+<li><strong>Réduire la taille du package</strong> — ne bundler que le strict nécessaire</li>
+</ol>
+<p>   ```bash    # Lambda — vérifier la taille réelle    zip -r function.zip . --exclude &quot;*.test.*&quot; &quot;node_modules/.cache/*&quot;    du -sh function.zip   # cible &lt; 5 MB décompressé    ```</p>
+<ol>
+<li><strong>Lazy loading des clients lourds</strong> — initialiser hors handler mais avec import paresseux</li>
+</ol>
+<p>   ```python    _db_client = None    def get_db():        global _db_client        if _db_client is None:            _db_client = boto3.resource(&quot;dynamodb&quot;)        return _db_client    ```</p>
+<ol>
+<li><strong>SnapStart (Java Lambda)</strong> — snapshot post-init, restore ~100 ms</li>
+<li><strong>Cloudflare Workers / Fastly Compute</strong> — V8 Isolates, pas de cold start</li>
+</ol>
+<h3>7. Choisir le pattern d'orchestration</h3>
+<pre><code>Séquence simple       → Step Functions Express / Durable Functions Activity Chain
+Compensation (saga)   → Step Functions Standard + compensating transactions
+Fan-out / fan-in      → SNS → N Lambdas → SQS aggregator
+Longue durée          → Durable Functions Orchestrator (stateful)
+Event choreography    → EventBridge / Event Grid (pas de coordinateur central)</code></pre>
+<p><strong>Orchestration vs Choreography :</strong></p>
+<ul>
+<li>Orchestration (Step Functions) : visibilité totale, debugging facile, couplage fort au moteur</li>
+<li>Choreography (EventBridge) : découplé, scalable, mais flux difficile à tracer → ajouter tracing distribué (X-Ray / OpenTelemetry)</li>
+</ul>
+<h3>8. Sécurité</h3>
+<pre><code>- IAM least privilege par fonction (pas de AdministratorAccess)
+- Secrets dans Secrets Manager / Key Vault — jamais en variable d'env plaintext
+- VPC endpoint si accès RDS/interne (attention cold start accru ~500 ms)
+- Validation du schéma d'entrée dès le handler (ex. Pydantic, Zod)
+- Activer Lambda function URL auth type IAM si pas d'API Gateway</code></pre>
+<h3>9. Observabilité</h3>
+<p>Triad minimal obligatoire :</p>
+<ul>
+<li><strong>Logs structurés JSON</strong> avec correlation ID injecté depuis l'événement</li>
+<li><strong>Métriques custom</strong> : durée métier, taux d'erreur, taille payload</li>
+<li><strong>Tracing distribué</strong> : AWS X-Ray / Azure App Insights / OpenTelemetry</li>
+</ul>
+<pre><code class="lang-python">import json, logging
+logger = logging.getLogger()
+logger.setLevel(&quot;INFO&quot;)
+
+def handler(event, context):
+    logger.info(json.dumps({
+        &quot;correlation_id&quot;: event.get(&quot;headers&quot;, {}).get(&quot;x-correlation-id&quot;),
+        &quot;action&quot;: &quot;order_processing&quot;,
+        &quot;order_id&quot;: event[&quot;order_id&quot;]
+    }))</code></pre>
+<h2>Garde-fous / Anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td>Fonction monolithique (&gt; 500 lignes)</td><td>Impossible à tester, cold start long</td><td>Découper par responsabilité</td></tr><tr><td>Appels synchrones chaînés (Lambda → Lambda direct)</td><td>Couplage fort, timeout cumulé</td><td>Passer par une queue SQS/SNS</td></tr><tr><td>Connexions DB ouvertes dans le handler</td><td>Pool épuisé, connexions orphelines</td><td>RDS Proxy / Cosmos serverless / client hors handler</td></tr><tr><td>Pas de DLQ sur les consumers async</td><td>Perte silencieuse de messages</td><td>DLQ systématique + alerte CloudWatch</td></tr><tr><td>Variables d'env avec secrets plaintext</td><td>Exposition dans logs/console</td><td>Secrets Manager + cache en mémoire</td></tr><tr><td>Timeout trop long sans circuit-breaker</td><td>Coût et latence incontrôlés</td><td>Timeout agressif + retry avec backoff exponentiel</td></tr><tr><td>Fan-out sans throttling</td><td>Throttling DynamoDB/RDS en aval</td><td>SQS batch + reserved concurrency</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Adopt ARM64 (Graviton3 / Ampere)</strong> sur Lambda et Cloud Run — 20 % moins cher, souvent plus rapide</li>
+<li><strong>Lambda function URLs</strong> remplacent souvent API Gateway pour les APIs simples (&lt; 1 M req/jour)</li>
+<li><strong>Azure Container Apps</strong> = alternative si &gt; 10 min d'exécution nécessaire tout en gardant le modèle serverless</li>
+<li><strong>Cold start budget</strong> : définir un SLO explicite (ex. p99 &lt; 2 s) et monitorer via CloudWatch Insights</li>
+<li><strong>Infrastructure as Code obligatoire</strong> : SAM (AWS), Bicep (Azure), Terraform pour la reproductibilité</li>
+</ul>
+<p>  ```bash   # Déploiement SAM   sam build &amp;&amp; sam deploy --guided</p>
+<p>  # Azure Functions Core Tools   func azure functionapp publish &lt;app-name&gt; --python   ```</p>
+<ul>
+<li><strong>Tests locaux avant déploiement</strong> : <code>sam local invoke</code>, <code>func start</code>, Vitest/Jest pour les handlers purs</li>
 </ul>
 </article>
 </main>

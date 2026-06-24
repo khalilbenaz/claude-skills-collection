@@ -97,279 +97,136 @@ cp -r claude-skills-collection/skills/agent-retry-strategist ~/.claude/skills/</
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent Retry Strategist</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utiliser ce skill dès qu'un sous-agent peut échouer et que l'échec ne doit pas être simplement propagé vers le haut sans tentative de récupération. Ce skill est essentiel dans les pipelines de production où des erreurs transitoires (rate limit, timeout réseau, hallucination LLM) sont fréquentes et gérables. Il convient également aux architectures où différents types d'erreurs nécessitent des traitements distincts — certaines méritent un retry immédiat, d'autres un fallback vers un modèle alternatif, d'autres encore une décomposition de la tâche.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Classification des erreurs</strong> — Avant tout retry, classifier l'erreur : <code>transient</code> (rate limit, timeout, 503) vs <code>permanent</code> (token limit dépassé, contenu refusé, erreur de schéma). Seules les erreurs transient méritent un retry. Les erreurs permanentes nécessitent un fallback ou une escalade immédiate.</li>
-</ol>
-<ol>
-<li><strong>Retry policies</strong> — Implémenter les quatre politiques de base selon la criticité de la tâche :</li>
-<ul>
-<li><code>immediate</code> : retry instantané (pour les 429 avec Retry-After court)</li>
-<li><code>fixed delay</code> : attendre N secondes entre chaque tentative</li>
-<li><code>exponential backoff</code> : délai = base × 2^attempt (ex : 1s, 2s, 4s, 8s)</li>
-<li><code>jittered backoff</code> : ajouter du bruit aléatoire pour éviter les thundering herds</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Max retries et circuit breaker</strong> — Limiter le nombre de tentatives (<code>max_attempts</code>). Implémenter un circuit breaker à trois états : <code>CLOSED</code> (normal), <code>OPEN</code> (stoppe les calls après N failures consécutifs), <code>HALF-OPEN</code> (teste une requête de sonde pour voir si le service est rétabli).</li>
-</ol>
-<ol>
-<li><strong>Retry with modification</strong> — Si la même requête échoue plusieurs fois, modifier la tentative : reformuler le prompt, simplifier la tâche, réduire le scope, diminuer le nombre de tokens demandés. Un retry identique sur un échec structurel ne sert à rien.</li>
-</ol>
-<ol>
-<li><strong>Model fallback</strong> — Si le modèle principal échoue (quota, indisponibilité) : basculer sur un modèle alternatif. Exemple : GPT-4o échoue → Claude 3.5 Sonnet → Claude 3 Haiku avec prompt simplifié. Définir une chaîne de fallback explicite dans la configuration.</li>
-</ol>
-<ol>
-<li><strong>Tool fallback</strong> — Si un outil spécifique échoue : utiliser un outil alternatif équivalent. Exemples : <code>search_web</code> échoue → <code>fetch_url</code> vers un moteur de secours ; API météo principale → API météo de backup ; base de données primaire → réplica.</li>
-</ol>
-<ol>
-<li><strong>Task decomposition on failure</strong> — Quand une tâche échoue pour cause de complexité excessive (trop longue, trop ambitieuse), la décomposer automatiquement en sous-tâches plus simples et relancer chaque fragment indépendamment.</li>
-</ol>
-<ol>
-<li><strong>Partial result recovery</strong> — Sauvegarder les checkpoints après chaque étape significative. En cas d'échec en cours de traitement, reprendre à partir du dernier checkpoint valide plutôt que de tout recommencer depuis le début.</li>
-</ol>
-<ol>
-<li><strong>Dead letter queue</strong> — Les tâches qui épuisent tous leurs retries et tous leurs fallbacks sont transférées dans une dead letter queue (DLQ) pour analyse humaine, audit et potentielle reprise manuelle.</li>
-</ol>
-<ol>
-<li><strong>Learning from failures</strong> — Logger systématiquement les patterns d'échec : type d'erreur, modèle impliqué, heure, fréquence. Utiliser ces données pour affiner les politiques de retry et prévenir les récurrences (ex : augmenter le délai de backoff si les rate limits sont fréquents).</li>
-</ol>
-<pre><code class="lang-python"># Exemple d'implémentation Python — Retry Strategist complet
-import asyncio
-import random
-import time
-from enum import Enum
-from dataclasses import dataclass
-from typing import Callable, Any, Optional
-import logging
+<p>Dès qu'un sous-agent peut échouer et que l'échec ne doit pas remonter brutalement. Cas typiques : pipelines de production avec erreurs transitoires (rate limit, timeout, 503), architectures multi-modèles avec quota par provider, traitements longs nécessitant des checkpoints.</p>
+<hr>
+<h2>Workflow — 10 étapes actionnables</h2>
+<h3>Étape 1 — Classifier l'erreur avant tout retry</h3>
+<table><thead><tr><th>Classe</th><th>Signaux</th><th>Action</th></tr></thead><tbody><tr><td><code>TRANSIENT</code></td><td>429, 503, timeout, connexion reset</td><td>Retry avec backoff</td></tr><tr><td><code>PERMANENT</code></td><td>400 schéma invalide, content policy, token limit</td><td>Fallback ou escalade — <strong>jamais de retry</strong></td></tr><tr><td><code>UNKNOWN</code></td><td>Toute autre exception</td><td>Retry prudent (max 1–2 fois)</td></tr></tbody></table>
+<pre><code class="lang-python">TRANSIENT_SIGNALS = [&quot;rate limit&quot;, &quot;429&quot;, &quot;503&quot;, &quot;timeout&quot;, &quot;connection&quot;, &quot;temporarily&quot;]
+PERMANENT_SIGNALS = [&quot;token limit&quot;, &quot;content policy&quot;, &quot;invalid schema&quot;, &quot;401&quot;, &quot;403&quot;, &quot;400&quot;]
 
-logger = logging.getLogger(__name__)
-
-
-class ErrorClass(Enum):
-    TRANSIENT = &quot;transient&quot;    # Retryable
-    PERMANENT = &quot;permanent&quot;    # Non-retryable
-    UNKNOWN = &quot;unknown&quot;        # Retry avec précaution
-
-
-class CircuitState(Enum):
-    CLOSED = &quot;closed&quot;          # Fonctionnel
-    OPEN = &quot;open&quot;              # En panne — stoppe les calls
-    HALF_OPEN = &quot;half_open&quot;    # Test de rétablissement
-
-
-def classify_error(error: Exception) -&gt; ErrorClass:
-    &quot;&quot;&quot;Classifier l'erreur pour choisir la stratégie adaptée.&quot;&quot;&quot;
-    error_str = str(error).lower()
-    transient_signals = [&quot;rate limit&quot;, &quot;429&quot;, &quot;503&quot;, &quot;timeout&quot;, &quot;connection&quot;, &quot;temporarily&quot;]
-    permanent_signals = [&quot;token limit&quot;, &quot;content policy&quot;, &quot;invalid schema&quot;, &quot;401&quot;, &quot;403&quot;]
-    
-    if any(s in error_str for s in transient_signals):
-        return ErrorClass.TRANSIENT
-    if any(s in error_str for s in permanent_signals):
-        return ErrorClass.PERMANENT
-    return ErrorClass.UNKNOWN
-
-
-@dataclass
-class RetryPolicy:
-    max_attempts: int = 3
-    base_delay: float = 1.0
-    backoff_factor: float = 2.0
-    jitter: bool = True
-    strategy: str = &quot;exponential&quot;  # immediate | fixed | exponential
-
-    def compute_delay(self, attempt: int) -&gt; float:
-        if self.strategy == &quot;immediate&quot;:
-            return 0
-        elif self.strategy == &quot;fixed&quot;:
-            delay = self.base_delay
-        else:  # exponential
-            delay = self.base_delay * (self.backoff_factor ** attempt)
-        
-        if self.jitter:
-            delay *= (0.5 + random.random())  # ±50% de bruit
-        return min(delay, 60.0)  # plafond à 60 secondes
-
-
-class CircuitBreaker:
-    def __init__(self, failure_threshold: int = 5, recovery_timeout: float = 30.0):
-        self.state = CircuitState.CLOSED
-        self.failure_count = 0
-        self.failure_threshold = failure_threshold
-        self.recovery_timeout = recovery_timeout
-        self.last_failure_time: Optional[float] = None
-
-    def record_success(self):
-        self.failure_count = 0
-        self.state = CircuitState.CLOSED
-
-    def record_failure(self):
-        self.failure_count += 1
-        self.last_failure_time = time.time()
-        if self.failure_count &gt;= self.failure_threshold:
-            self.state = CircuitState.OPEN
-            logger.warning(&quot;[CIRCUIT] Circuit ouvert après %d failures&quot;, self.failure_count)
-
+def classify_error(error: Exception) -&gt; str:
+    s = str(error).lower()
+    if any(x in s for x in TRANSIENT_SIGNALS): return &quot;transient&quot;
+    if any(x in s for x in PERMANENT_SIGNALS):  return &quot;permanent&quot;
+    return &quot;unknown&quot;</code></pre>
+<h3>Étape 2 — Choisir la retry policy selon le contexte</h3>
+<table><thead><tr><th>Stratégie</th><th>Formule délai</th><th>Usage</th></tr></thead><tbody><tr><td><code>immediate</code></td><td>0 s</td><td>429 avec <code>Retry-After: 1</code></td></tr><tr><td><code>fixed</code></td><td>base_delay</td><td>service interne fiable</td></tr><tr><td><code>exponential</code></td><td><code>base × 2^attempt</code></td><td>API externe instable</td></tr><tr><td><code>jittered</code></td><td><code>exponential × random(0.5–1.5)</code></td><td><strong>défaut recommandé</strong> — évite thundering herd</td></tr></tbody></table>
+<pre><code class="lang-python">def compute_delay(attempt: int, base: float = 1.0, jitter: bool = True) -&gt; float:
+    delay = base * (2 ** attempt)          # 1s, 2s, 4s, 8s...
+    if jitter:
+        delay *= 0.5 + random.random()     # ±50% de bruit
+    return min(delay, 60.0)               # plafond à 60 s</code></pre>
+<h3>Étape 3 — Circuit breaker (3 états)</h3>
+<pre><code>CLOSED ──N failures──► OPEN ──recovery_timeout──► HALF-OPEN
+  ▲                                                    │
+  └─────────────────── succès ────────────────────────┘</code></pre>
+<pre><code class="lang-python">class CircuitBreaker:
+    # failure_threshold=5, recovery_timeout=30s
     def can_attempt(self) -&gt; bool:
-        if self.state == CircuitState.CLOSED:
-            return True
-        if self.state == CircuitState.OPEN:
-            if time.time() - self.last_failure_time &gt; self.recovery_timeout:
-                self.state = CircuitState.HALF_OPEN
+        if self.state == &quot;OPEN&quot;:
+            if time.time() - self.last_failure &gt; self.recovery_timeout:
+                self.state = &quot;HALF_OPEN&quot;
                 return True
-            return False
-        return True  # HALF_OPEN : tester une sonde
-
-
-class RetryStrategist:
-    def __init__(self, policy: RetryPolicy = None, circuit_breaker: CircuitBreaker = None):
-        self.policy = policy or RetryPolicy()
-        self.circuit = circuit_breaker or CircuitBreaker()
-        self.failure_log: list[dict] = []
-        
-        # Chaîne de fallback modèles
-        self.model_fallback_chain = [
-            &quot;claude-3-5-sonnet&quot;,
-            &quot;claude-3-5-haiku&quot;,
-            &quot;claude-3-haiku&quot;,
-        ]
-        
-        # Fallback outils
-        self.tool_fallbacks = {
-            &quot;search_web&quot;: [&quot;fetch_url&quot;, &quot;search_academic&quot;],
-            &quot;fetch_url&quot;: [&quot;search_web&quot;],
-        }
-
-    async def execute_with_retry(
-        self,
-        task_fn: Callable,
-        task_args: dict,
-        checkpoint_fn: Callable = None,
-    ) -&gt; Any:
-        &quot;&quot;&quot;Exécuter une tâche avec retry intelligent.&quot;&quot;&quot;
-        
-        for attempt in range(self.policy.max_attempts):
-            if not self.circuit.can_attempt():
-                raise RuntimeError(&quot;[CIRCUIT] Circuit ouvert — service indisponible&quot;)
-
-            try:
-                result = await task_fn(**task_args)
-                self.circuit.record_success()
-                return result
-
-            except Exception as e:
-                error_class = classify_error(e)
-                self.circuit.record_failure()
-                self._log_failure(e, attempt, error_class, task_args)
-
-                if error_class == ErrorClass.PERMANENT:
-                    logger.error(&quot;[RETRY] Erreur permanente — pas de retry: %s&quot;, e)
-                    raise
-
-                if attempt &lt; self.policy.max_attempts - 1:
-                    delay = self.policy.compute_delay(attempt)
-                    logger.info(&quot;[RETRY] Tentative %d/%d dans %.1fs — %s&quot;,
-                                attempt + 1, self.policy.max_attempts, delay, e)
-                    
-                    # Modifier la tâche si l'échec persiste
-                    if attempt &gt;= 1:
-                        task_args = self._modify_task(task_args, attempt)
-                    
-                    await asyncio.sleep(delay)
-                else:
-                    logger.error(&quot;[DLQ] Toutes les tentatives épuisées — envoi en DLQ&quot;)
-                    self._send_to_dlq(task_args, e)
-                    raise
-
-    def _modify_task(self, task_args: dict, attempt: int) -&gt; dict:
-        &quot;&quot;&quot;Modifier la tâche pour améliorer les chances de succès.&quot;&quot;&quot;
-        modified = task_args.copy()
-        if &quot;prompt&quot; in modified and attempt == 2:
-            modified[&quot;prompt&quot;] = f&quot;Simplifié: {modified['prompt'][:500]}&quot;
-        if &quot;model&quot; in modified:
-            chain = self.model_fallback_chain
-            current_idx = next(
-                (i for i, m in enumerate(chain) if m == modified[&quot;model&quot;]), 0
-            )
-            if current_idx + 1 &lt; len(chain):
-                modified[&quot;model&quot;] = chain[current_idx + 1]
-                logger.info(&quot;[FALLBACK] Modèle → %s&quot;, modified[&quot;model&quot;])
-        return modified
-
-    def _log_failure(self, error: Exception, attempt: int, 
-                     error_class: ErrorClass, task_args: dict):
-        self.failure_log.append({
-            &quot;error&quot;: str(error),
-            &quot;class&quot;: error_class.value,
-            &quot;attempt&quot;: attempt,
-            &quot;task&quot;: str(task_args)[:200],
-            &quot;timestamp&quot;: time.time(),
-        })
-
-    def _send_to_dlq(self, task_args: dict, error: Exception):
-        &quot;&quot;&quot;Envoyer en Dead Letter Queue pour analyse humaine.&quot;&quot;&quot;
-        print(f&quot;[DLQ] Tâche échouée après tous les retries: {task_args} | Erreur: {error}&quot;)
-        # Ici : persister dans Redis, SQS, base de données, etc.
-
-    def failure_report(self) -&gt; dict:
-        from collections import Counter
-        classes = Counter(f[&quot;class&quot;] for f in self.failure_log)
-        return {&quot;total_failures&quot;: len(self.failure_log), &quot;by_class&quot;: dict(classes)}</code></pre>
-<pre><code>Architecture — Retry Strategist
-
-  Tâche entrante
-       │
-       ▼
-  ┌──────────────┐
-  │Circuit Breaker│ OPEN? → rejeter immédiatement
-  └──────┬───────┘
-         │ CLOSED / HALF-OPEN
-         ▼
-  ┌──────────────┐
-  │  Attempt #1  │──── succès → retourner résultat
-  └──────┬───────┘
-         │ échec
-         ▼
-  Classifier erreur
-  PERMANENT ────────────────────► Escalade / Exception
-  TRANSIENT
-         │
-         ▼
-  Modifier tâche (attempt &gt;= 2)
-  Model fallback → Tool fallback
-         │
-  Délai backoff (jittered)
-         │
-         ▼
-  ┌──────────────┐
-  │  Attempt #2  │──── succès → retourner résultat
-  └──────┬───────┘
-         │ ...
-         ▼
-  Max attempts épuisés
-         │
-         ▼
-  ┌─────────────────┐
-  │ Dead Letter Queue│ → analyse humaine
-  └─────────────────┘</code></pre>
-<p><strong>Comparaison LangGraph vs CrewAI vs Custom :</strong></p>
-<table><thead><tr><th>Critère</th><th>LangGraph</th><th>CrewAI</th><th>Custom Python</th></tr></thead><tbody><tr><td>Retry natif</td><td>Partiel (node retry)</td><td>Non natif</td><td>Total contrôle</td></tr><tr><td>Circuit breaker</td><td>Non</td><td>Non</td><td>Manuel</td></tr><tr><td>Model fallback</td><td>Non</td><td>Non</td><td>Manuel</td></tr><tr><td>DLQ</td><td>Non</td><td>Non</td><td>Manuel</td></tr><tr><td>Modification de tâche</td><td>Non</td><td>Non</td><td>Manuel</td></tr></tbody></table>
-<h2>Anti-patterns</h2>
+            return False   # rejeter sans appel réseau
+        return True</code></pre>
+<p>Paramètres conseillés par défaut : <code>failure_threshold=5</code>, <code>recovery_timeout=30s</code>.</p>
+<h3>Étape 4 — Modifier la tâche si l'échec persiste</h3>
+<p>Un retry identique sur un input identique produit le même échec. Dès la 2e tentative :</p>
 <ul>
-<li><strong>Retry infini sans backoff</strong> — Boucler immédiatement sans délai sur un service en rate limit aggrave la situation et peut déclencher une mise en quarantaine.</li>
-<li><strong>Retry sur erreurs permanentes</strong> — Retenter une erreur de &quot;content policy&quot; ou de &quot;token limit exceeded&quot; est inutile et gaspille du budget. Classifier d'abord, retenter ensuite.</li>
-<li><strong>Pas de logging des failures</strong> — Sans trace des échecs, il est impossible d'identifier les patterns problématiques et d'améliorer la stratégie au fil du temps.</li>
-<li><strong>Même stratégie pour toutes les erreurs</strong> — Un délai fixe de 5 secondes peut être trop long pour un rate limit de 429 (qui a un Retry-After de 1s) et trop court pour une indisponibilité de service (qui peut durer 30s+).</li>
+<li>Tronquer le prompt à 60 % de sa longueur initiale</li>
+<li>Supprimer les exemples few-shot pour réduire les tokens</li>
+<li>Simplifier la consigne : <code>&quot;Réponds en JSON strict, rien d'autre&quot;</code></li>
+<li>Basculer vers un modèle plus petit (voir étape 5)</li>
 </ul>
-<h2>Règles</h2>
+<pre><code class="lang-python">def modify_task(args: dict, attempt: int) -&gt; dict:
+    m = args.copy()
+    if attempt == 1 and &quot;prompt&quot; in m:
+        m[&quot;prompt&quot;] = m[&quot;prompt&quot;][:int(len(m[&quot;prompt&quot;]) * 0.6)]
+    if attempt == 2:
+        m[&quot;prompt&quot;] = &quot;Réponse JSON uniquement: &quot; + m[&quot;prompt&quot;][:300]
+    return m</code></pre>
+<h3>Étape 5 — Model fallback chain</h3>
+<p>Définir la chaîne une seule fois dans la config :</p>
+<pre><code class="lang-python">MODEL_FALLBACK_CHAIN = [
+    &quot;claude-opus-4-5&quot;,      # modèle principal
+    &quot;claude-sonnet-4-5&quot;,    # fallback intermédiaire
+    &quot;claude-haiku-3-5&quot;,     # fallback léger
+]</code></pre>
+<p>Basculer vers le suivant à chaque échec consécutif. Journaliser le changement de modèle.</p>
+<h3>Étape 6 — Tool fallback</h3>
+<pre><code class="lang-python">TOOL_FALLBACKS = {
+    &quot;search_web&quot;:    [&quot;fetch_url&quot;, &quot;search_academic&quot;],
+    &quot;fetch_url&quot;:     [&quot;search_web&quot;],
+    &quot;db_primary&quot;:    [&quot;db_replica&quot;],
+    &quot;api_weather_1&quot;: [&quot;api_weather_2&quot;],
+}</code></pre>
+<p>Si l'outil <code>search_web</code> échoue 2 fois → essayer <code>fetch_url</code>. Si le tool de fallback est indisponible aussi → remonter une erreur métier claire.</p>
+<h3>Étape 7 — Décomposition de tâche sur échec de complexité</h3>
+<p>Indicateur : erreur de token limit ou réponse tronquée/incohérente.</p>
+<pre><code class="lang-python"># Découper une liste de 100 items en chunks de 20
+def decompose(items: list, chunk_size: int = 20) -&gt; list[list]:
+    return [items[i:i+chunk_size] for i in range(0, len(items), chunk_size)]
+
+# Relancer chaque chunk indépendamment, agréger les résultats
+results = await asyncio.gather(*[process_chunk(c) for c in decompose(items)])</code></pre>
+<h3>Étape 8 — Checkpoints et partial recovery</h3>
+<p>Persister l'état après chaque étape critique :</p>
+<pre><code class="lang-python"># Redis / fichier / base de données
+checkpoint = {&quot;step&quot;: &quot;step_3&quot;, &quot;processed_ids&quot;: [1, 2, 3], &quot;ts&quot;: time.time()}
+redis_client.set(f&quot;checkpoint:{job_id}&quot;, json.dumps(checkpoint), ex=3600)
+
+# Au redémarrage : reprendre depuis le checkpoint
+ckpt = redis_client.get(f&quot;checkpoint:{job_id}&quot;)
+if ckpt:
+    state = json.loads(ckpt)
+    start_from = state[&quot;step&quot;]</code></pre>
+<h3>Étape 9 — Dead Letter Queue (DLQ)</h3>
+<p>Toute tâche qui épuise ses retries ET ses fallbacks → DLQ. Ne jamais l'abandonner silencieusement.</p>
+<pre><code class="lang-python">def send_to_dlq(task: dict, error: Exception, attempts: int):
+    record = {
+        &quot;task&quot;: task,
+        &quot;error&quot;: str(error),
+        &quot;attempts&quot;: attempts,
+        &quot;ts&quot;: datetime.utcnow().isoformat(),
+    }
+    # SQS: sqs.send_message(QueueUrl=DLQ_URL, MessageBody=json.dumps(record))
+    # Redis: redis_client.rpush(&quot;dlq:agents&quot;, json.dumps(record))
+    # Fichier: append to dlq.jsonl
+    logger.error(&quot;[DLQ] %s&quot;, json.dumps(record))</code></pre>
+<h3>Étape 10 — Analyse des patterns d'échec</h3>
+<pre><code class="lang-python">from collections import Counter
+
+def failure_report(failure_log: list[dict]) -&gt; dict:
+    by_class   = Counter(f[&quot;class&quot;]   for f in failure_log)
+    by_model   = Counter(f[&quot;model&quot;]   for f in failure_log)
+    by_tool    = Counter(f[&quot;tool&quot;]    for f in failure_log)
+    return {&quot;total&quot;: len(failure_log), &quot;by_class&quot;: dict(by_class),
+            &quot;by_model&quot;: dict(by_model), &quot;by_tool&quot;: dict(by_tool)}</code></pre>
+<p>Réviser les politiques si <code>transient/permanent ratio &gt; 3 : 1</code> → le backoff base est probablement trop court.</p>
+<hr>
+<h2>Comparaison frameworks</h2>
+<table><thead><tr><th>Critère</th><th>LangGraph</th><th>CrewAI</th><th>Custom Python</th></tr></thead><tbody><tr><td>Retry natif</td><td>Partiel (node)</td><td>Non</td><td>Total contrôle</td></tr><tr><td>Circuit breaker</td><td>Non</td><td>Non</td><td>Manuel</td></tr><tr><td>Model fallback</td><td>Non</td><td>Non</td><td>Manuel</td></tr><tr><td>DLQ</td><td>Non</td><td>Non</td><td>Manuel</td></tr><tr><td>Modification de tâche</td><td>Non</td><td>Non</td><td>Manuel</td></tr></tbody></table>
+<p>Recommandation : implémenter <code>RetryStrategist</code> en couche transversale, appelée par l'orchestrateur, indépendamment du framework agent.</p>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<ul>
+<li><strong>Retry immédiat sans délai</strong> — aggrave la surcharge du service et risque la mise en quarantaine IP.</li>
+<li><strong>Retry sur erreurs permanentes</strong> — gaspille du budget ; classifier <em>avant</em> de retenter.</li>
+<li><strong>Retry identique sans modification</strong> — un prompt qui dépasse le token limit restera trop long au 3e essai.</li>
+<li><strong>Circuit breaker absent</strong> — un sous-agent en cascade failure appellera le service dégradé N × max_attempts fois.</li>
+<li><strong>DLQ silencieuse</strong> — une tâche abandonnée sans trace crée des données manquantes invisibles.</li>
+<li><strong>Jitter absent en environnement multi-agents</strong> — tous les agents retenent en même temps après un outage → thundering herd.</li>
+<li><strong>Checkpoints non atomiques</strong> — écrire le checkpoint avant que l'opération soit réellement confirmée provoque des doublons.</li>
+</ul>
+<h2>Règles de décision rapide</h2>
 <ol>
-<li><strong>Toujours classifier l'erreur avant de décider d'un retry</strong> — <code>transient</code> vs <code>permanent</code> détermine la stratégie ; ne jamais retenter une erreur permanente.</li>
-<li><strong>Implémenter le jittered exponential backoff par défaut</strong> — c'est la stratégie la plus robuste pour éviter les pics de charge synchronisés sur des services partagés.</li>
-<li><strong>Modifier la tâche après le premier échec</strong> — un retry identique sur un même input aura tendance à produire le même échec ; changer le prompt, le modèle ou le scope améliore les chances.</li>
-<li><strong>Tout ce qui dépasse <code>max_attempts</code> va en Dead Letter Queue</strong> — ne jamais silencieusement abandonner une tâche ; la DLQ garantit la traçabilité et la reprise possible.</li>
-<li><strong>Mesurer et analyser les patterns d'échec</strong> — le rapport de failures doit alimenter un processus d'amélioration continue des politiques de retry.</li>
+<li>Erreur permanente → pas de retry, fallback ou escalade immédiate.</li>
+<li>Erreur transient → jittered exponential backoff, max 3–5 attempts.</li>
+<li>2e tentative → modifier le prompt / réduire le scope.</li>
+<li>3e tentative → changer de modèle ou d'outil.</li>
+<li>Toutes tentatives épuisées → DLQ obligatoire, jamais silencieux.</li>
+<li>Circuit OPEN → rejeter sans appel réseau, tester une sonde après <code>recovery_timeout</code>.</li>
 </ol>
 </article>
 </main>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ai-ml-nlp-pipeline-designer — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Conception de pipelines NLP (tokenization, embeddings, NER, sentiment, summarization)">
+<meta name="description" content="Conception de pipelines NLP (tokenization, embeddings, NER, sentiment, summarization) — guide opérationnel avec snippets, critères de décision et anti-patterns.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🧠 AI / ML</span>
 <h1 class="skill-title">ai-ml-nlp-pipeline-designer</h1>
-<p class="lead">Conception de pipelines NLP (tokenization, embeddings, NER, sentiment, summarization)</p>
+<p class="lead">Conception de pipelines NLP (tokenization, embeddings, NER, sentiment, summarization) — guide opérationnel avec snippets, critères de décision et anti-patterns.</p>
 
 
 
@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/ai-ml-nlp-pipeline-designer</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">NLP\</span><span class="trigger">traitement du langage\</span><span class="trigger">NER\</span><span class="trigger">sentiment analysis\</span><span class="trigger">text classification\</span><span class="trigger">spaCy\</span><span class="trigger">HuggingFace\</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>
@@ -96,85 +96,186 @@ cp -r claude-skills-collection/skills/ai-ml-nlp-pipeline-designer ~/.claude/skil
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>NLP Pipeline Designer</h1>
-<p>Guide complet pour la conception et l'implémentation de pipelines de traitement du langage naturel, de la tokenization aux tâches avancées comme la NER, l'analyse de sentiment et la summarization.</p>
-<h2>Workflow</h2>
-<h3>1. Analyser la tâche NLP et définir le pipeline</h3>
+<p>Guide opérationnel pour concevoir et implémenter des pipelines NLP production-ready, de la tokenization aux tâches avancées.</p>
+<hr>
+<h2>Étape 1 — Cadrer la tâche et choisir l'approche</h2>
+<p><strong>Questions à trancher avant tout code :</strong></p>
+<table><thead><tr><th>Critère</th><th>Approche légère</th><th>Approche Transformer</th></tr></thead><tbody><tr><td>&lt; 10 k exemples annotés</td><td>TF-IDF + sklearn</td><td>SetFit / few-shot</td></tr><tr><td>Latence &lt; 50 ms</td><td>DistilBERT, FastText</td><td>Non</td></tr><tr><td>Corpus français</td><td>CamemBERT, FlauBERT</td><td>XLM-RoBERTa si multilingue</td></tr><tr><td>Généralisation zero-shot</td><td>Non</td><td>NLI (MNLI) ou GPT-4o</td></tr><tr><td>Tâche extractive simple</td><td>regex + spaCy rules</td><td>Rarement utile</td></tr></tbody></table>
+<p><strong>Tâches → modèles recommandés (2026) :</strong></p>
 <ul>
-<li>Identifier la tâche principale : classification de texte, NER, sentiment analysis, summarization, question answering, traduction</li>
-<li>Déterminer la langue cible et les spécificités linguistiques (multilingue, dialectes, jargon technique)</li>
-<li>Choisir l'approche : modèle pré-entraîné (HuggingFace Transformers), pipeline spaCy, ou solution custom</li>
-<li>Évaluer les contraintes de latence, volume et coût (batch vs temps réel)</li>
-<li>Définir les métriques d'évaluation adaptées à la tâche (F1, precision, recall, ROUGE, BLEU)</li>
+<li>Classification texte : <code>CamemBERT-base</code> (FR), <code>DeBERTa-v3-base</code> (EN)</li>
+<li>NER : <code>spaCy fr_core_news_lg</code> (règles + statistique), <code>bert-base-multilingual-cased</code> fine-tuné</li>
+<li>Sentiment : <code>nlptown/bert-base-multilingual-uncased-sentiment</code>, ou zero-shot <code>facebook/bart-large-mnli</code></li>
+<li>Summarization : <code>facebook/bart-large-cnn</code>, <code>moussaKam/barthez-orangesum-abstract</code> (FR)</li>
+<li>QA extractif : <code>deepset/camembert-base-squad2</code> (FR)</li>
 </ul>
-<h3>2. Préparer et prétraiter le corpus textuel</h3>
+<hr>
+<h2>Étape 2 — Prétraitement du corpus</h2>
+<pre><code class="lang-python">import re, unicodedata
+from langdetect import detect
+
+def clean_text(text: str) -&gt; str:
+    text = re.sub(r&quot;&lt;[^&gt;]+&gt;&quot;, &quot; &quot;, text)               # strip HTML
+    text = unicodedata.normalize(&quot;NFC&quot;, text)           # normalise unicode
+    text = re.sub(r&quot;http\S+|www\.\S+&quot;, &quot;[URL]&quot;, text)  # masque URLs
+    text = re.sub(r&quot;\s+&quot;, &quot; &quot;, text).strip()
+    return text
+
+# Chunking pour textes longs (sliding window)
+def chunk_text(text: str, max_tokens: int = 400, overlap: int = 50) -&gt; list[str]:
+    words = text.split()
+    chunks = []
+    for i in range(0, len(words), max_tokens - overlap):
+        chunks.append(&quot; &quot;.join(words[i : i + max_tokens]))
+    return chunks</code></pre>
+<p><strong>Points critiques :</strong></p>
 <ul>
-<li>Collecter les textes depuis les sources identifiées (bases de données, APIs, fichiers)</li>
-<li>Nettoyer les textes : suppression du HTML/markdown, normalisation unicode, gestion des caractères spéciaux</li>
-<li>Détecter et gérer la langue de chaque document si corpus multilingue</li>
-<li>Appliquer les prétraitements spécifiques : lowercasing, suppression des stopwords (si pertinent), lemmatisation</li>
-<li>Segmenter les documents longs en chunks cohérents si nécessaire (sentence splitting, paragraph splitting)</li>
-<li>Annoter le corpus pour les tâches supervisées (labels de classe, entités nommées, relations)</li>
+<li>Ne pas supprimer les stopwords avant un Transformer (il les utilise pour le contexte).</li>
+<li>Conserver la casse pour la NER (majuscules = signal fort pour les entités).</li>
+<li>Annoter la langue avant tout pipeline multilingue : <code>detect(text)</code> → filtrer/router.</li>
 </ul>
-<h3>3. Configurer la tokenization et les embeddings</h3>
-<ul>
-<li>Choisir le tokenizer adapté au modèle : WordPiece (BERT), BPE (GPT), SentencePiece (T5, mBART)</li>
-<li>Configurer la longueur maximale des séquences et la stratégie de troncation/padding</li>
-<li>Pour les approches classiques : configurer TF-IDF, Word2Vec, FastText ou GloVe</li>
-<li>Pour les Transformers : utiliser les embeddings contextuels du modèle pré-entraîné</li>
-<li>Gérer les tokens hors vocabulaire (OOV) et les sous-mots rares</li>
-<li>Tester la couverture du vocabulaire sur le corpus cible</li>
-</ul>
-<h3>4. Sélectionner et configurer le modèle</h3>
-<ul>
-<li>Pour la classification : BERT, RoBERTa, CamemBERT (français), DistilBERT (léger)</li>
-<li>Pour la NER : spaCy NER, BERT-CRF, token classification avec Transformers</li>
-<li>Pour la summarization : BART, T5, Pegasus, mBART (multilingue)</li>
-<li>Pour le sentiment : modèles fine-tunés sur des corpus de sentiment, ou zero-shot avec NLI</li>
-<li>Charger le modèle pré-entraîné via HuggingFace ou spaCy</li>
-<li>Adapter l'architecture si nécessaire (ajout de couches, modification de la tête)</li>
-</ul>
-<h3>5. Entraîner ou fine-tuner le modèle</h3>
-<ul>
-<li>Préparer les DataLoaders avec batching dynamique et padding intelligent</li>
-<li>Configurer l'entraînement : learning rate (2e-5 à 5e-5 pour BERT), warmup steps, weight decay</li>
-<li>Appliquer le fine-tuning progressif : geler les couches basses, puis débloquer progressivement</li>
-<li>Monitorer la loss et les métriques de validation à chaque epoch</li>
-<li>Utiliser l'early stopping basé sur la métrique de validation principale</li>
-<li>Pour les tâches few-shot : explorer SetFit, prompt tuning ou in-context learning</li>
-</ul>
-<h3>6. Construire le pipeline de bout en bout</h3>
-<ul>
-<li>Assembler les composants : prétraitement, tokenization, modèle, post-traitement</li>
-<li>Implémenter le post-traitement des prédictions (décodage BIO pour NER, beam search pour la génération)</li>
-<li>Gérer les cas limites : textes vides, textes trop longs, langues non supportées</li>
-<li>Ajouter la gestion des erreurs et le fallback gracieux</li>
-<li>Optimiser le pipeline pour le batch processing si nécessaire</li>
-<li>Documenter les entrées/sorties et les formats attendus</li>
-</ul>
-<h3>7. Évaluer et itérer</h3>
-<ul>
-<li>Calculer les métriques détaillées par classe/entité (classification report complet)</li>
-<li>Analyser les erreurs : faux positifs récurrents, entités manquées, confusion entre classes</li>
-<li>Tester sur des données hors distribution pour évaluer la robustesse</li>
-<li>Créer un jeu de test de non-régression avec des cas critiques</li>
-<li>Itérer sur le dataset et le modèle en fonction des erreurs identifiées</li>
-</ul>
-<h2>Rules</h2>
+<hr>
+<h2>Étape 3 — Tokenization et DataLoader</h2>
+<pre><code class="lang-python">from transformers import AutoTokenizer
+from torch.utils.data import Dataset, DataLoader
+
+tokenizer = AutoTokenizer.from_pretrained(&quot;camembert-base&quot;)
+
+class TextDataset(Dataset):
+    def __init__(self, texts, labels, max_length=512):
+        self.encodings = tokenizer(
+            texts, truncation=True, padding=True,
+            max_length=max_length, return_tensors=&quot;pt&quot;
+        )
+        self.labels = labels
+
+    def __getitem__(self, idx):
+        item = {k: v[idx] for k, v in self.encodings.items()}
+        item[&quot;labels&quot;] = self.labels[idx]
+        return item
+
+    def __len__(self):
+        return len(self.labels)
+
+loader = DataLoader(TextDataset(train_texts, train_labels), batch_size=16, shuffle=True)</code></pre>
+<p><strong>Stratégie textes longs (&gt; 512 tokens) :</strong></p>
 <ol>
-<li><strong>Choisir le bon niveau de complexité</strong> : Ne pas utiliser un Transformer de 340M de paramètres quand un TF-IDF + régression logistique suffit. Commencer simple, complexifier seulement si les performances l'exigent. La complexité ajoutée doit être justifiée par un gain mesurable.</li>
+<li>Troncation simple : acceptable si l'info utile est en début de texte.</li>
+<li>Sliding window + vote : prédire sur chaque chunk, agréger (mean ou max).</li>
+<li>Hierarchical model : encoder les phrases, puis encoder le document.</li>
 </ol>
-<ol>
-<li><strong>Respecter les spécificités linguistiques</strong> : Pour le français, utiliser CamemBERT ou FlauBERT plutôt qu'un modèle anglais. Pour le multilingue, utiliser XLM-RoBERTa ou mBERT. Un modèle entraîné sur la bonne langue surpasse systématiquement un modèle générique.</li>
-</ol>
-<ol>
-<li><strong>Ne jamais évaluer sur les données d'entraînement</strong> : Toujours maintenir un set de test strictement séparé. Pour la NER, s'assurer que les mêmes entités n'apparaissent pas dans le train et le test (entity-level split si possible).</li>
-</ol>
-<ol>
-<li><strong>Gérer la longueur des textes explicitement</strong> : Définir une stratégie claire pour les textes dépassant la limite du tokenizer (troncation, sliding window, hierarchical approach). Ignorer ce problème cause des pertes silencieuses d'information.</li>
-</ol>
-<ol>
-<li><strong>Versionner le pipeline complet</strong> : Le modèle seul ne suffit pas. Versionner ensemble le code de prétraitement, le tokenizer, le modèle et le post-traitement. Un changement dans n'importe quel composant peut modifier les résultats.</li>
-</ol>
+<hr>
+<h2>Étape 4 — Fine-tuning</h2>
+<pre><code class="lang-python">from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer
+import evaluate
+
+model = AutoModelForSequenceClassification.from_pretrained(&quot;camembert-base&quot;, num_labels=3)
+
+args = TrainingArguments(
+    output_dir=&quot;./checkpoints&quot;,
+    num_train_epochs=5,
+    per_device_train_batch_size=16,
+    per_device_eval_batch_size=32,
+    learning_rate=2e-5,          # 2e-5 à 5e-5 pour BERT-like
+    weight_decay=0.01,
+    warmup_ratio=0.1,
+    evaluation_strategy=&quot;epoch&quot;,
+    save_strategy=&quot;best&quot;,
+    load_best_model_at_end=True,
+    metric_for_best_model=&quot;f1&quot;,
+    fp16=True,                   # activer si GPU CUDA disponible
+)
+
+metric = evaluate.load(&quot;f1&quot;)
+def compute_metrics(eval_pred):
+    logits, labels = eval_pred
+    preds = logits.argmax(-1)
+    return metric.compute(predictions=preds, references=labels, average=&quot;macro&quot;)
+
+trainer = Trainer(model=model, args=args,
+                  train_dataset=train_ds, eval_dataset=val_ds,
+                  compute_metrics=compute_metrics)
+trainer.train()</code></pre>
+<p><strong>Hyperparamètres clés :</strong></p>
+<ul>
+<li><code>learning_rate</code> : 2e-5 (sûr), 5e-5 si dataset &gt; 10k, 1e-5 si on gèle les couches basses.</li>
+<li><code>warmup_ratio</code> : 0.06–0.1 pour éviter les instabilités en début d'entraînement.</li>
+<li>Geler les 6 premières couches si &lt; 1000 exemples : <code>for p in model.bert.encoder.layer[:6].parameters(): p.requires_grad = False</code></li>
+</ul>
+<hr>
+<h2>Étape 5 — Pipeline spaCy (règles + ML, production rapide)</h2>
+<pre><code class="lang-python">import spacy
+
+nlp = spacy.load(&quot;fr_core_news_lg&quot;)
+
+# Ajouter des règles métier avant le ML
+ruler = nlp.add_pipe(&quot;entity_ruler&quot;, before=&quot;ner&quot;)
+ruler.add_patterns([
+    {&quot;label&quot;: &quot;PRODUIT&quot;, &quot;pattern&quot;: [{&quot;LOWER&quot;: &quot;carte&quot;}, {&quot;LOWER&quot;: &quot;visa&quot;}]},
+    {&quot;label&quot;: &quot;CODE&quot;, &quot;pattern&quot;: [{&quot;TEXT&quot;: {&quot;REGEX&quot;: r&quot;^[A-Z]{2}\d{6}$&quot;}}]},
+])
+
+doc = nlp(&quot;La carte Visa n° AB123456 est expirée.&quot;)
+for ent in doc.ents:
+    print(ent.text, ent.label_)</code></pre>
+<p><strong>Quand préférer spaCy au HuggingFace :</strong></p>
+<ul>
+<li>Pipeline CPU-only en production (latence &lt; 20 ms par document).</li>
+<li>Règles métier à combiner avec le ML (entity_ruler + NER).</li>
+<li>Cas d'usage où l'explicabilité des règles est requise.</li>
+</ul>
+<hr>
+<h2>Étape 6 — Évaluation rigoureuse</h2>
+<pre><code class="lang-python">from sklearn.metrics import classification_report
+from seqeval.metrics import classification_report as ner_report  # pour NER BIO
+
+# Classification
+print(classification_report(y_true, y_pred, target_names=class_names, digits=4))
+
+# NER (format BIO)
+print(ner_report(true_tags, pred_tags))  # F1 par type d'entité</code></pre>
+<p><strong>Métriques par tâche :</strong></p>
+<table><thead><tr><th>Tâche</th><th>Métrique principale</th><th>Métrique secondaire</th></tr></thead><tbody><tr><td>Classification binaire</td><td>F1 macro</td><td>AUC-ROC</td></tr><tr><td>Classification multi-classe</td><td>F1 macro</td><td>Matrice de confusion</td></tr><tr><td>NER</td><td>F1 entité exacte (seqeval)</td><td>F1 partielle</td></tr><tr><td>Summarization</td><td>ROUGE-L</td><td>BERTScore</td></tr><tr><td>QA extractif</td><td>Exact Match</td><td>F1 token</td></tr></tbody></table>
+<p><strong>Analyse d'erreurs :</strong></p>
+<pre><code class="lang-python">errors = [(text, true, pred) for text, true, pred in zip(texts, y_true, y_pred) if true != pred]
+# Inspecter les 20 erreurs les plus fréquentes par classe confondue
+from collections import Counter
+Counter((t, p) for _, t, p in errors).most_common(10)</code></pre>
+<hr>
+<h2>Étape 7 — Mise en production</h2>
+<pre><code class="lang-python"># Sérialisation optimisée
+from optimum.onnxruntime import ORTModelForSequenceClassification
+
+model_ort = ORTModelForSequenceClassification.from_pretrained(&quot;./checkpoints&quot;, export=True)
+model_ort.save_pretrained(&quot;./model_onnx&quot;)
+# Latence divisée par 2–4 vs PyTorch CPU
+
+# Pipeline HuggingFace prêt à l'emploi
+from transformers import pipeline
+classifier = pipeline(&quot;text-classification&quot;, model=&quot;./model_onnx&quot;,
+                      tokenizer=tokenizer, device=-1)
+results = classifier(texts, batch_size=32, truncation=True)</code></pre>
+<p><strong>Checklist avant déploiement :</strong></p>
+<ul>
+<li>[ ] Versionner ensemble : <code>tokenizer/</code> + <code>model/</code> + <code>config.json</code> + code de prétraitement.</li>
+<li>[ ] Tester le pipeline sur des textes vides, très longs, avec caractères spéciaux.</li>
+<li>[ ] Ajouter un timeout et un fallback (réponse par défaut) si latence dépassée.</li>
+<li>[ ] Logger les entrées et prédictions (échantillon 1%) pour détecter le drift.</li>
+<li>[ ] Définir un seuil de confiance minimum — rejeter les prédictions &lt; seuil.</li>
+</ul>
+<hr>
+<h2>Anti-patterns et pièges fréquents</h2>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Évaluer sur les données d'entraînement</td><td>F1 = 0.99 en train, 0.60 en test</td><td>Split strict, entity-level pour NER</td></tr><tr><td>Même tokenizer que le pré-entraînement non respecté</td><td>Résultats incohérents</td><td><code>AutoTokenizer.from_pretrained(model_name)</code> toujours</td></tr><tr><td>Textes &gt; 512 tokens tronqués silencieusement</td><td>Perte d'information en fin de doc</td><td>Sliding window ou chunking explicite</td></tr><tr><td>Stopwords supprimés avant Transformer</td><td>Dégradation des performances</td><td>Ne supprimer les stopwords que pour TF-IDF/classiques</td></tr><tr><td>Modèle anglais sur corpus français</td><td>F1 -15 à -30 points vs CamemBERT</td><td>Toujours aligner langue modèle / langue corpus</td></tr><tr><td>Fine-tuning sans warmup</td><td>Loss diverge en début d'entraînement</td><td><code>warmup_ratio=0.1</code> minimum</td></tr><tr><td>Batch trop petit (1-2) avec BN</td><td>Gradients instables</td><td>batch_size &gt;= 8, gradient_accumulation si mémoire limitée</td></tr><tr><td>Label imbalance ignoré</td><td>Modèle prédit toujours la classe majoritaire</td><td><code>class_weight=&quot;balanced&quot;</code> ou oversampling (imbalanced-learn)</td></tr></tbody></table>
+<hr>
+<h2>Ressources et outils clés (2026)</h2>
+<ul>
+<li><strong>HuggingFace Hub</strong> : <code>huggingface.co/models</code> — filtrer par langue + tâche.</li>
+<li><strong>spaCy</strong> : <code>python -m spacy download fr_core_news_lg</code></li>
+<li><strong>Optimum</strong> : export ONNX + quantisation INT8 pour inférence CPU rapide.</li>
+<li><strong>Label Studio</strong> : annotation collaborative (NER, classification, QA).</li>
+<li><strong>Argilla</strong> : feedback humain en boucle fermée pour amélioration continue.</li>
+<li><strong>BERTopic</strong> : clustering de topics non supervisé sur grands corpus.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

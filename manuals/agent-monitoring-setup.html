@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>agent-monitoring-setup — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Monitoring et observabilité pour agents IA en production. Traces, métriques, alertes.">
+<meta name="description" content="Monitoring et observabilité pour agents IA en production — traces distribuées, métriques LLM, alertes coût/qualité, dashboards, debugging.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🤖 Agents IA</span>
 <h1 class="skill-title">agent-monitoring-setup</h1>
-<p class="lead">Monitoring et observabilité pour agents IA en production. Traces, métriques, alertes.</p>
+<p class="lead">Monitoring et observabilité pour agents IA en production — traces distribuées, métriques LLM, alertes coût/qualité, dashboards, debugging.</p>
 
 
 
@@ -97,103 +97,182 @@ cp -r claude-skills-collection/skills/agent-monitoring-setup ~/.claude/skills/</
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent Monitoring Setup</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utilise ce skill lorsque l'utilisateur veut mettre en place l'observabilité d'un agent IA en production, diagnostiquer des comportements inattendus, ou comprendre les performances et coûts de son agent. S'applique dès qu'on parle de traces, métriques, logs structurés, dashboards, alertes, ou évaluation continue de la qualité des réponses.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Les 4 piliers de l'observabilité agent</strong> — Poser les fondations :</li>
+<p>Mise en place de l'observabilité d'un agent IA en production : traces, métriques, logs structurés, dashboards, alertes coût/qualité, debugging d'incidents.</p>
+<hr>
+<h2>Étape 1 — Choisir le backend de tracing</h2>
+<table><thead><tr><th>Outil</th><th>Cas d'usage</th><th>Hébergement</th></tr></thead><tbody><tr><td><strong>LangSmith</strong></td><td>LangChain natif, éval intégrée</td><td>SaaS</td></tr><tr><td><strong>Langfuse</strong></td><td>Open source, multi-framework</td><td>Self-hosted / SaaS</td></tr><tr><td><strong>Arize Phoenix</strong></td><td>ML observability, RAG eval</td><td>Self-hosted / SaaS</td></tr><tr><td><strong>OpenTelemetry + Jaeger</strong></td><td>Standard ouvert, multi-service</td><td>Self-hosted</td></tr><tr><td><strong>Datadog / New Relic</strong></td><td>Monitoring infra unifié</td><td>SaaS</td></tr></tbody></table>
+<p><strong>Critère de décision :</strong></p>
 <ul>
-<li><strong>Traces</strong> : séquence complète d'une exécution (LLM calls, tool calls, décisions)</li>
-<li><strong>Métriques</strong> : agrégats numériques (latence, tokens, coût, taux d'erreur)</li>
-<li><strong>Logs</strong> : événements structurés détaillés (inputs, outputs, étapes intermédiaires)</li>
-<li><strong>Évaluations</strong> : scores de qualité automatisés (correctness, faithfulness, relevance)</li>
+<li>LangChain → LangSmith (zéro config)</li>
+<li>Budget limité / données sensibles → Langfuse self-hosted</li>
+<li>Équipe SRE existante avec Datadog → OpenTelemetry + Datadog</li>
+<li>RAG avec éval de fidélité → Phoenix</li>
 </ul>
-</ol>
+<hr>
+<h2>Étape 2 — Instrumenter l'agent</h2>
+<h3>LangSmith (LangChain)</h3>
+<pre><code class="lang-bash">export LANGCHAIN_TRACING_V2=true
+export LANGCHAIN_API_KEY=lsv2_...
+export LANGCHAIN_PROJECT=my-agent-prod</code></pre>
+<p>Tout appel LangChain est automatiquement tracé. Pas de code supplémentaire.</p>
+<h3>Langfuse (multi-framework)</h3>
+<pre><code class="lang-python">from langfuse import Langfuse
+from langfuse.decorators import observe, langfuse_context
+
+lf = Langfuse(public_key=&quot;pk-...&quot;, secret_key=&quot;sk-...&quot;, host=&quot;https://cloud.langfuse.com&quot;)
+
+@observe()  # trace automatique de la fonction entière
+def run_agent(user_input: str, conversation_id: str):
+    langfuse_context.update_current_trace(
+        user_id=&quot;user-42&quot;,
+        session_id=conversation_id,
+        tags=[&quot;prod&quot;, &quot;v2.1&quot;],
+    )
+    # ... logique agent</code></pre>
+<h3>OpenTelemetry (agent custom)</h3>
+<pre><code class="lang-python">from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+
+tracer = trace.get_tracer(&quot;my-agent&quot;)
+
+with tracer.start_as_current_span(&quot;llm_call&quot;) as span:
+    span.set_attribute(&quot;model&quot;, &quot;claude-sonnet-4-5&quot;)
+    span.set_attribute(&quot;input_tokens&quot;, 450)
+    span.set_attribute(&quot;output_tokens&quot;, 120)
+    response = llm.invoke(prompt)
+    span.set_attribute(&quot;latency_ms&quot;, elapsed)</code></pre>
+<hr>
+<h2>Étape 3 — Logging structuré</h2>
+<p>Chaque événement doit comporter les champs de corrélation obligatoires :</p>
+<pre><code class="lang-python">import structlog
+
+log = structlog.get_logger()
+
+log.info(&quot;agent_step&quot;,
+    conversation_id=cid,   # OBLIGATOIRE — corrèle toutes les données
+    user_id=uid,
+    step=&quot;tool_call&quot;,
+    tool=&quot;search_web&quot;,
+    input_hash=hash(query),  # ne pas logguer PII en clair
+    duration_ms=elapsed,
+    tokens_used=tokens,
+    success=True,
+    error_code=None,
+)</code></pre>
+<p><strong>Champs obligatoires :</strong> <code>conversation_id</code>, <code>user_id</code>, <code>step</code>, <code>tool</code>, <code>success</code>, <code>error_code</code>.</p>
+<hr>
+<h2>Étape 4 — Métriques clés à exposer</h2>
+<p>Exposer via Prometheus (ou équivalent) :</p>
+<pre><code class="lang-python">from prometheus_client import Histogram, Counter, Gauge
+
+agent_latency = Histogram(&quot;agent_request_duration_seconds&quot;,
+    &quot;Latence par requête&quot;, [&quot;agent_name&quot;, &quot;task_type&quot;],
+    buckets=[0.1, 0.5, 1, 2, 5, 10, 30])
+
+agent_tokens = Counter(&quot;agent_tokens_total&quot;,
+    &quot;Tokens consommés&quot;, [&quot;model&quot;, &quot;direction&quot;])  # direction=input|output
+
+agent_cost_usd = Counter(&quot;agent_cost_usd_total&quot;,
+    &quot;Coût en dollars&quot;, [&quot;model&quot;, &quot;agent_name&quot;])
+
+agent_errors = Counter(&quot;agent_errors_total&quot;,
+    &quot;Erreurs&quot;, [&quot;error_type&quot;])  # timeout|safety|api_error|tool_error</code></pre>
+<p><strong>KPIs prioritaires :</strong> p95 latence, tokens/requête, $/conversation, taux d'erreur, tool call frequency.</p>
+<hr>
+<h2>Étape 5 — Dashboards Grafana</h2>
+<p>Panels essentiels (importer depuis <code>grafana.com/grafana/dashboards</code>) :</p>
+<pre><code>Row 1 — Trafic &amp; Latence
+  - Requests/min (stat)
+  - p50 / p95 / p99 latence (time series)
+  - Taux d'erreur % (gauge + threshold rouge &gt;5%)
+
+Row 2 — Coût &amp; Tokens
+  - Tokens/jour par modèle (bar chart)
+  - Coût cumulé du jour vs veille (stat)
+  - Top 10 conversations les plus chères (table)
+
+Row 3 — Qualité
+  - LLM-as-judge score moyen (time series)
+  - Taux de refus/safety violations (stat)
+  - User feedback ratio 👍/👎 (gauge)</code></pre>
+<hr>
+<h2>Étape 6 — Alertes (Alertmanager / PagerDuty / Slack)</h2>
+<pre><code class="lang-yaml"># prometheus/rules/agent.yml
+groups:
+  - name: agent_alerts
+    rules:
+      - alert: AgentErrorRateHigh
+        expr: rate(agent_errors_total[5m]) / rate(agent_requests_total[5m]) &gt; 0.05
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: &quot;Taux d'erreur agent &gt; 5% depuis 2 min&quot;
+
+      - alert: AgentLatencyDegraded
+        expr: histogram_quantile(0.95, agent_request_duration_seconds_bucket) &gt; 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;p95 latence &gt; 10s&quot;
+
+      - alert: AgentCostAnomaly
+        expr: increase(agent_cost_usd_total[1h]) &gt; 2 * avg_over_time(increase(agent_cost_usd_total[1h])[7d:1h])
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;Coût horaire &gt; 2x la moyenne 7j&quot;</code></pre>
+<p>Routing : <code>critical</code> → PagerDuty, <code>warning</code> → Slack <code>#agent-alerts</code>.</p>
+<hr>
+<h2>Étape 7 — Quality monitoring (LLM-as-judge)</h2>
+<pre><code class="lang-python">import anthropic
+
+def evaluate_response(question: str, answer: str) -&gt; dict:
+    client = anthropic.Anthropic()
+    prompt = f&quot;&quot;&quot;Évalue cette réponse d'agent (score 1-5) :
+Question : {question}
+Réponse : {answer}
+
+Critères : pertinence, exactitude, concision.
+Réponds UNIQUEMENT en JSON : {{&quot;score&quot;: X, &quot;reason&quot;: &quot;...&quot;}}&quot;&quot;&quot;
+
+    result = client.messages.create(
+        model=&quot;claude-haiku-4-5&quot;,
+        max_tokens=200,
+        messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt}]
+    )
+    return json.loads(result.content[0].text)
+
+# Exécuter en batch sur 5% des conversations (sampling)</code></pre>
+<hr>
+<h2>Étape 8 — Debugging d'incident</h2>
+<pre><code class="lang-bash"># Rejouer une trace LangSmith depuis son run_id
+langsmith runs get --run-id &lt;run_id&gt; --output-format json | jq '.inputs, .outputs'
+
+# Filtrer les traces Langfuse par session
+curl &quot;https://cloud.langfuse.com/api/public/sessions/&lt;session_id&gt;/observations&quot; \
+  -H &quot;Authorization: Basic $(echo -n 'pk-...:sk-...' | base64)&quot;</code></pre>
+<p>Checklist debugging :</p>
 <ol>
-<li><strong>Tracing</strong> — Choisir et intégrer un backend de tracing :</li>
-<ul>
-<li><strong>LangSmith</strong> (LangChain natif) : <code>LANGCHAIN_TRACING_V2=true</code>, <code>LANGCHAIN_API_KEY=...</code></li>
-<li><strong>Langfuse</strong> (open source) : SDK Python/JS, auto-instrumentation LangChain/LlamaIndex</li>
-<li><strong>Phoenix/Arize</strong> : focus ML observability, compatible OpenTelemetry</li>
-<li><strong>OpenTelemetry</strong> : standard ouvert, compatible avec Jaeger, Tempo, Datadog</li>
-<li>Instrumenter les spans manuellement pour les agents custom (début/fin de chaque étape)</li>
-</ul>
+<li>Récupérer le <code>conversation_id</code> depuis le ticket ou l'alerte</li>
+<li>Ouvrir la trace complète (LangSmith / Langfuse)</li>
+<li>Identifier le span en échec (error, latence anormale)</li>
+<li>Extraire l'input exact → reproduire en local</li>
+<li>Vérifier les tool calls (inputs/outputs de chaque outil)</li>
+<li>Comparer avec une trace réussie similaire</li>
 </ol>
-<ol>
-<li><strong>Métriques clés à collecter</strong> — Définir les KPIs de l'agent :</li>
+<hr>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Solution</th></tr></thead><tbody><tr><td>Logguer les inputs/outputs LLM en clair</td><td>Fuite de PII</td><td>Hasher ou tronquer ; masquer emails, téléphones, IBAN</td></tr><tr><td>Tracer 100% des tokens en prod</td><td>Coût stockage explosif</td><td>Sampling 10-20% en prod, 100% en staging</td></tr><tr><td>Alertes sans <code>for:</code> (trop réactives)</td><td>Alert fatigue</td><td>Toujours <code>for: 2m</code> minimum sur les règles critiques</td></tr><tr><td>Un seul <code>conversation_id</code> par user</td><td>Impossible de corréler</td><td>Générer un UUID par session, pas par user</td></tr><tr><td>Métriques sans labels business</td><td>Dashboards inexploitables</td><td>Toujours labeller par <code>agent_name</code>, <code>task_type</code>, <code>env</code></td></tr><tr><td>LLM-as-judge sur 100% des réponses</td><td>Coût éval &gt; coût prod</td><td>Sampling + règles triggers (score &lt; 3, feedback négatif)</td></tr><tr><td>Pas de runbook associé aux alertes</td><td>Temps de résolution x3</td><td>Lier chaque alerte à un runbook Confluence / Notion</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Latence : p50, p95, p99 par type de requête (détecter les outliers)</li>
-<li>Token usage : input tokens, output tokens, cached tokens (par agent, par task)</li>
-<li>Coût : <code>$</code> par requête, par conversation, par utilisateur</li>
-<li>Taux de succès : complétions réussies vs erreurs vs timeouts</li>
-<li>Tool call frequency : quels outils sont utilisés, combien de fois par session</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Logging structuré</strong> — Émettre des logs exploitables :</li>
-</ol>
-<p>   ```python    import structlog    logger = structlog.get_logger()    logger.info(&quot;agent_step&quot;, conversation_id=cid, step=&quot;tool_call&quot;,                tool=&quot;search_web&quot;, input=query, duration_ms=duration,                tokens_used=tokens, success=True)    ```    Inclure systématiquement : <code>conversation_id</code>, <code>user_id</code>, <code>step</code>, <code>tool</code>, <code>error_code</code>.</p>
-<ol>
-<li><strong>Dashboards</strong> — Visualiser les données en temps réel :</li>
-<ul>
-<li><strong>Grafana</strong> : connecter à Prometheus (métriques) + Loki (logs), templates pré-construits</li>
-<li><strong>LangSmith dashboard</strong> : traces, évaluations, comparaisons de versions</li>
-<li><strong>Langfuse</strong> : dashboard intégré coût + qualité + usage</li>
-<li>Créer une vue &quot;cost per conversation&quot; et &quot;error rate over time&quot; en priorité</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Alerting</strong> — Définir les alertes critiques :</li>
-<ul>
-<li>Error rate spike : &gt; 5% d'erreurs sur 5 minutes → PagerDuty / Slack</li>
-<li>Cost anomaly : dépense &gt; 2x la moyenne quotidienne → alerte email</li>
-<li>Latency degradation : p95 &gt; 10s → alerte équipe</li>
-<li>Safety violations : contenu filtré ou refus inapproprié → alerte immédiate</li>
-<li>Configurer des seuils graduels (warning, critical) pour éviter la fatigue d'alertes</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Replay et debugging</strong> — Diagnostiquer les incidents :</li>
-<ul>
-<li>Conversation replay : rejouer une session complète depuis les traces stockées</li>
-<li>Step-by-step trace : inspecter chaque étape (LLM call, tool call, décision)</li>
-<li>Input reproduction : extraire l'input exact d'un run pour le reproduire en local</li>
-<li>LangSmith / Langfuse : interface graphique pour explorer les traces en détail</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Quality monitoring</strong> — Évaluation continue automatisée :</li>
-<ul>
-<li>LLM-as-judge : utiliser un LLM (Claude, GPT-4) pour noter les réponses (1-5)</li>
-<li>Métriques : correctness, faithfulness, relevance, hallucination rate</li>
-<li>User feedback : intégrer thumbs up/down → lier au <code>conversation_id</code> dans les traces</li>
-<li>Regression detection : comparer qualité avant/après chaque déploiement</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Cost tracking</strong> — Suivre et anticiper les dépenses :</li>
-<ul>
-<li>Granularité : par agent, par conversation, par tool, par utilisateur</li>
-<li>Tendances : daily/weekly cost trends, coût moyen par task type</li>
-<li>Unit economics : coût par tâche complétée, coût par utilisateur actif</li>
-<li>Alertes budgétaires : seuil journalier, seuil mensuel, prévision de dépassement</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Incident response</strong> — Réagir aux incidents de production :</li>
-<ul>
-<li>Runbooks documentés : playbook pour chaque type d'incident courant</li>
-<li>Alert routing : PagerDuty, OpsGenie, ou Slack selon la criticité</li>
-<li>Escalation matrix : qui contacter pour erreurs LLM, sécurité, coût</li>
-<li>Post-mortem structuré : timeline, root cause, mesures correctives, suivi</li>
-</ul>
-</ol>
-<h2>Règles</h2>
-<ul>
-<li>Fournis des exemples de code et configuration concrets pour l'outil de monitoring choisi par l'utilisateur.</li>
-<li>Priorise la sécurité : masquer les PII dans les logs et traces (email, téléphone, données sensibles).</li>
-<li>Documente les pièges courants : sur-logging (coût stockage), alertes trop sensibles (fatigue), traces trop volumineuses.</li>
-<li>Impose un <code>conversation_id</code> unique dès le début pour corréler toutes les données.</li>
-<li>Adapte les dashboards et alertes au cloud provider de l'utilisateur (AWS CloudWatch, Azure Monitor, GCP Cloud Operations).</li>
+<li><strong>FinOps agent</strong> : fixer un budget journalier par agent via CloudWatch Billing Alerts ou Langfuse budgets — bloquer automatiquement si dépassement &gt; 150%.</li>
+<li><strong>Shadow mode</strong> : déployer un nouveau modèle en shadow (reçoit les requêtes sans répondre), comparer métriques qualité avant promotion.</li>
+<li><strong>Versioning des prompts</strong> : taguer chaque trace avec la version du prompt (<code>prompt_version=v2.3</code>) pour isoler les régressions de qualité.</li>
+<li><strong>SLOs explicites</strong> : définir p95 latence &lt; 5s, error rate &lt; 2%, quality score &gt; 3.5/5 — monitorer via Sloth ou Pyrra pour les error budgets.</li>
+<li><strong>Sampling intelligent</strong> : traces à 100% pour les erreurs et les sessions avec feedback négatif, 10% pour les succès nominaux.</li>
 </ul>
 </article>
 </main>

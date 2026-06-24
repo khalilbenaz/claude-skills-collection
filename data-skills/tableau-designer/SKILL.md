@@ -6,18 +6,165 @@ description: Conception de dashboards Tableau incluant calculated fields, LOD ex
 # Tableau Designer
 
 ## Workflow
-1. **Analyser les besoins de visualisation** — Identifier les questions métier auxquelles le dashboard doit répondre. Définir les KPIs, dimensions et métriques clés. Déterminer le public cible (exécutif, opérationnel, analytique) et adapter le niveau de détail en conséquence.
-2. **Préparer les sources de données** — Connecter les sources (bases de données, fichiers, APIs) via Tableau Desktop. Créer les jointures, unions et relations dans le modèle de données. Optimiser les extracts (.hyper) pour les performances. Définir les hiérarchies, groupes et alias pour faciliter l'exploration.
-3. **Concevoir les calculated fields** — Créer les métriques calculées : agrégations conditionnelles (IF/CASE), calculs de table (RUNNING_SUM, RANK, WINDOW_AVG), différences temporelles (DATEDIFF, DATETRUNC). Organiser les calculs dans des dossiers logiques. Tester chaque calcul sur un échantillon de données.
-4. **Maîtriser les LOD expressions** — Utiliser les expressions FIXED, INCLUDE et EXCLUDE pour contrôler le niveau de granularité des calculs indépendamment des filtres et dimensions de la vue. Appliquer pour les ratios, moyennes pondérées, cohortes et comparaisons entre niveaux de détail.
-5. **Construire les visualisations** — Créer les feuilles de travail avec les types de graphiques appropriés (barres, lignes, cartes, scatter, treemap). Appliquer les bonnes pratiques visuelles : palette de couleurs cohérente, étiquettes lisibles, axes bien calibrés, légendes claires. Limiter à 3-4 couleurs par vue.
-6. **Assembler le dashboard** — Organiser les feuilles dans un layout responsive. Configurer les actions de filtrage, de surbrillance et de navigation entre dashboards. Ajouter les filtres interactifs, paramètres et conteneurs dynamiques. Optimiser pour les performances avec le Performance Recorder.
-7. **Implémenter le storytelling** — Créer des Story Points pour guider l'utilisateur à travers une narration analytique. Annoter les insights clés directement sur les visualisations. Configurer les alertes et abonnements sur Tableau Server/Cloud pour la distribution automatique.
-8. **Publier et gouverner** — Déployer sur Tableau Server ou Tableau Cloud. Configurer les permissions par projet et groupe. Planifier les rafraîchissements d'extracts. Certifier les sources de données fiables. Monitorer l'adoption avec les vues d'administration.
 
-## Règles
-- Toujours concevoir les dashboards pour répondre à des questions métier précises et non pour afficher un maximum de données ; chaque visualisation doit avoir un objectif clair.
-- Ne jamais utiliser plus de 7-8 visualisations par dashboard pour maintenir la lisibilité et les performances de rendu.
-- Toujours utiliser les LOD expressions FIXED plutôt que des sous-requêtes ou des blending complexes pour les calculs multi-niveaux de granularité.
-- Préférer les extracts (.hyper) aux connexions live pour les dashboards fréquemment consultés afin d'améliorer les temps de chargement.
-- Toujours tester les dashboards sur les données de production réelles et avec les volumes attendus avant la publication pour éviter les problèmes de performance.
+### 1. Cadrer les besoins avant d'ouvrir Tableau
+
+- Lister les **3-5 questions métier** auxquelles le dashboard doit répondre (ex. « Quel commercial a le meilleur taux de conversion ce mois-ci ? »).
+- Identifier le public cible → adapte le grain :
+  - Exécutif : KPIs agrégés, peu de filtres, mobile-friendly
+  - Opérationnel : drill-down, filtres temporels, export CSV
+  - Analytique : LOD, paramètres dynamiques, tooltips détaillés
+- Esquisser le layout sur papier avant de toucher Tableau (économise 50 % des itérations).
+
+### 2. Préparer et modéliser les données
+
+**Connexions recommandées par cas :**
+
+| Cas | Connexion | Raison |
+|---|---|---|
+| Dashboard haute fréquence (>100 accès/j) | Extract `.hyper` | Cache local, rendu rapide |
+| Données temps-réel (<15 min) | Live | Fraîcheur garantie |
+| Plusieurs tables > 10 M lignes | Relationship (Tableau 2020.2+) | Évite les fanout JOIN |
+| Petits fichiers CSV/Excel | Published Data Source | Gouvernance centralisée |
+
+**Optimisation extract :**
+```
+# Filtres recommandés sur l'extract
+Date >= DATEADD('year', -2, TODAY())    -- limiter la fenêtre temporelle
+[Status] IN ('Active', 'Closed')        -- exclure les statuts obsolètes
+```
+
+Créer les **hiérarchies** (Année > Trimestre > Mois), **groupes** et **alias** directement dans la source pour les réutiliser dans toutes les feuilles.
+
+### 3. Construire les Calculated Fields
+
+**Agrégations conditionnelles :**
+```
+// CA sur les nouveaux clients uniquement
+IF [Client Type] = 'New' THEN [Revenue] ELSE 0 END
+// → toujours agréger ensuite : SUM(calcul_ci-dessus)
+```
+
+**Calculs de table (Table Calculations) :**
+```
+// Croissance mois sur mois
+(SUM([Revenue]) - LOOKUP(SUM([Revenue]), -1)) / ABS(LOOKUP(SUM([Revenue]), -1))
+// Vérifier l'Addressing/Partitioning : Edit Table Calculation > Specific Dimensions
+```
+
+**Calculs temporels courants :**
+```
+DATEDIFF('day', [Order Date], TODAY())          // ancienneté en jours
+DATETRUNC('month', [Order Date])                // tronquer au 1er du mois
+DATENAME('weekday', [Order Date])               // nom du jour
+```
+
+**Organisation :** regrouper les champs calculés dans des dossiers (`Clic droit > Folders`) — KPIs, Ratios, Dates, Flags.
+
+### 4. Maîtriser les LOD Expressions
+
+**Choisir la bonne syntaxe :**
+
+| LOD | Quand l'utiliser | Exemple |
+|---|---|---|
+| `FIXED` | Calcul indépendant des filtres de vue | CA par région quelle que soit la sélection |
+| `INCLUDE` | Ajouter une dimension absente de la vue | Moyenne par client dans une vue par région |
+| `EXCLUDE` | Supprimer une dimension présente | Total hors dimension sélectionnée |
+
+**Exemples copiables :**
+```
+// Premier achat par client (FIXED)
+{ FIXED [Customer ID] : MIN([Order Date]) }
+
+// Ratio client par région (INCLUDE)
+{ INCLUDE [Customer ID] : COUNTD([Order ID]) }
+// → mettre en AVG() dans la vue pour obtenir le nb moyen de commandes/client
+
+// Total global sans la dimension Mois (EXCLUDE)
+{ EXCLUDE [Order Month] : SUM([Revenue]) }
+// → utiliser pour calculer un % du total : SUM([Revenue]) / [Total sans mois]
+```
+
+**Piège fréquent :** les FIXED ignorent les filtres dimensionnels mais **pas les filtres de contexte** (`Add to Context`). Si le résultat semble faux, vérifier l'ordre d'évaluation : Extract → Data Source → Context → FIXED → LOD INCLUDE/EXCLUDE → Table Calc.
+
+### 5. Construire les visualisations
+
+**Choix du type de graphique :**
+
+| Objectif | Type recommandé | À éviter |
+|---|---|---|
+| Comparaison catégories | Bar chart horizontal | Pie chart >5 catégories |
+| Évolution temporelle | Line chart | Bar chart avec >12 périodes |
+| Distribution | Histogram / Box plot | — |
+| Corrélation | Scatter plot | — |
+| Géographie | Filled map / Symbol map | — |
+| Part du tout | Treemap / Stacked bar | Donut chart |
+
+**Bonnes pratiques visuelles :**
+- Palette : max 4 couleurs sémantiques ; utiliser la palette divergente pour les écarts (rouge = négatif, vert = positif).
+- Axes : commencer à 0 pour les barres, laisser libre pour les courbes de tendance.
+- Tooltips enrichis : ajouter des métriques secondaires et un `ATTR([Context info])` pour le diagnostic rapide.
+- Taille de police minimale : 10 pt pour les labels, 12 pt pour les titres.
+
+### 6. Assembler le dashboard
+
+**Layout :**
+- Conteneur vertical principal → conteneurs horizontaux par ligne → feuilles.
+- Activer **Fixed Size** (ex. 1200×800) pour les dashboards embarqués, **Automatic** pour le web responsive.
+- Padding uniforme : 8-12 px entre les objets.
+
+**Actions — types et usages :**
+
+| Type | Déclencheur recommandé | Cas d'usage |
+|---|---|---|
+| Filter Action | Select (hover = trop sensible) | Cross-filter entre graphiques |
+| Highlight Action | Hover | Mettre en valeur une série |
+| URL Action | Menu | Lien vers fiche CRM ou ticketing |
+| Set Action | Select | Paramétrer dynamiquement un LOD |
+
+**Performance Recorder** (`Help > Settings and Performance > Start Performance Recording`) : identifier les feuilles >2 s. Corriger en priorité : réduire le nombre de marques (<5 000 par feuille), simplifier les calculs imbriqués, passer en extract.
+
+### 7. Publier et gouverner sur Tableau Server / Cloud
+
+```bash
+# Publier via tabcmd (CLI)
+tabcmd login -s https://tableau.monentreprise.com -u admin -p MotDePasse
+tabcmd publish "MonDashboard.twbx" -r "Projet/Sous-projet" --overwrite
+
+# Rafraîchissement manuel d'un extract
+tabcmd refreshextracts --workbook "NomClasseur"
+```
+
+**Permissions minimales par rôle :**
+- Viewer : View + Download Image
+- Explorer : View + Download + Filter
+- Creator : View + Edit + Connect
+
+**Certifier une Published Data Source :** `Clic droit > Certification > Ajouter une note` — signal de confiance pour les utilisateurs.
+
+**Planifier les extracts :** Tableau Server > Tasks > Schedule → choisir hors heures ouvrées (ex. 02h00) pour éviter la contention.
+
+---
+
+## Garde-fous & anti-patterns
+
+| Anti-pattern | Conséquence | Correction |
+|---|---|---|
+| JOIN dans la source à la place des Relations (2020.2+) | Fanout → doublons dans les agrégations | Migrer vers le modèle de données avec Relations |
+| LOD FIXED sans filtre de contexte | Calcul sur tout l'historique même si l'utilisateur filtre sur une période | Ajouter le filtre date en Context Filter |
+| Table Calculation sur une vue avec >50 000 lignes | Timeout ou résultat erroné | Précalculer dans la source ou via un extrait agrégé |
+| Dashboard >10 feuilles sur une seule page | Rendu lent, surcharge cognitive | Segmenter en onglets ou dashboards liés par navigation |
+| Utiliser `COUNTD()` sur connexion Live SQL | Requête COUNT DISTINCT coûteuse à chaque interaction | Pré-agréger dans la couche SQL ou passer en extract |
+| Blending multi-sources comme substitut aux joins | Limitations LOD, pas de Table Calc cross-source | Consolider les données en amont (ETL) |
+| Publier un `.twbx` avec données intégrées sensibles | Fuite de données | Utiliser Published Data Source + extract serveur |
+
+---
+
+## Checklist avant publication
+
+- [ ] Toutes les feuilles chargent en <3 s sur un volume de production
+- [ ] Pas de `Null` non intentionnel dans les KPIs (ajouter `ZN()` ou `IFNULL()`)
+- [ ] Les filtres rapides ont `Apply to worksheets: All using this data source`
+- [ ] Les couleurs sont accessibles (test daltonisme : éviter rouge/vert seuls)
+- [ ] Le titre du dashboard indique la date de fraîcheur des données
+- [ ] Les permissions sont configurées par groupe (pas par utilisateur individuel)

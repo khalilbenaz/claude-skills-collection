@@ -96,34 +96,85 @@ cp -r claude-skills-collection/skills/career-salary-negotiation ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Salary Negotiation</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Contexte</strong> : nouveau poste ou augmentation ? Secteur, localisation, expérience.</li>
-<li><strong>Recherche</strong> : fourchettes de salaire du marché (si web search dispo).</li>
-<li><strong>Valorisation</strong> : lister les arguments objectifs :</li>
+<h2>Étape 1 — Collecter le contexte</h2>
+<p>Avant toute stratégie, recueillir les informations clés :</p>
+<pre><code>Scénario          : [ ] Offre d'emploi   [ ] Augmentation interne   [ ] Contre-offre
+Poste/niveau      : …
+Secteur           : …
+Localisation      : …  (coût de la vie = levier important)
+Salaire actuel    : … + variables (bonus, stock, avantages)
+Salaire visé      : … (si déjà une idée)
+Années XP pertinente : …
+Facteurs de levier  : autre offre en main ? demande forte du marché ? promotion imminente ?</code></pre>
+<h2>Étape 2 — Ancrage marché (benchmarking)</h2>
+<p>Sources de données fiables à consulter dans l'ordre de priorité :</p>
+<table><thead><tr><th>Source</th><th>Usage</th><th>Notes</th></tr></thead><tbody><tr><td>Glassdoor / Levels.fyi</td><td>Tech &amp; startups</td><td>Filtrer par ville + taille entreprise</td></tr><tr><td>LinkedIn Salary Insights</td><td>Généraliste</td><td>Nécessite profil complet</td></tr><tr><td>Michael Page / Robert Half</td><td>Europe / MENA</td><td>Rapports annuels PDF téléchargeables</td></tr><tr><td>Offres d'emploi actives</td><td>Marché en temps réel</td><td>Chercher les postes avec salaire affiché</td></tr><tr><td>Réseau pair-à-pair</td><td>Validation qualitative</td><td>Le plus précis si bien ciblé</td></tr></tbody></table>
+<p><strong>Calcul de la fourchette cible :</strong></p>
+<pre><code>plancher = médiane marché × 0.95   ← seuil en dessous duquel refuser
+cible    = médiane marché × 1.10   ← ce qu'on annonce en premier
+idéal    = médiane marché × 1.20   ← ancrage d'ouverture si contexte favorable</code></pre>
+<p>Toujours ouvrir sur l'idéal ou la cible, jamais le plancher. Le plancher ne se révèle jamais.</p>
+<h2>Étape 3 — Construire le dossier d'argumentation</h2>
+<p>Chaque argument doit être <strong>chiffré</strong> ou <strong>vérifiable</strong> :</p>
+<pre><code>[Résultat]   &quot;J'ai réduit le temps de traitement de 40 % sur le module X.&quot;
+[Compétence] &quot;Je maîtrise Kubernetes depuis 3 ans ; vos 2 DevOps actuels n'ont pas cette stack.&quot;
+[Impact]     &quot;Le projet Y que j'ai livré représente 15 % du CA Q4.&quot;
+[Marché]     &quot;Des postes équivalents en télécommunication Tunisie/France tournent entre X et Y.&quot;
+[Fidélité]   &quot;3 ans sans augmentation ; l'inflation cumulée sur la période est de N %.&quot;</code></pre>
+<p>Anti-argument à éviter absolument : &quot;j'ai besoin de cet argent pour…&quot; (raisons personnelles).</p>
+<h2>Étape 4 — Package total (Total Compensation)</h2>
+<p>Le salaire fixe n'est qu'une ligne. Identifier et valoriser :</p>
+<table><thead><tr><th>Élément</th><th>Valeur annuelle estimée</th></tr></thead><tbody><tr><td>Bonus annuel (% garanti vs cible)</td><td>…</td></tr><tr><td>Stock / ESOP (vesting, cliff)</td><td>…</td></tr><tr><td>Jours de congé additionnels</td><td>…</td></tr><tr><td>Télétravail (économies transport)</td><td>…</td></tr><tr><td>Formation / certifications payées</td><td>…</td></tr><tr><td>Assurance santé étendue</td><td>…</td></tr><tr><td>Voiture de fonction / indemnités</td><td>…</td></tr></tbody></table>
+<p>Si le fixe bloque, trader des éléments : &quot;Si le fixe est plafonné à X, je souhaite 5 jours télétravail et un budget formation de 3 000 €/an.&quot;</p>
+<h2>Étape 5 — Script de négociation</h2>
+<h3>Ouverture (offre d'emploi)</h3>
+<pre><code>&quot;Merci pour cette offre. Je suis très intéressé par le poste.
+Après avoir comparé avec le marché et évalué mes apports,
+je me positionne plutôt autour de [CIBLE]. Est-ce négociable ?&quot;</code></pre>
+<h3>Demande d'augmentation</h3>
+<pre><code>&quot;Je voulais qu'on prenne le temps de parler de ma rémunération.
+Sur les 12 derniers mois, j'ai [RÉSULTAT 1] et [RÉSULTAT 2].
+Le marché pour ce profil est entre X et Y.
+Je voudrais qu'on aligne mon salaire sur [CIBLE].&quot;</code></pre>
+<h3>Contre-offre face à une proposition basse</h3>
+<pre><code>&quot;Je comprends vos contraintes. Votre chiffre est à [OFFRE].
+Pour avancer, j'aurais besoin d'arriver à [CIBLE].
+Qu'est-ce qui serait possible de votre côté ?&quot;</code></pre>
+<h3>Technique du silence</h3>
+<p>Après avoir annoncé sa cible → ne pas combler le silence. Laisser l'interlocuteur répondre en premier.</p>
+<h2>Étape 6 — Timing et contexte</h2>
+<table><thead><tr><th>Situation</th><th>Moment optimal</th></tr></thead><tbody><tr><td>Augmentation</td><td>Après un succès mesurable, avant l'entretien annuel</td></tr><tr><td>Offre externe</td><td>Dès réception, avant acceptation formelle</td></tr><tr><td>Contre-offre</td><td>Jamais sous pression émotionnelle ; prendre 24-48 h</td></tr><tr><td>Promotion</td><td>Simultanément au changement de titre, jamais après</td></tr></tbody></table>
+<h2>Étape 7 — Plan B si refus</h2>
+<pre><code>SI refus ferme :
+  → &quot;Je comprends. Peut-on définir ensemble les objectifs qui justifieraient
+     cette revalorisation dans 6 mois ?&quot;
+  → Mettre par écrit les engagements obtenus
+
+SI refus partiel (fixe ok, bonus bloqué) :
+  → Négocier les éléments alternatifs du package
+  → Fixer une révision formelle à date précise
+
+SI refus total sans contrepartie :
+  → Évaluer le signal (plafond de verre ? tension budget ?)
+  → Continuer à interviewer ailleurs ; avoir une offre externe renforce le levier</code></pre>
+<h2>Anti-patterns / Pièges</h2>
 <ul>
-<li>Résultats concrets et chiffrés</li>
-<li>Compétences rares ou demandées</li>
-<li>Responsabilités accrues</li>
-<li>Ancienneté et fidélité</li>
+<li><strong>Annoncer son salaire actuel en premier</strong> : donne le contrôle à l'autre partie. Répondre : &quot;Je préfère m'aligner sur le marché et la valeur du poste.&quot;</li>
+<li><strong>Accepter immédiatement</strong> : toujours demander 24 h minimum, même si l'offre est bonne.</li>
+<li><strong>Menacer sans alternative réelle</strong> : ne jamais agiter la démission si on ne peut pas l'assumer.</li>
+<li><strong>Négocier par email uniquement</strong> : préférer l'oral pour la négociation, email pour la confirmation écrite.</li>
+<li><strong>Oublier l'inflation</strong> : en 2025-2026, intégrer systématiquement l'indice des prix dans le dossier d'augmentation.</li>
+<li><strong>Isoler le salaire fixe</strong> : comparer le package complet (fixe + variable + avantages).</li>
+<li><strong>Justifier par les besoins perso</strong> : l'argument doit toujours reposer sur la valeur apportée, pas sur les charges personnelles.</li>
 </ul>
-<li><strong>Stratégie</strong> :</li>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Fourchette à annoncer (plancher, cible, idéal)</li>
-<li>Timing optimal</li>
-<li>Éléments négociables hors salaire (télétravail, formation, bonus, congés…)</li>
+<li>Les offres avec <strong>fourchette affichée</strong> sont de plus en plus courantes (obligation légale en UE) : positionner sa demande dans le tiers supérieur.</li>
+<li>Dans les secteurs tech, Levels.fyi et les communautés Slack sectorielles donnent des données peer-to-peer plus précises que les agrégateurs classiques.</li>
+<li>La <strong>négociation asynchrone</strong> (Slack/email) est normalisée post-pandémie ; adapter le script écrit avec moins de silence et plus de reformulation explicite.</li>
+<li>En contexte MENA (Tunisie, Maroc, EAU) : la première offre est souvent délibérément basse ; contrer est attendu et non perçu comme agressif.</li>
 </ul>
-<li><strong>Script</strong> : phrases clés pour chaque étape de la conversation.</li>
-<li><strong>Plan B</strong> : que faire si c'est non.</li>
-</ol>
-<h2>Règles</h2>
-<ul>
-<li>Base les fourchettes sur des données de marché, pas des suppositions.</li>
-<li>Propose un ton assertif mais respectueux.</li>
-<li>Ne promet pas de résultat.</li>
-<li>Adapte au contexte culturel.</li>
-</ul>
-<blockquote>⚠️ Ces conseils sont généraux. Chaque situation de négociation est unique et dépend de nombreux facteurs.</blockquote>
+<blockquote>Ces conseils sont généraux. Chaque situation dépend du secteur, du rapport de force et du contexte culturel spécifique.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

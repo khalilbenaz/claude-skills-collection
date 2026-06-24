@@ -96,35 +96,190 @@ cp -r claude-skills-collection/skills/agent-claude-code-extension-builder ~/.cla
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Claude Code Extension Builder</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identifier le besoin d'extension</strong> — Analyser le workflow de l'utilisateur pour déterminer le type d'extension à créer : skill (fichier SKILL.md avec instructions), slash command custom, hook de pre/post-traitement, ou intégration MCP pour connecter des outils externes.</li>
-</ol>
-<ol>
-<li><strong>Concevoir la structure du skill</strong> — Créer le fichier SKILL.md avec le frontmatter YAML (name, description avec triggers), le workflow détaillé en étapes numérotées, et les règles de comportement. Définir les mots-clés de déclenchement précis.</li>
-</ol>
-<ol>
-<li><strong>Configurer les hooks Claude Code</strong> — Implémenter les hooks dans <code>.claude/settings.json</code> ou <code>claude_desktop_config.json</code> pour intercepter les événements : pre-commit review, post-file-change actions, custom validation rules, et notifications automatiques.</li>
-</ol>
-<ol>
-<li><strong>Intégrer des serveurs MCP</strong> — Connecter des outils externes via le protocole MCP : configurer les serveurs dans la configuration Claude, définir les outils disponibles, et documenter les capabilities exposées pour enrichir les capacités de Claude Code.</li>
-</ol>
-<ol>
-<li><strong>Développer les commandes slash</strong> — Créer des commandes slash personnalisées qui combinent plusieurs skills, définir les paramètres attendus, les validations d'entrée, et les formats de sortie standardisés.</li>
-</ol>
-<ol>
-<li><strong>Organiser la collection de skills</strong> — Structurer les skills dans des catégories logiques (dev, devops, data, security), maintenir un index centralisé, et définir les conventions de nommage et de documentation pour la cohérence de la collection.</li>
-</ol>
-<ol>
-<li><strong>Tester et itérer</strong> — Valider chaque extension dans des scénarios réels, vérifier que les triggers se déclenchent correctement, tester les cas limites, et collecter les retours d'utilisation pour améliorer les instructions.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de décision — quel type d'extension créer ?</h2>
+<table><thead><tr><th>Besoin</th><th>Type d'extension</th></tr></thead><tbody><tr><td>Réutiliser un workflow de prompt</td><td><strong>Skill</strong> (SKILL.md)</td></tr><tr><td>Déclencher une action sur événement Claude</td><td><strong>Hook</strong> (<code>.claude/settings.json</code>)</td></tr><tr><td>Exposer un outil externe (DB, API, fs)</td><td><strong>Serveur MCP</strong></td></tr><tr><td>Composer plusieurs skills en une commande</td><td><strong>Slash command custom</strong></td></tr></tbody></table>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Analyser le besoin</h3>
 <ul>
-<li>Chaque skill doit avoir des triggers précis et non ambigus pour éviter les déclenchements involontaires.</li>
-<li>Rédige les instructions du skill comme des directives claires et actionnables — pas de formulations vagues ou conditionnelles.</li>
-<li>Teste systématiquement chaque extension avec des cas d'usage réels avant de la publier dans la collection.</li>
-<li>Documente les dépendances externes (serveurs MCP, outils CLI) nécessaires au fonctionnement de l'extension.</li>
-<li>Maintiens la compatibilité avec les mises à jour de Claude Code en suivant les conventions officielles de la documentation.</li>
+<li>Identifier le workflow répétitif ou l'outil à connecter.</li>
+<li>Répondre à : <em>déclenchement automatique ou à la demande ? sortie texte, fichier, ou action ?</em></li>
+<li>Choisir le type (tableau ci-dessus) avant toute implémentation.</li>
+</ul>
+<hr>
+<h3>2. Créer un Skill (SKILL.md)</h3>
+<p><strong>Structure minimale obligatoire :</strong></p>
+<pre><code class="lang-markdown">---
+name: mon-skill                    # kebab-case, unique dans la collection
+description: Une ligne, termine avec les phrases de déclenchement entre guillemets. Se déclenche avec &quot;mot-clé A&quot;, &quot;mot-clé B&quot;.
+---
+
+# Mon Skill
+
+## Workflow
+
+1. **Étape 1** — description actionnable.
+2. **Étape 2** — ...
+
+## Règles
+
+- Règle 1 (obligatoire, concise).</code></pre>
+<p><strong>Bonnes pratiques :</strong></p>
+<ul>
+<li><code>name</code> = identifiant technique → dossier <code>agent-skills/&lt;category&gt;/&lt;name&gt;/SKILL.md</code>.</li>
+<li><code>description</code> : ≤ 2 phrases ; les triggers entre guillemets couvrent les synonymes naturels de l'utilisateur.</li>
+<li>Corps : 80-180 lignes, pas de section <code>## Communication Rules</code> (ajoutée automatiquement).</li>
+<li>Langue : français, termes techniques en anglais.</li>
+</ul>
+<p><strong>Arborescence collection :</strong></p>
+<pre><code>agent-skills/
+  dev/
+    mon-skill/
+      SKILL.md
+  devops/
+    ...</code></pre>
+<hr>
+<h3>3. Configurer des Hooks</h3>
+<p>Les hooks interceptent les événements Claude Code pour automatiser des actions.</p>
+<p><strong>Fichier :</strong> <code>.claude/settings.json</code> (projet) ou <code>~/.claude/settings.json</code> (global).</p>
+<pre><code class="lang-json">{
+  &quot;hooks&quot;: {
+    &quot;PreToolUse&quot;: [
+      {
+        &quot;matcher&quot;: &quot;Bash&quot;,
+        &quot;hooks&quot;: [
+          {
+            &quot;type&quot;: &quot;command&quot;,
+            &quot;command&quot;: &quot;echo '[hook] commande bash interceptée'&quot;
+          }
+        ]
+      }
+    ],
+    &quot;PostToolUse&quot;: [
+      {
+        &quot;matcher&quot;: &quot;Write&quot;,
+        &quot;hooks&quot;: [
+          {
+            &quot;type&quot;: &quot;command&quot;,
+            &quot;command&quot;: &quot;npx prettier --write $CLAUDE_TOOL_INPUT_FILE_PATH&quot;
+          }
+        ]
+      }
+    ],
+    &quot;Stop&quot;: [
+      {
+        &quot;hooks&quot;: [
+          {
+            &quot;type&quot;: &quot;command&quot;,
+            &quot;command&quot;: &quot;node scripts/notify-slack.js&quot;
+          }
+        ]
+      }
+    ]
+  }
+}</code></pre>
+<p><strong>Événements disponibles :</strong> <code>PreToolUse</code>, <code>PostToolUse</code>, <code>Notification</code>, <code>Stop</code>.</p>
+<p><strong>Variables d'environnement injectées :</strong></p>
+<ul>
+<li><code>CLAUDE_TOOL_NAME</code> — nom de l'outil utilisé</li>
+<li><code>CLAUDE_TOOL_INPUT_FILE_PATH</code> — chemin fichier (si applicable)</li>
+<li><code>CLAUDE_SESSION_ID</code> — id de session en cours</li>
+</ul>
+<p><strong>Cas d'usage typiques :</strong></p>
+<ul>
+<li><code>PostToolUse</code> + <code>Write</code> → auto-format, lint, tests unitaires.</li>
+<li><code>PreToolUse</code> + <code>Bash</code> → bloquer des commandes dangereuses (<code>rm -rf</code>).</li>
+<li><code>Stop</code> → notification Slack/Teams à la fin de chaque session.</li>
+</ul>
+<hr>
+<h3>4. Intégrer un serveur MCP</h3>
+<p><strong>Configuration dans <code>~/.claude/claude_desktop_config.json</code> :</strong></p>
+<pre><code class="lang-json">{
+  &quot;mcpServers&quot;: {
+    &quot;mon-serveur&quot;: {
+      &quot;command&quot;: &quot;node&quot;,
+      &quot;args&quot;: [&quot;/chemin/vers/mon-serveur/index.js&quot;],
+      &quot;env&quot;: {
+        &quot;API_KEY&quot;: &quot;xxxx&quot;
+      }
+    }
+  }
+}</code></pre>
+<p><strong>Squelette de serveur MCP (Node.js + SDK officiel) :</strong></p>
+<pre><code class="lang-typescript">import { Server } from &quot;@modelcontextprotocol/sdk/server/index.js&quot;;
+import { StdioServerTransport } from &quot;@modelcontextprotocol/sdk/server/stdio.js&quot;;
+
+const server = new Server({ name: &quot;mon-serveur&quot;, version: &quot;1.0.0&quot; }, {
+  capabilities: { tools: {} }
+});
+
+server.setRequestHandler(&quot;tools/list&quot;, async () =&gt; ({
+  tools: [{
+    name: &quot;mon_outil&quot;,
+    description: &quot;Description courte de l'outil&quot;,
+    inputSchema: {
+      type: &quot;object&quot;,
+      properties: { param: { type: &quot;string&quot;, description: &quot;Paramètre&quot; } },
+      required: [&quot;param&quot;]
+    }
+  }]
+}));
+
+server.setRequestHandler(&quot;tools/call&quot;, async (request) =&gt; {
+  if (request.params.name === &quot;mon_outil&quot;) {
+    const result = await faireQuelqueChose(request.params.arguments.param);
+    return { content: [{ type: &quot;text&quot;, text: result }] };
+  }
+});
+
+await server.connect(new StdioServerTransport());</code></pre>
+<p><strong>Vérifier la connexion :</strong></p>
+<pre><code class="lang-bash">claude mcp list          # lister les serveurs configurés
+claude mcp get mon-serveur  # détails et outils exposés</code></pre>
+<hr>
+<h3>5. Créer une Slash Command custom</h3>
+<p>Les slash commands combinent plusieurs skills ou enchaînent des instructions complexes.</p>
+<p><strong>Emplacement :</strong> <code>.claude/commands/&lt;nom-commande&gt;.md</code></p>
+<pre><code class="lang-markdown"># /mon-workflow
+
+Effectue les étapes suivantes dans l'ordre :
+
+1. Appelle le skill `code-review` sur les fichiers modifiés.
+2. Génère un changelog depuis les commits non publiés.
+3. Propose un bump de version sémantique.
+
+Arguments : `$ARGUMENTS` (optionnels, transmis à chaque étape).</code></pre>
+<p><strong>Invoquer dans Claude Code :</strong> <code>/mon-workflow</code> ou <code>/mon-workflow fix bug login</code>.</p>
+<hr>
+<h3>6. Tester l'extension</h3>
+<pre><code class="lang-bash"># Lancer Claude Code en mode verbeux pour voir les hooks déclenchés
+claude --debug
+
+# Tester un skill manuellement
+claude &quot;utilise le skill mon-skill pour analyser ce fichier&quot;
+
+# Valider la structure frontmatter d'un SKILL.md
+head -5 agent-skills/dev/mon-skill/SKILL.md</code></pre>
+<p><strong>Checklist de validation :</strong></p>
+<ul>
+<li>[ ] Les triggers déclenchent le skill et pas un autre.</li>
+<li>[ ] Le workflow est exécutable sans ambiguïté.</li>
+<li>[ ] Les hooks ne cassent pas les outils existants.</li>
+<li>[ ] Le serveur MCP répond dans <code>claude mcp get</code>.</li>
+<li>[ ] La slash command passe les arguments correctement.</li>
+</ul>
+<hr>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correctif</th></tr></thead><tbody><tr><td>Triggers trop génériques (<code>&quot;aide&quot;</code>, <code>&quot;code&quot;</code>)</td><td>Déclenchements non voulus</td><td>Triggers spécifiques de 2-3 mots</td></tr><tr><td>Hook sans gestion d'erreur</td><td>Claude bloqué si le script plante</td><td>`command</td><td></td><td>true<code> ou </code>try/catch`</td></tr><tr><td>MCP server avec timeout élevé</td><td>Ralentissement de toutes les sessions</td><td>Timeout ≤ 5 s, async non-bloquant</td></tr><tr><td>Sections <code>## Communication Rules</code> dans le corps</td><td>Doublon cassant le skill</td><td>Supprimer — section auto-injectée</td></tr><tr><td><code>name</code> avec espaces ou majuscules</td><td>Problème de résolution du skill</td><td>Toujours kebab-case</td></tr><tr><td>Skill &gt; 200 lignes</td><td>Dilution des instructions clés</td><td>Découper en sous-skills dédiés</td></tr><tr><td>Pas de <code>required</code> dans le schema MCP</td><td>Paramètres silencieusement ignorés</td><td>Toujours déclarer <code>required: [...]</code></td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Versionner</strong> la collection skills dans Git avec un <code>CHANGELOG.md</code> par skill modifié.</li>
+<li><strong>Un dossier = un skill</strong> : pas de SKILL.md racine regroupant plusieurs skills.</li>
+<li><strong>Nommer les hooks</strong> de façon unique pour faciliter le debug (<code>&quot;id&quot;: &quot;format-on-write&quot;</code>).</li>
+<li><strong>Préférer <code>stdio</code> au <code>http</code></strong> pour les serveurs MCP locaux (pas de gestion de port).</li>
+<li><strong>Documenter les dépendances</strong> dans le SKILL.md lui-même (ex: <code># Prérequis : node ≥ 20, jq</code>).</li>
+<li><strong>Tester en isolation</strong> : désactiver les autres hooks pour valider un hook seul.</li>
 </ul>
 </article>
 </main>

@@ -7,58 +7,221 @@ description: Construction d'agents de coding autonomes capables de lire, écrire
 
 ## Quand utiliser ce skill
 
-Utilise ce skill lorsque tu dois concevoir ou implémenter un agent autonome capable d'interagir avec une base de code : lire des fichiers, écrire ou modifier du code, exécuter des commandes, gérer des branches Git et faire tourner des tests. S'applique aussi bien à la création d'un agent SWE-bench-style qu'à un assistant développeur intégré dans un IDE ou un pipeline CI/CD.
+Conception ou implémentation d'un agent autonome qui interagit avec une base de code : lecture/écriture de fichiers, exécution de commandes, gestion Git, tests automatisés. S'applique à un agent SWE-bench-style, un assistant intégré dans un IDE, ou un pipeline CI/CD.
 
-## Workflow
+## Critères d'architecture : mono-agent vs multi-agents
 
-1. **Architecture générale** — Définis les composantes principales : accès au système de fichiers (`file system access`), sandbox d'exécution de code, interface Git, runner de tests et couche LLM. Choisis entre une architecture mono-agent ou multi-agents (planner + executor + reviewer).
+| Critère | Mono-agent | Multi-agents (planner + executor + reviewer) |
+|---|---|---|
+| Tâche simple (<5 fichiers) | ✅ | Surcharge inutile |
+| Tâche complexe, multi-modules | ❌ fragile | ✅ |
+| Budget tokens serré | ✅ | ❌ |
+| Cohérence inter-fichiers critique | ❌ | ✅ |
 
-2. **Définition des tools du coding agent** — Implémente les outils fondamentaux : `read_file(path)`, `write_file(path, content)`, `run_command(cmd)`, `search_code(query, repo)`, `git_diff()`, `run_tests(suite)`. Chaque tool doit renvoyer un résultat structuré (stdout, stderr, exit code).
+## Workflow en 10 étapes
 
-   ```python
-   # Exemple de tool run_command avec timeout
-   import subprocess
-   def run_command(cmd: str, timeout: int = 30) -> dict:
-       result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
-       return {"stdout": result.stdout, "stderr": result.stderr, "returncode": result.returncode}
-   ```
+### 1. Définir les tools fondamentaux
 
-3. **Sandbox d'exécution sécurisée** — Isole l'exécution du code dans un environnement contrôlé : Docker container (image minimale), [E2B](https://e2b.dev/) sandbox, ou local sandbox avec restrictions réseau. Applique des limites de CPU/mémoire, bloque les appels systèmes dangereux, et journalise toutes les opérations.
+Chaque tool renvoie un dict structuré (stdout, stderr, exit code). Pas d'exception silencieuse.
 
-4. **Planning strategy (plan-before-code)** — Avant toute modification, l'agent doit : (a) explorer et indexer le codebase, (b) comprendre la demande en profondeur, (c) générer un plan structuré (quels fichiers modifier, dans quel ordre, quels tests écrire). Utilise un LLM fort (Claude Opus, GPT-4o) pour la phase de planification.
+```python
+import subprocess, pathlib
 
-5. **Code generation contextuelle** — Génère du code en tenant compte du style existant (indentation, naming conventions, imports), des types présents, du framework utilisé. Injecte les fichiers pertinents dans le contexte via un mécanisme de retrieval (embeddings + similarité cosinus sur le repo).
+def read_file(path: str) -> dict:
+    p = pathlib.Path(path)
+    return {"content": p.read_text(encoding="utf-8"), "exists": p.exists()}
 
-   ```python
-   # Exemple de prompt de génération contextualisé
-   system_prompt = """Tu es un agent développeur expert. 
-   Voici les fichiers pertinents du repo : {relevant_files}
-   Style de code détecté : {code_style}
-   Génère du code cohérent avec l'existant."""
-   ```
+def write_file(path: str, content: str) -> dict:
+    pathlib.Path(path).write_text(content, encoding="utf-8")
+    return {"written": True, "path": path}
 
-6. **Testing loop (TDD automatique)** — Applique un cycle strict : écrire les tests unitaires → générer le code → exécuter les tests → analyser les erreurs → corriger → itérer jusqu'au vert. Limite les itérations à 5-10 pour éviter les boucles infinies. Log chaque tentative.
+def run_command(cmd: str, timeout: int = 30) -> dict:
+    r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
+    return {"stdout": r.stdout, "stderr": r.stderr, "returncode": r.returncode}
 
-7. **Code review intégré** — Avant tout commit, l'agent effectue une auto-review : (a) lint avec `ruff`/`eslint`, (b) vérification de sécurité avec `bandit`/`semgrep`, (c) style check, (d) review LLM pour la cohérence logique. Bloque le commit si des issues critiques sont détectées.
+def run_tests(suite: str = ".") -> dict:
+    return run_command(f"pytest {suite} --tb=short -q")
+```
 
-8. **Git workflow automatisé** — Gère le cycle Git complet : création de branche (`feat/agent-task-{id}`), commits atomiques avec messages conventionnels (`feat:`, `fix:`, `refactor:`), création de PR avec description auto-générée, résumé du diff. Utilise `gitpython` ou l'API GitHub/GitLab.
+Outils minimaux requis : `read_file`, `write_file`, `run_command`, `search_code`, `git_diff`, `run_tests`.
 
-   ```python
-   import git
-   repo = git.Repo(".")
-   repo.git.checkout("-b", f"feat/agent-task-{task_id}")
-   repo.index.add(modified_files)
-   repo.index.commit(f"feat: {task_description[:72]}")
-   ```
+### 2. Sandbox d'exécution (obligatoire en production)
 
-9. **Context management et indexation** — Maintiens un index du codebase avec embeddings (OpenAI, Voyage, ou local avec `sentence-transformers`). Utilise un dependency graph (AST parsing) pour identifier les fichiers impactés par une modification. Implémente un mécanisme de smart retrieval pour limiter le contexte envoyé au LLM.
+**Docker** (auto-hébergé) :
+```bash
+docker run --rm \
+  --network=none \          # pas d'accès réseau
+  --memory=512m \
+  --cpus=1 \
+  --read-only \
+  -v $(pwd)/workspace:/workspace \
+  python:3.12-slim \
+  bash -c "cd /workspace && python agent_task.py"
+```
 
-10. **Évaluation et métriques** — Benchmark l'agent sur [SWE-bench](https://swebench.com/) (résolution de vraies issues GitHub), HumanEval pour la génération, et des métriques internes : task completion rate, taux de tests verts au premier essai, nombre d'itérations moyen, taux de régression introduit.
+**E2B** (sandbox managé, plus simple) :
+```python
+from e2b_code_interpreter import Sandbox
+with Sandbox() as sbx:
+    result = sbx.run_code("print('hello')")
+    print(result.text)
+```
 
-## Règles
+Choix : E2B si tu veux du managed sans infra ; Docker si tu veux le contrôle total et l'air-gap réseau.
 
-- **Toujours sandboxer** : n'exécute jamais de code généré par l'agent directement sur la machine hôte sans isolation. Utilise Docker ou E2B en production.
-- **Plan avant code** : un agent qui code sans planifier produit du code incohérent. Exige toujours une phase de réflexion et de plan structuré avant la première ligne générée.
-- **Tests obligatoires** : tout code généré doit être accompagné de tests. Le taux de couverture cible est ≥ 80%. Refuse de committer du code non testé.
-- **Limiter les itérations** : implémente un mécanisme de timeout et de compteur d'itérations pour éviter les boucles infinies coûteuses. Maximum 10 tentatives par tâche.
-- **Frameworks recommandés** : [LangChain Agents](https://python.langchain.com/), [AutoGen](https://microsoft.github.io/autogen/), [SWE-agent](https://swe-agent.com/), [Aider](https://aider.chat/), [E2B](https://e2b.dev/) pour le sandboxing. Priorise la fiabilité sur la performance brute.
+### 3. Indexation et retrieval du codebase
+
+Avant toute génération, l'agent doit connaître la structure :
+
+```python
+# Indexation AST pour Python — récupère les symboles exportés
+import ast, pathlib
+
+def index_repo(root: str) -> dict[str, list[str]]:
+    index = {}
+    for f in pathlib.Path(root).rglob("*.py"):
+        tree = ast.parse(f.read_text())
+        index[str(f)] = [n.name for n in ast.walk(tree)
+                         if isinstance(n, (ast.FunctionDef, ast.ClassDef))]
+    return index
+```
+
+Pour le retrieval sémantique : embeddings `sentence-transformers` (local) ou Voyage/OpenAI (API). Chunk par fonction, pas par fichier entier. Injecte les 3-5 fichiers les plus pertinents dans le contexte.
+
+### 4. Phase plan-before-code (non négociable)
+
+Format de plan attendu en sortie LLM avant toute écriture :
+
+```
+## Plan
+1. Fichiers à lire : [liste]
+2. Fichiers à créer/modifier : [liste + raison]
+3. Tests à écrire : [liste]
+4. Ordre d'exécution : [séquence]
+5. Risques identifiés : [liste]
+```
+
+Utilise un modèle fort (Claude Opus / GPT-4o) pour la planification, un modèle plus rapide pour l'exécution. Sépare les deux appels.
+
+### 5. Génération de code contextualisée
+
+```python
+system_prompt = """
+Tu es un agent développeur expert. Règles strictes :
+- Respecte le style de code existant (indentation, naming, imports).
+- N'introduis aucune dépendance non listée dans requirements.txt/package.json.
+- Génère TOUJOURS les tests en même temps que le code.
+
+Fichiers pertinents du repo :
+{relevant_files}
+
+Style détecté : {code_style}  # extrait via ruff/pylint
+"""
+```
+
+Passe toujours le diff attendu, pas juste la description de la tâche.
+
+### 6. Boucle TDD automatique
+
+```
+écrire tests → générer code → run tests → analyser erreurs → corriger → itérer
+```
+
+```python
+MAX_ITER = 8
+for attempt in range(MAX_ITER):
+    code = llm_generate(plan, context)
+    write_file("solution.py", code)
+    result = run_tests("tests/")
+    if result["returncode"] == 0:
+        break
+    context += f"\n## Erreur tentative {attempt+1}\n{result['stderr']}"
+else:
+    raise RuntimeError("Agent bloqué après 8 tentatives — escalade manuelle requise")
+```
+
+### 7. Code review automatique avant commit
+
+```bash
+# Pipeline de review — exécute dans l'ordre, bloque au premier échec critique
+ruff check . --select=E,W,F          # lint Python
+bandit -r . -ll                       # sécurité (low severity ignorée)
+semgrep --config=auto .               # patterns de vulnérabilité
+```
+
+```python
+def auto_review(files: list[str]) -> bool:
+    critical_issues = []
+    for tool, cmd in [("ruff", "ruff check {f}"), ("bandit", "bandit {f} -ll")]:
+        for f in files:
+            r = run_command(cmd.format(f=f))
+            if r["returncode"] != 0:
+                critical_issues.append(f"{tool}: {r['stdout']}")
+    return len(critical_issues) == 0, critical_issues
+```
+
+### 8. Git workflow automatisé
+
+```python
+import git
+
+def agent_commit(task_id: str, task_desc: str, modified_files: list[str]) -> str:
+    repo = git.Repo(".")
+    branch = f"feat/agent-{task_id}"
+    repo.git.checkout("-b", branch)
+    repo.index.add(modified_files)
+    msg = f"feat: {task_desc[:72]}\n\nGenerated by coding-agent v2"
+    repo.index.commit(msg)
+    return branch
+```
+
+Convention de commits : `feat:`, `fix:`, `refactor:`, `test:` — jamais de commit fourre-tout. Un commit = une tâche atomique.
+
+### 9. Observabilité et métriques
+
+Instrumente dès le début, pas en post-prod :
+
+```python
+import time, logging
+
+def traced_tool_call(tool_name: str, fn, *args, **kwargs):
+    start = time.perf_counter()
+    result = fn(*args, **kwargs)
+    elapsed = time.perf_counter() - start
+    logging.info({"tool": tool_name, "duration_s": elapsed,
+                  "success": result.get("returncode", 0) == 0})
+    return result
+```
+
+Métriques clés : task completion rate, taux de vert au 1er essai, nb d'itérations moyen, taux de régression introduit.
+
+### 10. Benchmark et évaluation
+
+- **SWE-bench** : résolution de vraies issues GitHub — référence du secteur.
+- **HumanEval / MBPP** : génération de fonctions isolées.
+- **Tests internes** : crée un jeu de 20 tâches représentatives de ton domaine, rejoue-les à chaque release.
+
+Seuils cibles pour un agent production-ready : >40% SWE-bench verified, >85% tests verts au 1er essai, <5 itérations en moyenne.
+
+## Garde-fous et anti-patterns
+
+| Anti-pattern | Conséquence | Remède |
+|---|---|---|
+| Exécuter du code généré sans sandbox | RCE, destruction de données | Docker / E2B obligatoire |
+| Contexte trop large (>100 fichiers) | Hallucinations, lenteur | Retrieval + top-5 fichiers max |
+| Pas de plan structuré | Code incohérent, régression | Étape plan non négociable |
+| Boucle sans limite d'itérations | Coût infini, blocage | MAX_ITER=8 + escalade |
+| Commit multi-tâches | Diff illisible, rollback impossible | Un commit = une tâche atomique |
+| Review LLM-only (pas d'outil statique) | Bugs et vulnérabilités passent | ruff + bandit + semgrep en pipeline |
+| Modèle unique pour plan + exécution | Gaspillage de tokens | Plan=modèle fort, exec=modèle rapide |
+
+## Frameworks recommandés (2026)
+
+- **SWE-agent** : référence open-source pour agents SWE-bench.
+- **Aider** : CLI mature, intègre git nativement, support multi-modèle.
+- **AutoGen** : multi-agents, bonne orchestration planner/executor.
+- **E2B** : sandboxing managé, prêt en 5 min, facturation à l'usage.
+- **LangChain Agents** : si tu as déjà l'écosystème LangChain.
+- **Claude Code SDK** (Anthropic) : pour intégrer directement dans des pipelines Claude.
+
+Priorise **fiabilité** (sandbox, tests, limites d'itérations) avant performance brute.

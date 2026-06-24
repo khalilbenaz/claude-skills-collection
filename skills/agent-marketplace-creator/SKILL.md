@@ -6,37 +6,273 @@ description: Création de marketplaces et registres d'agents IA réutilisables e
 # Agent Marketplace Creator
 
 ## Quand utiliser ce skill
-Utilise ce skill lorsque tu dois créer une plateforme de distribution d'agents IA — qu'il s'agisse d'un registre interne d'entreprise, d'un marketplace public, d'une bibliothèque de templates réutilisables ou d'une place de marché avec monétisation. Il couvre l'architecture technique, la gouvernance, la découverte et la distribution des agents.
 
-## Workflow
+Utilise ce skill pour concevoir une plateforme de distribution d'agents IA : registre interne d'entreprise, marketplace public, bibliothèque de templates réutilisables ou place de marché avec monétisation. Il couvre l'architecture, le packaging, la gouvernance et la distribution.
 
-1. **Architecture du marketplace** — Concevoir les composants fondamentaux : Registry (base de données des agents avec métadonnées), Versioning (gestion des versions et compatibilité), Discovery (moteur de recherche et recommandation), Deployment (infrastructure d'exécution des agents), Billing (facturation et quotas). Choisir entre architecture centralisée (contrôle total, déploiement simplifié) ou fédérée (agents hébergés chez leurs créateurs, marketplace comme couche de découverte).
+---
 
-2. **Packaging des agents** — Définir un format de packaging standardisé pour tous les agents du marketplace. Structure minimale : `agent.yaml` (métadonnées, version, dépendances), `system_prompt.md` (instructions de l'agent), `tools.json` (outils requis et leurs configs), `config.schema.json` (paramètres configurables), `README.md` (documentation utilisateur), `tests/` (suite de tests fournie par le créateur). Publier un SDK pour faciliter la création de packages conformes.
+## Étape 1 — Choisir l'architecture cible
 
-3. **Découverte des agents** — Implémenter un moteur de découverte multi-dimensionnel : recherche full-text sur nom, description et tags, filtres par catégorie (productivité, données, communication, code, etc.), tri par popularité/rating/date, recommandations personnalisées basées sur l'historique d'usage, agents similaires ("voir aussi"). Indexer les agents avec un moteur comme Elasticsearch ou Typesense pour des recherches rapides et pertinentes.
+**Critère de décision :**
 
-4. **Versionnage et compatibilité** — Appliquer le semantic versioning (MAJOR.MINOR.PATCH) : MAJOR pour les changements d'API incompatibles, MINOR pour les nouvelles fonctionnalités rétrocompatibles, PATCH pour les corrections. Maintenir des guides de migration entre versions majeures. Définir une politique de deprecation (annonce 90 jours avant, support 6 mois après). Tester la compatibilité ascendante automatiquement dans la CI du marketplace.
+| Besoin | Architecture |
+|---|---|
+| Contrôle total, déploiement simplifié | Centralisée (registry + runtime hébergés) |
+| Agents hébergés chez leurs créateurs | Fédérée (marketplace = couche discovery) |
+| Usage interne entreprise uniquement | Registry privé (Artifact Hub, Harbor, custom) |
+| Monétisation publique | SaaS centralisé avec billing intégré |
 
-5. **Configuration et customisation** — Permettre aux utilisateurs de personnaliser les agents via un schéma de configuration validé : paramètres déclarés dans `config.schema.json` (type, valeurs par défaut, description, validation), secrets gérés séparément via un vault, sélection du modèle LLM (si l'agent supporte plusieurs modèles), tuning comportemental (niveau de verbosité, langue, ton). Fournir une UI de configuration avec validation temps réel.
+**Composants obligatoires :**
+- **Registry** : base de données des agents + métadonnées indexées
+- **Versioning** : semantic versioning strict, compatibilité ascendante
+- **Discovery** : search full-text + filtres + recommandations
+- **Runtime** : sandbox isolée par agent, ressources déclarées
+- **IAM** : auth créateur (publication) séparée de auth utilisateur (consommation)
 
-6. **Options de déploiement** — Offrir plusieurs modes d'accès selon les besoins : Managed (le marketplace héberge et exécute l'agent, zero-ops pour l'utilisateur), Self-hosted (package exportable pour déploiement dans l'infrastructure utilisateur), API endpoint (l'agent est exposé comme une API REST/streaming), Embedded (SDK pour intégrer l'agent dans une application existante). Documenter clairement les trade-offs de chaque option.
+---
 
-7. **Authentification et autorisation** — Implémenter un système d'accès robuste : API keys pour l'accès programmatique, OAuth2 pour l'intégration dans des applications tierces, gestion des tiers d'usage (free, pro, enterprise) avec rate limiting par tier, contrôle d'accès aux agents privés ou en beta, audit log de tous les accès. Séparer clairement l'authentification du créateur d'agent (publication) de celle de l'utilisateur final (consommation).
+## Étape 2 — Format de packaging standardisé
 
-8. **Facturation et monétisation** — Proposer des modèles économiques flexibles : Pay-per-use (facturation à l'appel ou au token), Subscription (accès illimité mensuel/annuel), Freemium (quota gratuit + limite payante), Revenue sharing (créateurs perçoivent un % des revenus générés par leurs agents). Intégrer Stripe pour la facturation, implémenter des webhooks pour les événements de facturation, fournir des tableaux de bord de revenus aux créateurs.
+Structure minimale d'un agent publiable :
 
-9. **Assurance qualité** — Définir un processus de validation avant publication : review automatique (lint du package, validation du schema, tests fournis passants, scan de sécurité des prompts), review manuelle pour les agents avec accès aux données sensibles ou niveaux de permission élevés, benchmarks de performance obligatoires (latence, précision sur dataset standard), security audit pour les agents en accès entreprise. Maintenir un score de qualité public par agent.
+```
+my-agent/
+├── agent.yaml          # manifeste principal
+├── system_prompt.md    # instructions de l'agent
+├── tools.json          # outils requis et configs
+├── config.schema.json  # paramètres configurables (JSON Schema)
+├── README.md           # documentation utilisateur
+└── tests/
+    ├── fixtures/       # inputs de test
+    └── expected/       # outputs attendus
+```
 
-10. **Communauté** — Construire l'écosystème autour du marketplace : système de notation et reviews utilisateurs (1-5 étoiles, commentaires), issues et bug reports publics ou privés selon la politique du créateur, fork d'agents existants pour créer des variantes, documentation collaborative (wiki), programme de certification pour les agents de haute qualité, leaderboard des créateurs les plus actifs. Animer la communauté via des newsletters, webinaires et hackathons.
+**`agent.yaml` minimal :**
 
-## Règles
+```yaml
+name: my-data-analyst
+version: 1.2.0
+description: Analyse des fichiers CSV et génère des rapports visuels.
+author: k.benazzouz@b3gtech.com
+license: MIT
+category: data
+tags: [csv, analysis, reporting]
+runtime:
+  model: claude-sonnet-4-6
+  max_tokens: 4096
+permissions:
+  network: false
+  filesystem: read-only
+  tools: [code_execution, file_read]
+dependencies:
+  agents: []
+  mcp_servers: []
+```
 
-- **Standardisation non négociable** : tout agent publié doit strictement respecter le format de packaging défini. Aucune exception pour les cas particuliers — préférer enrichir le standard plutôt que de créer des dérogations qui fragilisent l'écosystème.
-- **Sécurité par défaut** : tous les agents du marketplace sont exécutés dans des sandboxes isolées. Les accès aux ressources externes (internet, fichiers, APIs tierces) doivent être déclarés explicitement dans le manifeste et approuvés par l'utilisateur.
-- **Transparence des coûts** : afficher clairement le coût estimé par appel (ou par usage typique) pour chaque agent, en incluant les coûts LLM sous-jacents. Les utilisateurs ne doivent jamais avoir de surprise sur leur facture.
-- **Propriété intellectuelle claire** : la licence de chaque agent doit être déclarée explicitement (MIT, Apache 2.0, commercial, propriétaire). Le marketplace doit vérifier que les agents ne réutilisent pas du code ou des prompts sans autorisation appropriée.
-- **Observabilité pour les créateurs** : fournir aux créateurs d'agents des métriques détaillées sur l'usage de leurs agents (appels, erreurs, latence, satisfaction) pour leur permettre d'améliorer continuellement leurs créations. Sans données, il n'y a pas d'amélioration possible.
+**`config.schema.json` exemple :**
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "language": {
+      "type": "string",
+      "enum": ["fr", "en", "ar"],
+      "default": "fr",
+      "description": "Langue des rapports générés"
+    },
+    "chart_style": {
+      "type": "string",
+      "enum": ["minimal", "detailed"],
+      "default": "minimal"
+    }
+  }
+}
+```
+
+**Publier un SDK CLI :**
+
+```bash
+# Initialiser un nouveau package agent
+agent-sdk init my-agent --template data-analyst
+
+# Valider le package avant publication
+agent-sdk validate ./my-agent
+
+# Publier sur le registry
+agent-sdk publish ./my-agent --registry https://registry.monentreprise.com
+```
+
+---
+
+## Étape 3 — Discovery et indexation
+
+Utiliser **Typesense** (léger) ou **Elasticsearch** (scalable) pour l'index.
+
+**Champs à indexer :** `name`, `description`, `tags[]`, `category`, `author`, `downloads_count`, `rating_avg`, `updated_at`.
+
+**Filtres clés à exposer :**
+- Catégorie (data, code, communication, productivité, sécurité)
+- Modèle requis (claude, gpt-4, gemini…)
+- Permissions réseau (réseau autorisé / sandbox strict)
+- Licence (open-source / commercial)
+- Tier (gratuit / pro)
+
+**API search minimale :**
+
+```http
+GET /api/v1/agents?q=csv+analysis&category=data&license=open&sort=downloads
+```
+
+---
+
+## Étape 4 — Versionnage et cycle de vie
+
+Appliquer **SemVer strict** (MAJOR.MINOR.PATCH) :
+
+| Changement | Version |
+|---|---|
+| Breaking change prompt/API | MAJOR |
+| Nouvelle fonctionnalité rétrocompat | MINOR |
+| Bugfix, correction de prompt | PATCH |
+
+**Politique de dépréciation :**
+- Annonce 90 jours avant la fin de support d'une version MAJOR
+- Tag `deprecated` dans le registry, bannière dans la UI
+- Support de la version précédente pendant 6 mois minimum
+- Guide de migration fourni obligatoirement pour tout changement MAJOR
+
+**CI du registry — vérifications automatiques à chaque push :**
+
+```yaml
+# .github/workflows/agent-ci.yml
+steps:
+  - name: Validate schema
+    run: agent-sdk validate .
+  - name: Run tests
+    run: agent-sdk test . --fixture tests/fixtures/
+  - name: Security scan
+    run: agent-sdk scan . --check prompt-injection,data-leak
+  - name: Compat check
+    run: agent-sdk compat-check . --against-previous
+```
+
+---
+
+## Étape 5 — Authentification et accès
+
+**Séparation des rôles :**
+
+| Rôle | Auth | Permissions |
+|---|---|---|
+| Créateur | API key longue durée + 2FA | Publish, update, delete ses propres agents |
+| Utilisateur | OAuth2 / API key | Install, invoke, rate |
+| Admin | RBAC interne | Approve, ban, override |
+
+**Rate limiting par tier (exemple Nginx/Kong) :**
+
+```yaml
+# Kong rate-limit plugin
+config:
+  minute: 60      # free tier
+  hour: 1000
+  policy: local
+```
+
+---
+
+## Étape 6 — Déploiement des agents — 4 modes
+
+| Mode | Description | Idéal pour |
+|---|---|---|
+| **Managed** | Marketplace héberge et exécute | Zero-ops, usage ponctuel |
+| **Self-hosted** | Package exporté, runtime interne | Données sensibles, air-gapped |
+| **API endpoint** | Agent exposé en REST/streaming | Intégration applicative |
+| **Embedded SDK** | Bibliothèque à intégrer | Produit SaaS tiers |
+
+**Endpoint API standard :**
+
+```http
+POST /api/v1/agents/{agent_id}/invoke
+Authorization: Bearer <api_key>
+Content-Type: application/json
+
+{
+  "input": "Analyse ce fichier CSV...",
+  "config": { "language": "fr" },
+  "stream": true
+}
+```
+
+---
+
+## Étape 7 — Facturation et monétisation
+
+**Modèles disponibles :**
+- **Pay-per-use** : facturation au token ou à l'invocation
+- **Subscription** : accès illimité mensuel/annuel
+- **Freemium** : quota gratuit (ex : 100 invocations/mois) + payant
+- **Revenue sharing** : créateurs touchent 70 % des revenus générés
+
+**Intégration Stripe :**
+
+```python
+# Webhook Stripe pour crediter le créateur
+@app.post("/webhooks/stripe")
+async def stripe_webhook(event: StripeEvent):
+    if event.type == "invoice.payment_succeeded":
+        agent_id = event.metadata["agent_id"]
+        creator_id = get_agent_creator(agent_id)
+        amount = event.amount_paid * 0.70  # 70% pour le créateur
+        credit_creator_wallet(creator_id, amount)
+```
+
+Afficher **coût estimé par invocation** sur la fiche agent (inclure coût LLM sous-jacent + frais marketplace).
+
+---
+
+## Étape 8 — Assurance qualité et validation
+
+**Pipeline de review à deux niveaux :**
+
+1. **Automatique (bloquant) :**
+   - Validation du schema `agent.yaml` + `config.schema.json`
+   - Tests fournis passants à 100 %
+   - Scan injection de prompt (`agent-sdk scan`)
+   - Taille du system prompt < 50 000 tokens
+   - Permissions déclarées cohérentes avec les outils utilisés
+
+2. **Manuelle (pour agents sensibles) :**
+   - Accès à des données utilisateurs
+   - Permissions réseau + filesystem write
+   - Niveau de permission `enterprise`
+
+**Score de qualité public (0–100) :**
+
+```
+score = (test_coverage * 0.3) + (rating_avg/5 * 0.3) + (doc_completeness * 0.2) + (uptime * 0.2)
+```
+
+---
+
+## Anti-patterns et pièges
+
+- **Ne jamais publier un agent sans sandbox** : exécuter des agents en environnement non isolé expose l'infrastructure hôte à des injections de prompt qui déclenchent des commandes système.
+- **Éviter les configurations "tout-en-un"** : un agent qui fait trop de choses est impossible à tester, versionner et monitorer correctement. Préférer la composition d'agents spécialisés.
+- **Ne pas négliger la migration** : un MAJOR sans guide de migration force les utilisateurs à rester bloqués sur l'ancienne version — cela fragmente l'écosystème.
+- **Éviter les secrets dans `agent.yaml`** : toujours passer les credentials via un vault (AWS Secrets Manager, HashiCorp Vault, Doppler) référencé par nom, jamais en clair dans le manifeste.
+- **Ne pas mélanger auth créateur et auth utilisateur** : deux surfaces d'attaque distinctes, deux rotations de clés distinctes, deux audit logs distincts.
+- **Pas de rate limiting absent** : sans limite, un seul agent malveillant ou bogué peut consommer tout le budget LLM du marketplace en quelques minutes.
+
+---
+
+## Bonnes pratiques 2026
+
+- **Observabilité créateur** : exposer via dashboard les métriques par agent — invocations, taux d'erreur, latence p50/p99, satisfaction (thumbs up/down). Sans données, pas d'amélioration.
+- **Licence explicite obligatoire** : MIT, Apache 2.0, BSL, commercial ou propriétaire — refuser toute publication sans déclaration de licence.
+- **Interopérabilité MCP** : exposer les agents comme serveurs MCP pour permettre leur consommation directe depuis Claude Code et d'autres clients compatibles.
+- **Tests de non-régression comportementale** : les benchmarks de réponse sur un dataset golden set doivent être exécutés à chaque nouvelle version pour détecter les dérives de comportement liées aux mises à jour de modèle.
+- **Changelog public automatique** : générer le changelog depuis les commits Git (Conventional Commits) et le publier automatiquement sur la fiche marketplace à chaque release.
 
 
 ## Communication Rules — MANDATORY

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>arabic-darija-translator — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Traduction et adaptation entre français/anglais et darija marocaine, avec prise en compte du contexte culturel et des variantes régionales.">
+<meta name="description" content="Traduction et adaptation entre français/anglais et darija marocaine, avec prise en compte du contexte culturel, des variantes régionales et du registre.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🌍 Arabe / Maroc</span>
 <h1 class="skill-title">arabic-darija-translator</h1>
-<p class="lead">Traduction et adaptation entre français/anglais et darija marocaine, avec prise en compte du contexte culturel et des variantes régionales.</p>
+<p class="lead">Traduction et adaptation entre français/anglais et darija marocaine, avec prise en compte du contexte culturel, des variantes régionales et du registre.</p>
 
 
 
@@ -96,23 +96,75 @@ cp -r claude-skills-collection/skills/arabic-darija-translator ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Darija Translator</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identification de la direction</strong> — Déterminer le sens de traduction : français vers darija, anglais vers darija, darija vers français, ou darija vers anglais.</li>
-<li><strong>Analyse du contexte</strong> — Identifier le registre souhaité : formel (administration, travail), courant (conversation quotidienne), familier (entre amis), ou technique (domaine spécifique).</li>
-<li><strong>Translittération</strong> — Proposer la traduction en deux formats : écriture arabe (الدارجة) et translittération latine (derija) avec les conventions courantes (3 = ع, 7 = ح, 9 = ق, 5 = خ, 8 = غ).</li>
-<li><strong>Adaptation culturelle</strong> — Adapter les expressions idiomatiques et les références culturelles plutôt que de traduire mot à mot. Proposer les équivalents culturels marocains.</li>
-<li><strong>Variantes régionales</strong> — Signaler les différences régionales quand elles existent (Casablanca, Fès, Marrakech, Nord/Rif, Souss) et proposer la variante la plus courante.</li>
-<li><strong>Exemples d'usage</strong> — Fournir des exemples de phrases en contexte pour chaque traduction, avec la prononciation approximative si demandé.</li>
-<li><strong>Vérification</strong> — Valider avec l'utilisateur que la traduction correspond à l'intention et au ton souhaités.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en étapes</h2>
+<h3>1. Identifier la direction et le registre</h3>
+<table><thead><tr><th>Direction</th><th>Exemples déclencheurs</th></tr></thead><tbody><tr><td>FR/EN → Darija</td><td>&quot;comment dit-on X en darija ?&quot;, &quot;traduis en marocain&quot;</td></tr><tr><td>Darija → FR/EN</td><td>&quot;qu'est-ce que ça veut dire X&quot;, &quot;c'est quoi X en français&quot;</td></tr><tr><td>Darija → Darija</td><td>normalisation registre, correction</td></tr></tbody></table>
+<p><strong>Registre à demander ou inférer du contexte :</strong></p>
 <ul>
-<li>La darija n'a pas de grammaire standardisée : proposer les formes les plus couramment utilisées.</li>
-<li>Toujours fournir la translittération latine en plus de l'écriture arabe pour faciliter la lecture.</li>
-<li>Signaler quand un mot ou une expression est spécifique à une région du Maroc.</li>
-<li>Respecter le contexte culturel et religieux dans les traductions.</li>
-<li>Ne pas confondre darija marocaine avec l'arabe standard ou les dialectes d'autres pays du Maghreb.</li>
+<li><code>formel</code> — courriers admin, prise de parole officielle</li>
+<li><code>courant</code> — conversation quotidienne, WhatsApp famille/collègues</li>
+<li><code>familier</code> — entre amis proches, jeunes, code-switching FR+darija</li>
+<li><code>technique</code> — métier (santé, droit, informatique, finance)</li>
+</ul>
+<h3>2. Conventions de translittération (système numérique marocain)</h3>
+<table><thead><tr><th>Lettre arabe</th><th>Code Latin</th><th>Exemple</th></tr></thead><tbody><tr><td>ع</td><td>3</td><td>3andek = عندك (tu as)</td></tr><tr><td>ح</td><td>7</td><td>7it = حيت (parce que)</td></tr><tr><td>خ</td><td>5 ou kh</td><td>5obz / khobz = خبز (pain)</td></tr><tr><td>ق</td><td>9</td><td>9al = قال (il a dit)</td></tr><tr><td>غ</td><td>8 ou gh</td><td>8alyan / ghalyan = غالي (cher)</td></tr><tr><td>ش</td><td>ch</td><td>chkon = شكون (qui)</td></tr><tr><td>ج</td><td>j</td><td>juj = جوج (deux)</td></tr></tbody></table>
+<blockquote>Les deux conventions (5/kh, 8/gh) coexistent — préciser ou utiliser la plus lisible selon l'audience.</blockquote>
+<h3>3. Format de sortie systématique</h3>
+<p>Pour chaque traduction, fournir <strong>les trois lignes</strong> :</p>
+<pre><code>[Écriture arabe]  : كيداير؟
+[Translittération]: Ki dayr?
+[Prononciation]   : /ki dɛr/   ← si demandé ou ambiguïté
+[FR/EN]          : Comment tu vas ? (familier)</code></pre>
+<p>Exemple complet — &quot;Bonjour, comment allez-vous ?&quot; (formel) :</p>
+<pre><code>الدارجة (arabe)  : لباس عليكم؟
+Translittération : L-bas 3likoum?
+Français         : Vous allez bien ? / Bonjour, comment allez-vous ?
+Note             : formule polie, variante féminine inchangée</code></pre>
+<h3>4. Adaptation culturelle (pas de traduction mot à mot)</h3>
+<p>Critères de décision :</p>
+<ul>
+<li>L'expression source a-t-elle un <strong>équivalent idiomatique</strong> en darija ? → utiliser cet équivalent, pas une calque littérale.</li>
+<li>Y a-t-il une <strong>connotation religieuse</strong> implicite ? → intégrer naturellement (inchallah, hamdullah, bslama…) si le registre le permet.</li>
+<li>Le contexte est-il <strong>code-switching</strong> FR+darija ? → reproduire le même mélange dans la sortie.</li>
+</ul>
+<p>Exemples :</p>
+<table><thead><tr><th>Source</th><th>Mauvais (littéral)</th><th>Correct (idiomatique)</th></tr></thead><tbody><tr><td>&quot;Il pleut des cordes&quot;</td><td>كيتيح الحبال</td><td>الله كيصب</td></tr><tr><td>&quot;Casser les pieds&quot;</td><td>كسر الرجلين</td><td>دير في الراس</td></tr><tr><td>&quot;Bonne chance&quot;</td><td>شانس مزيان</td><td>الله يعاون</td></tr></tbody></table>
+<h3>5. Signaler les variantes régionales</h3>
+<p>Mentionner la variante quand elle diffère notablement :</p>
+<pre><code>Mot : &quot;voiture&quot;
+- Standard/Casa : tomobil / ṭomobil (طوموبيل)
+- Fès/Meknès   : karossa (كاروصة) [vieilli]
+- Commun écrit : سيارة (arabe standard, compris partout)
+Recommandation : utiliser &quot;tomobil&quot; sauf contexte formel.</code></pre>
+<p>Régions à distinguer : <strong>Casa/Rabat</strong> (darija de référence), <strong>Fès/Meknès</strong>, <strong>Marrakech/Sud</strong>, <strong>Nord/Rif</strong> (influence rifaine), <strong>Souss</strong> (influence amazighe forte).</p>
+<h3>6. Gestion du code-switching FR/Darija</h3>
+<p>La darija urbaine mélange fréquemment français et arabe. Reproduire le registre :</p>
+<pre><code>Source (FR)     : &quot;On se retrouve au bureau à 9h ?&quot;
+Darija familier : &quot;Ntlaqa f-bureau m3ak f-tis3a ?&quot;
+                   نتلاقاو فالبيرو معاك فتسعة؟
+Note            : &quot;bureau&quot;, &quot;neuf&quot; souvent gardés en français à l'oral.</code></pre>
+<h3>7. Validation et itération</h3>
+<ul>
+<li>Proposer 2 niveaux de registre quand le contexte est ambigu (ex. : courant + familier).</li>
+<li>Signaler explicitement quand une expression n'a pas d'équivalent direct → donner la périphrase la plus naturelle.</li>
+<li>Demander confirmation si le sens est potentiellement sensible (humour, ironie, argot fort).</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<h3>Ne pas confondre avec</h3>
+<ul>
+<li><strong>Arabe standard (MSA/فصحى)</strong> — darija ≠ MSA ; ne pas produire du MSA quand darija est demandée.</li>
+<li><strong>Dialectes voisins</strong> — algérien (dz), tunisien, égyptien : similaires mais distincts. Signaler toute confusion possible.</li>
+<li><strong>Amazigh/Tamazight</strong> — distinct ; certains mots darija en sont empruntés (ex. : &quot;azul&quot; = bonjour en amazigh, parfois utilisé au Maroc mais pas darija native).</li>
+</ul>
+<h3>Pièges courants</h3>
+<table><thead><tr><th>Piège</th><th>Exemple</th><th>Correction</th></tr></thead><tbody><tr><td>Translittération incohérente</td><td>mélanger 5 et kh dans le même texte</td><td>choisir une convention et la tenir</td></tr><tr><td>Calque syntaxique du français</td><td>&quot;je suis allé à&quot; → ana mchit l (correct) vs <em>&quot;ana kont rayer l&quot;</em></td><td>vérifier l'ordre VSO/SVO darija</td></tr><tr><td>Oublier l'accord de genre</td><td>&quot;mzyan&quot; (masc.) vs &quot;mzyana&quot; (fém.)</td><td>accorder systématiquement</td></tr><tr><td>Ignorer la négation double</td><td>pas de &quot;ne&quot; isolé → &quot;ma-kaydirch&quot; pas &quot;*la kaydير*&quot;</td><td>toujours ma-…-ch</td></tr><tr><td>Écriture arabe sans harakat</td><td>ambiguïté de lecture pour les non-natifs</td><td>ajouter la translittération latine systématiquement</td></tr></tbody></table>
+<h3>Bonnes pratiques 2026</h3>
+<ul>
+<li>Pour un usage <strong>UI/app</strong> : privilégier la translittération latine (meilleure compatibilité clavier), proposer l'arabe en secondaire.</li>
+<li>Pour un usage <strong>contenu social/marketing</strong> : écriture arabe en priorité, translittération en sous-titre.</li>
+<li>Pour <strong>chatbots/NLP</strong> : indiquer que les modèles traitant le darija sont encore limités ; conseiller de normaliser vers l'arabe ou le français avant tout pipeline NLP.</li>
+<li>Toujours mentionner si un terme est <strong>emprunté au français</strong> (très fréquent : &quot;l-fridge&quot;, &quot;le portable&quot;, &quot;le bureau&quot;) vs terme arabe natif — le choix dépend du registre cible.</li>
 </ul>
 </article>
 </main>

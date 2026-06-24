@@ -96,24 +96,203 @@ cp -r claude-skills-collection/skills/agent-email-agent-builder ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Email Agent Builder</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Connecter les sources email</strong> — Configurer l'accès aux boîtes mail via IMAP, Microsoft Graph API (Outlook/Exchange) ou Gmail API. Implémenter l'authentification OAuth 2.0 pour un accès sécurisé. Gérer les webhooks ou le polling pour la détection de nouveaux messages en temps réel.</li>
-<li><strong>Parser et normaliser les emails</strong> — Extraire les métadonnées (expéditeur, destinataires, sujet, date, pièces jointes). Parser le contenu HTML et texte brut. Gérer les encodages (UTF-8, ISO-8859). Nettoyer les signatures, disclaimers et historique de conversation pour isoler le contenu pertinent.</li>
-<li><strong>Classifier les emails</strong> — Implémenter un pipeline de classification multi-labels : catégorie (support, commercial, RH, facturation), urgence (critique, haute, normale, basse), intention (demande, réclamation, information, confirmation). Utiliser un LLM ou un modèle fine-tuné sur les données historiques.</li>
-<li><strong>Extraire les informations structurées</strong> — Identifier et extraire les entités clés : noms, dates, montants, numéros de référence, adresses. Détecter les pièces jointes importantes (factures, contrats, documents). Structurer les données extraites en JSON pour l'intégration avec les systèmes métier (CRM, ERP).</li>
-<li><strong>Générer les réponses automatiques</strong> — Concevoir des templates de réponse par catégorie. Utiliser un LLM pour personnaliser les réponses en fonction du contexte et du ton de l'email original. Implémenter un système de validation humaine (draft review) avant l'envoi pour les réponses critiques.</li>
-<li><strong>Orchestrer les workflows de traitement</strong> — Définir les règles de routage : assignation à un agent humain, transfert vers un département, escalade automatique sur les urgences. Déclencher des actions dans les outils tiers (créer un ticket Jira, mettre à jour Salesforce, notifier sur Slack).</li>
-<li><strong>Implémenter les garde-fous</strong> — Configurer les limites de confiance : en dessous d'un seuil, router vers un humain. Bloquer l'envoi automatique pour les emails sensibles (juridique, financier). Implémenter un système de feedback loop pour améliorer la classification continuellement.</li>
-<li><strong>Monitorer et optimiser</strong> — Suivre les métriques clés : taux de classification correcte, temps de traitement moyen, taux d'intervention humaine. Analyser les erreurs de classification pour enrichir les données d'entraînement. Générer des rapports hebdomadaires de performance de l'agent.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de décision — Quelle source connecter ?</h2>
+<table><thead><tr><th>Cas</th><th>Solution</th></tr></thead><tbody><tr><td>Microsoft 365 / Exchange Online</td><td>Microsoft Graph API + OAuth2 (Delegated ou App-only)</td></tr><tr><td>Gmail / Google Workspace</td><td>Gmail API + OAuth2 (Service Account pour full-auto)</td></tr><tr><td>IMAP générique (hébergement, Outlook on-premise)</td><td>IMAP4 + STARTTLS, polling toutes les N secondes</td></tr><tr><td>Temps réel critique (SLA &lt; 30 s)</td><td>Graph webhooks (changeNotifications) ou Gmail push (Pub/Sub)</td></tr><tr><td>Volume &gt; 10 000 emails/jour</td><td>Kafka topic + consumer group pour paralléliser</td></tr></tbody></table>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Connexion et authentification</h3>
+<pre><code class="lang-python"># Microsoft Graph — App-only (sans interaction utilisateur)
+from msal import ConfidentialClientApplication
+
+app = ConfidentialClientApplication(
+    client_id=CLIENT_ID,
+    client_credential=CLIENT_SECRET,
+    authority=f&quot;https://login.microsoftonline.com/{TENANT_ID}&quot;
+)
+token = app.acquire_token_for_client(scopes=[&quot;https://graph.microsoft.com/.default&quot;])
+# Stocker token[&quot;access_token&quot;] dans un vault (Azure Key Vault, HashiCorp Vault)
+# Ne jamais logger ce token, ne jamais le committer</code></pre>
+<pre><code class="lang-python"># Gmail — Service Account
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+creds = service_account.Credentials.from_service_account_file(
+    &quot;sa.json&quot;,
+    scopes=[&quot;https://www.googleapis.com/auth/gmail.modify&quot;]
+).with_subject(&quot;inbox@company.com&quot;)
+service = build(&quot;gmail&quot;, &quot;v1&quot;, credentials=creds)</code></pre>
+<p><strong>Checklist connexion :</strong></p>
 <ul>
-<li>Toujours implémenter une validation humaine pour les réponses automatiques sur les emails sensibles (juridique, financier, réclamation) avant tout envoi.</li>
-<li>Ne jamais stocker les credentials email en clair ; utiliser OAuth 2.0 avec refresh tokens et un vault sécurisé pour le stockage des tokens.</li>
-<li>Toujours conserver l'email original et les métadonnées de classification dans un audit trail pour la traçabilité et la conformité RGPD.</li>
-<li>Implémenter un mécanisme de rate limiting sur les réponses automatiques pour éviter les boucles d'emails (auto-reply storm) entre agents.</li>
-<li>Ne jamais transférer automatiquement des pièces jointes sans les scanner préalablement pour les malwares et vérifier leur conformité.</li>
+<li>[ ] Refresh token stocké en vault, jamais en <code>.env</code> committé</li>
+<li>[ ] Scopes minimaux (lecture seule si l'agent ne répond pas)</li>
+<li>[ ] Webhook/subscription renouvelé avant expiration (Graph : 60 min max)</li>
+</ul>
+<hr>
+<h3>2. Parser et normaliser les emails</h3>
+<pre><code class="lang-python">import email
+from email import policy
+
+def parse_raw(raw_bytes: bytes) -&gt; dict:
+    msg = email.message_from_bytes(raw_bytes, policy=policy.default)
+    body_plain = &quot;&quot;
+    body_html  = &quot;&quot;
+    attachments = []
+
+    for part in msg.walk():
+        ct = part.get_content_type()
+        if ct == &quot;text/plain&quot; and not body_plain:
+            body_plain = part.get_content()
+        elif ct == &quot;text/html&quot; and not body_html:
+            body_html = part.get_content()
+        elif part.get_filename():
+            attachments.append({
+                &quot;filename&quot;: part.get_filename(),
+                &quot;content_type&quot;: ct,
+                &quot;size&quot;: len(part.get_payload(decode=True) or b&quot;&quot;),
+            })
+
+    return {
+        &quot;message_id&quot;: msg[&quot;Message-ID&quot;],
+        &quot;from&quot;: msg[&quot;From&quot;],
+        &quot;to&quot;: msg.get_all(&quot;To&quot;, []),
+        &quot;subject&quot;: msg[&quot;Subject&quot;],
+        &quot;date&quot;: msg[&quot;Date&quot;],
+        &quot;body_plain&quot;: strip_signature(body_plain),
+        &quot;body_html&quot;: body_html,
+        &quot;attachments&quot;: attachments,
+    }
+
+def strip_signature(text: str) -&gt; str:
+    &quot;&quot;&quot;Coupe aux marqueurs communs de signature.&quot;&quot;&quot;
+    markers = [&quot;-- \n&quot;, &quot;Cordialement,&quot;, &quot;Best regards,&quot;, &quot;Sent from my&quot;]
+    for m in markers:
+        if m in text:
+            text = text[:text.index(m)]
+    return text.strip()</code></pre>
+<hr>
+<h3>3. Classifier avec un LLM</h3>
+<pre><code class="lang-python">import anthropic, json
+
+SYSTEM = &quot;&quot;&quot;Tu es un classificateur d'emails B2B. Réponds UNIQUEMENT en JSON.
+Schéma : {&quot;category&quot;: &quot;support|commercial|rh|facturation|autre&quot;,
+           &quot;urgency&quot;: &quot;critique|haute|normale|basse&quot;,
+           &quot;intent&quot;: &quot;demande|reclamation|information|confirmation|spam&quot;,
+           &quot;confidence&quot;: 0.0-1.0}&quot;&quot;&quot;
+
+def classify(email_data: dict) -&gt; dict:
+    client = anthropic.Anthropic()
+    prompt = f&quot;Sujet: {email_data['subject']}\n\nCorps:\n{email_data['body_plain'][:1500]}&quot;
+    resp = client.messages.create(
+        model=&quot;claude-sonnet-4-5&quot;,
+        max_tokens=200,
+        system=SYSTEM,
+        messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt}]
+    )
+    return json.loads(resp.content[0].text)</code></pre>
+<p><strong>Seuils de confiance :</strong></p>
+<ul>
+<li><code>confidence &gt;= 0.85</code> → action automatique autorisée</li>
+<li><code>0.60 &lt;= confidence &lt; 0.85</code> → draft généré, validation humaine requise</li>
+<li><code>confidence &lt; 0.60</code> → router immédiatement vers un humain, sans draft</li>
+</ul>
+<hr>
+<h3>4. Extraire les entités structurées</h3>
+<pre><code class="lang-python">EXTRACT_SYSTEM = &quot;&quot;&quot;Extrais les entités de l'email en JSON strict.
+Schéma : {&quot;references&quot;: [], &quot;amounts&quot;: [], &quot;dates&quot;: [], &quot;persons&quot;: [],
+           &quot;companies&quot;: [], &quot;action_required&quot;: bool, &quot;deadline&quot;: null|&quot;ISO8601&quot;}&quot;&quot;&quot;
+
+def extract_entities(email_data: dict) -&gt; dict:
+    client = anthropic.Anthropic()
+    resp = client.messages.create(
+        model=&quot;claude-sonnet-4-5&quot;,
+        max_tokens=400,
+        system=EXTRACT_SYSTEM,
+        messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: email_data[&quot;body_plain&quot;][:2000]}]
+    )
+    return json.loads(resp.content[0].text)</code></pre>
+<p>Mapper ensuite vers votre CRM/ERP via l'API correspondante (Salesforce REST, Jira REST, SAP via RFC).</p>
+<hr>
+<h3>5. Générer les réponses automatiques</h3>
+<pre><code class="lang-python">RESPONSE_SYSTEM = &quot;&quot;&quot;Tu es l'assistant email de {company}. Rédige une réponse professionnelle
+en {lang} sur la base du contexte fourni. Sois concis (&lt; 150 mots). Ne promets pas
+de délais sans les avoir vérifiés. Ne divulgue pas d'informations internes.&quot;&quot;&quot;
+
+def draft_response(email_data: dict, classification: dict, context: str) -&gt; str:
+    client = anthropic.Anthropic()
+    resp = client.messages.create(
+        model=&quot;claude-sonnet-4-5&quot;,
+        max_tokens=500,
+        system=RESPONSE_SYSTEM.format(company=&quot;Acme&quot;, lang=&quot;français&quot;),
+        messages=[{
+            &quot;role&quot;: &quot;user&quot;,
+            &quot;content&quot;: f&quot;Email reçu:\n{email_data['body_plain'][:1000]}\n\nContexte CRM:\n{context}&quot;
+        }]
+    )
+    return resp.content[0].text</code></pre>
+<p><strong>Règle d'or :</strong> toute réponse générée est un <strong>draft</strong> par défaut. L'envoi automatique n'est activé qu'après validation explicite en configuration, pour des catégories à risque nul (accusé de réception, confirmation de rendez-vous sans engagement).</p>
+<hr>
+<h3>6. Routage et orchestration</h3>
+<pre><code class="lang-python">def route(classification: dict, entities: dict) -&gt; str:
+    if classification[&quot;intent&quot;] == &quot;spam&quot;:
+        return &quot;archive&quot;
+    if classification[&quot;urgency&quot;] == &quot;critique&quot;:
+        return &quot;escalate_human&quot;  # alerte Slack/PagerDuty immédiate
+    if classification[&quot;category&quot;] == &quot;facturation&quot; and entities.get(&quot;amounts&quot;):
+        return &quot;queue:finance&quot;
+    if classification[&quot;confidence&quot;] &lt; 0.85:
+        return &quot;queue:review&quot;
+    return &quot;queue:auto_reply&quot;</code></pre>
+<p>Intégrations courantes :</p>
+<ul>
+<li><strong>Slack</strong> : <code>POST /api/chat.postMessage</code> avec mention <code>@responsable</code></li>
+<li><strong>Jira</strong> : <code>POST /rest/api/3/issue</code> avec champs custom mappés depuis <code>entities</code></li>
+<li><strong>Salesforce</strong> : upsert sur <code>Case</code> via l'objet <code>sObject</code></li>
+</ul>
+<hr>
+<h3>7. Anti-boucles et sécurité d'envoi</h3>
+<pre><code class="lang-python">AUTO_REPLY_HEADERS = {&quot;X-Auto-Reply&quot;: &quot;true&quot;, &quot;Auto-Submitted&quot;: &quot;auto-replied&quot;}
+
+def is_auto_reply(headers: dict) -&gt; bool:
+    &quot;&quot;&quot;Détecte les emails déjà automatiques pour éviter les boucles infinies.&quot;&quot;&quot;
+    return any([
+        headers.get(&quot;X-Auto-Reply&quot;),
+        headers.get(&quot;Auto-Submitted&quot;, &quot;&quot;).startswith(&quot;auto&quot;),
+        &quot;MAILER-DAEMON&quot; in headers.get(&quot;From&quot;, &quot;&quot;).upper(),
+        headers.get(&quot;Precedence&quot;) in (&quot;bulk&quot;, &quot;list&quot;, &quot;junk&quot;),
+    ])</code></pre>
+<p><strong>Rate limiting :</strong> max 1 réponse automatique par expéditeur par heure, stocké en Redis :</p>
+<pre><code class="lang-python">key = f&quot;autoreply:{sender_email}&quot;
+if redis.incr(key) == 1:
+    redis.expire(key, 3600)
+elif redis.get(key) &gt; 1:
+    raise AutoReplyThrottled(sender_email)</code></pre>
+<hr>
+<h3>8. Monitoring et feedback loop</h3>
+<p>Métriques essentielles à exposer (Prometheus/Grafana) :</p>
+<ul>
+<li><code>email_classified_total{category, urgency}</code> — compteur</li>
+<li><code>email_classification_confidence_histogram</code> — distribution</li>
+<li><code>email_human_review_rate</code> — objectif &lt; 15 %</li>
+<li><code>email_processing_duration_seconds</code> — SLO &lt; 5 s P95</li>
+</ul>
+<p>Feedback loop :</p>
+<ol>
+<li>L'opérateur corrige une classification dans l'interface de review</li>
+<li>La correction est loggée dans un dataset JSONL versionné (Git LFS)</li>
+<li>Tous les 500 corrections accumulées → fine-tune ou mise à jour du prompt système</li>
+<li>Ré-évaluer sur le jeu de test avant de déployer en production</li>
+</ol>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Remède</th></tr></thead><tbody><tr><td>Envoi auto sans seuil de confiance</td><td>Réponses erronées envoyées aux clients</td><td>Seuil <code>&gt;= 0.85</code> obligatoire</td></tr><tr><td>Stocker les tokens OAuth en <code>.env</code> committé</td><td>Compromission du compte email</td><td>Vault (Azure KV, AWS Secrets Manager)</td></tr><tr><td>Pas de détection de boucles</td><td>Auto-reply storm entre serveurs</td><td>Header <code>Auto-Submitted</code> + Redis rate limit</td></tr><tr><td>Transférer les PJ sans scan</td><td>Propagation de malware</td><td>ClamAV / API AV avant tout forward</td></tr><tr><td>Répondre aux emails juridiques/financiers automatiquement</td><td>Engagement contractuel non voulu</td><td>Whitelist catégories auto-reply ; exclure <code>facturation</code>, <code>legal</code></td></tr><tr><td>Absence d'audit trail</td><td>Non-conformité RGPD</td><td>Logguer message_id, classification, action, timestamp dans append-only store</td></tr><tr><td>Prompt LLM sans longueur cap</td><td>Injection via corps email long</td><td>Tronquer le body à 2 000 caractères avant envoi au LLM</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Model routing</strong> : utiliser <code>claude-haiku-4-5</code> pour la classification (faible coût, latence &lt; 1 s) et <code>claude-sonnet-4-5</code> pour la génération de réponse.</li>
+<li><strong>Structured outputs</strong> : préférer <code>tool_use</code> ou JSON-mode pour garantir un schéma strict plutôt que parser du texte libre.</li>
+<li><strong>RGPD</strong> : anonymiser les emails dans les logs (remplacer adresses par hash SHA-256). Définir une politique de rétention (ex. 90 jours) avec purge automatique.</li>
+<li><strong>Test harness</strong> : maintenir un dataset de 200+ emails labelisés pour régression à chaque changement de prompt ou de modèle.</li>
+<li><strong>Idempotence</strong> : dédupliquer par <code>Message-ID</code> avant traitement pour éviter les doubles réponses lors de retries.</li>
 </ul>
 </article>
 </main>

@@ -7,100 +7,300 @@ description: Sous-agent de traitement de fichiers — lecture, parsing, transfor
 
 ## Quand utiliser ce skill
 
-Utiliser ce skill lorsqu'un agent parent doit déléguer le traitement de fichiers de formats variés (PDF, Excel, CSV, DOCX, JSON, XML, YAML, images) à un sous-agent spécialisé. Pertinent pour les pipelines d'ingestion de données, la génération de rapports multi-formats, la conversion entre formats, l'extraction de contenu depuis des documents scannés, ou le traitement par lot de répertoires entiers de fichiers.
+Déléguer à ce sous-agent quand l'agent parent doit traiter des fichiers de formats variés sans polluer son contexte principal : ingestion de données, conversion de format, extraction de contenu (dont OCR), génération de rapports, traitement par lot d'un répertoire entier.
 
-## Workflow
+**Ne pas utiliser** si le fichier est < 5 Ko et que le format est trivial (JSON, YAML simple) : l'agent parent peut le lire directement.
 
-1. **Interface et validation des inputs** — Recevoir depuis l'agent parent : `file_path` (chemin absolu ou URL du fichier), `operation` (read/transform/generate/convert/batch), `params` (paramètres spécifiques à l'opération), `output_format` (format de sortie attendu). Vérifier l'existence du fichier, les permissions de lecture, la taille (alerte si > 100 Mo), et la cohérence entre `operation` et `output_format`.
+---
 
-2. **File type detection** — Détecter le type réel du fichier : lire les magic bytes (premiers 8 octets) avec `python-magic`, vérifier l'extension, inspecter le MIME type. Ne pas faire confiance uniquement à l'extension (un `.csv` peut être un Excel mal renommé). Détecter l'encodage texte avec `chardet` (UTF-8, Latin-1, UTF-16, etc.). Sélectionner le parser approprié selon le type détecté.
+## Workflow en étapes
 
-3. **Parsers par format** — Appliquer le parser optimal selon le type détecté : PDF → `pdfplumber` (texte et tableaux) ou `PyMuPDF` (fitz, images et métadonnées) ; Excel `.xlsx/.xls` → `openpyxl` ou `xlrd` ; CSV → `pandas.read_csv` (inférence de types, séparateur auto) ; DOCX → `python-docx` (paragraphes, tables, styles) ; JSON → `json`/`orjson` ; XML → `lxml.etree` ; YAML → `PyYAML` ; HTML → `beautifulsoup4` ; Images → `Pillow`.
+### 1. Validation des inputs
 
-4. **Text extraction** — Pour les PDFs scannés ou images contenant du texte, activer l'OCR via `pytesseract` (Tesseract engine) ou `easyocr` (multi-langues, deep learning). Extraire les tableaux avec `camelot-py` (PDF) ou `tabula-py` (PDF). Extraire les métadonnées (auteur, date, titre, mots-clés) avec `PyMuPDF` ou `mutagen`. Nettoyer le texte extrait (remove headers/footers répétitifs, normaliser whitespace).
+Avant toute opération, vérifier :
 
-5. **Data transformation** — Appliquer les transformations définies dans `params` : filtrage de lignes/colonnes, agrégation (groupby, sum, mean, count), reformatage (pivot, melt, transpose), mapping de schéma (renommer colonnes, changer types), jointure avec d'autres données, déduplication, tri. Utiliser `pandas` pour les transformations tabulaires, `jq`/`jsonpath` pour JSON, `XSLT` pour XML.
-
-6. **File generation** — Générer de nouveaux fichiers dans le format de sortie demandé : PDF rapport → `reportlab` ou `WeasyPrint` (HTML → PDF) ; Excel avec mise en forme → `openpyxl` (styles, graphiques, formules) ; CSV → `pandas.to_csv` ; JSON → `json.dumps` (pretty-print, indent) ; Markdown → template f-string ; HTML rapport → `jinja2` template ; YAML → `PyYAML.dump`. Sauvegarder dans le répertoire temporaire ou le chemin spécifié.
-
-7. **Batch processing** — Si `operation = "batch"` et `file_path` est un répertoire ou pattern glob : scanner avec `pathlib.Path.glob()`, filtrer par extension, traiter chaque fichier individuellement avec isolation d'erreurs, collecter les résultats agrégés. Supporter le traitement parallèle via `concurrent.futures.ThreadPoolExecutor` pour les opérations I/O-bound. Afficher la progression via callbacks.
-
-8. **Validation** — Valider les données extraites ou générées : vérifier la conformité au schéma attendu (`jsonschema`, `pydantic`), l'intégrité des données numériques (range checks, null ratios), la cohérence des fichiers générés (ouvrir et re-lire pour vérifier), la taille minimale du fichier de sortie. Retourner les statistiques de validation dans `stats`.
-
-9. **Error handling** — Gérer les erreurs spécifiques aux fichiers : fichier corrompu (binaire invalide), encodage non détectable, PDF protégé par mot de passe (signaler sans déchiffrer), Excel avec macros (warning sécurité), fichier trop volumineux pour la mémoire (streaming avec `chunksize`), données manquantes (stratégie configurable : skip, fill NA, raise). Logger chaque erreur avec fichier, ligne/page, et nature du problème.
-
-10. **Cleanup et ressources** — Libérer les ressources après traitement : fermer les handles de fichiers, supprimer les fichiers temporaires (`tempfile.TemporaryDirectory` context manager), libérer la mémoire des DataFrames volumineux (`del df; gc.collect()`). Pour les très gros fichiers, utiliser le streaming/chunking natif de chaque parser pour éviter les OOM. Retourner les statistiques de performance dans l'output.
-
-## Interface du sous-agent
-
-**Input schema :**
 ```python
-{
-  "file_path": str,               # Chemin absolu du fichier ou répertoire (obligatoire)
-  "operation": str,               # "read" | "transform" | "generate" | "convert" | "batch" | "extract"
-  "params": {                     # Paramètres spécifiques à l'opération (optionnel)
-    "sheet_name": str,            # Pour Excel : nom ou index de la feuille
-    "columns": list[str],         # Colonnes à extraire
-    "filters": dict,              # Filtres à appliquer {"column": "value"}
-    "transformations": list[dict],# Séquence de transformations
-    "ocr_language": str,          # Langue OCR : "fra", "eng", "ara" (défaut: "fra+eng")
-    "chunk_size": int,            # Taille des chunks pour gros fichiers (défaut: 10000)
-    "encoding": str,              # Forcer l'encodage (défaut: auto-détection)
-    "password": str               # Mot de passe pour fichiers protégés
-  },
-  "output_format": str,           # "json" | "csv" | "excel" | "pdf" | "markdown" | "html" | "dict"
-  "output_path": str,             # Chemin de sortie (optionnel, génère un temp si absent)
-  "batch_pattern": str,           # Glob pattern pour batch (ex: "*.pdf")
-  "parallel_workers": int         # Nombre de workers parallèles pour batch (défaut: 4)
-}
+import os, pathlib
+
+def validate_input(inp: dict) -> list[str]:
+    errors = []
+    fp = inp.get("file_path", "")
+    if not fp:
+        errors.append("file_path manquant")
+    elif not pathlib.Path(fp).exists() and inp.get("operation") != "generate":
+        errors.append(f"Fichier introuvable : {fp}")
+    if pathlib.Path(fp).stat().st_size > 500 * 1024 * 1024:
+        errors.append("Fichier > 500 Mo : utiliser batch + chunk_size")
+    if inp.get("operation") not in ("read","transform","generate","convert","batch","extract"):
+        errors.append("operation invalide")
+    return errors
 ```
 
-**Output schema :**
+Retourner un `output_schema` avec `errors` rempli si la validation échoue — ne jamais lever d'exception non catchée vers l'agent parent.
+
+---
+
+### 2. Détection du type de fichier
+
+Ne pas faire confiance à l'extension seule.
+
+```python
+import magic  # python-magic
+import chardet
+
+def detect_file_type(path: str) -> tuple[str, str]:
+    mime = magic.from_file(path, mime=True)  # ex: "application/pdf"
+    encoding = "binary"
+    if mime.startswith("text/"):
+        with open(path, "rb") as f:
+            raw = f.read(32_768)
+        encoding = chardet.detect(raw)["encoding"] or "utf-8"
+    return mime, encoding
+```
+
+**Critères de sélection du parser :**
+
+| MIME détecté | Parser prioritaire | Fallback |
+|---|---|---|
+| `application/pdf` | `pdfplumber` | `PyMuPDF` (fitz) |
+| `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` | `openpyxl` | `pandas.read_excel` |
+| `application/vnd.ms-excel` | `xlrd` | `pandas.read_excel` |
+| `text/csv` | `pandas.read_csv` | `csv.DictReader` |
+| `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | `python-docx` | — |
+| `application/json` | `orjson` | `json` |
+| `application/xml` ou `text/xml` | `lxml.etree` | — |
+| `text/html` | `BeautifulSoup` (lxml parser) | — |
+| `image/*` | `Pillow` + `pytesseract` (OCR) | `easyocr` |
+
+---
+
+### 3. Parsing par format
+
+**PDF (texte + tableaux) :**
+```python
+import pdfplumber
+
+with pdfplumber.open(file_path) as pdf:
+    text = "\n".join(p.extract_text() or "" for p in pdf.pages)
+    tables = [p.extract_tables() for p in pdf.pages]
+```
+
+**PDF scanné → OCR :**
+```python
+import fitz  # PyMuPDF
+import pytesseract
+from PIL import Image
+import io
+
+doc = fitz.open(file_path)
+for page in doc:
+    pix = page.get_pixmap(dpi=300)
+    img = Image.open(io.BytesIO(pix.tobytes("png")))
+    text = pytesseract.image_to_string(img, lang="fra+eng")
+```
+
+**Excel avec multi-feuilles :**
+```python
+import openpyxl
+
+wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+for sheet_name in wb.sheetnames:
+    ws = wb[sheet_name]
+    rows = list(ws.values)
+```
+
+**CSV gros fichier (streaming) :**
+```python
+import pandas as pd
+
+for chunk in pd.read_csv(file_path, chunksize=10_000, encoding=encoding,
+                          sep=None, engine="python"):  # sep auto-détecté
+    process(chunk)
+```
+
+**XML avec namespace :**
+```python
+from lxml import etree
+
+tree = etree.parse(file_path)
+ns = {"ns": "http://example.com/schema"}
+nodes = tree.xpath("//ns:Record", namespaces=ns)
+```
+
+---
+
+### 4. Transformation des données
+
+```python
+import pandas as pd
+
+def transform(df: pd.DataFrame, params: dict) -> pd.DataFrame:
+    if cols := params.get("columns"):
+        df = df[cols]
+    if filters := params.get("filters"):
+        for col, val in filters.items():
+            df = df[df[col] == val]
+    for t in params.get("transformations", []):
+        if t["type"] == "rename":
+            df = df.rename(columns=t["mapping"])
+        elif t["type"] == "groupby":
+            df = df.groupby(t["by"]).agg(t["agg"]).reset_index()
+        elif t["type"] == "fillna":
+            df = df.fillna(t["value"])
+        elif t["type"] == "deduplicate":
+            df = df.drop_duplicates(subset=t.get("subset"))
+    return df
+```
+
+Pour JSON complexe, préférer `jq` via subprocess :
+```bash
+jq '.data[] | select(.status == "active") | {id, name}' input.json > output.json
+```
+
+---
+
+### 5. Génération de fichiers
+
+**Rapport PDF avec ReportLab :**
+```python
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+
+doc = SimpleDocTemplate(output_path, pagesize=A4)
+data = [["Colonne A", "Colonne B"]] + rows
+table = Table(data)
+doc.build([table])
+```
+
+**Excel avec styles :**
+```python
+from openpyxl.styles import Font, PatternFill
+
+ws["A1"].font = Font(bold=True)
+ws["A1"].fill = PatternFill("solid", fgColor="4472C4")
+wb.save(output_path)
+```
+
+**HTML via Jinja2 :**
+```python
+from jinja2 import Environment, FileSystemLoader
+
+env = Environment(loader=FileSystemLoader("templates/"))
+html = env.get_template("report.html.j2").render(data=rows, title="Rapport")
+Path(output_path).write_text(html, encoding="utf-8")
+```
+
+---
+
+### 6. Batch processing
+
+```python
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+def batch_process(directory: str, pattern: str, workers: int = 4) -> list[dict]:
+    files = list(Path(directory).glob(pattern))
+    results, errors = [], []
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(process_single, f): f for f in files}
+        for future in as_completed(futures):
+            try:
+                results.append(future.result())
+            except Exception as e:
+                errors.append({"file": str(futures[future]), "error": str(e)})
+    return results, errors
+```
+
+Règle : l'échec d'un fichier ne bloque jamais les autres. Logger chaque erreur avec nom de fichier + nature.
+
+---
+
+### 7. Output schema
+
 ```python
 {
-  "result": any,                  # Données extraites (dict, list) ou None si fichier généré
-  "output_path": str,             # Chemin du fichier généré (None si result contient les données)
-  "stats": {                      # Statistiques de traitement
+  "result": dict | list | None,   # Données extraites, ou None si fichier généré
+  "output_path": str | None,      # Chemin fichier généré
+  "stats": {
     "rows_processed": int,
     "pages_processed": int,
-    "files_processed": int,       # Pour batch
+    "files_processed": int,
     "bytes_read": int,
     "bytes_written": int,
-    "detected_type": str,         # Type MIME détecté
-    "detected_encoding": str      # Encodage détecté
+    "detected_type": str,
+    "detected_encoding": str
   },
-  "errors": list[dict],           # [{"file": str, "page": int, "error": str}]
-  "warnings": list[str],          # Avertissements non bloquants
-  "execution_time_s": float       # Durée totale en secondes
+  "errors": [{"file": str, "page": int, "error": str}],
+  "warnings": ["string"],
+  "execution_time_s": float
 }
 ```
 
-**Librairies Python recommandées :**
+---
+
+## Garde-fous et anti-patterns
+
+| Anti-pattern | Risque | Correction |
+|---|---|---|
+| `yaml.load()` sans `Loader` | Exécution de code arbitraire | Toujours `yaml.safe_load()` |
+| `pd.read_csv` sur fichier > 1 Go en mémoire | OOM | `chunksize=50_000` |
+| Faire confiance à l'extension `.csv` | Peut être Excel, TSV, ou corrompu | Vérifier les magic bytes |
+| Lire un PDF protégé sans vérifier | Exception non catchée | Tester `pdf.is_encrypted` avant extraction |
+| Fermer sans context manager | Handle de fichier non fermé | Toujours `with open(...)` ou `with pdfplumber.open(...)` |
+| `concurrent.futures` sur fichiers > 200 Mo | Swap mémoire | Limiter workers, traiter séquentiellement les gros fichiers |
+| Écrire en dehors du `output_path` fourni | Effet de bord non contrôlé | Valider que le chemin de sortie est sous le répertoire autorisé |
+| `del df` sans `gc.collect()` | Mémoire non libérée immédiatement | `del df; import gc; gc.collect()` après chaque chunk |
+
+---
+
+## Librairies recommandées (2026)
+
 ```
-pdfplumber>=0.10.0
-PyMuPDF>=1.23.0
-openpyxl>=3.1.0
-pandas>=2.0.0
+pdfplumber>=0.11.0
+PyMuPDF>=1.24.0
+openpyxl>=3.2.0
+pandas>=2.2.0
 python-docx>=1.1.0
 python-magic>=0.4.27
 chardet>=5.2.0
 pytesseract>=0.3.10
-Pillow>=10.0.0
+Pillow>=10.3.0
 camelot-py[cv]>=0.11.0
-reportlab>=4.0.0
-jinja2>=3.1.0
-PyYAML>=6.0.0
-lxml>=4.9.0
+reportlab>=4.2.0
+jinja2>=3.1.4
+PyYAML>=6.0.1
+lxml>=5.2.0
+orjson>=3.10.0
 ```
 
-## Règles
+Installation OCR système requis :
+```bash
+# Ubuntu/Debian
+apt-get install tesseract-ocr tesseract-ocr-fra poppler-utils libmagic1
 
-1. **Interface contractuelle stricte** — Valider `file_path`, `operation`, et `output_format` avant toute opération. Si le fichier n'existe pas, retourner un output d'erreur formaté (ne pas lever `FileNotFoundError` non catchée). Si `operation` et `output_format` sont incompatibles (ex: generate sans template), signaler clairement dans `errors`. L'agent parent reçoit toujours un output conforme.
+# Windows
+choco install tesseract poppler
+```
 
-2. **Robustesse sur fichiers corrompus** — Un fichier partiellement lisible doit retourner les données extraites jusqu'au point de corruption, avec un warning. Ne jamais crasher sur un fichier corrompu ou vide. En mode batch, l'échec d'un fichier ne doit jamais arrêter le traitement des autres fichiers du lot.
+---
 
-3. **Sécurité et isolation** — Ne jamais exécuter de macros Excel, de scripts embarqués dans des PDFs, ou de code dans des fichiers YAML (`yaml.safe_load` uniquement). Ne pas suivre les liens externes dans les documents. Limiter la taille des fichiers traités (configurable, défaut 500 Mo). Ne jamais écrire en dehors du répertoire de sortie autorisé.
+## Exemple d'intégration agent parent
 
-4. **Efficacité mémoire** — Pour les fichiers > 50 Mo, utiliser systématiquement le mode streaming/chunking. Les DataFrames pandas doivent être explicitement libérés après usage. Utiliser des générateurs plutôt que des listes pour les transformations en pipeline. Reporter la consommation mémoire approximative dans `stats`.
+```python
+# L'agent parent appelle le sous-agent via tool call
+result = file_processor_subagent.run({
+    "file_path": "/data/invoices/",
+    "operation": "batch",
+    "batch_pattern": "*.pdf",
+    "params": {"ocr_language": "fra", "columns": ["date", "montant", "fournisseur"]},
+    "output_format": "excel",
+    "output_path": "/data/output/invoices_summary.xlsx",
+    "parallel_workers": 4
+})
 
-5. **Code Python fonctionnel fourni** — Fournir une implémentation complète de la classe `FileProcessorSubAgent` avec méthodes `run(input_schema) -> output_schema`, `_detect_file_type()`, `_parse_file()`, `_transform_data()`, `_generate_output()`, support du batch processing, et un exemple d'intégration dans un pipeline d'ingestion de données piloté par agent.
+if result["errors"]:
+    # Signaler à l'agent parent les fichiers en échec sans bloquer
+    log_errors(result["errors"])
+
+df_summary = pd.read_excel(result["output_path"])
+```

@@ -97,22 +97,164 @@ cp -r claude-skills-collection/skills/cloud-gcp-guide ~/.claude/skills/</div><bu
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>GCP Guide</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Comprendre le contexte du projet</strong> — Identifier les besoins métier, les volumes de données attendus et les contraintes de performance ou de conformité</li>
-<li><strong>Organiser la hiérarchie des ressources</strong> — Structurer les projets GCP, les dossiers et l'organisation avec une stratégie IAM claire et des service accounts dédiés</li>
-<li><strong>Sélectionner les services de calcul</strong> — Choisir entre Cloud Run (conteneurs serverless), GKE (Kubernetes managé) ou Cloud Functions (event-driven) selon le cas d'usage</li>
-<li><strong>Concevoir la couche de données</strong> — Déterminer le stockage adapté entre Firestore (NoSQL temps réel), BigQuery (analytique), Cloud SQL ou Cloud Storage selon les patterns d'accès</li>
-<li><strong>Configurer le réseau et la sécurité</strong> — Mettre en place les VPC, les règles de pare-feu, les interconnexions et les politiques d'accès IAM granulaires</li>
-<li><strong>Implémenter le pipeline de données</strong> — Construire les flux de données avec Pub/Sub, Dataflow ou Cloud Composer pour l'orchestration des traitements</li>
-<li><strong>Déployer avec Infrastructure as Code</strong> — Utiliser Terraform ou Deployment Manager pour automatiser le provisionnement et garantir la reproductibilité</li>
-<li><strong>Superviser et optimiser</strong> — Configurer Cloud Monitoring, Cloud Logging et les alertes, puis analyser les recommandations de coûts via le Cost Management</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Structurer la hiérarchie des ressources</h3>
+<pre><code>Organization
+└── Folder (prod / staging / dev)
+    └── Project (une app ou un domaine)
+        └── Resources (Cloud Run, BigQuery, etc.)</code></pre>
 <ul>
-<li>Toujours utiliser des service accounts dédiés par application plutôt que des comptes utilisateurs pour l'authentification machine</li>
-<li>Activer les logs d'audit (Cloud Audit Logs) sur tous les projets en production</li>
-<li>Privilégier les services managés de GCP pour réduire la charge opérationnelle</li>
-<li>Partitionner et clustériser les tables BigQuery pour optimiser les performances et les coûts de requêtage</li>
+<li>Crée un projet distinct par environnement ; jamais partager des projets entre prod et non-prod.</li>
+<li>Attribue un budget + alerte à chaque projet dès la création.</li>
+</ul>
+<pre><code class="lang-bash">gcloud projects create my-app-prod --folder=FOLDER_ID
+gcloud billing projects link my-app-prod --billing-account=BILLING_ID
+gcloud alpha billing budgets create \
+  --billing-account=BILLING_ID \
+  --display-name=&quot;my-app-prod budget&quot; \
+  --budget-amount=500USD \
+  --threshold-rule=percent=0.8</code></pre>
+<h3>2. IAM — moindre privilège dès le départ</h3>
+<ul>
+<li>Un <strong>service account</strong> par workload, jamais la clé par défaut Compute.</li>
+<li>Préfère <strong>Workload Identity Federation</strong> (pas de clé JSON) pour les pipelines CI/CD.</li>
+<li>Rôles custom &gt; rôles primitifs (Owner/Editor/Viewer).</li>
+</ul>
+<pre><code class="lang-bash"># Créer un SA dédié
+gcloud iam service-accounts create sa-cloud-run-api \
+  --display-name=&quot;API Cloud Run&quot;
+
+# Binding minimal
+gcloud projects add-iam-policy-binding PROJECT_ID \
+  --member=&quot;serviceAccount:sa-cloud-run-api@PROJECT_ID.iam.gserviceaccount.com&quot; \
+  --role=&quot;roles/run.invoker&quot;</code></pre>
+<h3>3. Choisir le bon service de calcul</h3>
+<table><thead><tr><th>Besoin</th><th>Service recommandé</th></tr></thead><tbody><tr><td>API HTTP / microservice conteneurisé, trafic variable</td><td><strong>Cloud Run</strong></td></tr><tr><td>Workloads Kubernetes existants, GPU, état local</td><td><strong>GKE Autopilot</strong></td></tr><tr><td>Traitement event-driven simple (&lt;10 min)</td><td><strong>Cloud Functions 2nd gen</strong></td></tr><tr><td>Batch HPC ou ML training</td><td><strong>Batch</strong> + GPU/TPU</td></tr><tr><td>VM legacy ou contrôle OS total</td><td><strong>Compute Engine</strong></td></tr></tbody></table>
+<pre><code class="lang-bash"># Déployer sur Cloud Run depuis une image Artifact Registry
+gcloud run deploy my-api \
+  --image=europe-west1-docker.pkg.dev/PROJECT_ID/repo/my-api:latest \
+  --region=europe-west1 \
+  --platform=managed \
+  --service-account=sa-cloud-run-api@PROJECT_ID.iam.gserviceaccount.com \
+  --min-instances=0 \
+  --max-instances=20 \
+  --concurrency=80 \
+  --no-allow-unauthenticated</code></pre>
+<h3>4. Choisir le bon stockage de données</h3>
+<table><thead><tr><th>Pattern</th><th>Service</th></tr></thead><tbody><tr><td>Analytique OLAP, PB+</td><td><strong>BigQuery</strong></td></tr><tr><td>Transactionnel SQL managé</td><td><strong>Cloud SQL</strong> (Postgres/MySQL) ou <strong>AlloyDB</strong></td></tr><tr><td>NoSQL document temps réel (mobile/web)</td><td><strong>Firestore</strong></td></tr><tr><td>Clé-valeur faible latence (&lt; 10 ms)</td><td><strong>Bigtable</strong></td></tr><tr><td>Fichiers, backups, assets</td><td><strong>Cloud Storage</strong></td></tr><tr><td>Cache in-memory</td><td><strong>Memorystore (Redis)</strong></td></tr></tbody></table>
+<p><strong>BigQuery — optimisations essentielles :</strong></p>
+<pre><code class="lang-sql">-- Toujours créer les tables partitionnées
+CREATE TABLE `project.dataset.events`
+PARTITION BY DATE(created_at)
+CLUSTER BY user_id, event_type
+OPTIONS (require_partition_filter = true)
+AS SELECT * FROM staging.events WHERE FALSE;
+
+-- Lire seulement les partitions nécessaires
+SELECT user_id, COUNT(*) as cnt
+FROM `project.dataset.events`
+WHERE DATE(created_at) BETWEEN '2026-01-01' AND '2026-01-31'
+GROUP BY user_id;</code></pre>
+<h3>5. Réseau et sécurité</h3>
+<pre><code class="lang-bash"># VPC dédié avec sous-réseaux régionaux
+gcloud compute networks create vpc-prod --subnet-mode=custom
+gcloud compute networks subnets create subnet-west1 \
+  --network=vpc-prod \
+  --region=europe-west1 \
+  --range=10.0.1.0/24 \
+  --enable-private-ip-google-access
+
+# Firewall — deny-all ingress par défaut, allow uniquement ce qui est nécessaire
+gcloud compute firewall-rules create allow-internal \
+  --network=vpc-prod \
+  --action=ALLOW \
+  --rules=tcp:8080 \
+  --source-ranges=10.0.0.0/8</code></pre>
+<ul>
+<li>Active <strong>VPC Service Controls</strong> pour confiner BigQuery / GCS dans un périmètre.</li>
+<li>Chiffrement CMEK obligatoire pour les données sensibles (clés dans Cloud KMS).</li>
+<li>Active <strong>Cloud Armor</strong> devant les Load Balancers exposés à Internet.</li>
+</ul>
+<h3>6. Pipeline de données événementiels</h3>
+<pre><code>Source → Pub/Sub → Dataflow → BigQuery / Firestore
+                 ↘ Cloud Run (webhook consumer)</code></pre>
+<pre><code class="lang-bash"># Créer un topic Pub/Sub et un abonnement avec dead-letter
+gcloud pubsub topics create events-topic
+gcloud pubsub topics create events-dead-letter
+gcloud pubsub subscriptions create events-sub \
+  --topic=events-topic \
+  --dead-letter-topic=events-dead-letter \
+  --max-delivery-attempts=5 \
+  --ack-deadline=60</code></pre>
+<p>Utilise <strong>Dataflow</strong> (Apache Beam managé) pour les transformations à fort volume ; <strong>Cloud Composer</strong> (Airflow) pour l'orchestration batch planifiée.</p>
+<h3>7. Infrastructure as Code avec Terraform</h3>
+<pre><code class="lang-hcl"># provider.tf
+terraform {
+  required_providers {
+    google = { source = &quot;hashicorp/google&quot;, version = &quot;~&gt; 5.0&quot; }
+  }
+  backend &quot;gcs&quot; {
+    bucket = &quot;tfstate-my-app-prod&quot;
+    prefix = &quot;terraform/state&quot;
+  }
+}
+
+# Cloud Run minimal
+resource &quot;google_cloud_run_v2_service&quot; &quot;api&quot; {
+  name     = &quot;my-api&quot;
+  location = &quot;europe-west1&quot;
+  template {
+    service_account = google_service_account.run_sa.email
+    containers {
+      image = &quot;europe-west1-docker.pkg.dev/${var.project_id}/repo/my-api:latest&quot;
+      resources { limits = { cpu = &quot;1&quot;, memory = &quot;512Mi&quot; } }
+    }
+  }
+}</code></pre>
+<ul>
+<li>Un workspace Terraform par environnement (ou modules + <code>tfvars</code>).</li>
+<li>Stocke le state dans <strong>GCS</strong> avec versioning activé.</li>
+</ul>
+<h3>8. Observabilité</h3>
+<pre><code class="lang-bash"># Voir les logs Cloud Run en temps réel
+gcloud logging read \
+  'resource.type=&quot;cloud_run_revision&quot; AND resource.labels.service_name=&quot;my-api&quot;' \
+  --project=PROJECT_ID \
+  --freshness=1h \
+  --format=&quot;table(timestamp,jsonPayload.message)&quot;
+
+# Créer une alerte sur erreurs 5xx
+gcloud monitoring policies create --policy-from-file=alert-5xx.yaml</code></pre>
+<ul>
+<li>Utilise <strong>Cloud Trace</strong> + <strong>Error Reporting</strong> dès le dev (zero-cost en dessous des quotas).</li>
+<li>Exporte les logs vers BigQuery pour des analyses long terme à moindre coût.</li>
+</ul>
+<hr>
+<h2>Critères de décision rapides</h2>
+<ul>
+<li><strong>Cloud Run vs GKE</strong> : préfère Cloud Run si pas de dépendance Kubernetes-native (DaemonSet, CRD, GPU) ; GKE sinon.</li>
+<li><strong>Firestore vs Cloud SQL</strong> : Firestore si schéma flexible et accès mobile/web direct ; Cloud SQL si SQL strict et transactions complexes.</li>
+<li><strong>Région</strong> : <code>europe-west1</code> (Belgique) ou <code>europe-west9</code> (Paris) pour la conformité RGPD Europe.</li>
+</ul>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<ul>
+<li><strong>Pas de partitionnement BigQuery</strong> → factures qui explosent ; toujours partitionner sur une colonne date.</li>
+<li><strong>Clés JSON de service account committées</strong> → rotation immédiate + audit ; utiliser Workload Identity à la place.</li>
+<li><strong>min-instances=0 sans warm-up</strong> → cold starts sur Cloud Run ; ajoute <code>--min-instances=1</code> sur les APIs latency-sensitive.</li>
+<li><strong>Requêtes BigQuery sans filtre de partition</strong> → full table scan à chaque exécution ; active <code>require_partition_filter</code>.</li>
+<li><strong>IAM Owner sur un projet de prod</strong> → accès trop large ; utiliser des rôles granulaires ou custom.</li>
+<li><strong>Pas de VPC pour Cloud SQL</strong> → exposé via IP publique ; toujours connecter via Cloud SQL Auth Proxy ou Private IP.</li>
+<li><strong>Ignorer les quotas</strong> → erreurs 429 imprévues en prod ; vérifier et demander les augmentations en amont.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Artifact Registry</strong> remplace Container Registry (GCR deprecated) ; migrer les images existantes.</li>
+<li><strong>Cloud Run Jobs</strong> pour les tâches batch ponctuelles sans serveur Kubernetes.</li>
+<li><strong>AlloyDB Omni</strong> si besoin Postgres ultra-performant avec cache columnar intégré.</li>
+<li><strong>Gemini in BigQuery</strong> (Vertex AI intégré) pour les analyses ML directement dans le data warehouse.</li>
+<li><strong>Assured Workloads</strong> pour les projets sous contrainte réglementaire (FedRAMP, C5, RGPD souverain).</li>
+<li>Chiffrement <strong>CMEK + Cloud KMS</strong> obligatoire pour tout stockage de données personnelles en production.</li>
 </ul>
 </article>
 </main>

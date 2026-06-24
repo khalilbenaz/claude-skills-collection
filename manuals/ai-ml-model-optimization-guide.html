@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ai-ml-model-optimization-guide — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Optimisation de modèles ML pour l'inférence (quantization, pruning, distillation, ONNX)">
+<meta name="description" content="Optimisation de modèles ML pour l'inférence (quantization, pruning, distillation, ONNX) — guide opérationnel avec snippets copiables, critères de choix et anti-patterns.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🧠 AI / ML</span>
 <h1 class="skill-title">ai-ml-model-optimization-guide</h1>
-<p class="lead">Optimisation de modèles ML pour l'inférence (quantization, pruning, distillation, ONNX)</p>
+<p class="lead">Optimisation de modèles ML pour l'inférence (quantization, pruning, distillation, ONNX) — guide opérationnel avec snippets copiables, critères de choix et anti-patterns.</p>
 
 
 
@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/ai-ml-model-optimization-guide</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">quantization\</span><span class="trigger">pruning\</span><span class="trigger">distillation\</span><span class="trigger">ONNX\</span><span class="trigger">optimiser un modèle\</span><span class="trigger">inférence rapide\</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>
@@ -96,98 +96,200 @@ cp -r claude-skills-collection/skills/ai-ml-model-optimization-guide ~/.claude/s
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Model Optimization Guide</h1>
-<p>Guide complet pour l'optimisation de modèles de machine learning en vue du déploiement : réduction de taille, accélération de l'inférence et préservation des performances.</p>
-<h2>Workflow</h2>
-<h3>1. Profiler le modèle et établir les objectifs</h3>
+<p>Guide opérationnel pour réduire la taille et accélérer l'inférence d'un modèle ML sans régresser les métriques métier.</p>
+<h2>Critères de décision rapides</h2>
+<table><thead><tr><th>Contrainte principale</th><th>Technique recommandée</th></tr></thead><tbody><tr><td>Déploiement sans GPU, CPU seul</td><td>PTQ INT8 + ONNX Runtime (OpenVINO EP)</td></tr><tr><td>Latence &lt; 20 ms sur GPU NVIDIA</td><td>TensorRT FP16 ou INT8</td></tr><tr><td>Modèle trop gros pour mémoire edge</td><td>Pruning structuré + TFLite/CoreML</td></tr><tr><td>LLM &gt; 7B à servir sur 1 GPU</td><td>GPTQ 4-bit ou AWQ</td></tr><tr><td>Contrainte de qualité stricte (&lt; 0,5 % drop)</td><td>QAT ou distillation</td></tr><tr><td>Pipeline cross-framework</td><td>ONNX export + ORT</td></tr></tbody></table>
+<hr>
+<h2>Workflow en 7 étapes</h2>
+<h3>1. Profiler et fixer les objectifs</h3>
+<p><strong>Avant toute optimisation</strong>, mesurer la baseline sur le hardware de production.</p>
+<pre><code class="lang-python"># PyTorch Profiler (CPU+GPU)
+import torch
+from torch.profiler import profile, ProfilerActivity
+
+with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+             record_shapes=True, profile_memory=True) as prof:
+    model(inputs)
+
+print(prof.key_averages().table(sort_by=&quot;cuda_time_total&quot;, row_limit=15))
+prof.export_chrome_trace(&quot;trace.json&quot;)  # ouvrir dans chrome://tracing</code></pre>
+<p>Grille d'objectifs à remplir avant de commencer :</p>
+<table><thead><tr><th>Métrique</th><th>Valeur actuelle</th><th>Cible</th><th>Tolérance dégradation</th></tr></thead><tbody><tr><td>Latence P95 (ms)</td><td>?</td><td>?</td><td>+0 %</td></tr><tr><td>Taille modèle (MB)</td><td>?</td><td>?</td><td>—</td></tr><tr><td>Accuracy / F1</td><td>?</td><td>—</td><td>-0,5 % max</td></tr><tr><td>VRAM / RAM (MB)</td><td>?</td><td>?</td><td>—</td></tr></tbody></table>
+<hr>
+<h3>2. Quantification (technique la plus rapide)</h3>
+<p><strong>PTQ INT8 — PyTorch (sans réentraînement)</strong></p>
+<pre><code class="lang-python">import torch.quantization as tq
+
+model.eval()
+model.qconfig = tq.get_default_qconfig('fbgemm')   # CPU x86
+# ou 'qnnpack' pour ARM/mobile
+tq.prepare(model, inplace=True)
+
+# Calibration : passer ~100-500 exemples représentatifs
+for batch in calibration_loader:
+    model(batch)
+
+tq.convert(model, inplace=True)
+torch.save(model.state_dict(), &quot;model_int8.pt&quot;)</code></pre>
+<p><strong>PTQ FP16 — ONNX Runtime (le plus portable)</strong></p>
+<pre><code class="lang-python">from onnxruntime.quantization import quantize_dynamic, QuantType
+
+quantize_dynamic(
+    &quot;model.onnx&quot;,
+    &quot;model_int8.onnx&quot;,
+    weight_type=QuantType.QInt8
+)</code></pre>
+<p><strong>LLM — bitsandbytes 4-bit (Hugging Face)</strong></p>
+<pre><code class="lang-python">from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type=&quot;nf4&quot;,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=True,
+)
+model = AutoModelForCausalLM.from_pretrained(&quot;mistralai/Mistral-7B-v0.1&quot;,
+                                              quantization_config=bnb_config,
+                                              device_map=&quot;auto&quot;)</code></pre>
+<p><strong>QAT (quand PTQ dégrade &gt; seuil)</strong></p>
+<pre><code class="lang-python">model.train()
+model.qconfig = tq.get_default_qat_qconfig('fbgemm')
+tq.prepare_qat(model, inplace=True)
+# Fine-tune 3-5 epochs avec LR réduit (~10x)
+trainer.train()
+tq.convert(model.eval(), inplace=True)</code></pre>
+<hr>
+<h3>3. Pruning (élagage)</h3>
+<p><strong>Choix de la stratégie :</strong></p>
 <ul>
-<li>Mesurer les performances de base du modèle non optimisé (latence, throughput, taille mémoire)</li>
-<li>Profiler l'inférence pour identifier les goulots d'étranglement (couches les plus coûteuses, transferts mémoire)</li>
-<li>Utiliser des outils de profiling : PyTorch Profiler, TensorFlow Profiler, NVIDIA Nsight</li>
-<li>Définir les objectifs cibles (latence max, taille max du modèle, budget mémoire, hardware cible)</li>
-<li>Établir le seuil minimal de performance acceptable (dégradation maximale tolérée en accuracy/F1)</li>
+<li>Non structuré → sparsité maximale, gains réels seulement avec bibliothèques sparse (cuSPARSE, SparseML)</li>
+<li>Structuré (filtres/couches) → gains directs sur CPU/GPU classiques ✓</li>
+<li>2:4 semi-structuré → gain x2 sur GPU NVIDIA Ampere+ via sparsité matérielle ✓</li>
 </ul>
-<h3>2. Appliquer la quantification</h3>
+<pre><code class="lang-python">import torch.nn.utils.prune as prune
+
+# Pruning structuré : supprimer 30 % des filtres conv
+prune.ln_structured(model.layer1[0].conv1, name='weight', amount=0.3, n=2, dim=0)
+
+# Pruning global non structuré (tous les modules conv+linear)
+parameters_to_prune = [
+    (module, 'weight')
+    for module in model.modules()
+    if isinstance(module, (torch.nn.Conv2d, torch.nn.Linear))
+]
+prune.global_unstructured(parameters_to_prune,
+                           pruning_method=prune.L1Unstructured,
+                           amount=0.4)
+
+# Rendre le pruning permanent
+for module, _ in parameters_to_prune:
+    prune.remove(module, 'weight')</code></pre>
+<p>Après pruning, <strong>fine-tuner obligatoirement</strong> 3-10 epochs avec LR = 1/10 du LR d'origine.</p>
+<hr>
+<h3>4. Distillation de connaissances</h3>
+<p>Quand on veut un modèle student 5-10x plus petit avec &lt; 1 % de dégradation.</p>
+<pre><code class="lang-python">import torch.nn.functional as F
+
+def distillation_loss(student_logits, teacher_logits, labels,
+                      temperature=4.0, alpha=0.7):
+    # Soft loss (KL divergence sur les distributions adoucies)
+    soft_targets = F.softmax(teacher_logits / temperature, dim=-1)
+    soft_student = F.log_softmax(student_logits / temperature, dim=-1)
+    kd_loss = F.kl_div(soft_student, soft_targets, reduction='batchmean') * (temperature ** 2)
+
+    # Hard loss (cross-entropy sur les vrais labels)
+    ce_loss = F.cross_entropy(student_logits, labels)
+
+    return alpha * kd_loss + (1 - alpha) * ce_loss</code></pre>
+<p>Valeurs de départ : <code>temperature=4</code>, <code>alpha=0.7</code>. Augmenter <code>temperature</code> si le teacher est très confiant.</p>
+<hr>
+<h3>5. Export ONNX et optimisation du graphe</h3>
+<pre><code class="lang-python">import torch
+import onnx
+from onnxruntime.tools.optimizer import optimize_model
+
+# Export
+dummy_input = torch.randn(1, 3, 224, 224)
+torch.onnx.export(
+    model, dummy_input, &quot;model.onnx&quot;,
+    opset_version=17,
+    input_names=[&quot;input&quot;], output_names=[&quot;output&quot;],
+    dynamic_axes={&quot;input&quot;: {0: &quot;batch_size&quot;}, &quot;output&quot;: {0: &quot;batch_size&quot;}}
+)
+
+# Vérification
+onnx.checker.check_model(&quot;model.onnx&quot;)
+
+# Optimisation du graphe (fusion conv+bn, élimination nœuds morts)
+optimized = optimize_model(&quot;model.onnx&quot;, model_type=&quot;bert&quot;)  # ou &quot;gpt2&quot;, &quot;vit&quot;
+optimized.save_model_to_file(&quot;model_opt.onnx&quot;)</code></pre>
+<p><strong>Benchmark ONNX Runtime vs PyTorch :</strong></p>
+<pre><code class="lang-python">import onnxruntime as ort, time, numpy as np
+
+sess = ort.InferenceSession(&quot;model_opt.onnx&quot;,
+       providers=[&quot;CUDAExecutionProvider&quot;, &quot;CPUExecutionProvider&quot;])
+
+inp = {&quot;input&quot;: np.random.randn(1, 3, 224, 224).astype(np.float32)}
+# Warmup
+for _ in range(10): sess.run(None, inp)
+
+t0 = time.perf_counter()
+for _ in range(200): sess.run(None, inp)
+print(f&quot;ORT latency: {(time.perf_counter()-t0)/200*1000:.2f} ms&quot;)</code></pre>
+<hr>
+<h3>6. Optimisations hardware spécifiques</h3>
+<p><strong>TensorRT (GPU NVIDIA) :</strong></p>
+<pre><code class="lang-bash"># Convertir ONNX → TensorRT engine FP16
+trtexec --onnx=model_opt.onnx \
+        --saveEngine=model_fp16.trt \
+        --fp16 \
+        --workspace=4096 \
+        --minShapes=input:1x3x224x224 \
+        --optShapes=input:8x3x224x224 \
+        --maxShapes=input:32x3x224x224</code></pre>
+<p><strong>OpenVINO (Intel CPU/GPU) :</strong></p>
+<pre><code class="lang-bash">mo --input_model model.onnx \
+   --compress_to_fp16 \
+   --output_dir openvino_model/</code></pre>
+<p><strong>TFLite (mobile Android/iOS) :</strong></p>
+<pre><code class="lang-python">converter = tf.lite.TFLiteConverter.from_saved_model(&quot;saved_model/&quot;)
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+converter.target_spec.supported_types = [tf.float16]
+tflite_model = converter.convert()
+open(&quot;model.tflite&quot;, &quot;wb&quot;).write(tflite_model)</code></pre>
+<hr>
+<h3>7. Validation et benchmarking final</h3>
+<pre><code class="lang-python"># Checklist de validation avant déploiement
+import numpy as np
+
+def validate_optimization(original_model, optimized_runner, test_loader, tol=1e-3):
+    diffs = []
+    for inputs, _ in test_loader:
+        ref = original_model(inputs).detach().numpy()
+        opt = optimized_runner(inputs)
+        diffs.append(np.abs(ref - opt).max())
+    print(f&quot;Max output diff: {max(diffs):.6f} (tol={tol})&quot;)
+    assert max(diffs) &lt; tol, &quot;REGRESSION NUMERIQUE DETECTEE&quot;</code></pre>
+<p>Métriques à documenter impérativement :</p>
+<table><thead><tr><th>Métrique</th><th>Avant</th><th>Après</th><th>Delta</th></tr></thead><tbody><tr><td>Accuracy / F1</td><td></td><td></td><td></td></tr><tr><td>Latence P95 ms</td><td></td><td></td><td></td></tr><tr><td>Taille fichier MB</td><td></td><td></td><td></td></tr><tr><td>VRAM peak MB</td><td></td><td></td><td></td></tr><tr><td>Throughput img/s</td><td></td><td></td><td></td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<p><strong>1. Optimiser sans mesurer sur le hardware cible</strong> INT8 sur CPU x86 peut être plus lent que FP32 si les opérateurs ne sont pas supportés nativement. Toujours mesurer sur le vrai hardware.</p>
+<p><strong>2. Combiner toutes les techniques d'un coup</strong> Quantification + pruning + distillation ensemble = impossible de diagnostiquer la source de dégradation. Une technique à la fois, mesurer entre chaque.</p>
+<p><strong>3. Calibration non représentative pour PTQ</strong> Calibrer sur le jeu de test → fuite d'information. Calibrer sur un sous-ensemble du train. 100-500 exemples suffisent ; plus n'améliore pas.</p>
+<p><strong>4. Ignorer les couches sensibles</strong> Premières et dernières couches du réseau sont souvent très sensibles à la quantification. Utiliser <code>per-channel</code> plutôt que <code>per-tensor</code>, ou les laisser en FP32.</p>
+<p><strong>5. Oublier le dynamic batching</strong> Un modèle optimisé pour batch=1 peut ne pas bénéficier du throughput à batch=32. Configurer <code>dynamic_axes</code> à l'export ONNX et profiler les deux cas.</p>
+<p><strong>6. Ne pas vérifier la cohérence numérique</strong> Les exporteurs ONNX ont des bugs sur certains opérateurs (attention masks, custom layers). Toujours comparer les sorties sur un jeu fixe.</p>
+<p><strong>7. Pruning non structuré sans framework sparse</strong> PyTorch met les poids à zéro mais la couche reste dense en mémoire. Gain réel uniquement avec SparseML, DeepSparse ou en convertissant vers un format sparse explicite.</p>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Choisir le type de quantification selon les besoins :</li>
-<ul>
-<li>Post-Training Quantization (PTQ) : rapide, sans réentraînement (FP32 vers INT8 ou FP16)</li>
-<li>Quantization-Aware Training (QAT) : meilleure qualité, nécessite un réentraînement</li>
-<li>Quantification dynamique : quantifie les activations à la volée</li>
+<li><strong>llm.int8() / bitsandbytes</strong> : standard de facto pour les LLM &gt; 3B sur GPU avec mémoire limitée.</li>
+<li><strong>AWQ (Activation-aware Weight Quantization)</strong> : meilleure qualité que GPTQ à 4-bit, privilégier pour les LLM critiques.</li>
+<li><strong>torch.compile() (PyTorch 2.x)</strong> : avant toute optimisation manuelle, tester <code>model = torch.compile(model, mode=&quot;reduce-overhead&quot;)</code> — gain gratuit 10-40 % sans perte de qualité.</li>
+<li><strong>Flash Attention 2/3</strong> : pour les transformers, remplacer l'attention standard par <code>flash_attn</code> réduit la mémoire quadratique en linéaire et accélère x2-x4.</li>
+<li><strong>Continual calibration</strong> : pour les modèles en production, recalibrer la quantification PTQ à chaque dérive significative de la distribution des données.</li>
 </ul>
-<li>Configurer la calibration pour PTQ avec un échantillon représentatif du dataset</li>
-<li>Appliquer la quantification par couche (certaines couches sensibles restent en FP32)</li>
-<li>Valider les métriques après quantification et comparer avec le modèle original</li>
-<li>Pour les LLM : utiliser GPTQ, AWQ ou bitsandbytes pour la quantification 4-bit/8-bit</li>
-</ul>
-<h3>3. Implémenter le pruning (élagage)</h3>
-<ul>
-<li>Choisir la stratégie de pruning :</li>
-<ul>
-<li>Non structuré : met à zéro les poids individuels (sparsity)</li>
-<li>Structuré : supprime des neurones, filtres ou couches entières</li>
-<li>Semi-structuré : pattern 2:4 pour les GPU NVIDIA Ampere+</li>
-</ul>
-<li>Définir le ratio de pruning cible (typiquement 30-90% selon la tolérance)</li>
-<li>Appliquer le pruning progressif : augmenter graduellement le taux d'élagage sur plusieurs epochs</li>
-<li>Réentraîner (fine-tuning) le modèle élagué pour récupérer les performances perdues</li>
-<li>Évaluer l'impact du pruning sur chaque couche pour identifier les couches sensibles</li>
-</ul>
-<h3>4. Mettre en oeuvre la distillation de connaissances</h3>
-<ul>
-<li>Sélectionner le modèle enseignant (teacher) : le modèle original performant</li>
-<li>Concevoir le modèle élève (student) : architecture plus petite mais adaptée à la tâche</li>
-<li>Configurer la loss de distillation : combinaison de la loss standard et de la KL-divergence sur les logits</li>
-<li>Ajuster la température de softmax (typiquement T=2 à T=20) et le ratio alpha entre les deux losses</li>
-<li>Entraîner l'élève en utilisant simultanément les labels réels et les soft labels du teacher</li>
-<li>Comparer les performances de l'élève avec le teacher et un modèle entraîné sans distillation</li>
-</ul>
-<h3>5. Exporter et optimiser avec ONNX</h3>
-<ul>
-<li>Exporter le modèle au format ONNX via torch.onnx.export ou tf2onnx</li>
-<li>Vérifier la validité du graphe ONNX (onnx.checker, comparaison des sorties)</li>
-<li>Appliquer les optimisations du graphe avec ONNX Runtime :</li>
-<ul>
-<li>Fusion d'opérateurs (conv+bn, matmul+add)</li>
-<li>Élimination des noeuds redondants</li>
-<li>Optimisation de la mémoire (réutilisation des buffers)</li>
-</ul>
-<li>Configurer les execution providers adaptés au hardware (CUDA, TensorRT, OpenVINO, DirectML)</li>
-<li>Benchmarker ONNX Runtime vs le framework original sur des données réelles</li>
-</ul>
-<h3>6. Appliquer les optimisations spécifiques au hardware</h3>
-<ul>
-<li>Pour GPU NVIDIA : compiler avec TensorRT pour des gains majeurs de latence</li>
-<li>Pour CPU Intel : utiliser OpenVINO ou ONNX Runtime avec MKL-DNN</li>
-<li>Pour mobile : convertir en TFLite (Android), Core ML (iOS) ou ONNX Mobile</li>
-<li>Pour edge : utiliser des frameworks spécialisés (TensorRT pour Jetson, NNAPI pour Android)</li>
-<li>Activer les optimisations de batching dynamique et de parallélisme d'inférence</li>
-<li>Exploiter la mixed precision (FP16/BF16) sur les GPU compatibles</li>
-</ul>
-<h3>7. Valider et benchmarker le modèle optimisé</h3>
-<ul>
-<li>Comparer les métriques de qualité avant/après chaque optimisation (accuracy, F1, mAP)</li>
-<li>Mesurer la latence (P50, P95, P99) sur le hardware de production</li>
-<li>Calculer le throughput (inférences/seconde) en conditions de charge réalistes</li>
-<li>Vérifier la cohérence numérique entre le modèle original et optimisé sur un jeu de test</li>
-<li>Documenter le trade-off performance/qualité pour chaque technique appliquée</li>
-<li>Tester la stabilité sous charge prolongée (memory leaks, dégradation de latence)</li>
-</ul>
-<h2>Rules</h2>
-<ol>
-<li><strong>Mesurer avant d'optimiser</strong> : Toujours profiler le modèle pour identifier les vrais goulots d'étranglement. Optimiser sans mesurer conduit à des efforts inutiles sur des composants qui ne sont pas limitants.</li>
-</ol>
-<ol>
-<li><strong>Optimiser de manière incrémentale</strong> : Appliquer une technique à la fois et mesurer l'impact. Combiner quantification, pruning et distillation simultanément rend impossible l'identification de la source d'une dégradation.</li>
-</ol>
-<ol>
-<li><strong>Valider numériquement chaque étape</strong> : Après chaque transformation (export ONNX, quantification, pruning), comparer les sorties du modèle optimisé avec l'original sur un jeu de référence. Des écarts silencieux peuvent apparaître lors des conversions.</li>
-</ol>
-<ol>
-<li><strong>Adapter l'optimisation au hardware cible</strong> : Une optimisation performante sur GPU peut être contre-productive sur CPU. Toujours benchmarker sur le hardware réel de déploiement, pas uniquement sur la machine de développement.</li>
-</ol>
-<ol>
-<li><strong>Documenter les compromis</strong> : Chaque optimisation implique un trade-off entre taille, vitesse et qualité. Documenter précisément ces compromis pour permettre une prise de décision éclairée lors du déploiement.</li>
-</ol>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

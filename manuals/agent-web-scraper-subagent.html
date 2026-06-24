@@ -97,86 +97,222 @@ cp -r claude-skills-collection/skills/agent-web-scraper-subagent ~/.claude/skill
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Web Scraper Sub-Agent</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utiliser ce skill lorsqu'un agent parent doit déléguer la collecte de données web à un sous-agent autonome et réutilisable. Idéal pour les tâches de surveillance de pages, d'extraction de catalogues produits, de collecte de données structurées depuis des sites dynamiques ou statiques, ou lorsque plusieurs sources web doivent être interrogées en parallèle.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Interface du sous-agent</strong> — Recevoir depuis l'agent parent : <code>url</code> (URL de départ), <code>selectors</code> (schéma d'extraction CSS/XPath), <code>max_pages</code> (limite de pagination), <code>timeout</code> (délai maximum en secondes) et <code>output_format</code> (json/csv/markdown). Valider tous les champs avant de commencer.</li>
-</ol>
-<ol>
-<li><strong>Browser automation setup</strong> — Initialiser le moteur headless approprié selon l'environnement : Playwright (recommandé, supporte Chromium/Firefox/WebKit), Puppeteer (Node.js), ou Selenium avec ChromeDriver. Configurer le profil du navigateur (résolution, langue, timezone) pour paraître naturel.</li>
-</ol>
-<ol>
-<li><strong>Page navigation</strong> — Naviguer vers l'URL cible, attendre le rendu complet (<code>networkidle</code>, <code>domcontentloaded</code>). Gérer la pagination automatique (bouton &quot;suivant&quot;, paramètres d'URL <code>?page=N</code>, curseurs, scroll infini via injection JS <code>window.scrollTo</code>). Limiter la profondeur selon <code>max_pages</code>.</li>
-</ol>
-<ol>
-<li><strong>Data extraction</strong> — Appliquer les sélecteurs CSS ou XPath définis dans <code>selectors</code>. Utiliser <code>readability.js</code> ou <code>trafilatura</code> pour l'extraction de texte principal. Extraire les tableaux (<code>pandas.read_html</code>), les données structurées (JSON-LD, microdata, Open Graph), et les attributs d'éléments (<code>href</code>, <code>src</code>, <code>data-*</code>).</li>
-</ol>
-<ol>
-<li><strong>Anti-detection</strong> — Faire pivoter les User-Agent (liste de navigateurs réels). Injecter des délais aléatoires entre requêtes (1–5 secondes). Masquer les propriétés <code>navigator.webdriver</code>. Utiliser des proxies rotatifs si nécessaire. Désactiver les en-têtes révélateurs (<code>headless</code>, <code>automation</code>).</li>
-</ol>
-<ol>
-<li><strong>Error handling</strong> — Intercepter les codes HTTP d'erreur (403, 404, 429, 503). Détecter les CAPTCHAs (présence de reCAPTCHA, hCaptcha) et signaler au parent. Implémenter un retry avec backoff exponentiel (1s, 2s, 4s, max 3 tentatives). Logger chaque erreur avec URL, code, timestamp et contexte.</li>
-</ol>
-<ol>
-<li><strong>Output structuring</strong> — Nettoyer les données extraites (strip whitespace, normaliser encodage UTF-8). Dédupliquer les enregistrements via hash de contenu. Valider la conformité au schéma JSON attendu. Enrichir si besoin (timestamps d'extraction, URL source, numéro de page).</li>
-</ol>
-<ol>
-<li><strong>Caching</strong> — Maintenir un cache local (SQLite ou fichier JSON) des pages déjà visitées avec TTL configurable. Vérifier le cache avant toute requête réseau. Supporter le rafraîchissement conditionnel via <code>If-Modified-Since</code> ou <code>ETag</code>. Éviter les re-crawls inutiles en session courante.</li>
-</ol>
-<ol>
-<li><strong>Rate limiting et politesse</strong> — Lire et respecter <code>robots.txt</code> (utiliser <code>urllib.robotparser</code>). Appliquer un délai minimum entre requêtes vers le même domaine. Limiter la concurrence (max 2–3 requêtes simultanées par domaine). Respecter l'en-tête <code>Retry-After</code> en cas de 429.</li>
-</ol>
-<ol>
-<li><strong>Reporting au parent</strong> — Retourner un objet structuré complet : données extraites, statut global (<code>success</code>/<code>partial</code>/<code>failed</code>), nombre de pages visitées, liste d'erreurs détaillées, score de confiance (ratio champs remplis / total attendu), et durée totale d'exécution.</li>
-</ol>
-<h2>Interface du sous-agent</h2>
-<p><strong>Input schema :</strong></p>
+<p>Utiliser ce skill quand un agent parent doit déléguer la collecte de données web à un sous-agent autonome. Cas typiques :</p>
+<table><thead><tr><th>Cas</th><th>Outil adapté</th></tr></thead><tbody><tr><td>Page statique HTML simple</td><td><code>requests</code> + <code>BeautifulSoup</code></td></tr><tr><td>Page JS dynamique (SPA, lazy-load)</td><td><code>playwright</code> headless</td></tr><tr><td>Extraction de texte principal</td><td><code>trafilatura</code></td></tr><tr><td>Tableau HTML → DataFrame</td><td><code>pandas.read_html</code></td></tr><tr><td>Scraping à grande échelle</td><td><code>scrapy</code> + middlewares</td></tr><tr><td>Browser automation avec MCP</td><td><code>playwright-mcp</code></td></tr></tbody></table>
+<p><strong>Ne pas utiliser ce skill pour</strong> : APIs REST publiques (utiliser <code>requests</code> direct), données disponibles via export officiel (CSV, JSON), ou sites protégés par authentication que l'on ne détient pas.</p>
+<h2>Workflow en étapes</h2>
+<h3>Étape 1 — Valider l'input avant toute requête réseau</h3>
+<pre><code class="lang-python">REQUIRED_FIELDS = {&quot;url&quot;}
+DEFAULTS = {&quot;max_pages&quot;: 1, &quot;timeout&quot;: 30, &quot;output_format&quot;: &quot;json&quot;,
+            &quot;cache_ttl&quot;: 3600, &quot;follow_pagination&quot;: False, &quot;proxy&quot;: None}
+
+def validate_input(params: dict) -&gt; dict:
+    missing = REQUIRED_FIELDS - params.keys()
+    if missing:
+        raise ValueError(f&quot;Champs obligatoires manquants : {missing}&quot;)
+    return {**DEFAULTS, **params}</code></pre>
+<p>Vérifier aussi que l'URL est bien formée (<code>urllib.parse.urlparse</code>) et que le schéma est <code>http</code> ou <code>https</code>.</p>
+<h3>Étape 2 — Choisir le moteur de rendu</h3>
+<pre><code class="lang-python"># Décision : site statique ou dynamique ?
+import requests
+from bs4 import BeautifulSoup
+
+r = requests.get(url, timeout=10)
+soup = BeautifulSoup(r.text, &quot;lxml&quot;)
+
+# Si les sélecteurs retournent vide → site JS → basculer sur Playwright
+if not soup.select(selectors[&quot;target_field&quot;]):
+    use_playwright = True</code></pre>
+<p>Playwright en mode headless Chromium est le choix par défaut pour les sites dynamiques en 2026. Puppeteer n'est pertinent que si le reste de la stack est Node.js.</p>
+<h3>Étape 3 — Initialiser le navigateur (Playwright)</h3>
+<pre><code class="lang-python">from playwright.sync_api import sync_playwright
+
+def get_page_content(url: str, timeout: int, proxy: str | None) -&gt; str:
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=True,
+            proxy={&quot;server&quot;: proxy} if proxy else None,
+            args=[&quot;--no-sandbox&quot;, &quot;--disable-blink-features=AutomationControlled&quot;]
+        )
+        ctx = browser.new_context(
+            user_agent=&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 &quot;
+                       &quot;(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36&quot;,
+            locale=&quot;fr-FR&quot;,
+            viewport={&quot;width&quot;: 1280, &quot;height&quot;: 800},
+        )
+        page = ctx.new_page()
+        page.goto(url, wait_until=&quot;networkidle&quot;, timeout=timeout * 1000)
+        content = page.content()
+        browser.close()
+    return content</code></pre>
+<h3>Étape 4 — Extraire les données</h3>
+<pre><code class="lang-python">from bs4 import BeautifulSoup
+
+def extract(html: str, selectors: dict, source_url: str) -&gt; list[dict]:
+    soup = BeautifulSoup(html, &quot;lxml&quot;)
+    # Extraction JSON-LD (structured data) en priorité
+    import json
+    for tag in soup.find_all(&quot;script&quot;, type=&quot;application/ld+json&quot;):
+        try:
+            return [json.loads(tag.string)]
+        except Exception:
+            pass
+
+    # Fallback : sélecteurs CSS définis par l'appelant
+    rows = []
+    containers = soup.select(selectors.get(&quot;container&quot;, &quot;body&quot;))
+    for el in containers:
+        row = {&quot;_source_url&quot;: source_url}
+        for field, selector in selectors.items():
+            if field == &quot;container&quot;:
+                continue
+            found = el.select_one(selector)
+            row[field] = found.get_text(strip=True) if found else None
+        rows.append(row)
+    return rows</code></pre>
+<p>Pour extraction de texte libre (articles, documentation) : <code>trafilatura.fetch_url</code> + <code>trafilatura.extract</code> retourne directement le contenu principal nettoyé.</p>
+<h3>Étape 5 — Gérer la pagination</h3>
+<pre><code class="lang-python">import re, time, random
+
+def iter_pages(start_url: str, max_pages: int, follow: bool):
+    url = start_url
+    for page_num in range(max_pages):
+        yield url, page_num + 1
+        if not follow:
+            break
+        # Stratégie 1 : paramètre ?page=N dans l'URL
+        next_url = re.sub(r&quot;([?&amp;]page=)\d+&quot;, lambda m: m.group(1) + str(page_num + 2), url)
+        if next_url == url:
+            break  # Pas de paramètre page → fin
+        url = next_url
+        time.sleep(random.uniform(1.5, 3.5))  # Délai poli</code></pre>
+<p>Pour les boutons &quot;page suivante&quot; dynamiques, utiliser <code>page.locator(&quot;a[aria-label='Next']&quot;).click()</code> dans Playwright puis attendre <code>networkidle</code>.</p>
+<h3>Étape 6 — Respecter robots.txt et les limites</h3>
+<pre><code class="lang-python">from urllib.robotparser import RobotFileParser
+from urllib.parse import urlparse
+
+def can_fetch(url: str, user_agent: str = &quot;*&quot;) -&gt; bool:
+    parsed = urlparse(url)
+    rp = RobotFileParser()
+    rp.set_url(f&quot;{parsed.scheme}://{parsed.netloc}/robots.txt&quot;)
+    try:
+        rp.read()
+        return rp.can_fetch(user_agent, url)
+    except Exception:
+        return True  # En cas d'erreur réseau, ne pas bloquer</code></pre>
+<p>Appeler <code>can_fetch</code> <strong>avant</strong> la première requête. Si <code>False</code>, retourner immédiatement <code>status: &quot;failed&quot;</code> avec message explicite.</p>
+<h3>Étape 7 — Error handling et retry</h3>
+<pre><code class="lang-python">import time
+
+def fetch_with_retry(fetch_fn, url: str, max_retries: int = 3) -&gt; str | None:
+    delay = 1
+    for attempt in range(max_retries):
+        try:
+            return fetch_fn(url)
+        except Exception as e:
+            code = getattr(e, &quot;status&quot;, 0)
+            if code == 429:
+                retry_after = getattr(e, &quot;retry_after&quot;, delay * 2)
+                time.sleep(retry_after)
+            elif code in (403, 404):
+                break  # Inutile de retenter
+            else:
+                time.sleep(delay)
+                delay *= 2
+    return None</code></pre>
+<h3>Étape 8 — Nettoyer et scorer les données</h3>
+<pre><code class="lang-python">import hashlib, unicodedata
+
+def clean_record(record: dict) -&gt; dict:
+    return {k: unicodedata.normalize(&quot;NFKC&quot;, v).strip() if isinstance(v, str) else v
+            for k, v in record.items()}
+
+def deduplicate(records: list[dict]) -&gt; list[dict]:
+    seen = set()
+    out = []
+    for r in records:
+        h = hashlib.md5(str(r).encode()).hexdigest()
+        if h not in seen:
+            seen.add(h)
+            out.append(r)
+    return out
+
+def confidence_score(records: list[dict], expected_fields: list[str]) -&gt; float:
+    if not records:
+        return 0.0
+    filled = sum(1 for r in records for f in expected_fields if r.get(f))
+    return filled / (len(records) * len(expected_fields))</code></pre>
+<h3>Étape 9 — Retourner le résultat au parent</h3>
+<pre><code class="lang-python"># Schéma de retour normalisé
+output = {
+    &quot;data&quot;: cleaned_records,           # list[dict]
+    &quot;status&quot;: &quot;success&quot;,               # &quot;success&quot; | &quot;partial&quot; | &quot;failed&quot;
+    &quot;pages_visited&quot;: pages_visited,    # int
+    &quot;errors&quot;: error_log,               # [{&quot;url&quot;, &quot;code&quot;, &quot;message&quot;, &quot;timestamp&quot;}]
+    &quot;confidence_score&quot;: score,         # float 0.0–1.0
+    &quot;execution_time_s&quot;: elapsed,       # float
+    &quot;cached&quot;: served_from_cache,       # bool
+}</code></pre>
+<h2>Schémas d'interface</h2>
+<p><strong>Input :</strong></p>
 <pre><code class="lang-python">{
   &quot;url&quot;: str,                  # URL de départ (obligatoire)
-  &quot;selectors&quot;: {               # Dictionnaire nom_champ → sélecteur CSS/XPath
-    &quot;field_name&quot;: &quot;css_or_xpath_selector&quot;
+  &quot;selectors&quot;: {               # nom_champ → sélecteur CSS ou XPath
+    &quot;container&quot;: &quot;article.product&quot;,
+    &quot;title&quot;: &quot;h2.name&quot;,
+    &quot;price&quot;: &quot;span.price&quot;
   },
-  &quot;max_pages&quot;: int,            # Nombre maximum de pages à parcourir (défaut: 1)
-  &quot;timeout&quot;: int,              # Timeout global en secondes (défaut: 30)
-  &quot;output_format&quot;: str,        # &quot;json&quot; | &quot;csv&quot; | &quot;markdown&quot; (défaut: &quot;json&quot;)
-  &quot;cache_ttl&quot;: int,            # TTL du cache en secondes (défaut: 3600)
-  &quot;follow_pagination&quot;: bool,   # Activer la pagination automatique (défaut: False)
-  &quot;proxy&quot;: str                 # URL proxy optionnel (défaut: None)
+  &quot;max_pages&quot;: int,            # défaut: 1
+  &quot;timeout&quot;: int,              # défaut: 30 (secondes)
+  &quot;output_format&quot;: str,        # &quot;json&quot; | &quot;csv&quot; | &quot;markdown&quot; — défaut: &quot;json&quot;
+  &quot;cache_ttl&quot;: int,            # défaut: 3600 (secondes)
+  &quot;follow_pagination&quot;: bool,   # défaut: False
+  &quot;proxy&quot;: str | None          # ex: &quot;http://proxy:8080&quot;
 }</code></pre>
-<p><strong>Output schema :</strong></p>
-<pre><code class="lang-python">{
-  &quot;data&quot;: list[dict],          # Liste d'enregistrements extraits
-  &quot;status&quot;: str,               # &quot;success&quot; | &quot;partial&quot; | &quot;failed&quot;
-  &quot;pages_visited&quot;: int,        # Nombre de pages effectivement visitées
-  &quot;errors&quot;: list[dict],        # [{&quot;url&quot;: str, &quot;code&quot;: int, &quot;message&quot;: str}]
-  &quot;confidence_score&quot;: float,   # 0.0–1.0 (ratio champs remplis)
-  &quot;execution_time_s&quot;: float,   # Durée totale en secondes
-  &quot;cached&quot;: bool               # True si données servies depuis le cache
-}</code></pre>
-<p><strong>Librairies Python recommandées :</strong></p>
-<pre><code>playwright&gt;=1.40.0
-beautifulsoup4&gt;=4.12.0
-lxml&gt;=4.9.0
-trafilatura&gt;=1.6.0
-requests&gt;=2.31.0
-urllib3&gt;=2.0.0
-pandas&gt;=2.0.0</code></pre>
-<h2>Règles</h2>
-<ol>
-<li><strong>Interface contractuelle stricte</strong> — Le sous-agent doit toujours accepter exactement le schéma d'entrée défini et retourner exactement le schéma de sortie défini. Tout champ manquant en entrée doit lever une <code>ValueError</code> explicite avant toute opération réseau.</li>
-</ol>
-<ol>
-<li><strong>Robustesse prioritaire</strong> — Une erreur sur une page individuelle ne doit jamais interrompre le traitement des autres pages. Utiliser <code>try/except</code> granulaires, logger chaque exception, et continuer avec les pages restantes. Retourner <code>status: &quot;partial&quot;</code> plutôt que de lever une exception globale.</li>
-</ol>
-<ol>
-<li><strong>Éthique et légalité</strong> — Toujours vérifier <code>robots.txt</code> avant de commencer. Ne jamais contourner les mécanismes d'authentification. Respecter les <code>Terms of Service</code>. Si une page retourne 403 persistant, signaler au parent sans insister. Le sous-agent ne doit pas être utilisé pour des activités illégales.</li>
-</ol>
-<ol>
-<li><strong>Réutilisabilité maximale</strong> — Le sous-agent doit fonctionner comme une boîte noire indépendante, sans état persistant entre deux appels. Toute configuration doit passer par le schéma d'entrée. Ne jamais hardcoder des sélecteurs, URLs ou credentials dans le code.</li>
-</ol>
-<ol>
-<li><strong>Code Python fonctionnel fourni</strong> — Toujours fournir une implémentation Python complète et exécutable, incluant la classe <code>WebScraperSubAgent</code> avec méthodes <code>run(input_schema) -&gt; output_schema</code>, la gestion des dépendances (<code>requirements.txt</code>), et un exemple d'appel depuis un agent parent.</li>
-</ol>
+<p><strong>Dépendances Python (<code>requirements.txt</code>) :</strong></p>
+<pre><code>playwright&gt;=1.44.0
+beautifulsoup4&gt;=4.12.3
+lxml&gt;=5.2.0
+trafilatura&gt;=1.10.0
+requests&gt;=2.32.0
+pandas&gt;=2.2.0</code></pre>
+<p>Installer Playwright : <code>pip install playwright &amp;&amp; playwright install chromium</code></p>
+<h2>Pièges et anti-patterns</h2>
+<p><strong>Attendre <code>load</code> au lieu de <code>networkidle</code></strong> — Sur les SPAs, <code>load</code> se déclenche avant que l'Ajax soit terminé. Utiliser <code>wait_until=&quot;networkidle&quot;</code> ou attendre explicitement un sélecteur : <code>page.wait_for_selector(&quot;div.results&quot;)</code>.</p>
+<p><strong>Hardcoder des sélecteurs fragiles</strong> — Les sélecteurs comme <code>div:nth-child(3) &gt; span</code> cassent à la moindre refonte. Préférer les attributs sémantiques : <code>[data-testid=&quot;price&quot;]</code>, <code>[itemprop=&quot;price&quot;]</code>, classes métier stables.</p>
+<p><strong>Ignorer robots.txt</strong> — Risque légal (CFAA aux États-Unis, RGPD en Europe si PII). Vérifier systématiquement.</p>
+<p><strong>Pas de délai inter-requêtes</strong> — Ban IP immédiat sur la plupart des sites. Minimum 1,5 s entre requêtes vers le même domaine.</p>
+<p><strong>Lever une exception globale sur une erreur de page</strong> — Le sous-agent doit retourner <code>status: &quot;partial&quot;</code> et continuer. L'agent parent décide du fallback.</p>
+<p><strong>Stocker des données personnelles sans consentement</strong> — Vérifier que les données extraites ne contiennent pas de PII (emails, téléphones, noms) si le site ne l'autorise pas explicitement.</p>
+<p><strong>Lancer Playwright sans <code>--no-sandbox</code></strong> — Plante dans les environnements Docker sans user namespace. Toujours passer l'argument en conteneur.</p>
+<h2>Exemple d'appel depuis un agent parent</h2>
+<pre><code class="lang-python">result = web_scraper_subagent.run({
+    &quot;url&quot;: &quot;https://example.com/products?page=1&quot;,
+    &quot;selectors&quot;: {
+        &quot;container&quot;: &quot;div.product-card&quot;,
+        &quot;title&quot;: &quot;h2.product-title&quot;,
+        &quot;price&quot;: &quot;span.price&quot;,
+        &quot;availability&quot;: &quot;span.stock-status&quot;
+    },
+    &quot;max_pages&quot;: 5,
+    &quot;follow_pagination&quot;: True,
+    &quot;timeout&quot;: 45,
+    &quot;output_format&quot;: &quot;json&quot;
+})
+
+if result[&quot;status&quot;] == &quot;failed&quot;:
+    parent_agent.escalate(result[&quot;errors&quot;])
+elif result[&quot;confidence_score&quot;] &lt; 0.7:
+    parent_agent.log_warning(&quot;Extraction partielle&quot;, result)
+else:
+    parent_agent.process(result[&quot;data&quot;])</code></pre>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Playwright MCP</strong> : si l'environnement Claude Code dispose du MCP Playwright, préférer les outils <code>browser_navigate</code>, <code>browser_snapshot</code>, <code>browser_click</code> plutôt que d'instancier un script Python séparé — latence réduite, pas de dépendance externe.</li>
+<li><strong>Cache HTTP conditionnel</strong> : utiliser <code>requests_cache</code> ou stocker <code>ETag</code>/<code>Last-Modified</code> pour éviter de re-télécharger des pages inchangées.</li>
+<li><strong>Formats prioritaires</strong> : toujours tenter JSON-LD et microdata avant les sélecteurs CSS — plus stable, moins sensible aux refontes HTML.</li>
+<li><strong>Monitoring</strong> : logguer systématiquement <code>confidence_score</code> par run. Un score &lt; 0,5 sur plusieurs runs consécutifs signale une rupture de sélecteur à corriger.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

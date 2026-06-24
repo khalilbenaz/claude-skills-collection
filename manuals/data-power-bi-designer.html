@@ -97,37 +97,134 @@ cp -r claude-skills-collection/skills/data-power-bi-designer ~/.claude/skills/</
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Power BI Designer</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser les besoins métier</strong> — Identifier les KPIs à suivre, les questions métier auxquelles le dashboard doit répondre, le public cible (direction, opérationnel, technique), et la fréquence de rafraîchissement des données requise.</li>
-</ol>
-<ol>
-<li><strong>Concevoir le modèle de données</strong> — Structurer le modèle en étoile (star schema) avec les tables de faits et de dimensions, définir les relations (one-to-many, direction du filtre), créer les hiérarchies de drill-down, et optimiser les types de données pour la performance.</li>
-</ol>
-<ol>
-<li><strong>Connecter et transformer les sources</strong> — Configurer les connexions aux sources de données (SQL Server, Excel, API REST, SharePoint), créer les requêtes Power Query (M) pour le nettoyage et la transformation, et mettre en place le rafraîchissement incrémental pour les gros volumes.</li>
-</ol>
-<ol>
-<li><strong>Écrire les mesures DAX</strong> — Créer les mesures calculées avec DAX : agrégations de base (SUM, AVERAGE, COUNT), time intelligence (YTD, MTD, même période année précédente), mesures conditionnelles (CALCULATE avec filtres), et KPIs formatés avec gestion des cas limites (DIVIDE, ISBLANK).</li>
-</ol>
-<ol>
-<li><strong>Construire les visualisations</strong> — Concevoir les pages du rapport avec les visuels adaptés (bar charts pour la comparaison, line charts pour les tendances, cards pour les KPIs, matrices pour le détail), les slicers pour le filtrage interactif, et les bookmarks pour la navigation.</li>
-</ol>
-<ol>
-<li><strong>Configurer la Row-Level Security</strong> — Implémenter la RLS pour restreindre l'accès aux données par utilisateur ou rôle : créer les rôles de sécurité avec les expressions DAX de filtrage, configurer les mappings utilisateurs, et tester avec la fonctionnalité &quot;View as role&quot;.</li>
-</ol>
-<ol>
-<li><strong>Optimiser les performances</strong> — Analyser avec DAX Studio et Performance Analyzer, réduire la cardinalité des colonnes, supprimer les colonnes inutilisées, optimiser les mesures DAX complexes, et configurer les agrégations pour les grands volumes.</li>
-</ol>
-<ol>
-<li><strong>Publier et distribuer</strong> — Déployer sur le Power BI Service, configurer les workspaces, les pipelines de déploiement (dev/test/prod), le rafraîchissement planifié, les alertes de données, et les abonnements pour la distribution automatique par email.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Analyser les besoins métier</h3>
 <ul>
-<li>Conçois toujours le modèle en star schema avec des relations unidirectionnelles — évite les relations bidirectionnelles et many-to-many sauf nécessité absolue.</li>
-<li>Utilise des mesures DAX explicites plutôt que des colonnes calculées pour les calculs dynamiques — les colonnes calculées augmentent la taille du modèle.</li>
-<li>Applique la Row-Level Security dès qu'il y a des données sensibles ou des périmètres d'accès différents entre utilisateurs.</li>
-<li>Fournis les formules DAX complètes avec des commentaires expliquant la logique métier, pas seulement la syntaxe.</li>
-<li>Propose des visualisations accessibles : palettes de couleurs contrastées, étiquettes lisibles, et alternatives textuelles pour les données clés.</li>
+<li>Identifier les KPIs (ex. : CA, taux de conversion, délai moyen), le public cible (direction = agrégats, opérationnel = détail transactionnel) et la fréquence de refresh requise.</li>
+<li>Livrable minimum : liste de 5-10 questions métier auxquelles le dashboard doit répondre.</li>
+</ul>
+<h3>2. Concevoir le modèle de données (star schema)</h3>
+<ul>
+<li><strong>Tables de faits</strong> : mesures numériques + clés étrangères uniquement. Jamais de colonnes de description.</li>
+<li><strong>Tables de dimensions</strong> : attributs descriptifs, hiérarchies (Année → Trimestre → Mois → Jour).</li>
+<li>Règle des relations : <strong>toujours unidirectionnelles</strong> par défaut ; bidirectionnel seulement si le filtre croisé est strictement nécessaire et documenté.</li>
+<li>Typage des colonnes dans Power Query <strong>avant</strong> de charger : Date, Integer, Decimal, Text — évite l'auto-détection qui crée des colonnes inutiles.</li>
+</ul>
+<pre><code class="lang-m">// Power Query — typage explicite en fin de requête
+#&quot;Types appliqués&quot; = Table.TransformColumnTypes(Source, {
+    {&quot;DateVente&quot;, type date},
+    {&quot;Montant&quot;, type number},
+    {&quot;IdClient&quot;, Int64.Type}
+})</code></pre>
+<h3>3. Connecter et transformer les sources (Power Query / M)</h3>
+<ul>
+<li>Utiliser le <strong>Query Folding</strong> : filtrer et agréger côté source (SQL, SSAS) avant de ramener les données dans Power BI.</li>
+<li>Rafraîchissement incrémental : configurer <code>RangeStart</code> / <code>RangeEnd</code> pour les tables de faits &gt; 1 M de lignes.</li>
+</ul>
+<pre><code class="lang-m">// Paramètres requis pour le rafraîchissement incrémental
+// Créer deux paramètres de type Date/Time : RangeStart et RangeEnd
+#&quot;Filtre incrémental&quot; = Table.SelectRows(Source, each
+    [DateVente] &gt;= RangeStart and [DateVente] &lt; RangeEnd
+)</code></pre>
+<ul>
+<li>Désactiver le chargement des requêtes intermédiaires (staging) pour ne charger que les tables finales.</li>
+</ul>
+<h3>4. Écrire les mesures DAX</h3>
+<p><strong>Règle fondamentale</strong> : mesures pour les calculs dynamiques, colonnes calculées uniquement pour les attributs statiques.</p>
+<pre><code class="lang-dax">-- Mesure de base
+CA Total = SUM(Ventes[Montant])
+
+-- DIVIDE pour éviter les divisions par zéro
+Taux Conversion =
+DIVIDE(
+    COUNTROWS(FILTER(Leads, Leads[Statut] = &quot;Converti&quot;)),
+    COUNTROWS(Leads),
+    0
+)
+
+-- YTD (Year-to-Date)
+CA YTD =
+CALCULATE(
+    [CA Total],
+    DATESYTD(Calendrier[Date])
+)
+
+-- Comparaison année précédente
+CA N-1 =
+CALCULATE(
+    [CA Total],
+    SAMEPERIODLASTYEAR(Calendrier[Date])
+)
+
+-- Variation %
+Var% CA =
+DIVIDE([CA Total] - [CA N-1], [CA N-1], BLANK())
+
+-- Mesure avec contexte filtré
+CA Région Active =
+CALCULATE(
+    [CA Total],
+    KEEPFILTERS(Régions[Actif] = TRUE())
+)</code></pre>
+<p><strong>Critères de choix mesure vs colonne calculée :</strong></p>
+<table><thead><tr><th>Besoin</th><th>Mesure DAX</th><th>Colonne calculée</th></tr></thead><tbody><tr><td>Agrégation dynamique</td><td>Oui</td><td>Non</td></tr><tr><td>Filtre par slicer</td><td>Oui</td><td>Non</td></tr><tr><td>Attribut de dimension fixe</td><td>Non</td><td>Oui</td></tr><tr><td>Tri personnalisé</td><td>Non</td><td>Oui</td></tr></tbody></table>
+<h3>5. Construire les visualisations</h3>
+<ul>
+<li><strong>Bar/Column chart</strong> : comparaisons catégorielles (max 10-12 barres).</li>
+<li><strong>Line chart</strong> : tendances temporelles, ne pas mixer &gt; 3 séries.</li>
+<li><strong>Card / KPI visual</strong> : indicateurs en haut de page, valeur + variation.</li>
+<li><strong>Matrix</strong> : tableaux croisés avec drill-down, activer &quot;Stepped layout&quot; pour les hiérarchies.</li>
+<li><strong>Slicers</strong> : filtres Date en mode &quot;Between&quot;, listes en mode &quot;Dropdown&quot; si &gt; 5 valeurs.</li>
+<li><strong>Bookmarks</strong> : navigation entre vues (vue Résumé / vue Détail) sans pages supplémentaires.</li>
+</ul>
+<p>Ordre d'une page bien conçue : KPIs haut → graphiques principaux centre → filtres/drill gauche ou haut.</p>
+<h3>6. Configurer la Row-Level Security (RLS)</h3>
+<pre><code class="lang-dax">-- Rôle &quot;Vendeur&quot; : ne voit que ses propres ventes
+[Email Vendeur] = USERPRINCIPALNAME()
+
+-- Rôle &quot;Région&quot; : filtre par région assignée
+[Code Région] IN
+    VALUES(
+        FILTER(RegionUtilisateurs,
+            RegionUtilisateurs[Email] = USERPRINCIPALNAME()
+        )[Code Région]
+    )</code></pre>
+<ul>
+<li>Tester avec <strong>Modeling → View as → [nom du rôle]</strong> avant de publier.</li>
+<li>En mode <strong>Dynamic RLS</strong> : une table de mapping Email↔Périmètre est plus maintenable que des rôles statiques par région.</li>
+<li>RLS s'applique uniquement aux rapports Power BI Service, pas aux exports Excel ou aux connexions directes SSAS avec identité propre.</li>
+</ul>
+<h3>7. Optimiser les performances</h3>
+<ul>
+<li><strong>DAX Studio</strong> : analyser les mesures lentes avec Server Timings + Query Plan.</li>
+<li><strong>Performance Analyzer</strong> (dans Power BI Desktop) : identifier les visuels lents (&gt; 500 ms = à optimiser).</li>
+<li>Réduire la cardinalité : encoder les colonnes de statuts comme entiers (0/1/2) pas comme texte.</li>
+<li>Supprimer les colonnes non utilisées dans les rapports (réduire la taille du fichier .pbix).</li>
+<li>Préférer <code>SUMX</code> sur des tables petites ; éviter <code>FILTER(ALL(Table), ...)</code> sur de grandes tables.</li>
+</ul>
+<pre><code class="lang-dax">-- Mauvais : FILTER sur toute la table de faits
+Mauvaise Mesure =
+CALCULATE([CA Total], FILTER(ALL(Ventes), Ventes[Montant] &gt; 1000))
+
+-- Bon : utiliser KEEPFILTERS ou une dimension
+Bonne Mesure =
+CALCULATE([CA Total], Ventes[Montant] &gt; 1000)</code></pre>
+<h3>8. Publier et distribuer</h3>
+<ul>
+<li><strong>Pipelines de déploiement</strong> : workspace Dev → Test → Prod avec règles de paramétrage par étape.</li>
+<li>Refresh planifié : maximum 8x/jour en Pro, 48x/jour en Premium. Toujours configurer une alerte d'échec de refresh.</li>
+<li><strong>Abonnements email</strong> : rapport en PDF/PNG envoyé automatiquement, utile pour les destinataires sans licence Power BI.</li>
+<li>Intégration Teams : épingler les rapports dans des onglets Teams pour la distribution sans sortir de l'outil.</li>
+</ul>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Impact</th><th>Solution</th></tr></thead><tbody><tr><td>Relations bidirectionnelles excessives</td><td>Ambiguïté des filtres, résultats incorrects</td><td>Unidirectionnel par défaut, bidirectionnel documenté</td></tr><tr><td>Colonnes calculées pour les agrégations</td><td>Modèle lourd, recalcul à chaque refresh</td><td>Mesures DAX</td></tr><tr><td>CALCULATE sans REMOVEFILTERS</td><td>Contexte non contrôlé, valeurs surprenantes</td><td>Ajouter ALL() ou ALLEXCEPT() explicitement</td></tr><tr><td>Pas de table Calendrier dédiée</td><td>Time intelligence impossible</td><td>Toujours créer une <code>DimCalendrier</code> marquée comme &quot;Date Table&quot;</td></tr><tr><td>Ignorer Query Folding</td><td>Toutes les transformations en mémoire locale</td><td>Vérifier l'icône &quot;Native Query&quot; dans Power Query</td></tr><tr><td>RLS testée seulement en local</td><td>Erreurs de périmètre en production</td><td>Tester avec &quot;View as role&quot; + vérification USERPRINCIPALNAME() en service</td></tr><tr><td>Trop de visuels par page</td><td>Temps de rendu &gt; 3s</td><td>Max 8-10 visuels par page</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Fabric / Direct Lake</strong> : pour les entrepôts sur Microsoft Fabric, utiliser le mode Direct Lake (remplace Import + DirectQuery) — lecture directe depuis OneLake sans import ni requêtes SQL en temps réel.</li>
+<li><strong>Copilot Power BI</strong> : générer des mesures DAX avec le Copilot intégré, mais toujours relire et valider la logique métier — le Copilot hallucine sur les contextes de filtre complexes.</li>
+<li><strong>Semantic Model centralisé</strong> : un seul modèle sémantique partagé (anciennement &quot;dataset&quot;) référencé par plusieurs rapports — évite la duplication de la logique DAX.</li>
+<li><strong>Versioning .pbix</strong> : Power BI Desktop 2025+ supporte le format <code>.pbip</code> (dossiers) compatible Git — utiliser ce format pour les projets en équipe.</li>
+<li><strong>Accessibilité</strong> : activer Alt text sur tous les visuels, tester avec le lecteur d'écran intégré (Tab order dans View → Accessibility).</li>
 </ul>
 </article>
 </main>

@@ -96,24 +96,96 @@ cp -r claude-skills-collection/skills/arabic-morocco-admin-guide ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Morocco Admin Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identification du besoin</strong> — Déterminer la démarche administrative : création d'entreprise (SARL, SA, SAS, auto-entrepreneur), déclarations fiscales, affiliation CNSS, registre de commerce, ou démarches sectorielles spécifiques.</li>
-<li><strong>Statut juridique</strong> — Conseiller sur le statut le plus adapté selon l'activité : auto-entrepreneur (CA &lt; 500K/200K MAD), SARL (structure la plus courante), SAS (flexibilité), ou personne physique commerçante.</li>
-<li><strong>Documents requis</strong> — Lister les documents nécessaires pour la démarche : CIN, certificat négatif, statuts, PV de constitution, attestation de domiciliation, formulaires spécifiques, et indiquer où les obtenir.</li>
-<li><strong>Procédure étape par étape</strong> — Détailler la procédure complète : organismes à contacter (CRI, tribunal de commerce, DGI, CNSS), ordre des démarches, délais moyens, et coûts associés.</li>
-<li><strong>Obligations fiscales</strong> — Expliquer les obligations : IS (impôt sur les sociétés), IR (impôt sur le revenu), TVA (seuils et régimes), taxe professionnelle, cotisation minimale, déclarations annuelles et leurs échéances.</li>
-<li><strong>CNSS et social</strong> — Détailler les obligations sociales : affiliation CNSS, taux de cotisation (patronale et salariale), déclarations mensuelles, AMO (assurance maladie obligatoire), retraite.</li>
-<li><strong>Plateformes en ligne</strong> — Orienter vers les services numériques : portail CNSS (damancom.ma), simpl-is et simpl-ir (DGI), CRI en ligne, registre national électronique, portail auto-entrepreneur (ae.gov.ma).</li>
-<li><strong>Veille réglementaire</strong> — Signaler les dernières évolutions législatives et fiscales pertinentes (loi de finances en cours, nouveaux seuils, réformes).</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Identification du besoin</h2>
+<p>Avant toute réponse, qualifier précisément la demande :</p>
+<table><thead><tr><th>Type de demande</th><th>Organisme principal</th><th>Délai moyen</th></tr></thead><tbody><tr><td>Création auto-entrepreneur</td><td>ae.gov.ma / CRI</td><td>24-48 h</td></tr><tr><td>Création SARL</td><td>CRI / Tribunal</td><td>3-5 jours ouvrés</td></tr><tr><td>Affiliation CNSS (société)</td><td>damancom.ma</td><td>5-7 jours</td></tr><tr><td>Déclaration IS / IR</td><td>simpl.tax.gov.ma</td><td>Selon échéance</td></tr><tr><td>Immatriculation registre de commerce</td><td>Tribunal de commerce</td><td>2-3 jours</td></tr></tbody></table>
+<h2>2. Choix du statut juridique</h2>
+<p><strong>Critères de décision :</strong></p>
 <ul>
-<li>Toujours vérifier les informations avec les sources officielles (textes de loi, sites gouvernementaux) car la réglementation évolue fréquemment.</li>
-<li>Préciser les délais réels (pas seulement légaux) et les coûts actualisés des démarches.</li>
-<li>Recommander un expert-comptable ou un fiduciaire pour les situations complexes ou les créations de société.</li>
-<li>Distinguer clairement les obligations des auto-entrepreneurs de celles des sociétés.</li>
-<li>Indiquer systématiquement les pénalités en cas de retard ou de non-conformité.</li>
+<li><strong>Auto-entrepreneur</strong> → CA annuel &lt; 500 000 MAD (commerce/industrie) ou &lt; 200 000 MAD (services). Pas de comptabilité formelle. Pas de salariés. Impôt libératoire : 1 % (achat/revente), 2 % (services). Inscription en ligne sur <code>ae.gov.ma</code>.</li>
+<li><strong>Personne physique commerçante (PPC)</strong> → activité artisanale ou commerciale simple, RCS obligatoire, IR sur bénéfice net réel.</li>
+<li><strong>SARL</strong> → 1 associé minimum (SARL-AU), capital minimum 1 MAD (librement fixé), responsabilité limitée, IS.</li>
+<li><strong>SA</strong> → 5 actionnaires minimum, capital ≥ 300 000 MAD (non coté). Gouvernance lourde. Réservé aux projets à financement externe.</li>
+</ul>
+<p><strong>Anti-pattern</strong> : choisir la SARL uniquement pour l'image sans évaluer les charges (expert-comptable obligatoire, tenue de comptabilité). Pour un freelance solo &lt; 200 K MAD/an, auto-entrepreneur est souvent suffisant.</p>
+<h2>3. Création d'entreprise — Étapes détaillées</h2>
+<h3>3a. Auto-entrepreneur</h3>
+<pre><code>1. S'inscrire sur ae.gov.ma (CIN + photo + activité)
+2. Recevoir attestation d'inscription (email + espace perso)
+3. Ouvrir compte bancaire professionnel (optionnel mais recommandé)
+4. Déclarer le CA mensuellement ou trimestriellement sur ae.gov.ma
+   → Paiement impôt libératoire automatique à la déclaration</code></pre>
+<h3>3b. SARL / SARL-AU</h3>
+<pre><code>1. Certificat négatif         → OMPIC (ompic.ma) | ~170 MAD | 24 h en ligne
+2. Rédaction des statuts      → notaire ou fiduciaire | ~2 000-5 000 MAD
+3. Dépôt du capital           → banque (attestation de blocage)
+4. Publication au BO + JAL    → bulletin officiel (bo.gov.ma) + journal annonces légales
+5. Immatriculation au RCS     → Tribunal de commerce | ~500-1 500 MAD
+6. Identifiant fiscal (IF)    → DGI, automatique via CRI
+7. Affiliation CNSS           → damancom.ma (dès le 1er salarié ou gérant associé)
+8. Patente / Taxe prof.       → DGI, déclaration dans les 30 j de démarrage</code></pre>
+<p><strong>Coût total indicatif SARL-AU 2025-2026 :</strong> 5 000 – 12 000 MAD (hors capital social).</p>
+<h2>4. Obligations fiscales</h2>
+<h3>Impôt sur les Sociétés (IS)</h3>
+<ul>
+<li>Taux progressif (LF 2023→2026) : 20 % (&lt; 1 M MAD), 22,75 % (1-5 M), 26,5 % (5-10 M), 31 % (&gt; 10 M MAD)</li>
+<li>Cotisation minimale (CM) : 0,5 % du CA HT, minimum 3 000 MAD</li>
+<li><strong>Acomptes provisionnels</strong> : 4 versements trimestriels (mars, juin, sept, déc) sur simpl.tax.gov.ma</li>
+<li>Déclaration annuelle IS : avant le 31 mars (clôture 31/12)</li>
+</ul>
+<h3>Impôt sur le Revenu (IR)</h3>
+<ul>
+<li>Barème progressif 0-38 % sur salaires/bénéfices professionnels</li>
+<li>Déclaration annuelle IR : avant le 30 avril</li>
+</ul>
+<h3>TVA</h3>
+<table><thead><tr><th>Seuil</th><th>Régime</th></tr></thead><tbody><tr><td>CA &lt; 500 K MAD</td><td>Exonération ou franchise</td></tr><tr><td>CA ≥ 500 K MAD</td><td>TVA de droit commun (20 % / 14 % / 10 % / 7 %)</td></tr></tbody></table>
+<ul>
+<li>Déclaration mensuelle (CA &gt; 1 M MAD) ou trimestrielle</li>
+<li>Plateforme : <code>simpl.tax.gov.ma</code></li>
+</ul>
+<h3>Taxe Professionnelle</h3>
+<ul>
+<li>Déclaration dans les 30 jours suivant le démarrage d'activité</li>
+<li>Base : valeur locative des locaux professionnels × coefficient</li>
+<li>Exonération 5 ans pour nouvelles entreprises (hors certaines activités)</li>
+</ul>
+<h3>Pénalités clés</h3>
+<ul>
+<li>Retard déclaration IS/IR : 5 % du montant dû + 0,5 % par mois de retard</li>
+<li>Défaut de facturation TVA : amende 2 000-50 000 MAD par infraction</li>
+<li>Non-paiement CNSS : majoration 3 % + frais de recouvrement</li>
+</ul>
+<h2>5. CNSS — Affiliation et cotisations</h2>
+<h3>Affiliation</h3>
+<pre><code>1. Créer compte employeur sur damancom.ma
+2. Uploader : statuts ou RC, CIN du gérant, formulaire d'affiliation
+3. Obtenir numéro d'affilié (5-7 jours)</code></pre>
+<h3>Taux de cotisations 2025-2026</h3>
+<table><thead><tr><th>Branche</th><th>Part patronale</th><th>Part salariale</th></tr></thead><tbody><tr><td>Prestations courtes (chômage, etc.)</td><td>1,05 %</td><td>0,52 %</td></tr><tr><td>Prestations longues (retraite)</td><td>7,93 %</td><td>3,96 %</td></tr><tr><td>AMO (maladie)</td><td>2,26 %</td><td>2,26 %</td></tr><tr><td><strong>Total</strong></td><td><strong>~23,98 %</strong></td><td><strong>~6,74 %</strong></td></tr></tbody></table>
+<ul>
+<li>Déclaration mensuelle : avant le 10 du mois suivant sur <code>damancom.ma</code></li>
+<li>Paiement en ligne (virement ou CMI)</li>
+<li><strong>Anti-pattern</strong> : déclarer le gérant majoritaire associé comme salarié CNSS — il cotise en tant que gérant (régime indépendant) sauf si minoritaire ou tiers.</li>
+</ul>
+<h2>6. Plateformes officielles (2026)</h2>
+<table><thead><tr><th>Plateforme</th><th>Usage</th><th>URL</th></tr></thead><tbody><tr><td>simpl.tax.gov.ma</td><td>IS, IR, TVA, taxe prof.</td><td>https://simpl.tax.gov.ma</td></tr><tr><td>damancom.ma</td><td>CNSS déclarations, AMO</td><td>https://www.damancom.ma</td></tr><tr><td>ae.gov.ma</td><td>Auto-entrepreneur</td><td>https://www.ae.gov.ma</td></tr><tr><td>ompic.ma</td><td>Certificat négatif, marques</td><td>https://www.ompic.ma</td></tr><tr><td>cri.gov.ma (CRI local)</td><td>Création société en ligne</td><td>https://www.cri.gov.ma</td></tr><tr><td>bo.gov.ma</td><td>Publication légale (BO)</td><td>https://www.bo.gov.ma</td></tr></tbody></table>
+<h2>7. Garde-fous et pièges fréquents</h2>
+<ul>
+<li><strong>Domiciliation fictive</strong> : adresse non occupée → risque redressement fiscal + refus ouverture compte bancaire. Utiliser un centre de gestion agréé si pas de local.</li>
+<li><strong>Confusion auto-entrepreneur / société</strong> : un auto-entrepreneur ne peut pas récupérer la TVA ni déduire les charges réelles. Arbitrer dès que CA &gt; 150 K MAD/an ou que les charges déductibles sont significatives.</li>
+<li><strong>Gérant non affilié CNSS</strong> : le gérant majoritaire (&gt; 50 %) est affilié en tant qu'indépendant ; oublier cette affiliation génère des pénalités CNSS rétroactives.</li>
+<li><strong>Délai de publication BO</strong> : compter 7-15 jours supplémentaires après dépôt — ne pas promettre une immatriculation express.</li>
+<li><strong>Loi de finances annuelle</strong> : les taux IS, seuils TVA et cotisations CNSS changent chaque janvier. Vérifier la LF en vigueur avant toute simulation chiffrée.</li>
+<li><strong>Clôture ≠ 31/12</strong> : une SARL peut avoir une clôture décalée — adapter les échéances IS en conséquence.</li>
+</ul>
+<h2>8. Bonnes pratiques 2026</h2>
+<ul>
+<li>Toujours mentionner la source réglementaire (numéro d'article LF ou circulaire DGI).</li>
+<li>Pour toute simulation fiscale, indiquer explicitement l'année de référence de la LF utilisée.</li>
+<li>Recommander un expert-comptable agréé (OEC Maroc) dès qu'il y a des salariés ou un CA &gt; 500 K MAD.</li>
+<li>Orienter vers le CRI local (17 CRIs régionaux) pour les questions spécifiques à une wilaya ou un secteur réglementé (BTP, santé, éducation).</li>
+<li>Pour les non-résidents marocains souhaitant créer : vérifier les règles d'investissement étranger (Office des Changes, formulaire IS 19).</li>
 </ul>
 </article>
 </main>

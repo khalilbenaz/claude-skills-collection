@@ -1,86 +1,284 @@
 ---
 name: agent-cost-optimizer
-description: Optimisation des coûts des agents IA — tokens, API calls, modèles, caching. Se déclenche avec "coût agent", "agent cher", "réduire les coûts IA", "token optimization", "optimiser les tokens", "budget agent", "agent cost", "économiser sur l'API".
+description: Optimisation des coûts des agents IA — tokens, API calls, modèles, caching, routing, budget controls. Se déclenche avec "coût agent", "agent cher", "réduire les coûts IA", "token optimization", "optimiser les tokens", "budget agent", "agent cost", "économiser sur l'API".
 ---
 
 # Agent Cost Optimizer
 
 ## Quand utiliser ce skill
 
-Utilise ce skill lorsque l'utilisateur veut réduire les coûts de son agent IA, optimiser sa consommation de tokens, ou mettre en place des contrôles budgétaires. S'applique dès qu'on mentionne des dépenses API trop élevées, un besoin d'optimisation de prompts, de caching, de routing vers des modèles moins chers, ou de prévision budgétaire pour un agent en production.
+Dès qu'un agent IA consomme trop de tokens, que la facture API dépasse le budget, ou qu'on cherche à passer en production à coût maîtrisé. S'applique aussi pour mettre en place des garde-fous préventifs avant le déploiement.
+
+---
 
 ## Workflow
 
-1. **Audit des coûts actuels** — Établir la baseline avant d'optimiser :
-   - Analyser le token usage par agent, par type de tâche, par outil
-   - Calculer le coût réel : `(input_tokens × price_in) + (output_tokens × price_out)`
-   - Identifier les 20% de requêtes qui génèrent 80% des coûts (règle de Pareto)
-   - Outils : LangSmith cost tracking, Langfuse, logs structurés avec champs `cost_usd`
+### Étape 1 — Audit baseline (ne rien optimiser sans mesure)
 
-2. **Prompt optimization** — Réduire la taille des prompts sans perdre en qualité :
-   - Supprimer les instructions redondantes, les exemples superflus, le verbose inutile
-   - Compacter le system prompt (objectif : < 500 tokens pour agents simples)
-   - Utiliser des instructions concises : "Réponds en JSON" vs long paragraphe explicatif
-   - Tester chaque modification avec un jeu de cas de test pour valider que la qualité est maintenue
+**Objectif** : identifier les 20 % de requêtes qui causent 80 % du coût.
 
-3. **Model routing** — Utiliser le bon modèle pour chaque tâche :
-   - Modèle cheap (Claude Haiku, GPT-4o-mini, Gemini Flash) : classification, extraction, résumé simple
-   - Modèle premium (Claude Sonnet/Opus, GPT-4o) : raisonnement complexe, génération créative, décisions critiques
-   - Router intelligent : classifier la complexité de la requête avant de choisir le modèle
-   ```python
-   def route_model(task_complexity: str) -> str:
-       return "claude-haiku-3" if task_complexity == "simple" else "claude-sonnet-4"
-   ```
+```python
+# Structure minimale de log — ajouter à chaque appel LLM
+import anthropic, time
 
-4. **Caching intelligent** — Éviter de payer pour les requêtes répétitives :
-   - **Exact match cache** : hash du prompt → réponse stockée (Redis, TTL configurable)
-   - **Semantic cache** : embeddings → trouver des réponses similaires (GPTCache, Langchain cache)
-   - **Tool result cache** : cacher les résultats d'outils coûteux (recherches web, API externes)
-   - **Prompt cache** (Anthropic/OpenAI natif) : préfixer le system prompt pour activer le cache API
+client = anthropic.Anthropic()
 
-5. **Context window management** — Contrôler la croissance du contexte :
-   - Summarization progressive : résumer les anciens messages quand le contexte dépasse un seuil
-   - Truncation intelligente : garder les N derniers messages + le résumé des précédents
-   - Relevant context only : RAG pour injecter uniquement le contexte pertinent, pas tout le document
-   - Sliding window : fenêtre glissante de K messages pour les conversations longues
+def call_with_cost_log(messages, model, system=""):
+    t0 = time.time()
+    resp = client.messages.create(
+        model=model, max_tokens=1024,
+        system=system, messages=messages
+    )
+    cost = (
+        resp.usage.input_tokens  * pricing[model]["in"]  +
+        resp.usage.output_tokens * pricing[model]["out"]
+    )
+    print(f"[COST] model={model} in={resp.usage.input_tokens} "
+          f"out={resp.usage.output_tokens} cost_usd={cost:.5f} "
+          f"latency_ms={int((time.time()-t0)*1000)}")
+    return resp
+```
 
-6. **Batch processing** — Grouper les requêtes pour réduire les coûts :
-   - Batch API (Anthropic, OpenAI) : jusqu'à 50% de réduction pour les traitements asynchrones
-   - Regrouper les requêtes similaires : traiter N documents en un seul appel LLM si possible
-   - Async bulk processing : file d'attente + worker, traitement par lots la nuit (tarifs réduits)
-   - Éviter les appels LLM en boucle : traiter plusieurs items en une seule requête batch
+Tarifs 2026 indicatifs (vérifier [anthropic.com/pricing](https://anthropic.com/pricing)) :
 
-7. **Tool call optimization** — Réduire le nombre d'appels aux outils :
-   - Moins d'appels : combiner plusieurs outils en un seul quand possible
-   - Batch tools : créer des outils qui acceptent plusieurs inputs en une fois
-   - Cached tool results : stocker les résultats d'outils déterministes (ex : météo, données statiques)
-   - Tool selection tuning : améliorer les descriptions d'outils pour que le LLM choisisse mieux du premier coup
+| Modèle | Input / 1M tokens | Output / 1M tokens |
+|---|---|---|
+| claude-haiku-3-5 | $0.80 | $4.00 |
+| claude-sonnet-4 | $3.00 | $15.00 |
+| claude-opus-4 | $15.00 | $75.00 |
+| gpt-4o-mini | $0.15 | $0.60 |
+| gemini-2.0-flash | $0.10 | $0.40 |
 
-8. **Architecture optimization** — Réduire les itérations de l'agent :
-   - Réduire le nombre d'étapes agent (chaque LLM call coûte) : one-shot si possible
-   - Early stopping : arrêter dès qu'une condition de succès est détectée
-   - Confidence threshold : ne passer au modèle premium que si la confiance est < seuil
-   - Paralléliser les tool calls indépendants (appels simultanés plutôt que séquentiels)
+**Critère de décision** : si le coût médian par requête > $0.02, optimiser en priorité. Si variance > 10×, le routing est le levier le plus impactant.
 
-9. **Budget controls** — Limiter les dépenses de façon préventive :
-   - Per-agent limits : plafond de coût par instance d'agent (`max_cost_usd = 0.50`)
-   - Per-conversation caps : arrêter proprement si une conversation dépasse le budget
-   - Daily budgets : alertes à 80% du budget, blocage à 100%
-   - Hard limits côté code + côté API (paramètre `max_tokens` sur chaque requête)
+---
 
-10. **Cost monitoring et forecasting** — Piloter les coûts dans la durée :
-    - Dashboards : coût par jour, par semaine, par utilisateur, par type de tâche
-    - Unit economics : coût par tâche complétée, coût par utilisateur actif (objectif < $0.01)
-    - Forecasting : projection mensuelle basée sur les tendances actuelles
-    - ROI tracking : valeur générée par l'agent vs coût API (justifier l'investissement)
+### Étape 2 — Model routing (levier le plus rapide)
 
-## Règles
+Router chaque tâche vers le modèle le moins cher capable de la traiter.
 
-- Fournis des exemples de code et configuration concrets, avec des calculs de coût réels basés sur les tarifs actuels des APIs.
-- Priorise la sécurité et la fiabilité : ne jamais sacrifier la qualité critique pour des économies marginales.
-- Documente les pièges courants : cache poisoning, résumés trop agressifs qui perdent du contexte, routing qui envoie des tâches complexes au mauvais modèle.
-- Mesure toujours l'impact qualité d'une optimisation avant de la déployer en production.
-- Adapte les recommandations au budget réel de l'utilisateur et à son provider LLM (Anthropic, OpenAI, Azure OpenAI, GCP Vertex).
+```python
+ROUTING_RULES = {
+    "simple":   "claude-haiku-3-5",   # classification, extraction, reformulation
+    "moderate": "claude-sonnet-4",    # raisonnement, synthèse, code standard
+    "complex":  "claude-opus-4",      # architecture, décisions critiques, audit
+}
+
+def classify_task(prompt: str) -> str:
+    """Classifier cheap (Haiku) pour décider du modèle à utiliser."""
+    resp = client.messages.create(
+        model="claude-haiku-3-5", max_tokens=10,
+        messages=[{"role": "user", "content":
+            f"Complexity of this task (simple/moderate/complex):\n{prompt[:300]}"}]
+    )
+    return resp.content[0].text.strip().lower()
+
+def route(prompt: str):
+    level = classify_task(prompt)
+    return ROUTING_RULES.get(level, "claude-sonnet-4")
+```
+
+> Règle : le coût du classifier doit être < 5 % du coût économisé. Haiku à $0.80/M tokens convient parfaitement.
+
+---
+
+### Étape 3 — Prompt optimization
+
+Compacter sans dégrader la qualité :
+
+- Supprimer les formules de politesse, répétitions et exemples superflus.
+- System prompt cible : **< 500 tokens** pour agents simples, < 1 000 pour agents complexes.
+- Remplacer les longues instructions par des formats compacts :
+
+```
+# MAUVAIS (verbose)
+Tu es un assistant utile et bienveillant. Lorsque l'utilisateur te pose une question,
+tu dois répondre de manière claire et structurée en utilisant le format JSON...
+
+# BON (concis)
+Réponds UNIQUEMENT en JSON valide. Schéma: {"answer": str, "confidence": float}
+```
+
+- Tester chaque modification sur un jeu de **≥ 20 cas** avant de déployer.
+- Utiliser `tiktoken` (OpenAI) ou `anthropic.count_tokens()` pour mesurer avant/après.
+
+---
+
+### Étape 4 — Prompt caching (Anthropic natif)
+
+Économie immédiate sur les requêtes avec system prompt identique (jusqu'à **90 % de réduction** sur les tokens en cache).
+
+```python
+response = client.messages.create(
+    model="claude-sonnet-4",
+    max_tokens=1024,
+    system=[{
+        "type": "text",
+        "text": LONG_SYSTEM_PROMPT,          # > 1024 tokens pour activer le cache
+        "cache_control": {"type": "ephemeral"}
+    }],
+    messages=messages
+)
+# Les appels suivants avec le même system prompt utilisent le cache (prix cache_read << prix input)
+```
+
+**Prérequis** : system prompt ≥ 1 024 tokens. En dessous, le gain est nul.
+
+---
+
+### Étape 5 — Context window management
+
+Chaque token dans le contexte est facturé à chaque appel.
+
+```python
+MAX_CONTEXT_TOKENS = 4000  # seuil avant résumé
+
+def maybe_summarize(messages: list, model="claude-haiku-3-5") -> list:
+    total = sum(len(m["content"].split()) * 1.3 for m in messages)  # estimation rapide
+    if total < MAX_CONTEXT_TOKENS:
+        return messages
+    # Résumer les messages anciens (garder les 4 derniers intacts)
+    to_summarize = messages[:-4]
+    summary_resp = client.messages.create(
+        model=model, max_tokens=300,
+        messages=[{"role": "user", "content":
+            "Résume en 200 mots max:\n" + "\n".join(m["content"] for m in to_summarize)}]
+    )
+    return [{"role": "assistant", "content": "[Résumé] " + summary_resp.content[0].text}] + messages[-4:]
+```
+
+Stratégies complémentaires :
+- **RAG** : injecter uniquement les chunks pertinents (top-k = 3 à 5) plutôt que tout le document.
+- **Sliding window** : conserver les N derniers échanges + résumé cumulatif.
+
+---
+
+### Étape 6 — Caching applicatif
+
+```python
+import hashlib, json
+from functools import lru_cache
+
+# Cache exact (Redis recommandé en prod)
+cache: dict = {}
+
+def cached_llm_call(prompt: str, model: str) -> str:
+    key = hashlib.sha256(f"{model}:{prompt}".encode()).hexdigest()
+    if key in cache:
+        return cache[key]
+    result = client.messages.create(model=model, max_tokens=512,
+        messages=[{"role": "user", "content": prompt}])
+    text = result.content[0].text
+    cache[key] = text
+    return text
+```
+
+- **Semantic cache** (GPTCache, Redis VSS) : utile quand les prompts varient légèrement mais la réponse est identique.
+- **Tool result cache** : cacher les résultats d'API externes coûteuses (recherches web, bases de données).
+- TTL recommandé : 1 h pour données fraîches, 24 h pour données statiques.
+
+---
+
+### Étape 7 — Batch processing
+
+```bash
+# Batch API Anthropic — jusqu'à 50 % de réduction, délai < 24 h
+curl https://api.anthropic.com/v1/messages/batches \
+  -H "x-api-key: $ANTHROPIC_API_KEY" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{
+    "requests": [
+      {"custom_id": "task-1", "params": {"model": "claude-haiku-3-5", "max_tokens": 256,
+        "messages": [{"role": "user", "content": "Classe ce texte: ..."}]}},
+      {"custom_id": "task-2", "params": {"model": "claude-haiku-3-5", "max_tokens": 256,
+        "messages": [{"role": "user", "content": "Résume: ..."}]}}
+    ]
+  }'
+```
+
+Adapter pour **openai.batches** (même principe, quota 24 h, 50 % discount).
+
+---
+
+### Étape 8 — Tool call optimization
+
+- **Batch tools** : concevoir des outils qui acceptent une liste d'items plutôt qu'un seul.
+- **Parallel calls** : déclencher les tool calls indépendants en simultané (réduire les aller-retours).
+- **Descriptions précises** : le LLM choisit mieux du premier coup → moins de tentatives ratées.
+
+```python
+# MAUVAIS : 3 appels séquentiels = 3 tours agent
+get_weather("Paris")  # appel 1
+get_price("AAPL")     # appel 2
+translate("hello")    # appel 3
+
+# BON : parallel tool use (un seul tour agent)
+# L'agent émet les 3 tool_use en une seule réponse si les descriptions sont claires
+```
+
+---
+
+### Étape 9 — Budget controls
+
+```python
+class BudgetGuard:
+    def __init__(self, max_usd: float):
+        self.max_usd = max_usd
+        self.spent = 0.0
+
+    def charge(self, cost: float):
+        self.spent += cost
+        if self.spent >= self.max_usd * 0.8:
+            print(f"[WARN] 80% du budget atteint ({self.spent:.4f}$/{self.max_usd}$)")
+        if self.spent >= self.max_usd:
+            raise RuntimeError(f"Budget dépassé : {self.spent:.4f}$ > {self.max_usd}$")
+```
+
+Paramétrage recommandé :
+- **Par conversation** : $0.10–$0.50 selon cas d'usage
+- **Par agent/jour** : $5–$50 en production
+- Toujours combiner limite côté code **et** `max_tokens` dans chaque requête API.
+
+---
+
+### Étape 10 — Monitoring continu
+
+Métriques minimales à tracker :
+
+| Métrique | Cible |
+|---|---|
+| Coût par tâche complétée | < $0.01 |
+| Cache hit rate | > 30 % |
+| % requêtes routées vers cheap model | > 60 % |
+| Token ratio output/input | < 0.5 (éviter sur-génération) |
+
+Stack recommandée : **Langfuse** (open-source, self-hostable) ou **LangSmith** pour le tracing ; Grafana + InfluxDB pour les dashboards opérationnels.
+
+---
+
+## Anti-patterns / pièges
+
+| Piège | Conséquence | Correctif |
+|---|---|---|
+| Résumé trop agressif | Perte de contexte critique, hallucinations | Garder toujours les 4 derniers messages bruts |
+| Cache sans TTL | Réponses obsolètes livrées aux utilisateurs | TTL explicite + invalidation sur changement de données |
+| Routing systématique vers Haiku | Dégradation qualité sur tâches complexes | Classifier avant de router, évaluer la qualité |
+| `max_tokens` trop grand | Sur-génération inutile | Calibrer par type de tâche (extraction : 128, résumé : 512) |
+| Optimiser avant de mesurer | Effort mal ciblé | Toujours établir la baseline d'abord |
+| Prompt cache sur < 1 024 tokens | Aucun gain (seuil non atteint) | Vérifier le token count avant d'activer |
+| Ignorer le coût des embeddings | Budget RAG sous-estimé | Tracker `embedding_tokens` séparément |
+
+---
+
+## Checklist avant mise en production
+
+- [ ] Baseline mesurée (coût médian, P95, P99 par type de requête)
+- [ ] Model routing implémenté et testé sur jeu de données réel
+- [ ] System prompt < seuil cible et prompt cache activé si éligible
+- [ ] Context summarization avec tests de non-régression qualité
+- [ ] Budget guard actif avec alertes à 80 % et hard stop à 100 %
+- [ ] Cache hit rate > 20 % dès le départ
+- [ ] Dashboard coût/tâche opérationnel (pas juste coût total)
 
 
 ## Communication Rules — MANDATORY

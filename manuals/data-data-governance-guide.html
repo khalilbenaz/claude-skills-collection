@@ -96,24 +96,213 @@ cp -r claude-skills-collection/skills/data-data-governance-guide ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Data Governance Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définir le framework de gouvernance</strong> — Établir la stratégie de gouvernance alignée sur les objectifs métier. Créer le comité de gouvernance (Data Governance Council). Définir les rôles : Data Owner (responsable métier), Data Steward (gardien qualité), Data Custodian (technique). Rédiger la charte de gouvernance.</li>
-<li><strong>Déployer le catalogue de données</strong> — Implémenter un data catalog (Apache Atlas, Collibra, Alation, DataHub) pour inventorier tous les assets de données. Documenter chaque dataset : description, schéma, propriétaire, classification, fréquence de mise à jour. Automatiser la découverte avec des crawlers.</li>
-<li><strong>Cartographier le data lineage</strong> — Tracer l'origine et les transformations de chaque donnée de la source au reporting. Implémenter le lineage automatique via les outils ETL (dbt, Airflow) et le catalog. Visualiser les dépendances pour l'analyse d'impact avant toute modification de schéma ou de pipeline.</li>
-<li><strong>Implémenter la qualité des données</strong> — Définir les dimensions de qualité : complétude, exactitude, cohérence, fraîcheur, unicité. Implémenter des contrôles automatisés avec Great Expectations, dbt tests ou Soda. Configurer des alertes sur les violations de qualité. Mesurer un Data Quality Score global.</li>
-<li><strong>Classifier et protéger les données</strong> — Définir les niveaux de classification (public, interne, confidentiel, restreint). Appliquer les politiques de masquage, anonymisation et rétention selon la classification. Implémenter le tagging automatique avec des outils de découverte de données sensibles (PII, PHI, PCI).</li>
-<li><strong>Établir les politiques et standards</strong> — Rédiger les politiques de gestion des données : naming conventions, formats, rétention, accès, partage. Définir les data contracts entre les producteurs et consommateurs de données. Automatiser la conformité avec des policies-as-code.</li>
-<li><strong>Gérer le cycle de vie des données</strong> — Définir les durées de rétention par type de données et réglementation (RGPD, HIPAA). Automatiser l'archivage et la suppression. Implémenter le droit à l'effacement. Gérer les versions et l'historisation des données de référence (master data).</li>
-<li><strong>Mesurer et améliorer</strong> — Définir des KPIs de gouvernance : couverture du catalogue, score de qualité, conformité aux politiques, adoption par les équipes. Générer des rapports mensuels pour le comité de gouvernance. Itérer sur les processus en fonction des retours utilisateurs.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Étape 1 — Poser le cadre organisationnel</h2>
+<p>Avant tout outil, définir les rôles et la charte de gouvernance.</p>
+<table><thead><tr><th>Rôle</th><th>Périmètre</th><th>Exemple concret</th></tr></thead><tbody><tr><td><strong>Data Owner</strong></td><td>Responsabilité métier &amp; budget</td><td>CFO pour les données financières</td></tr><tr><td><strong>Data Steward</strong></td><td>Qualité, définitions, règles</td><td>Analyste BI du domaine</td></tr><tr><td><strong>Data Custodian</strong></td><td>Stockage, sécurité, accès technique</td><td>DBA / Data Engineer</td></tr><tr><td><strong>Data Consumer</strong></td><td>Utilisation conforme aux politiques</td><td>Analyste, Data Scientist</td></tr></tbody></table>
+<p>Charte minimale (artefact à créer dès le kick-off) :</p>
+<pre><code>1. Périmètre couvert (domaines métier)
+2. Instances de décision (Data Governance Council — cadence mensuelle)
+3. Processus d'escalade qualité
+4. Politique de classification des données
+5. Indicateurs de succès (KPIs)</code></pre>
+<p><strong>Critère de passage :</strong> chaque dataset critique a un Data Owner nommé et joignable.</p>
+<hr>
+<h2>Étape 2 — Déployer le Data Catalog</h2>
+<p><strong>Choix de l'outil selon le contexte :</strong></p>
+<table><thead><tr><th>Contexte</th><th>Outil recommandé</th></tr></thead><tbody><tr><td>Open-source / budget limité</td><td><strong>DataHub</strong> (LinkedIn), Apache Atlas</td></tr><tr><td>Cloud AWS</td><td><strong>AWS Glue Data Catalog</strong> + DataHub</td></tr><tr><td>Cloud Azure</td><td><strong>Microsoft Purview</strong></td></tr><tr><td>Cloud GCP</td><td><strong>Dataplex</strong></td></tr><tr><td>Enterprise avec budget</td><td>Collibra, Alation</td></tr><tr><td>Stack dbt</td><td><strong>dbt Docs</strong> + Elementary</td></tr></tbody></table>
+<p><strong>Ingestion automatique avec DataHub :</strong></p>
+<pre><code class="lang-bash">pip install acryl-datahub
+
+# Crawler PostgreSQL
+datahub ingest -c postgres_recipe.yaml</code></pre>
+<pre><code class="lang-yaml"># postgres_recipe.yaml
+source:
+  type: postgres
+  config:
+    host_port: &quot;localhost:5432&quot;
+    database: &quot;my_db&quot;
+    username: &quot;datahub&quot;
+    password: &quot;${POSTGRES_PASSWORD}&quot;
+    include_tables: true
+    profile_patterns:
+      allow: [&quot;public.*&quot;]
+
+sink:
+  type: datahub-rest
+  config:
+    server: &quot;http://datahub-gms:8080&quot;</code></pre>
+<p><strong>Métadonnées minimales obligatoires par dataset :</strong></p>
 <ul>
-<li>Toujours assigner un Data Owner métier identifié pour chaque dataset critique ; la gouvernance ne peut pas fonctionner sans responsabilité claire.</li>
-<li>Ne jamais modifier un schéma de données partagé sans consulter le data lineage et notifier tous les consommateurs impactés en amont.</li>
-<li>Toujours automatiser les contrôles de qualité dans les pipelines de données plutôt que de compter sur des vérifications manuelles ponctuelles.</li>
-<li>Classifier toutes les données contenant des informations personnelles (PII) dès leur ingestion et appliquer automatiquement les politiques de masquage appropriées.</li>
-<li>Documenter chaque dataset dans le catalogue avec au minimum : description, propriétaire, classification, schéma et fréquence de mise à jour.</li>
+<li>Description métier (en langage non-technique)</li>
+<li>Data Owner + Data Steward</li>
+<li>Niveau de classification (public / interne / confidentiel / restreint)</li>
+<li>Schéma avec descriptions des colonnes</li>
+<li>Fréquence de mise à jour + SLA de fraîcheur</li>
+<li>Tags domaine métier</li>
+</ul>
+<hr>
+<h2>Étape 3 — Cartographier le Data Lineage</h2>
+<p><strong>Avec dbt (lineage automatique) :</strong></p>
+<pre><code class="lang-bash">dbt docs generate
+dbt docs serve  # UI interactive avec graphe de lineage</code></pre>
+<p><strong>Lineage programmatique via DataHub SDK :</strong></p>
+<pre><code class="lang-python">from datahub.emitter.mce_builder import make_dataset_urn
+from datahub.emitter.rest_emitter import DatahubRestEmitter
+from datahub.metadata.schema_classes import DatasetLineageTypeClass, UpstreamClass, UpstreamLineageClass
+
+emitter = DatahubRestEmitter(&quot;http://datahub-gms:8080&quot;)
+
+upstream_lineage = UpstreamLineageClass(
+    upstreams=[
+        UpstreamClass(
+            dataset=make_dataset_urn(&quot;postgres&quot;, &quot;prod.orders&quot;),
+            type=DatasetLineageTypeClass.TRANSFORMED,
+        )
+    ]
+)
+# émettre vers DataHub</code></pre>
+<p><strong>Règle critique :</strong> avant toute modification de schéma, exécuter l'analyse d'impact :</p>
+<pre><code class="lang-bash"># dbt — lister les modèles dépendants d'une colonne supprimée
+dbt ls --select &quot;orders+&quot;  # tout ce qui dépend de 'orders'</code></pre>
+<hr>
+<h2>Étape 4 — Qualité des données (Data Quality)</h2>
+<p><strong>Framework Great Expectations — setup rapide :</strong></p>
+<pre><code class="lang-bash">pip install great-expectations
+great_expectations init
+great_expectations suite new</code></pre>
+<p><strong>Expectations copiables :</strong></p>
+<pre><code class="lang-python">import great_expectations as gx
+
+context = gx.get_context()
+ds = context.sources.add_pandas(&quot;my_ds&quot;)
+da = ds.add_dataframe_asset(&quot;orders&quot;)
+batch = da.add_batch_definition_whole_dataframe(&quot;batch&quot;).get_batch()
+
+suite = context.suites.add(gx.ExpectationSuite(name=&quot;orders_suite&quot;))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column=&quot;order_id&quot;))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(column=&quot;amount&quot;, min_value=0))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToBeUnique(column=&quot;order_id&quot;))</code></pre>
+<p><strong>Tests dbt (intégrer dans le pipeline CI/CD) :</strong></p>
+<pre><code class="lang-yaml"># models/orders.yml
+models:
+  - name: orders
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['pending', 'shipped', 'delivered', 'cancelled']
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('customers')
+              field: id</code></pre>
+<p><strong>Dimensions de qualité à mesurer :</strong></p>
+<table><thead><tr><th>Dimension</th><th>Mesure</th><th>Seuil acceptable</th></tr></thead><tbody><tr><td>Complétude</td><td>% champs non-null sur colonnes critiques</td><td>&gt; 99 %</td></tr><tr><td>Unicité</td><td>% de doublons sur clés primaires</td><td>0 %</td></tr><tr><td>Exactitude</td><td>% de valeurs dans les plages attendues</td><td>&gt; 98 %</td></tr><tr><td>Fraîcheur</td><td>Écart vs SLA de mise à jour</td><td>&lt; 1 heure (transactionnel)</td></tr><tr><td>Cohérence</td><td>Intégrité référentielle cross-datasets</td><td>100 %</td></tr></tbody></table>
+<hr>
+<h2>Étape 5 — Classification et protection des données</h2>
+<p><strong>Niveaux de classification :</strong></p>
+<pre><code>PUBLIC      → données accessibles librement (ex : tarifs publics)
+INTERNAL    → usage interne uniquement (ex : rapports de vente)
+CONFIDENTIAL → accès restreint par rôle (ex : données RH)
+RESTRICTED  → chiffrement + audit log + accès nominatif (ex : données PII, PCI)</code></pre>
+<p><strong>Masquage PII avec Python (anonymisation one-way) :</strong></p>
+<pre><code class="lang-python">import hashlib
+
+def mask_email(email: str) -&gt; str:
+    &quot;&quot;&quot;Pseudonymisation RGPD-compatible par hachage.&quot;&quot;&quot;
+    return hashlib.sha256(email.lower().encode()).hexdigest()[:16] + &quot;@masked.local&quot;
+
+def mask_phone(phone: str) -&gt; str:
+    return phone[:3] + &quot;****&quot; + phone[-2:]</code></pre>
+<p><strong>Politique de rétention (modèle) :</strong></p>
+<pre><code>Données transactionnelles    : 7 ans (obligations légales)
+Logs applicatifs             : 90 jours
+Données de session           : 30 jours
+Données marketing / cookies  : 13 mois (RGPD)
+Données RH                   : durée du contrat + 5 ans</code></pre>
+<hr>
+<h2>Étape 6 — Data Contracts</h2>
+<p>Un data contract formalise le SLA entre un producteur et ses consommateurs.</p>
+<pre><code class="lang-yaml"># data_contract_orders.yaml
+id: orders-v2
+version: &quot;2.1.0&quot;
+owner: team-commerce
+domain: commerce
+
+schema:
+  - name: order_id
+    type: integer
+    required: true
+    unique: true
+  - name: amount
+    type: float
+    required: true
+    minimum: 0
+
+sla:
+  freshness: 15min          # délai max entre source et destination
+  availability: 99.9%
+  completeness: 99%
+
+contact:
+  owner: commerce@company.com
+  slack: &quot;#team-commerce-data&quot;</code></pre>
+<p>Outils : <strong>Soda Data Contracts</strong>, <strong>OpenDataContracts</strong> (spec open-source), <strong>dbt contracts</strong> (dbt Core 1.5+).</p>
+<pre><code class="lang-yaml"># dbt model contract
+models:
+  - name: orders
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: order_id
+        data_type: integer
+        constraints:
+          - type: not_null
+          - type: unique</code></pre>
+<hr>
+<h2>Étape 7 — KPIs de gouvernance (tableau de bord mensuel)</h2>
+<pre><code class="lang-sql">-- Couverture catalogue (% datasets documentés)
+SELECT
+    COUNT(*) FILTER (WHERE description IS NOT NULL AND owner IS NOT NULL) * 100.0 / COUNT(*) AS coverage_pct
+FROM catalog.datasets;
+
+-- Score qualité global (agrégat de toutes les suites GE)
+SELECT
+    suite_name,
+    AVG(success_percent) AS avg_quality_score
+FROM data_quality.run_results
+WHERE run_date &gt;= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY suite_name
+ORDER BY avg_quality_score ASC;</code></pre>
+<p><strong>KPIs cibles :</strong></p>
+<ul>
+<li>Couverture catalogue : &gt; 80 % des datasets critiques documentés</li>
+<li>Score qualité global : &gt; 95 %</li>
+<li>Incidents de qualité non détectés en production : 0</li>
+<li>Temps moyen de résolution d'un incident qualité : &lt; 4 h</li>
+</ul>
+<hr>
+<h2>Anti-patterns / Pièges</h2>
+<p><strong>Gouvernance top-down sans adhésion terrain</strong> — Si les équipes data ne voient pas la valeur, le catalogue devient obsolète en 3 mois. Impliquer les Data Stewards dès le départ, montrer les gains concrets (moins d'incidents, moins de questions répétées).</p>
+<p><strong>Tout cataloguer d'un coup</strong> — Commencer par les 20-30 datasets les plus critiques (80 % de la valeur), pas par l'exhaustivité. Prioriser par usage business réel.</p>
+<p><strong>Qualité sans ownership</strong> — Une alerte de qualité sans responsable assigné n'est jamais corrigée. Chaque règle de qualité doit avoir un Data Steward notifié automatiquement.</p>
+<p><strong>Data lineage manuel</strong> — Le lineage documenté à la main est toujours faux à J+30. Utiliser uniquement des outils qui capturent le lineage automatiquement (dbt, Airflow, Spark listeners, OpenLineage).</p>
+<p><strong>Politique de rétention sans suppression effective</strong> — Écrire la politique sans automatiser la suppression est un risque RGPD. Implémenter les jobs de purge dès le départ, pas après.</p>
+<p><strong>Classification à la main à grande échelle</strong> — Au-delà de 100 datasets, utiliser des outils de découverte automatique (AWS Macie, Microsoft Purview scanner, Google DLP) pour détecter PII/PHI/PCI.</p>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>OpenLineage</strong> comme standard de lineage inter-outils (Airflow, Spark, dbt supportent nativement le format Marquez/OpenLineage).</li>
+<li><strong>dbt Mesh</strong> pour la gouvernance inter-domaines : chaque domaine expose des <code>public models</code> avec contrats enforced, les autres domaines ne consomment qu'au travers de ces interfaces stables.</li>
+<li><strong>Data Mesh organisationnel</strong> : gouvernance fédérée avec standards centraux (catalog, qualité, classification) mais ownership décentralisé par domaine métier.</li>
+<li><strong>Shift-left quality</strong> : les contrôles de qualité s'exécutent dans la CI/CD avant merge, pas seulement en production.</li>
+<li><strong>Policies-as-code</strong> : versionner les politiques d'accès (ex : Apache Ranger policies en YAML dans Git) pour auditabilité et rollback.</li>
 </ul>
 </article>
 </main>

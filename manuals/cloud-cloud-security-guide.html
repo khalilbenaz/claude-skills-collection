@@ -96,24 +96,166 @@ cp -r claude-skills-collection/skills/cloud-cloud-security-guide ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Cloud Security Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Auditer la posture IAM</strong> — Inventorier tous les comptes, rôles et politiques d'accès. Appliquer le principe du moindre privilège. Supprimer les accès inutilisés avec IAM Access Analyzer (AWS), Azure AD Access Reviews ou GCP Policy Analyzer. Imposer le MFA sur tous les comptes humains.</li>
-<li><strong>Sécuriser le réseau cloud</strong> — Configurer les VPC/VNET avec segmentation par sous-réseaux (public, privé, données). Implémenter les security groups et NACLs restrictifs. Déployer des WAF devant les applications exposées. Activer les VPC Flow Logs pour la visibilité réseau.</li>
-<li><strong>Chiffrer les données</strong> — Activer le chiffrement at-rest sur tous les services de stockage (S3, Blob Storage, RDS, disques). Configurer le chiffrement in-transit avec TLS 1.2+. Gérer les clés avec KMS/Key Vault en utilisant des Customer Managed Keys (CMK) pour les données sensibles.</li>
-<li><strong>Gérer les secrets</strong> — Centraliser les secrets dans un vault dédié (AWS Secrets Manager, Azure Key Vault, HashiCorp Vault). Implémenter la rotation automatique des secrets. Interdire les secrets en dur dans le code ou les variables d'environnement non chiffrées.</li>
-<li><strong>Déployer un CSPM</strong> — Configurer un outil de Cloud Security Posture Management (AWS Security Hub, Microsoft Defender for Cloud, Prisma Cloud). Définir des benchmarks de conformité (CIS). Automatiser la remédiation des findings critiques avec des playbooks.</li>
-<li><strong>Implémenter la détection de menaces</strong> — Activer les services de détection natifs (GuardDuty, Sentinel, Security Command Center). Configurer les alertes sur les comportements anormaux : accès inhabituel, exfiltration de données, escalade de privilèges. Centraliser les logs dans un SIEM.</li>
-<li><strong>Assurer la conformité</strong> — Mapper les contrôles cloud aux frameworks réglementaires (ISO 27001, SOC 2, RGPD, HIPAA). Automatiser les audits de conformité avec des policies-as-code (OPA, AWS Config Rules, Azure Policy). Générer des rapports de conformité périodiques.</li>
-<li><strong>Planifier la réponse aux incidents</strong> — Documenter les procédures de réponse aux incidents cloud (isolation de ressource, forensics, notification). Tester régulièrement avec des exercices de tabletop. Configurer les snapshots automatiques pour la préservation des preuves.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Auditer et durcir l'IAM</h3>
+<p><strong>Critère de déclenchement</strong> : nouveau compte cloud, audit trimestriel, onboarding d'un service.</p>
+<pre><code class="lang-bash"># AWS — lister les utilisateurs sans MFA
+aws iam generate-credential-report
+aws iam get-credential-report --query 'Content' --output text | base64 -d | grep ',false,'
+
+# AWS — trouver les politiques permissives (Action: *)
+aws iam list-policies --scope Local --query &quot;Policies[*].Arn&quot; --output text | \
+  xargs -I{} aws iam get-policy-version --policy-arn {} --version-id v1 \
+  --query &quot;PolicyVersion.Document&quot; 2&gt;/dev/null | grep -B5 '&quot;Action&quot;: &quot;\*&quot;'
+
+# Azure — Access Review via CLI
+az ad user list --query &quot;[?accountEnabled==\`true\`].{UPN:userPrincipalName}&quot; --output table</code></pre>
+<p>Règles d'or :</p>
 <ul>
-<li>Toujours appliquer le principe du moindre privilège sur chaque rôle IAM et réviser les permissions trimestriellement pour supprimer les accès non utilisés.</li>
-<li>Ne jamais exposer de ressources de données (bases de données, buckets, queues) directement sur Internet ; toujours utiliser des endpoints privés ou des VPN.</li>
-<li>Toujours chiffrer les données sensibles avec des Customer Managed Keys (CMK) et activer la rotation automatique des clés.</li>
-<li>Implémenter le tagging obligatoire sur toutes les ressources cloud pour assurer la traçabilité, la gestion des coûts et l'application des politiques de sécurité.</li>
-<li>Ne jamais désactiver les logs d'audit (CloudTrail, Activity Log, Audit Logs) ; les conserver au minimum 12 mois dans un stockage immuable.</li>
+<li>Pas de credentials longue durée sur les machines : utiliser des <strong>Instance Profiles / Managed Identities / Workload Identity</strong>.</li>
+<li>Séparer les comptes par environnement (dev / staging / prod) avec <strong>AWS Organizations SCPs</strong> ou <strong>Azure Management Groups</strong>.</li>
+<li>Imposer MFA via une SCP/Policy bloquant toutes les actions si MFA absent.</li>
+</ul>
+<pre><code class="lang-json">// AWS SCP — forcer MFA
+{
+  &quot;Effect&quot;: &quot;Deny&quot;,
+  &quot;NotAction&quot;: [&quot;iam:CreateVirtualMFADevice&quot;,&quot;iam:EnableMFADevice&quot;,&quot;sts:GetSessionToken&quot;],
+  &quot;Resource&quot;: &quot;*&quot;,
+  &quot;Condition&quot;: {&quot;BoolIfExists&quot;: {&quot;aws:MultiFactorAuthPresent&quot;: &quot;false&quot;}}
+}</code></pre>
+<hr>
+<h3>2. Segmenter le réseau</h3>
+<pre><code class="lang-bash"># AWS — VPC avec sous-réseaux isolés (Terraform snippet)
+resource &quot;aws_vpc&quot; &quot;main&quot; { cidr_block = &quot;10.0.0.0/16&quot; }
+resource &quot;aws_subnet&quot; &quot;public&quot;   { cidr_block = &quot;10.0.1.0/24&quot; ... }
+resource &quot;aws_subnet&quot; &quot;private&quot;  { cidr_block = &quot;10.0.2.0/24&quot; ... }
+resource &quot;aws_subnet&quot; &quot;data&quot;     { cidr_block = &quot;10.0.3.0/24&quot; ... }
+
+# Activer les VPC Flow Logs
+aws ec2 create-flow-logs \
+  --resource-type VPC --resource-ids vpc-xxx \
+  --traffic-type ALL --log-destination-type cloud-watch-logs \
+  --log-group-name /vpc/flowlogs</code></pre>
+<p>Décision rapide :</p>
+<table><thead><tr><th>Ressource</th><th>Exposition autorisée</th></tr></thead><tbody><tr><td>Base de données</td><td>Jamais publique — Private endpoint obligatoire</td></tr><tr><td>Application web</td><td>Via ALB/WAF uniquement</td></tr><tr><td>API interne</td><td>Via VPN ou Service Mesh</td></tr><tr><td>Bucket/Blob</td><td>Jamais public sauf CDN explicite</td></tr></tbody></table>
+<hr>
+<h3>3. Chiffrer les données</h3>
+<pre><code class="lang-bash"># AWS — activer le chiffrement SSE-KMS sur un bucket S3
+aws s3api put-bucket-encryption --bucket mon-bucket \
+  --server-side-encryption-configuration '{
+    &quot;Rules&quot;:[{&quot;ApplyServerSideEncryptionByDefault&quot;:{&quot;SSEAlgorithm&quot;:&quot;aws:kms&quot;,&quot;KMSMasterKeyID&quot;:&quot;arn:aws:kms:...&quot;}}]
+  }'
+
+# Azure — activer CMK sur un Storage Account
+az storage account update \
+  --name monstorage --resource-group monrg \
+  --encryption-key-source Microsoft.Keyvault \
+  --encryption-key-vault https://monkeyvault.vault.azure.net/ \
+  --encryption-key-name maclé --encryption-key-version latest</code></pre>
+<p>Critères CMK vs clés gérées par le provider :</p>
+<ul>
+<li><strong>Clés provider (SSE-S3, Microsoft-managed)</strong> : acceptable pour données non réglementées.</li>
+<li><strong>CMK obligatoire</strong> : données médicales, financières, PII soumises à RGPD/HIPAA/PCI-DSS.</li>
+<li>Activer la <strong>rotation automatique annuelle</strong> des CMK.</li>
+</ul>
+<hr>
+<h3>4. Gérer les secrets sans les exposer</h3>
+<pre><code class="lang-bash"># AWS — créer un secret avec rotation
+aws secretsmanager create-secret \
+  --name prod/myapp/db-password \
+  --secret-string '{&quot;username&quot;:&quot;admin&quot;,&quot;password&quot;:&quot;xxx&quot;}'
+
+aws secretsmanager rotate-secret \
+  --secret-id prod/myapp/db-password \
+  --rotation-lambda-arn arn:aws:lambda:...
+
+# Récupérer au runtime (Python)
+import boto3, json
+secret = json.loads(
+  boto3.client(&quot;secretsmanager&quot;).get_secret_value(SecretId=&quot;prod/myapp/db-password&quot;)[&quot;SecretString&quot;]
+)</code></pre>
+<p>Règles :</p>
+<ul>
+<li>Scan automatique des secrets dans le code : <code>git-secrets</code>, <code>trufflehog</code>, <code>detect-secrets</code> en pre-commit hook.</li>
+<li>Variables d'environnement en CI/CD : toujours via le secret store du pipeline (GitHub Secrets, Azure Key Vault linked variable groups) — jamais en clair dans le YAML.</li>
+</ul>
+<hr>
+<h3>5. Déployer un CSPM et automatiser la remédiation</h3>
+<pre><code class="lang-bash"># AWS Security Hub — activer CIS Benchmark
+aws securityhub enable-security-hub --enable-default-standards
+aws securityhub batch-enable-standards \
+  --standards-subscription-requests '[
+    {&quot;StandardsArn&quot;:&quot;arn:aws:securityhub:::ruleset/cis-aws-foundations-benchmark/v/1.4.0&quot;}
+  ]'
+
+# Azure — activer Defender for Cloud sur tous les plans
+az security pricing create -n VirtualMachines --tier Standard
+az security pricing create -n StorageAccounts --tier Standard</code></pre>
+<p>Remédiation automatique : utiliser <strong>AWS Config Remediation Actions</strong> ou <strong>Azure Policy DeployIfNotExists</strong> pour corriger automatiquement les findings récurrents (ex: activer CloudTrail si désactivé).</p>
+<hr>
+<h3>6. Détection de menaces et SIEM</h3>
+<pre><code class="lang-bash"># AWS — activer GuardDuty sur tous les comptes d'une org
+aws guardduty create-detector --enable --finding-publishing-frequency FIFTEEN_MINUTES
+# Déléguer à un compte sécurité centralisé
+aws guardduty enable-organization-admin-account --admin-account-id 123456789012
+
+# Centraliser les logs CloudTrail → S3 → CloudWatch → SIEM
+aws cloudtrail create-trail \
+  --name org-trail --s3-bucket-name audit-logs-bucket \
+  --is-multi-region-trail --enable-log-file-validation</code></pre>
+<p>Alertes prioritaires à configurer :</p>
+<ul>
+<li>Root account login</li>
+<li>IAM policy modification</li>
+<li>S3 bucket rendu public</li>
+<li>Connexion depuis IP suspecte / pays inhabituel</li>
+<li>Exfiltration de données (volume anormal d'accès sortants)</li>
+</ul>
+<hr>
+<h3>7. Conformité as Code</h3>
+<pre><code class="lang-bash"># OPA — policy interdisant les buckets S3 publics (Rego)
+deny[msg] {
+  input.resource.type == &quot;aws_s3_bucket&quot;
+  input.resource.config.acl == &quot;public-read&quot;
+  msg := sprintf(&quot;Bucket %v ne doit pas être public&quot;, [input.resource.name])
+}
+
+# AWS Config Rule custom
+aws configservice put-config-rule --config-rule '{
+  &quot;ConfigRuleName&quot;: &quot;s3-no-public-acl&quot;,
+  &quot;Source&quot;: {&quot;Owner&quot;:&quot;AWS&quot;,&quot;SourceIdentifier&quot;:&quot;S3_BUCKET_PUBLIC_READ_PROHIBITED&quot;}
+}'</code></pre>
+<p>Mapping frameworks 2026 :</p>
+<table><thead><tr><th>Contrôle</th><th>CIS</th><th>ISO 27001</th><th>SOC 2</th><th>PCI-DSS</th></tr></thead><tbody><tr><td>MFA obligatoire</td><td>1.10</td><td>A.9.4.2</td><td>CC6.1</td><td>8.4</td></tr><tr><td>Chiffrement at-rest</td><td>2.1</td><td>A.10.1</td><td>CC6.7</td><td>3.4</td></tr><tr><td>Logs d'audit 12 mois</td><td>3.1</td><td>A.12.4</td><td>CC7.2</td><td>10.5</td></tr></tbody></table>
+<hr>
+<h3>8. Réponse aux incidents cloud</h3>
+<p>Procédure d'isolation rapide :</p>
+<pre><code class="lang-bash"># AWS — isoler une instance compromise
+aws ec2 create-security-group --group-name quarantine --description &quot;No ingress/egress&quot;
+aws ec2 modify-instance-attribute \
+  --instance-id i-xxxx --groups sg-quarantine
+
+# Snapshot pour préservation des preuves
+aws ec2 create-snapshot --volume-id vol-xxxx \
+  --description &quot;forensics-$(date +%Y%m%d-%H%M%S)&quot; \
+  --tag-specifications 'ResourceType=snapshot,Tags=[{Key=incident,Value=INC-001}]'</code></pre>
+<p>Décisions clés lors d'un incident :</p>
+<ol>
+<li>Isoler SANS éteindre (préserver la mémoire volatile si forensics nécessaire).</li>
+<li>Révoquer les credentials immédiatement (pas juste désactiver).</li>
+<li>Notifier le DPO si données personnelles concernées (RGPD : 72h).</li>
+</ol>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>IAM <code>*:*</code> sur un rôle Lambda</td><td>Blast radius total si compromis</td><td>Scope minimal sur les ARNs nécessaires</td></tr><tr><td>Bucket S3 public &quot;pour simplifier&quot;</td><td>Fuite de données, amende RGPD</td><td>CloudFront + OAC obligatoire</td></tr><tr><td>Secrets dans les variables Terraform en clair</td><td>Exposés dans le state</td><td><code>sensitive = true</code> + state chiffré + backend sécurisé</td></tr><tr><td>MFA uniquement sur root, pas sur les admins</td><td>Élévation facile via un compte admin</td><td>SCP MFA obligatoire sur tous les comptes humains</td></tr><tr><td>CloudTrail désactivé en dev</td><td>Pas de traces en cas d'incident</td><td>Trail org couvrant tous les comptes y compris dev</td></tr><tr><td>Rotation des clés KMS jamais activée</td><td>Clé compromise = données indéchiffrables à terme</td><td>Rotation automatique annuelle</td></tr><tr><td>Partage de credentials entre services</td><td>Traçabilité impossible</td><td>Une identité par service (service account / role)</td></tr><tr><td>Security groups <code>0.0.0.0/0</code> en entrée</td><td>Exposition totale</td><td>Restreindre au CIDR minimal ou au SG source</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Zero Trust</strong> : ne pas faire confiance au réseau interne — vérifier chaque appel avec des tokens courts (SPIFFE/SPIRE pour les workloads).</li>
+<li><strong>Supply chain</strong> : signer les images container (Sigstore/Cosign), scanner les CVEs avant le push en registry (Trivy, Grype).</li>
+<li><strong>Infrastructure immutable</strong> : pas de SSH direct en prod — utiliser AWS SSM Session Manager / Azure Bastion sans port 22 exposé.</li>
+<li><strong>Shift-left security</strong> : intégrer les checks SAST/SCA/IaC-scan dans la PR (Checkov pour Terraform, Semgrep, Dependabot).</li>
+<li><strong>Tagging obligatoire</strong> : <code>env</code>, <code>owner</code>, <code>data-classification</code>, <code>cost-center</code> sur toutes les ressources — prérequis pour les politiques automatisées.</li>
 </ul>
 </article>
 </main>

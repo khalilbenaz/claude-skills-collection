@@ -97,34 +97,128 @@ cp -r claude-skills-collection/skills/automation-zapier-workflow-builder ~/.clau
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Zapier Workflow Builder</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le processus à automatiser</strong> — identifier l'application source (trigger), les applications cibles (actions), les données à transférer entre elles, et vérifier la disponibilité des intégrations sur le catalogue Zapier (6000+ apps).</li>
-</ol>
-<ol>
-<li><strong>Configurer le trigger</strong> — choisir l'événement déclencheur dans l'application source (nouveau lead dans CRM, nouvel email, nouveau fichier, webhook entrant), connecter le compte, et tester le trigger pour récupérer des données d'exemple utilisées dans les étapes suivantes.</li>
-</ol>
-<ol>
-<li><strong>Construire les étapes intermédiaires</strong> — ajouter des actions de transformation : Formatter (texte, dates, nombres), Filter (continuer uniquement si condition remplie), Delay (attendre avant la prochaine action), Looping (itérer sur une liste), et Paths (branches conditionnelles multiples).</li>
-</ol>
-<ol>
-<li><strong>Configurer les actions de destination</strong> — mapper les champs du trigger vers les champs de l'application cible, utiliser les variables dynamiques de chaque étape précédente, formater les données avec les fonctions intégrées, et tester chaque action individuellement.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les Paths et filtres avancés</strong> — créer des branches conditionnelles avec Paths pour traiter différemment les données selon des critères (type de client, montant, priorité), combiner avec des filtres pour exclure les exécutions inutiles et économiser les tâches.</li>
-</ol>
-<ol>
-<li><strong>Configurer les webhooks</strong> — utiliser Webhooks by Zapier pour recevoir des données depuis des applications non intégrées (Catch Hook), envoyer des requêtes HTTP personnalisées (POST, GET, PUT) vers des API externes, et parser les réponses JSON.</li>
-</ol>
-<ol>
-<li><strong>Tester de bout en bout</strong> — exécuter le Zap en mode test étape par étape, vérifier le mapping des données à chaque action, tester les cas limites (données manquantes, formats inattendus), et activer le Zap uniquement après validation complète.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Cadrer le besoin avant d'ouvrir Zapier</h3>
 <ul>
-<li>Toujours tester chaque étape individuellement avant d'activer le Zap complet — un mapping incorrect peut créer des données corrompues dans l'application cible.</li>
-<li>Utiliser les filtres tôt dans le workflow pour éviter les exécutions inutiles — chaque tâche consommée compte dans le quota du plan Zapier.</li>
-<li>Préférer les Paths aux Zaps multiples quand la logique diverge selon une condition — cela centralise la maintenance et réduit les risques d'incohérence.</li>
-<li>Documenter chaque Zap avec un nom descriptif et des notes expliquant le contexte métier — les Zaps orphelins sans documentation deviennent rapidement ingérables.</li>
-<li>Surveiller les erreurs via le Task History et configurer des alertes email pour les échecs — un Zap en erreur silencieuse peut bloquer un processus métier critique.</li>
+<li>Lister : <strong>trigger app + événement</strong>, <strong>action app(s) + opération</strong>, champs à mapper.</li>
+<li>Vérifier le plan Zapier : Paths et multi-step nécessitent au minimum le plan <strong>Starter</strong> ; Looping et Code by Zapier nécessitent <strong>Professional</strong>.</li>
+<li>Estimer la consommation mensuelle de tâches (= nombre d'exécutions × nombre d'actions par exécution) pour choisir le bon plan.</li>
+</ul>
+<p><strong>Critère de décision : Zap ou autre outil ?</strong></p>
+<table><thead><tr><th>Besoin</th><th>Recommandation</th></tr></thead><tbody><tr><td>Connecter 2 apps SaaS sans dev</td><td>Zapier</td></tr><tr><td>Logique complexe / boucles imbriquées</td><td>Make (Integromat) ou n8n</td></tr><tr><td>Volume &gt; 50 000 tâches/mois</td><td>Make ou pipeline dédié</td></tr><tr><td>Accès base de données directe</td><td>n8n + SQL step</td></tr></tbody></table>
+<hr>
+<h3>2. Configurer le trigger</h3>
+<ol>
+<li>Choisir l'app source et l'événement (ex. <code>New Lead</code> dans HubSpot).</li>
+<li>Connecter le compte OAuth ou API Key — Zapier stocke les credentials chiffrés.</li>
+<li>Cliquer <strong>Test trigger</strong> : récupérer un enregistrement réel pour avoir des données d'exemple dans toutes les étapes suivantes.</li>
+<li>Si l'app ne supporte pas le polling : utiliser <strong>Webhooks by Zapier → Catch Hook</strong> et copier l'URL générée dans l'app source.</li>
+</ol>
+<pre><code>URL webhook Zapier exemple :
+https://hooks.zapier.com/hooks/catch/123456/abcxyz/</code></pre>
+<hr>
+<h3>3. Ajouter les étapes de transformation</h3>
+<p><strong>Formatter by Zapier</strong> — transformer sans code :</p>
+<ul>
+<li><code>Text → Split Text</code> : découper un champ <code>&quot;Nom Prénom&quot;</code> → <code>[&quot;Nom&quot;, &quot;Prénom&quot;]</code></li>
+<li><code>Numbers → Format Number</code> : <code>1234.5</code> → <code>&quot;1 234,50 €&quot;</code></li>
+<li><code>Date/Time → Format Date</code> : ISO 8601 → <code>DD/MM/YYYY</code></li>
+</ul>
+<p><strong>Filter by Zapier</strong> — stopper l'exécution si la condition n'est pas remplie :</p>
+<pre><code>Champ : &quot;Statut&quot;   Condition : &quot;exactly matches&quot;   Valeur : &quot;Payé&quot;</code></pre>
+<p>Placer les filtres <strong>le plus tôt possible</strong> dans le Zap pour éviter de consommer des tâches.</p>
+<p><strong>Delay by Zapier</strong> :</p>
+<ul>
+<li><code>Delay For</code> : attendre N minutes/heures.</li>
+<li><code>Delay Until</code> : attendre une date/heure issue d'un champ de l'enregistrement.</li>
+</ul>
+<hr>
+<h3>4. Configurer les actions de destination</h3>
+<ol>
+<li>Choisir l'app cible et l'opération (ex. <code>Create Row</code> dans Google Sheets).</li>
+<li>Mapper les champs en cliquant sur l'icône <code>+</code> pour insérer des variables dynamiques des étapes précédentes.</li>
+<li>Utiliser les <strong>champs imbriqués</strong> si l'action accepte du JSON : cliquer &quot;Use a Custom Value&quot; et entrer la variable directement.</li>
+<li>Tester l'action individuellement — vérifier dans l'app cible que l'enregistrement est créé/modifié correctement.</li>
+</ol>
+<hr>
+<h3>5. Implémenter les Paths (branches conditionnelles)</h3>
+<p>Les Paths remplacent plusieurs Zaps séparés sur le même trigger.</p>
+<pre><code>Trigger : Nouveau formulaire soumis
+│
+├── Path A : budget &gt; 10 000 € → Notifier équipe commerciale Slack + Créer deal HubSpot
+├── Path B : budget 1 000–10 000 € → Envoyer email automatique + Créer contact CRM
+└── Path C : budget &lt; 1 000 € → Ajouter à liste Mailchimp seulement</code></pre>
+<ul>
+<li>Chaque Path a sa propre condition et ses propres actions.</li>
+<li>Les Paths s'exécutent en <strong>parallèle</strong> — un seul Path peut aussi être vide (no-op intentionnel).</li>
+<li>Maximum <strong>5 Paths</strong> par Zap sur plan Professional.</li>
+</ul>
+<hr>
+<h3>6. Webhooks — appels API sortants</h3>
+<p><strong>Envoyer une requête HTTP POST</strong> :</p>
+<pre><code class="lang-json">// Action : Webhooks by Zapier → POST
+URL    : https://api.monservice.com/v1/contacts
+Method : POST
+Headers:
+  Authorization : Bearer {{api_key}}
+  Content-Type  : application/json
+Data (JSON):
+{
+  &quot;email&quot;: &quot;{{1. Email}}&quot;,
+  &quot;name&quot;:  &quot;{{1. Full Name}}&quot;,
+  &quot;source&quot;: &quot;zapier&quot;
+}</code></pre>
+<p><strong>Parser la réponse</strong> : Zapier expose automatiquement les champs JSON de la réponse dans les étapes suivantes sous <code>webhooks_by_zapier__catch_hook</code>.</p>
+<p>Pour les API paginées ou les réponses complexes : utiliser <strong>Code by Zapier (Python/JavaScript)</strong>.</p>
+<hr>
+<h3>7. Code by Zapier — pour les cas non couverts nativement</h3>
+<pre><code class="lang-javascript">// Exemple JavaScript — construire un objet JSON dynamique
+const items = inputData.line_items.split(',');
+const total = items.reduce((acc, item) =&gt; {
+  const [name, price] = item.split(':');
+  return acc + parseFloat(price);
+}, 0);
+
+output = [{ total: total.toFixed(2), count: items.length }];</code></pre>
+<pre><code class="lang-python"># Exemple Python — appel API avec authentification custom
+import requests
+
+resp = requests.get(
+    'https://api.exemple.com/orders',
+    headers={'X-Api-Key': input_data['api_key']},
+    params={'status': 'pending'}
+)
+orders = resp.json()
+output = [{'order_count': len(orders['data'])}]</code></pre>
+<hr>
+<h3>8. Tester et activer</h3>
+<ol>
+<li>Tester chaque étape individuellement avec les données récupérées au step 2.</li>
+<li>Lancer un <strong>test complet</strong> (bouton &quot;Test Zap&quot;) — vérifier l'enregistrement créé dans l'app cible.</li>
+<li>Tester les cas limites : champ vide, valeur nulle, format de date inattendu.</li>
+<li>Activer le Zap → surveiller le <strong>Task History</strong> pendant les 24 premières heures.</li>
+</ol>
+<hr>
+<h2>Surveillance et maintenance</h2>
+<ul>
+<li><strong>Alertes d'erreur</strong> : Zapier &gt; Settings &gt; Notifications → activer les emails sur erreur d'étape.</li>
+<li><strong>Task History</strong> : inspecter les exécutions en erreur — Zapier affiche l'étape exacte et le message d'erreur.</li>
+<li><strong>Naming convention</strong> : <code>[APP_SOURCE] → [APP_CIBLE] — [Description courte]</code></li>
+<ul>
+<li>Exemple : <code>HubSpot → Slack — Nouveau deal &gt; 10k€</code></li>
+</ul>
+<li><strong>Versioning</strong> : Zapier garde un historique des versions du Zap — possible de revenir à la version précédente.</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Remède</th></tr></thead><tbody><tr><td>Pas de filtre en début de Zap</td><td>Consomme des tâches inutilement</td><td>Ajouter un Filter juste après le trigger</td></tr><tr><td>Zaps en doublon pour chaque condition</td><td>Maintenance éclatée</td><td>Centraliser avec Paths</td></tr><tr><td>Mapper un champ texte libre comme ID</td><td>Données corrompues si l'utilisateur change le texte</td><td>Toujours mapper l'ID unique (uuid, record_id)</td></tr><tr><td>Aucune gestion des champs vides</td><td>Erreurs silencieuses dans l'app cible</td><td>Utiliser Formatter → &quot;Default Value&quot; ou un filtre préventif</td></tr><tr><td>Activer sans test end-to-end</td><td>Création de doublons ou données erronées en prod</td><td>Test obligatoire avant activation</td></tr><tr><td>Stocker des secrets dans les champs libres</td><td>Credential exposé dans les logs Zapier</td><td>Utiliser les connexions OAuth ou les champs &quot;Password&quot; dans Zapier</td></tr><tr><td>Zap sans nom descriptif ni notes</td><td>Ingérable après 3 mois</td><td>Nommer + documenter la logique métier dans le champ &quot;Notes&quot;</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Utilisez Zapier Tables</strong> pour stocker un état entre exécutions (ex. dédoublonnage, compteurs) sans passer par un outil externe.</li>
+<li><strong>Interfaces by Zapier</strong> : créer des formulaires internes déclenchant directement un Zap, sans app tierce.</li>
+<li><strong>Zapier AI Actions</strong> : exposer des Zaps comme outils appelables par un LLM (GPT, Claude) via l'intégration OpenAI/Zapier — utile pour les agents IA.</li>
+<li>Préférer les <strong>webhooks instantanés</strong> aux triggers par polling quand l'app source le supporte — latence &lt; 1 s vs jusqu'à 15 min sur les plans bas.</li>
+<li>Audit trimestriel : désactiver les Zaps sans exécution depuis 30 jours — libère du quota et réduit la surface d'erreur.</li>
 </ul>
 </article>
 </main>

@@ -97,61 +97,44 @@ cp -r claude-skills-collection/skills/agent-spawner ~/.claude/skills/</div><butt
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent Spawner</h1>
 <h2>Quand utiliser ce skill</h2>
-<p>Utiliser ce skill lorsqu'une tâche nécessite la création dynamique de sous-agents spécialisés pendant l'exécution — par exemple quand la complexité d'une requête dépasse les capacités d'un agent unique ou que des traitements parallèles indépendants sont requis. Ce skill est adapté aux architectures multi-agents où le nombre et le type d'agents ne peuvent pas être déterminés à l'avance. Il convient également aux systèmes de type &quot;agent factory&quot; où des gabarits réutilisables doivent être instanciés avec des configurations contextuelles différentes.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définir les templates d'agents</strong> — Créer des gabarits réutilisables (system prompt, tools autorisés, modèle LLM, contraintes, timeout). Chaque template définit une spécialisation : <code>ResearcherTemplate</code>, <code>CoderTemplate</code>, <code>ReviewerTemplate</code>, etc.</li>
-</ol>
-<ol>
-<li><strong>Identifier le déclencheur de spawn</strong> — Évaluer les conditions qui justifient la création d'un nouvel agent : complexité de la tâche, besoin de spécialisation, parallélisme requis, manque de compétence de l'agent courant.</li>
-</ol>
-<ol>
-<li><strong>Configuration dynamique</strong> — Injecter le contexte spécifique dans le template sélectionné : données d'entrée, instructions particulières, tools adaptés à la tâche, sélection du modèle selon le budget disponible.</li>
-</ol>
-<ol>
-<li><strong>Resource allocation</strong> — Allouer les ressources avant le spawn : budget tokens, timeout maximal, liste des tools accessibles, niveau de permission, modèle LLM (premium vs économique selon la criticité).</li>
-</ol>
-<ol>
-<li><strong>Lifecycle management</strong> — Piloter l'agent à travers les phases <code>create → initialize → execute → report → terminate</code>. Chaque transition doit être loggée avec un timestamp et l'état résultant.</li>
-</ol>
-<ol>
-<li><strong>Agent registry</strong> — Enregistrer chaque agent spawné dans un registre central : identifiant unique (UUID), statut courant, heure de création, référence au parent, tâche assignée, métriques d'utilisation.</li>
-</ol>
-<ol>
-<li><strong>Agents éphémères vs persistants</strong> — Distinguer les agents one-shot (créés pour une tâche unique puis détruits) des agents persistants (maintenus entre les tâches pour réduire le warm-up). Adapter la stratégie selon le coût et la fréquence d'utilisation.</li>
-</ol>
-<ol>
-<li><strong>Rate limiting</strong> — Enforcer les limites : nombre maximal d'agents concurrents, cadence de spawn (agents/seconde), budget total alloué à l'ensemble du pool, file d'attente si le plafond est atteint.</li>
-</ol>
-<ol>
-<li><strong>Cleanup et garbage collection</strong> — Terminer les agents inactifs après un timeout, libérer les ressources allouées, archiver les logs de résultats, supprimer les entrées du registre pour les agents terminés.</li>
-</ol>
-<ol>
-<li><strong>Factory patterns</strong> — Implémenter des patterns reconnus : <code>AgentFactory</code> (création centralisée), <code>Builder</code> (configuration étape par étape), héritage de templates, composition de capacités pour créer des agents hybrides.</li>
-</ol>
-<pre><code class="lang-python"># Exemple d'implémentation Python — AgentFactory
-import uuid
-from dataclasses import dataclass, field
-from datetime import datetime
+<table><thead><tr><th>Condition</th><th>Spawner requis ?</th></tr></thead><tbody><tr><td>Nombre d'agents inconnu à l'avance</td><td>Oui</td></tr><tr><td>Agents identiques, volume variable</td><td>Oui (+ pool-manager)</td></tr><tr><td>Agents fixes et connus en design-time</td><td>Non — câbler statiquement</td></tr><tr><td>Besoin de parallélisme homogène</td><td>Préférer <code>agent-pool-manager</code></td></tr><tr><td>Types d'agents différents selon le contexte</td><td>Oui</td></tr></tbody></table>
+<h2>Workflow en étapes</h2>
+<h3>1. Concevoir les templates d'agents</h3>
+<p>Chaque template encode une spécialisation. Définir au minimum :</p>
+<pre><code class="lang-python">from dataclasses import dataclass, field
 from typing import Optional
 
 @dataclass
 class AgentTemplate:
-    name: str
-    system_prompt: str
-    tools: list[str]
-    model: str = &quot;claude-3-5-sonnet&quot;
+    name: str                          # identifiant du gabarit
+    system_prompt: str                 # supporte les placeholders {domain}, {task}…
+    tools: list[str]                   # liste des tools autorisés
+    model: str = &quot;claude-sonnet-4-5&quot;   # modèle par défaut
     max_tokens: int = 4096
-    timeout_seconds: int = 120
+    timeout_seconds: int = 120</code></pre>
+<p>Exemples de templates courants :</p>
+<ul>
+<li><code>researcher</code> — <code>search_web</code>, <code>fetch_url</code>, modèle léger (haiku)</li>
+<li><code>coder</code> — <code>bash</code>, <code>read_file</code>, <code>write_file</code>, modèle puissant (sonnet/opus)</li>
+<li><code>reviewer</code> — lecture seule, modèle sonnet</li>
+<li><code>summarizer</code> — aucun tool, haiku suffit</li>
+</ul>
+<h3>2. Critères de décision : quel modèle choisir ?</h3>
+<table><thead><tr><th>Criticité / Complexité</th><th>Modèle recommandé</th></tr></thead><tbody><tr><td>Analyse simple, résumé</td><td><code>claude-haiku-4</code></td></tr><tr><td>Tâche de code standard</td><td><code>claude-sonnet-4-5</code></td></tr><tr><td>Raisonnement multi-étapes, debugging</td><td><code>claude-opus-4</code></td></tr><tr><td>Réponses temps-réel &lt; 2 s</td><td><code>claude-haiku-4</code></td></tr></tbody></table>
+<p>Règle : <strong>ne jamais utiliser opus pour les agents répétitifs à fort volume</strong> — le coût est 10–20× celui de haiku.</p>
+<h3>3. Implémenter la factory</h3>
+<pre><code class="lang-python">import uuid
+from datetime import datetime, timezone
 
 @dataclass
 class AgentInstance:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     template_name: str = &quot;&quot;
-    status: str = &quot;created&quot;  # created | running | done | failed | terminated
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    status: str = &quot;created&quot;   # created | running | done | failed | terminated
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     parent_id: Optional[str] = None
     result: Optional[str] = None
+    error: Optional[str] = None
 
 class AgentFactory:
     _templates: dict[str, AgentTemplate] = {}
@@ -159,87 +142,144 @@ class AgentFactory:
     _max_concurrent: int = 10
 
     @classmethod
-    def register_template(cls, template: AgentTemplate):
-        cls._templates[template.name] = template
+    def register_template(cls, t: AgentTemplate) -&gt; None:
+        cls._templates[t.name] = t
 
     @classmethod
-    def spawn(cls, template_name: str, context: dict, parent_id: str = None) -&gt; AgentInstance:
-        if len([a for a in cls._registry.values() if a.status == &quot;running&quot;]) &gt;= cls._max_concurrent:
-            raise RuntimeError(&quot;Max concurrent agents reached — task queued&quot;)
-        
-        template = cls._templates[template_name]
+    def spawn(cls, template_name: str, context: dict, parent_id: str | None = None) -&gt; AgentInstance:
+        running = sum(1 for a in cls._registry.values() if a.status == &quot;running&quot;)
+        if running &gt;= cls._max_concurrent:
+            raise RuntimeError(f&quot;Limite {cls._max_concurrent} agents concurrents atteinte&quot;)
+
+        tpl = cls._templates[template_name]
         agent = AgentInstance(template_name=template_name, parent_id=parent_id)
         cls._registry[agent.id] = agent
-        
-        # Injecter le contexte dans le system prompt
-        enriched_prompt = template.system_prompt.format(**context)
+
+        enriched_prompt = tpl.system_prompt.format(**context)
         agent.status = &quot;running&quot;
-        
-        print(f&quot;[SPAWN] Agent {agent.id} ({template_name}) créé à {agent.created_at}&quot;)
+        print(f&quot;[SPAWN] {agent.id} ({template_name}) parent={parent_id} at {agent.created_at.isoformat()}&quot;)
         return agent
 
     @classmethod
-    def terminate(cls, agent_id: str, result: str = None):
-        if agent_id in cls._registry:
-            cls._registry[agent_id].status = &quot;terminated&quot;
-            cls._registry[agent_id].result = result
-            print(f&quot;[TERMINATE] Agent {agent_id} terminé.&quot;)
+    def terminate(cls, agent_id: str, result: str | None = None, error: str | None = None) -&gt; None:
+        if a := cls._registry.get(agent_id):
+            a.status = &quot;failed&quot; if error else &quot;terminated&quot;
+            a.result, a.error = result, error
 
     @classmethod
-    def active_agents(cls) -&gt; list[AgentInstance]:
-        return [a for a in cls._registry.values() if a.status == &quot;running&quot;]
+    def gc(cls, timeout_s: int = 300) -&gt; list[str]:
+        &quot;&quot;&quot;Libère les agents bloqués en 'running' depuis trop longtemps.&quot;&quot;&quot;
+        now = datetime.now(timezone.utc)
+        stale = [
+            a.id for a in cls._registry.values()
+            if a.status == &quot;running&quot; and (now - a.created_at).total_seconds() &gt; timeout_s
+        ]
+        for aid in stale:
+            cls.terminate(aid, error=&quot;GC timeout&quot;)
+        return stale
 
-# Usage
-researcher_tpl = AgentTemplate(
+    @classmethod
+    def active(cls) -&gt; list[AgentInstance]:
+        return [a for a in cls._registry.values() if a.status == &quot;running&quot;]</code></pre>
+<h3>4. Utilisation concrète</h3>
+<pre><code class="lang-python"># Enregistrer les templates une seule fois au démarrage
+AgentFactory.register_template(AgentTemplate(
     name=&quot;researcher&quot;,
-    system_prompt=&quot;Tu es un chercheur expert en {domain}. Analyse: {task}&quot;,
+    system_prompt=&quot;Expert en {domain}. Analyse : {task}&quot;,
     tools=[&quot;search_web&quot;, &quot;fetch_url&quot;],
-    model=&quot;claude-3-5-haiku&quot;
-)
-AgentFactory.register_template(researcher_tpl)
+    model=&quot;claude-haiku-4&quot;,
+))
 
-agent = AgentFactory.spawn(&quot;researcher&quot;, {&quot;domain&quot;: &quot;IA&quot;, &quot;task&quot;: &quot;LLM benchmarks 2025&quot;})
-AgentFactory.terminate(agent.id, result=&quot;Rapport de recherche complet&quot;)</code></pre>
-<pre><code>Architecture — Agent Spawner
+AgentFactory.register_template(AgentTemplate(
+    name=&quot;coder&quot;,
+    system_prompt=&quot;Tu codes en {language}. Tâche : {task}&quot;,
+    tools=[&quot;bash&quot;, &quot;read_file&quot;, &quot;write_file&quot;],
+    model=&quot;claude-sonnet-4-5&quot;,
+    timeout_seconds=300,
+))
 
-  Parent Agent
-      │
-      ▼
-  AgentFactory
-  ┌─────────────────────────────────┐
-  │  Templates Registry             │
-  │  ┌─────────┐ ┌───────────────┐  │
-  │  │Coder    │ │ Researcher    │  │
-  │  │Template │ │ Template      │  │
-  │  └─────────┘ └───────────────┘  │
-  └────────────┬────────────────────┘
-               │ spawn()
-               ▼
-  Agent Registry (UUID → AgentInstance)
-  ┌──────────┬──────────┬──────────┐
-  │ Agent A  │ Agent B  │ Agent C  │
-  │ running  │ done     │ running  │
-  └──────────┴──────────┴──────────┘
-               │
-               ▼
-  Rate Limiter → max_concurrent=10
-  GC → terminate idle agents</code></pre>
-<p><strong>Comparaison LangGraph vs CrewAI vs Custom :</strong></p>
-<table><thead><tr><th>Critère</th><th>LangGraph</th><th>CrewAI</th><th>Custom Python</th></tr></thead><tbody><tr><td>Spawn dynamique</td><td>Via <code>Send()</code> API</td><td><code>Agent()</code> instanciation</td><td>Total contrôle</td></tr><tr><td>Templates</td><td>Nodes réutilisables</td><td><code>Agent</code> configs</td><td>Dataclasses</td></tr><tr><td>Registry</td><td>State graph</td><td>Crew internal</td><td>Dict custom</td></tr><tr><td>Rate limiting</td><td>Manuel</td><td>Manuel</td><td>Manuel</td></tr><tr><td>Lifecycle</td><td>Graph states</td><td>Task lifecycle</td><td>Manuel</td></tr></tbody></table>
-<h2>Anti-patterns</h2>
+# Spawn depuis un orchestrateur
+parent_id = &quot;orchestrator-001&quot;
+
+r = AgentFactory.spawn(&quot;researcher&quot;, {&quot;domain&quot;: &quot;finance&quot;, &quot;task&quot;: &quot;analyse Q1 2026&quot;}, parent_id)
+c = AgentFactory.spawn(&quot;coder&quot;,      {&quot;language&quot;: &quot;Python&quot;, &quot;task&quot;: &quot;générer rapport PDF&quot;}, parent_id)
+
+# ... exécution asynchrone ...
+
+AgentFactory.terminate(r.id, result=&quot;Données collectées&quot;)
+AgentFactory.terminate(c.id, result=&quot;rapport.pdf généré&quot;)
+
+# Nettoyage périodique
+stale = AgentFactory.gc(timeout_s=180)
+print(f&quot;Agents nettoyés par GC : {stale}&quot;)</code></pre>
+<h3>5. Agent registry — schéma minimal</h3>
+<pre><code class="lang-json">{
+  &quot;agent_id&quot;: &quot;550e8400-e29b-41d4-a716-446655440000&quot;,
+  &quot;template&quot;:  &quot;researcher&quot;,
+  &quot;parent_id&quot;: &quot;orchestrator-001&quot;,
+  &quot;status&quot;:    &quot;running&quot;,
+  &quot;created_at&quot;:&quot;2026-06-24T10:00:00Z&quot;,
+  &quot;model&quot;:     &quot;claude-haiku-4&quot;,
+  &quot;tools&quot;:     [&quot;search_web&quot;, &quot;fetch_url&quot;],
+  &quot;result&quot;:    null,
+  &quot;error&quot;:     null
+}</code></pre>
+<p>Stocker en mémoire pour les sessions courtes ; Redis ou un store distribué pour la production.</p>
+<h3>6. Lifecycle et logging</h3>
+<pre><code>create → initialize → running → done/failed → terminated</code></pre>
+<p>Chaque transition doit émettre un événement structuré (JSON) :</p>
+<pre><code class="lang-json">{&quot;event&quot;:&quot;SPAWN&quot;,&quot;agent_id&quot;:&quot;…&quot;,&quot;template&quot;:&quot;coder&quot;,&quot;ts&quot;:&quot;2026-06-24T10:01:00Z&quot;}
+{&quot;event&quot;:&quot;TERMINATE&quot;,&quot;agent_id&quot;:&quot;…&quot;,&quot;status&quot;:&quot;done&quot;,&quot;duration_s&quot;:42,&quot;ts&quot;:&quot;…&quot;}
+{&quot;event&quot;:&quot;GC&quot;,&quot;agent_id&quot;:&quot;…&quot;,&quot;reason&quot;:&quot;timeout&quot;,&quot;ts&quot;:&quot;…&quot;}</code></pre>
+<h3>7. Rate limiting et quotas</h3>
 <ul>
-<li><strong>Spawn sans limite</strong> — Ne jamais créer des agents sans plafond de concurrence. Un burst de 100 agents simultanés peut saturer les quotas API et exploser le budget en quelques secondes.</li>
-<li><strong>Pas de cleanup</strong> — Les agents qui restent en état <code>running</code> sans surveillance consomment des ressources et polluent le registre. Toujours implémenter un timeout et un garbage collector.</li>
-<li><strong>Agents orphelins</strong> — Spawner un agent sans référence au parent empêche la remontée des résultats et le suivi des erreurs. Toujours passer <code>parent_id</code> au moment du spawn.</li>
-<li><strong>Recréer au lieu de réutiliser</strong> — Spawner un nouvel agent pour chaque micro-tâche est inefficace. Préférer la réutilisation via un pool (voir <code>agent-pool-manager</code>) quand les agents sont identiques.</li>
+<li>Fixer <code>max_concurrent</code> <strong>avant</strong> le premier spawn (jamais illimité).</li>
+<li>Implémenter une file d'attente si le plafond est atteint plutôt que de lever une exception sèche en production.</li>
+<li>Surveiller le budget cumulé : <code>total_tokens_used</code> par session.</li>
 </ul>
-<h2>Règles</h2>
+<pre><code class="lang-python">from collections import deque
+
+class BoundedFactory(AgentFactory):
+    _queue: deque = deque()
+
+    @classmethod
+    def spawn_or_queue(cls, template_name, context, parent_id=None):
+        try:
+            return cls.spawn(template_name, context, parent_id)
+        except RuntimeError:
+            cls._queue.append((template_name, context, parent_id))
+            print(f&quot;[QUEUE] En attente — {len(cls._queue)} tâches en file&quot;)
+            return None</code></pre>
+<h2>Architecture</h2>
+<pre><code>Parent Agent
+    │
+    ▼
+AgentFactory
+┌─────────────────────────────────┐
+│  Templates Registry             │
+│  [researcher] [coder] [reviewer]│
+└────────────┬────────────────────┘
+             │ spawn(template, context, parent_id)
+             ▼
+Agent Registry (UUID → AgentInstance)
+┌──────────┬──────────┬──────────┐
+│ Agent A  │ Agent B  │ Agent C  │
+│ running  │ done     │ running  │
+└──────────┴──────────┴──────────┘
+             │
+             ├─ Rate Limiter (max_concurrent)
+             ├─ GC (timeout → terminated)
+             └─ Logger (events JSON)</code></pre>
+<h2>Anti-patterns / pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Spawn illimité</td><td>Quota API explosé en secondes</td><td><code>max_concurrent</code> obligatoire</td></tr><tr><td>Pas de <code>parent_id</code></td><td>Agents orphelins, résultats perdus</td><td>Toujours passer le parent</td></tr><tr><td>Pas de GC</td><td>Registre pollué, faux &quot;running&quot;</td><td><code>gc()</code> périodique (cron ou après chaque batch)</td></tr><tr><td>Opus pour tous les agents</td><td>Coût ×15 inutile</td><td>Haiku pour tâches simples, Sonnet par défaut</td></tr><tr><td>Recréer au lieu de réutiliser</td><td>Overhead de warm-up</td><td>Pooling si agents homogènes (voir <code>agent-pool-manager</code>)</td></tr><tr><td>Timeout absent</td><td>Agent bloqué indéfiniment</td><td><code>timeout_seconds</code> dans chaque template</td></tr><tr><td>Contexte non validé avant spawn</td><td><code>KeyError</code> au format du prompt</td><td>Valider les clés du context avant <code>.spawn()</code></td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
 <ol>
-<li><strong>Tout agent spawné doit avoir un identifiant unique</strong> (UUID) enregistré dans le registre central dès sa création, avec référence au parent.</li>
-<li><strong>Le resource budget doit être défini avant le spawn</strong> — modèle, max_tokens, timeout et tools sont immuables après instanciation.</li>
-<li><strong>Enforcer un plafond de concurrence</strong> — <code>max_concurrent_agents</code> doit être configuré explicitement ; ne jamais le laisser à l'infini.</li>
-<li><strong>Le lifecycle complet doit être loggé</strong> — chaque transition d'état (create → running → done/failed → terminated) doit être tracée avec timestamp.</li>
-<li><strong>Fournir des templates pour toutes les spécialisations courantes</strong> — ne pas hardcoder les configurations ; utiliser le pattern Factory pour permettre l'extension sans modification du code core.</li>
+<li><strong>Immutabilité après spawn</strong> — modèle, tools et timeout sont figés à la création ; ne jamais les modifier en cours d'exécution.</li>
+<li><strong>Un UUID par agent, lié au parent</strong> — indispensable pour le tracing distribué (OpenTelemetry, Langfuse…).</li>
+<li><strong>Templates versionnés</strong> — nommer les templates avec une version (<code>researcher_v2</code>) pour permettre le rollback sans downtime.</li>
+<li><strong>Graceful shutdown</strong> — à l'arrêt du système, drainer la file et attendre <code>done/failed</code> sur tous les agents <code>running</code> avant de couper.</li>
+<li><strong>Séparation registre / exécution</strong> — le registre ne doit jamais contenir la logique métier ; il est un index de statuts.</li>
+<li><strong>Tests de charge</strong> — simuler le burst (N spawns simultanés) avant la mise en production pour calibrer <code>max_concurrent</code> et le timeout GC.</li>
 </ol>
 </article>
 </main>

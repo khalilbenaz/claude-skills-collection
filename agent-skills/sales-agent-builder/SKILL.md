@@ -7,68 +7,273 @@ description: Construction d'agents de vente IA pour prospection, qualification e
 
 ## Quand utiliser ce skill
 
-Utilise ce skill pour concevoir un agent commercial capable de gérer automatiquement tout ou partie du cycle de vente outbound : enrichir des leads, les qualifier selon un framework structuré (BANT, MEDDIC), rédiger des emails d'outreach personnalisés, gérer des séquences multi-touch, mettre à jour le CRM et préparer des argumentaires commerciaux. S'applique aux équipes SDR/BDR, aux startups B2B en phase de croissance et aux équipes sales cherchant à automatiser les tâches répétitives.
+Conçois un agent commercial automatisant tout ou partie du cycle outbound : enrichissement de leads, qualification structurée (BANT/MEDDIC), rédaction d'emails personnalisés, séquences multi-touch, mise à jour CRM, prise de rendez-vous. S'applique aux équipes SDR/BDR, startups B2B en croissance et toute équipe cherchant à industrialiser les tâches répétitives sans sacrifier la personnalisation.
 
-## Workflow
+---
 
-1. **Architecture générale** — Définis les cinq modules : (a) enrichissement et recherche de leads, (b) moteur de qualification (scoring), (c) générateur d'outreach personnalisé, (d) gestionnaire de séquences et de follow-ups, (e) intégration CRM et reporting. Choisis entre un agent fully autonomous (déclenche les envois seul) ou human-in-the-loop (propose à valider avant envoi, recommandé pour démarrer).
+## Workflow en étapes
 
-2. **Lead enrichment automatique** — Pour chaque lead entrant, l'agent collecte automatiquement : informations entreprise (taille, secteur, financement via Crunchbase/PitchBook), profil LinkedIn du contact, actualités récentes (levées de fonds, recrutements, partenariats), stack technologique (BuiltWith, Wappalyzer), et score ICP (Ideal Customer Profile). Utilise les APIs de Clearbit, Apollo, Hunter.io ou LinkedIn Sales Navigator.
+### 1. Choix du mode d'autonomie
 
-   ```python
-   # Enrichissement via Apollo API
-   import requests
-   response = requests.post("https://api.apollo.io/v1/people/match", json={
-       "first_name": lead["first_name"],
-       "last_name": lead["last_name"],
-       "organization_name": lead["company"],
-       "api_key": APOLLO_API_KEY
-   })
-   enriched = response.json()["person"]
-   ```
+Avant de coder : décide du niveau d'autonomie selon la maturité de l'équipe.
 
-3. **Framework de qualification** — Implémente un ou plusieurs frameworks selon le contexte commercial : BANT (Budget, Authority, Need, Timeline), MEDDIC (Metrics, Economic Buyer, Decision Criteria, Decision Process, Identify Pain, Champion), SPIN (Situation, Problem, Implication, Need-Payoff). L'agent score chaque lead de 0 à 100 et classe en Hot / Warm / Cold avec un raisonnement explicite par critère.
+| Mode | Comportement | Quand l'utiliser |
+|---|---|---|
+| **Human-in-the-loop** | Propose les emails, attend validation avant envoi | Phase initiale (< 100 emails validés) |
+| **Semi-autonome** | Envoie automatiquement les templates approuvés, escalade les cas ambigus | Taux de réponse > 10% confirmé |
+| **Fully autonomous** | Gère l'intégralité du cycle sans intervention | Après 3+ mois de données, superviseur actif |
 
-4. **Génération d'emails d'outreach personnalisés** — Rédige des emails 1er contact ultra-personnalisés en s'appuyant sur les données d'enrichissement : une accroche liée à une actualité récente de l'entreprise, une connexion claire entre la douleur identifiée et la solution proposée, une preuve sociale pertinente (client similaire dans le même secteur), un CTA clair et sans friction. Génère 2-3 variantes pour A/B testing. Respecte les meilleures pratiques (< 150 mots, objet < 50 chars, 1 seul CTA).
+**Toujours démarrer en human-in-the-loop.** Passer en semi-autonome uniquement après validation de 100 emails minimum et taux de réponse > 10%.
 
-   ```python
-   email_prompt = f"""Rédige un email de prospection court (< 150 mots) pour :
-   Contact : {lead_name}, {lead_title} chez {company}
-   Actualité récente : {recent_news}
-   Pain point probable : {pain_point}
-   Notre solution : {value_prop}
-   Client de référence similaire : {case_study}
-   Ton : professionnel et direct. 1 seul CTA."""
-   ```
+---
 
-5. **Gestion des conversations et objections** — L'agent gère les réponses entrantes : classifie le type de réponse (intéressé / pas intéressé / pas maintenant / question), prépare une réponse adaptée. Pour les objections courantes ("trop cher", "déjà un outil", "pas le bon moment"), utilise une bibliothèque d'objections pré-renseignée avec des réponses validées par l'équipe commerciale. Escalade vers un humain pour les réponses complexes ou les opportunités qualifiées.
+### 2. Architecture des cinq modules
 
-6. **Intégration CRM complète** — Connecte l'agent à Salesforce, HubSpot, Pipedrive ou Close via leurs APIs. Actions automatisées : création/mise à jour de contact et de company, logging de chaque activité (email envoyé, réponse reçue, appel loggé), progression du deal dans le pipeline (MQL → SQL → Opportunity), mise à jour du score de qualification, création de tâches de follow-up pour les commerciaux. Utilise des webhooks pour la synchronisation temps réel.
+```
+┌─────────────────────────────────────────────────────┐
+│  Lead entrant (CSV / webhook CRM / formulaire)      │
+└────────────────────┬────────────────────────────────┘
+                     ▼
+         ┌─────────────────────┐
+         │ A. Enrichissement   │  Apollo, Clay, Hunter.io
+         └──────────┬──────────┘
+                    ▼
+         ┌─────────────────────┐
+         │ B. Qualification     │  BANT / MEDDIC → score 0-100
+         └──────────┬──────────┘
+                    ▼
+         ┌─────────────────────┐
+         │ C. Génération       │  Email + variantes A/B
+         │    d'outreach       │
+         └──────────┬──────────┘
+                    ▼
+         ┌─────────────────────┐
+         │ D. Séquences        │  Multi-touch J0/J3/J5/J8/J10/J15
+         │    & follow-ups     │
+         └──────────┬──────────┘
+                    ▼
+         ┌─────────────────────┐
+         │ E. CRM + Reporting  │  HubSpot / Salesforce / Pipedrive
+         └─────────────────────┘
+```
 
-   ```python
-   # Mise à jour HubSpot après qualification
-   hubspot.crm.contacts.basic_api.update(contact_id, {
-       "properties": {
-           "hs_lead_status": "QUALIFIED",
-           "qualification_score": str(score),
-           "qualification_notes": qualification_summary,
-           "lifecyclestage": "salesqualifiedlead"
-       }
-   })
-   ```
+---
 
-7. **Scheduling et prise de rendez-vous** — Intègre un module de booking : génère des liens Calendly/Cal.com personnalisés dans les emails, détecte les signaux d'intérêt pour un appel (réponse positive, clic sur un lien), propose des créneaux en tenant compte du fuseau horaire du prospect. Envoie des rappels automatiques J-1 et H-1. Log le meeting dans le CRM et prépare une fiche de préparation de l'appel.
+### 3. Enrichissement automatique des leads
 
-8. **Séquences multi-touch optimisées** — Conçoit et exécute des séquences outbound complètes : email J0 (1er contact), relance email J3 (angle différent), connexion LinkedIn J5, email J8 (value add - partage d'une ressource pertinente), appel J10 (avec script préparé), email de rupture J15. Optimise les timings selon les taux d'ouverture et de réponse observés. Stop automatique dès une réponse (positive ou négative).
+Pour chaque lead entrant, collecter : taille/secteur/financement (Crunchbase, Apollo), profil LinkedIn, actualités récentes (levées, recrutements, partenariats), stack technique (BuiltWith), et score ICP.
 
-9. **Personnalisation à grande échelle** — Maintiens une base de connaissances sectorielle : pain points par industrie, terminologie métier, cas clients par vertical, objections typiques par taille d'entreprise. L'agent enrichit chaque message avec ce contexte pour éviter les messages génériques. Implémente un système de templates avec variables dynamiques (`{{recent_news}}`, `{{mutual_connection}}`, `{{competitor_they_use}}`).
+```python
+# Enrichissement via Apollo API
+import requests
 
-10. **Métriques de performance commerciale** — Instrumente l'agent pour suivre en temps réel : taux d'ouverture des emails (cible > 40%), taux de réponse (cible > 15%), taux de conversion lead → meeting (cible > 5%), pipeline généré par l'agent (en €), ROI vs. SDR humain, meilleurs angles d'accroche par segment. Génère un rapport hebdomadaire automatique pour le manager commercial.
+def enrich_lead(lead: dict, api_key: str) -> dict:
+    resp = requests.post(
+        "https://api.apollo.io/v1/people/match",
+        json={
+            "first_name": lead["first_name"],
+            "last_name": lead["last_name"],
+            "organization_name": lead["company"],
+            "api_key": api_key,
+        },
+        timeout=10,
+    )
+    resp.raise_for_status()
+    person = resp.json().get("person", {})
+    return {
+        "title": person.get("title"),
+        "linkedin_url": person.get("linkedin_url"),
+        "seniority": person.get("seniority"),
+        "company_size": person.get("employment_history", [{}])[0].get("organization", {}).get("estimated_num_employees"),
+        "technologies": person.get("organization", {}).get("current_technologies", []),
+    }
+```
 
-## Règles
+**Critère de décision :** si l'enrichissement retourne < 3 champs fiables, marquer le lead `enrichment_incomplete` et ne pas l'inclure dans les séquences automatiques avant revue manuelle.
 
-- **Human-in-the-loop obligatoire au démarrage** : en phase initiale, toujours faire valider les emails par un commercial avant envoi. Passe en mode autonome uniquement après validation d'au moins 100 emails et un taux de réponse satisfaisant (> 10%).
-- **Conformité RGPD et CAN-SPAM** : chaque email doit contenir un lien de désinscription fonctionnel. Respecte les opt-outs dans les 48h. Ne prospecte pas sur des adresses achetées sans consentement explicite. Documente la base légale de traitement pour chaque liste.
-- **Personnalisation authentique** : un email généré doit sembler écrit par un humain, pas par un robot. Évite les tournures génériques ("J'espère que ce message vous trouve bien"). L'accroche doit démontrer une vraie connaissance de l'entreprise ou du contact.
-- **Limites de volume** : n'envoie jamais plus de 100-200 emails/jour depuis un seul domaine pour préserver la délivrabilité. Réchauffe les nouveaux domaines progressivement (10 → 50 → 100 emails/jour sur 4 semaines). Monitore le taux de bounce (< 2%) et de spam (< 0.1%).
-- **Frameworks recommandés** : [Apollo.io](https://apollo.io/) pour l'enrichissement et les séquences, [Clay](https://clay.com/) pour l'enrichissement avancé, [LangChain](https://python.langchain.com/) pour l'orchestration de l'agent, [Instantly](https://instantly.ai/) pour l'envoi d'emails, [HubSpot API](https://developers.hubspot.com/) ou [Salesforce API](https://developer.salesforce.com/) pour le CRM. Modèle recommandé : Claude Sonnet pour la rédaction, Claude Haiku pour la classification.
+---
+
+### 4. Framework de qualification — scoring structuré
+
+Implémente un score composite 0-100 basé sur le framework choisi.
+
+**BANT simplifié :**
+
+```python
+def bant_score(lead: dict) -> dict:
+    score = 0
+    reasons = []
+
+    # Budget (0-25)
+    if lead.get("company_size", 0) > 200:
+        score += 25; reasons.append("Budget probable (>200 employés)")
+    elif lead.get("company_size", 0) > 50:
+        score += 15; reasons.append("Budget estimé moyen")
+
+    # Authority (0-25)
+    senior_titles = ["VP", "Director", "Head", "Chief", "CXO", "Founder"]
+    if any(t in (lead.get("title") or "") for t in senior_titles):
+        score += 25; reasons.append("Décisionnaire identifié")
+
+    # Need (0-25) — basé sur stack / industrie
+    pain_industries = ["fintech", "ecommerce", "saas"]
+    if lead.get("industry", "").lower() in pain_industries:
+        score += 20; reasons.append("Industrie cible prioritaire")
+
+    # Timeline (0-25) — basé sur signaux (recrutement SDR, levée récente)
+    if lead.get("recent_funding") or lead.get("hiring_sales"):
+        score += 25; reasons.append("Signal de croissance détecté")
+
+    tier = "Hot" if score >= 70 else "Warm" if score >= 40 else "Cold"
+    return {"score": score, "tier": tier, "reasons": reasons}
+```
+
+**Règle :** ne faire entrer dans les séquences automatiques que les leads `Warm` (≥ 40) et `Hot` (≥ 70). Les `Cold` vont dans une nurture séparée.
+
+---
+
+### 5. Génération d'emails d'outreach personnalisés
+
+Contraintes non négociables : < 150 mots, objet < 50 caractères, 1 seul CTA, accroche liée à une donnée concrète du lead.
+
+```python
+EMAIL_PROMPT = """Rédige un email de prospection outbound court (< 150 mots) en {language}.
+
+Contact : {lead_name}, {lead_title} chez {company}
+Taille entreprise : {company_size} employés
+Actualité récente : {recent_news}
+Pain point probable : {pain_point}
+Notre solution : {value_prop}
+Preuve sociale secteur : {case_study}
+
+Règles strictes :
+- Objet < 50 caractères, sans point d'exclamation
+- Première phrase = accroche sur l'actualité récente (pas "J'espère que...")
+- 1 seul CTA à la fin (question fermée ou lien calendrier)
+- Ton direct et professionnel
+- Génère 2 variantes (A et B) avec angles différents"""
+```
+
+Génère systématiquement 2-3 variantes pour A/B testing dès le départ.
+
+---
+
+### 6. Séquences multi-touch
+
+```
+J0  — Email 1er contact (accroche actualité)
+J3  — Relance email (angle valeur différent)
+J5  — Connexion LinkedIn (message court, pas de pitch)
+J8  — Email "value add" (ressource pertinente, pas de vente)
+J10 — Appel sortant (script court préparé par l'agent)
+J15 — Email de rupture ("Dois-je vous retirer de ma liste ?")
+```
+
+**Stop automatique** dès toute réponse reçue (positive, négative ou hors-sujet). Ne jamais continuer une séquence après une réponse humaine sans analyse du contenu.
+
+**Script d'appel J10 généré par l'agent :**
+
+```python
+CALL_SCRIPT_PROMPT = """Génère un script d'appel de 60 secondes pour :
+- Lead : {lead_name}, {lead_title}
+- Contexte : a ouvert l'email J0 mais pas répondu
+- Pain point : {pain_point}
+Structure : accroche (10s) → raison de l'appel (15s) → question ouverte (10s) → CTA booking (10s)"""
+```
+
+---
+
+### 7. Gestion des réponses et objections
+
+L'agent classifie chaque réponse entrante :
+
+```python
+CLASSIFY_PROMPT = """Classifie cette réponse email en une catégorie :
+- INTERESTED : ouvert à un échange
+- NOT_NOW : pas le bon moment (> 3 mois)
+- NOT_RELEVANT : hors cible, mauvaise personne
+- OBJECTION_PRICE : problème de budget
+- OBJECTION_TOOL : déjà un outil concurrent
+- NEGATIVE : refus définitif
+- QUESTION : demande d'information
+
+Réponse : {email_body}
+Réponds avec le code catégorie uniquement."""
+```
+
+Pour `OBJECTION_PRICE` et `OBJECTION_TOOL` : utilise une bibliothèque d'objections validée par l'équipe commerciale. Pour `INTERESTED` : escalade immédiate vers un humain avec contexte complet du lead.
+
+---
+
+### 8. Intégration CRM
+
+```python
+# Mise à jour HubSpot après qualification (SDK officiel)
+from hubspot import HubSpot
+
+client = HubSpot(access_token=HUBSPOT_TOKEN)
+
+def update_lead_hubspot(contact_id: str, score: int, summary: str):
+    client.crm.contacts.basic_api.update(
+        contact_id=contact_id,
+        simple_public_object_input={
+            "properties": {
+                "hs_lead_status": "QUALIFIED" if score >= 70 else "IN_PROGRESS",
+                "qualification_score": str(score),
+                "qualification_notes": summary,
+                "lifecyclestage": "salesqualifiedlead" if score >= 70 else "lead",
+            }
+        },
+    )
+```
+
+Actions minimales à logger dans le CRM pour chaque lead : email envoyé, email ouvert, réponse reçue, classification de la réponse, score de qualification, meeting booké.
+
+---
+
+### 9. Métriques à monitorer
+
+| Métrique | Cible | Alarme si |
+|---|---|---|
+| Taux d'ouverture emails | > 40% | < 25% |
+| Taux de réponse | > 15% | < 8% |
+| Lead → meeting | > 5% | < 2% |
+| Bounce rate | < 2% | > 3% |
+| Spam rate | < 0.1% | > 0.08% |
+| Pipeline généré (€) | Dépend du deal size | — |
+
+Génère un rapport hebdomadaire automatique (Slack/email) pour le manager avec ces indicateurs et les top 3 emails par taux de réponse.
+
+---
+
+## Garde-fous et conformité
+
+- **RGPD / CAN-SPAM** : lien de désinscription fonctionnel dans chaque email. Respecter les opt-outs sous 48h. Ne jamais prospecter sur des listes achetées sans consentement documenté.
+- **Délivrabilité** : maximum 100-200 emails/jour par domaine. Réchauffage progressif sur 4 semaines (10 → 30 → 80 → 150/jour). Surveiller bounce (< 2%) et spam (< 0.1%) en continu.
+- **Escalade humaine obligatoire** : toute réponse `INTERESTED` ou réponse ambiguë → transfer immédiat à un commercial avec contexte complet. L'agent ne négocie jamais seul.
+- **Audit trail** : chaque email envoyé par l'agent doit être loggé avec timestamp, version du template, données d'enrichissement utilisées. Conserve 12 mois minimum pour conformité.
+
+---
+
+## Anti-patterns à éviter
+
+- **Générer des emails sans accroche contextualisée** : "J'espère que vous allez bien" = taux de réponse < 3%. L'accroche doit citer une donnée concrète.
+- **Lancer la séquence complète avant validation** : envoyer J0 à J15 sans analyser les réponses intermédiaires brûle les leads et risque le blacklistage.
+- **Score de qualification sans justification** : un score sans `reasons` est inexploitable par le commercial. Toujours fournir les critères.
+- **Pas de limite de volume au démarrage** : un nouveau domaine qui envoie 500 emails J1 sera blacklisté sous 48h. Respecter le réchauffage.
+- **CRM non synchronisé** : un agent qui envoie des emails sans logger dans le CRM crée des doublons de prospection et détruit la relation client.
+- **Objections gérées par l'agent sans validation humaine** : les réponses aux objections complexes doivent être validées par l'équipe commerciale avant d'être intégrées à la bibliothèque.
+
+---
+
+## Stack recommandée (2026)
+
+| Besoin | Outils |
+|---|---|
+| Enrichissement | Apollo.io, Clay, Hunter.io, LinkedIn Sales Navigator |
+| Séquences email | Instantly.ai, Lemlist, Outreach |
+| Orchestration agent | LangChain, LangGraph, Anthropic SDK |
+| CRM | HubSpot API, Salesforce API, Pipedrive API |
+| Booking | Calendly API, Cal.com (open source) |
+| Monitoring | Datadog, Grafana, PostHog |
+| Modèle LLM | Claude Sonnet (rédaction), Claude Haiku (classification) |

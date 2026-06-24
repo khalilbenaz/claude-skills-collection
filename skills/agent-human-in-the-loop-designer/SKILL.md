@@ -6,71 +6,207 @@ description: Design de systèmes human-in-the-loop pour agents IA avec approbati
 # Human-in-the-Loop Designer
 
 ## Quand utiliser ce skill
-Utilise ce skill lorsque tu dois intégrer des points de contrôle humain dans un workflow d'agent IA. Il s'applique dès que l'agent peut prendre des décisions irréversibles (envoyer un email, supprimer des données, effectuer un paiement), opérer dans des domaines à haute criticité (médical, légal, financier), ou lorsque la confiance dans les décisions autonomes n'est pas encore établie.
 
-## Workflow
+Intègre un point de contrôle humain dès qu'une action de l'agent est :
+- **Irréversible** : suppression de données, envoi d'email, paiement, déploiement en production
+- **Coûteuse** : action dont le coût de correction dépasse le coût de la validation
+- **Réglementairement obligatoire** : conformité financière, médicale, légale
+- **Hors-distribution** : tâche inédite ou contexte jamais rencontré par l'agent
+- **À faible confiance** : score de confiance de l'agent sous le seuil calibré
 
-1. **Identifier les points de décision nécessitant un humain** — Cartographie le workflow de l'agent et identifie les actions à haute criticité (irréversibles, coûteuses, risquées), les zones d'incertitude (l'agent n'a pas assez d'information), et les étapes réglementairement obligatoires (conformité, audit). Distingue les vérifications systématiques (toujours demander) des vérifications conditionnelles (demander si X).
+## Étape 1 — Cartographier les points de décision
 
-2. **Patterns HITL** — Choisis le pattern adapté : `approval gate` (bloquer l'agent jusqu'à approbation explicite), `correction loop` (l'agent propose, l'humain corrige puis l'agent continue), `exception escalation` (l'agent agit seul sauf cas limite), `confidence threshold` (escalade automatique si le score de confiance est sous un seuil), `shadow mode` (l'agent recommande, l'humain décide pour l'instant).
+Parcours le workflow de l'agent, identifie chaque nœud d'action, et classe-le :
 
-3. **UX du HITL** — Conçois l'interface de validation pour maximiser la vitesse et la qualité des décisions humaines : notification claire avec contexte suffisant (ne pas forcer l'humain à chercher l'information), `diff view` pour les modifications (ce qui change vs l'état actuel), bouton undo pour les actions déjà exécutées, timeout visible avec compte à rebours, résumé de l'impact de la décision.
+| Catégorie | Exemples | Mode HITL recommandé |
+|-----------|----------|----------------------|
+| Irréversible + haut risque | Suppression DB, virement, envoi en masse | `approval gate` systématique |
+| Réversible + impact modéré | Brouillon d'email, mise à jour de ticket | `exception escalation` (si doute) |
+| Basse criticité, haute fréquence | Catégorisation, tagging, résumé | `shadow mode` puis autonomie progressive |
+| Obligation légale | Signature, validation KYC | `approval gate` systématique + audit trail |
 
-4. **Threshold de confiance** — Implémente un système de scoring pour décider automatiquement d'escalader : calcule un score de confiance basé sur la clarté de la requête, la familiarité de la tâche, le risque estimé, et l'historique de succès. Calibre les seuils empiriquement (commence conservateur, relâche progressivement).
-   ```python
-   def should_escalate(task: Task, agent_confidence: float) -> bool:
-       risk_score = task.estimated_cost * task.reversibility_factor
-       if risk_score > HIGH_RISK_THRESHOLD:
-           return True
-       if agent_confidence < CONFIDENCE_THRESHOLD:
-           return True
-       return False
-   ```
+## Étape 2 — Choisir le pattern HITL
 
-5. **Correction et feedback** — Transforme chaque correction humaine en signal d'apprentissage : loggue la décision originale de l'agent, la correction humaine, et le contexte. Utilise ces données pour affiner les prompts, ajuster les seuils de confiance, ou alimenter un dataset de fine-tuning. Notifie l'agent de la correction pour qu'il adapte la suite du workflow.
-   ```python
-   def apply_human_correction(agent_output: str, human_correction: str, task_id: str):
-       feedback_store.save({
-           "task_id": task_id,
-           "agent_output": agent_output,
-           "human_correction": human_correction,
-           "timestamp": datetime.now().isoformat()
-       })
-       return human_correction  # l'agent continue avec la version corrigée
-   ```
+### `approval gate` — bloquer jusqu'à approbation explicite
+```python
+# LangGraph interrupt pattern (SDK 0.2+)
+from langgraph.types import interrupt, Command
 
-6. **Async HITL** — Pour les workflows longs ou multi-utilisateurs, implémente le HITL en asynchrone : stocke les demandes d'approbation dans une queue persistante, envoie une notification (email, Slack, SMS), maintiens un SLA (délai maximum de réponse), permets le batch approval (approuver plusieurs actions d'un coup), et gère l'expiration des demandes trop anciennes.
+def human_approval_node(state: AgentState):
+    payload = {
+        "action": state["proposed_action"],
+        "context": state["context"],
+        "risk_level": state["risk_level"],
+        "estimated_impact": state["impact_summary"],
+    }
+    decision = interrupt(payload)  # suspend le graph, reprend après résumption
+    if decision["approved"]:
+        return {"approved_action": state["proposed_action"]}
+    return {"approved_action": decision.get("correction", "__abort__")}
+```
 
-7. **Implémentation technique** — Selon ta stack : `LangGraph interrupt` (interrompre un graph à un node spécifique et reprendre après approbation), `webhook callbacks` (l'agent envoie une requête HTTP et attend la réponse), `Slack approval` (message interactif avec boutons Approuver/Rejeter), `email approval` (lien magique one-time dans un email), interface web custom.
-   ```python
-   # LangGraph interrupt pattern
-   from langgraph.types import interrupt
+### `confidence threshold` — escalade automatique selon le score
+```python
+HIGH_RISK_THRESHOLD = 0.7   # ex : coût normalisé 0..1
+CONFIDENCE_THRESHOLD = 0.82  # calibrer empiriquement
 
-   def human_approval_node(state: AgentState):
-       decision = interrupt({
-           "action": state["proposed_action"],
-           "context": state["context"],
-           "risk_level": state["risk_level"]
-       })
-       if decision["approved"]:
-           return {"approved_action": state["proposed_action"]}
-       else:
-           return {"approved_action": decision.get("correction")}
-   ```
+def should_escalate(task: Task, confidence: float) -> bool:
+    risk = task.estimated_cost_normalized * (1 - task.reversibility)
+    return risk > HIGH_RISK_THRESHOLD or confidence < CONFIDENCE_THRESHOLD
+```
 
-8. **Audit trail** — Loggue exhaustivement chaque décision impliquant un humain : qui a approuvé/rejeté (identifiant utilisateur), quand (timestamp précis), quoi (action proposée par l'agent), pourquoi (commentaire optionnel), et quelle a été la suite du workflow. Rends ces logs immuables et consultables pour la conformité réglementaire.
+### `correction loop` — l'agent propose, l'humain corrige, l'agent continue
+```python
+def apply_human_correction(agent_output: str, correction: str, task_id: str) -> str:
+    feedback_store.save({
+        "task_id": task_id,
+        "agent_output": agent_output,
+        "human_correction": correction,
+        "ts": datetime.utcnow().isoformat(),
+    })
+    return correction  # l'agent continue avec la version validée
+```
 
-9. **Graceful degradation** — Prévois le comportement si l'humain ne répond pas : `timeout with safe default` (l'agent prend l'action la moins risquée par défaut), `pause and notify` (l'agent s'arrête et notifie qu'une intervention est requise), `escalate up` (notifier un superviseur si le premier responsable ne répond pas), `abort and log` (annuler et documenter pour traitement différé).
+### `exception escalation` — l'agent agit seul, escalade uniquement sur cas limite
+```python
+try:
+    result = agent.execute(task)
+except UncertaintyException as e:
+    notify_human(task, e.reason)
+    result = await wait_for_human_decision(task.id, timeout_s=3600)
+```
 
-10. **Métriques** — Monitore la santé du système HITL : `approval rate` (% d'actions approuvées sans correction — une baisse indique une dégradation de l'agent), `correction rate` (% de corrections — utile pour identifier les zones d'amélioration), `escalation frequency` (% de tâches escaladées — calibre les seuils si trop élevé), `human response time` (SLA respecté ?), `false positive rate` (escalades inutiles qui surchargent les humains).
+### `shadow mode` — recommandation sans exécution, pour établir la confiance
+```python
+if phase == "shadow":
+    log_recommendation(agent_output)
+    return human_decides(task)   # humain garde la main
+elif phase == "supervised":
+    return approval_gate(agent_output)
+else:
+    return agent_output          # autonomie établie
+```
 
-## Règles
+## Étape 3 — Concevoir l'UX de validation
 
-- **Minimalisme du HITL** : chaque validation humaine est un coût (temps, attention) ; n'escalade que ce qui le justifie vraiment — l'objectif est de réduire progressivement la fréquence d'escalade à mesure que la confiance s'établit.
-- **Anti-pattern — approbation sans contexte** : demander "Approuver ?" sans montrer ce qui va se passer génère des clics aveugles ; fournis toujours un résumé de l'action et de son impact avant la validation.
-- **Asymétrie risque** : le coût d'une escalade inutile (quelques secondes humaines) est bien moindre que le coût d'une action incorrecte non vérifiée ; calibre les seuils en faveur de la prudence.
-- **Boucle de feedback fermée** : un système HITL sans mécanisme de retour vers l'agent n'améliore rien ; chaque correction doit alimenter l'amélioration continue du système.
-- **Test du chemin de refus** : teste systématiquement ce qui se passe quand un humain rejette ou corrige l'action de l'agent — le workflow doit être aussi robuste dans ce cas que dans le cas d'approbation.
+Règle d'or : **l'humain ne doit pas chercher l'information, elle doit lui être livrée**.
+
+Structure d'une notification HITL minimale :
+```
+[HITL] Action requérant approbation
+Agent       : payment-agent v2.1
+Action      : Virement 4 850 € → IBAN FR76...3421
+Déclencheur : Facture #INV-2026-0789 (PDF joint)
+Risque      : ÉLEVÉ — irréversible sous 10 min
+Contexte    : Client Acme Corp, contrat C-4421 actif
+Impact      : Solde après opération : 12 340 €
+
+[Approuver ✓]  [Corriger ✎]  [Rejeter ✗]
+Expire dans : 47 min
+```
+
+Checklist UX :
+- [ ] Diff view pour les modifications (avant / après)
+- [ ] Résumé de l'impact en une phrase
+- [ ] Bouton "Annuler" si une action a déjà été partiellement exécutée
+- [ ] Compte à rebours visible (SLA)
+- [ ] Champ commentaire libre pour le rejet (alimente le feedback)
+
+## Étape 4 — Implémenter le canal d'approbation
+
+### Slack (boutons interactifs)
+```python
+# Utilise slack_sdk + Block Kit
+blocks = [
+    {"type": "section", "text": {"type": "mrkdwn", "text": f"*Action* : {action_summary}"}},
+    {"type": "actions", "elements": [
+        {"type": "button", "text": {"type": "plain_text", "text": "Approuver"}, "value": "approve", "style": "primary"},
+        {"type": "button", "text": {"type": "plain_text", "text": "Rejeter"}, "value": "reject", "style": "danger"},
+    ]},
+]
+client.chat_postMessage(channel=APPROVER_CHANNEL, blocks=blocks, text=action_summary)
+```
+
+### Email (lien magique one-time)
+```python
+token = secrets.token_urlsafe(32)
+redis.setex(f"hitl:{token}", 3600, json.dumps({"task_id": task_id, "action": action}))
+approve_url = f"https://app.example.com/hitl/approve?token={token}"
+reject_url  = f"https://app.example.com/hitl/reject?token={token}"
+send_email(approver_email, subject="[Action requise]", body=render_template(approve_url, reject_url))
+```
+
+### Webhook callback (approche API-first)
+```python
+# L'agent POST une demande et attend un callback
+response = requests.post("/api/hitl/requests", json={
+    "task_id": task_id, "action": action, "callback_url": f"{BASE_URL}/resume/{task_id}"
+})
+# Le endpoint /resume/{task_id} reprend le graph suspendu
+```
+
+## Étape 5 — Gérer la dégradation et les timeouts
+
+```python
+async def wait_for_decision(task_id: str, timeout_s: int = 1800) -> Decision:
+    try:
+        return await asyncio.wait_for(decision_queue.get(task_id), timeout=timeout_s)
+    except asyncio.TimeoutError:
+        match TIMEOUT_POLICY:
+            case "safe_default":  return Decision(approved=False, reason="timeout")
+            case "escalate_up":   return await notify_supervisor(task_id)
+            case "abort":         raise AgentAbortError(f"HITL timeout for {task_id}")
+```
+
+Politiques de timeout recommandées selon l'urgence :
+
+| Urgence | Timeout | Politique |
+|---------|---------|-----------|
+| Critique (paiement) | 30 min | `escalate_up` |
+| Modérée (email) | 4 h | `safe_default` (ne pas envoyer) |
+| Faible (rapport) | 24 h | `abort` + log |
+
+## Étape 6 — Audit trail
+
+Chaque décision HITL doit produire un enregistrement **immuable** :
+```python
+@dataclass
+class HITLAuditRecord:
+    task_id: str
+    agent_version: str
+    proposed_action: str
+    decision: Literal["approved", "rejected", "corrected", "timeout"]
+    corrected_action: str | None
+    approver_id: str
+    approver_comment: str | None
+    ts_requested: datetime
+    ts_decided: datetime
+    workflow_outcome: str   # ce qui s'est passé ensuite
+```
+
+Stocke dans un log append-only (ex : fichier JSONL, table SQL INSERT-only, Kafka topic).
+
+## Étape 7 — Métriques et calibration continue
+
+| Métrique | Formule | Signal d'alerte |
+|----------|---------|-----------------|
+| `approval_rate` | approbations / total | < 70 % → agent se dégrade |
+| `correction_rate` | corrections / escalades | > 30 % → seuils trop bas |
+| `escalation_rate` | escalades / actions totales | > 20 % → faux positifs, coût humain élevé |
+| `human_response_time` | médiane ts_decided - ts_requested | > SLA → revoir le canal |
+| `false_positive_rate` | escalades approuvées sans correction | > 50 % → relâcher les seuils |
+
+Automatise un rapport hebdomadaire pour calibrer les seuils `CONFIDENCE_THRESHOLD` et `HIGH_RISK_THRESHOLD`.
+
+## Anti-patterns et pièges
+
+- **Approbation sans contexte** : demander "Approuver ?" sans résumé génère des clics aveugles et annule l'intérêt du HITL. Toujours fournir action + impact + lien de contexte.
+- **HITL synchrone bloquant le thread principal** : en production, le graph doit être suspendu et sérialisé (ex : Redis, DB) — ne jamais bloquer un thread avec un `sleep` ou `input()`.
+- **Pas de chemin de refus** : teste systématiquement le scénario "l'humain rejette" — le workflow doit être aussi robuste que le cas nominal.
+- **Notifications sans SLA** : sans timeout explicite et politique de dégradation, une approbation non répondue bloque indéfiniment le workflow.
+- **Boucle fermée sans apprentissage** : logguer sans jamais relire les corrections ne sert à rien ; planifie une revue mensuelle des corrections pour affiner les prompts ou les seuils.
+- **Escalader trop tôt** : un HITL sur chaque action tue l'autonomie et épuise les humains ; commence conservateur, puis relâche progressivement à mesure que la confiance s'établit.
+- **Un seul approbateur** : prévoir un fallback (superviseur, groupe) si l'approbateur principal est absent — surtout pour les actions sensibles.
 
 
 ## Communication Rules — MANDATORY

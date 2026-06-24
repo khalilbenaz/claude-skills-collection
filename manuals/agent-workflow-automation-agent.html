@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>agent-workflow-automation-agent — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Construction d'agents d'automatisation de workflows métier incluant RPA intelligent, déclencheurs et actions chaînées.">
+<meta name="description" content="Construction d'agents d'automatisation de workflows métier incluant RPA intelligent, déclencheurs et actions chaînées, orchestration d'étapes avec gestion d'erreurs et monitoring.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🤖 Agents IA</span>
 <h1 class="skill-title">agent-workflow-automation-agent</h1>
-<p class="lead">Construction d'agents d'automatisation de workflows métier incluant RPA intelligent, déclencheurs et actions chaînées.</p>
+<p class="lead">Construction d'agents d'automatisation de workflows métier incluant RPA intelligent, déclencheurs et actions chaînées, orchestration d'étapes avec gestion d'erreurs et monitoring.</p>
 
 
 
@@ -97,23 +97,134 @@ cp -r claude-skills-collection/skills/agent-workflow-automation-agent ~/.claude/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Workflow Automation Agent</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Cartographier les processus métier</strong> — Documenter les workflows existants avec leurs étapes, acteurs, systèmes impliqués et points de décision. Identifier les tâches répétitives et à faible valeur ajoutée. Calculer le ROI potentiel de l'automatisation pour prioriser les processus candidats.</li>
-<li><strong>Concevoir l'architecture de l'agent</strong> — Définir les composants : moteur de workflow (state machine ou DAG), connecteurs vers les systèmes tiers (API, UI, fichiers), module de décision (règles métier + LLM), module de monitoring. Choisir entre orchestration centralisée et chorégraphie événementielle.</li>
-<li><strong>Implémenter les connecteurs</strong> — Développer les intégrations avec les systèmes cibles : APIs REST/SOAP, bases de données, systèmes de fichiers, services email, outils SaaS (Salesforce, SAP, ServiceNow). Implémenter la RPA UI (Playwright, UiPath) pour les systèmes sans API. Gérer les retries et le circuit breaker.</li>
-<li><strong>Définir les déclencheurs</strong> — Configurer les événements qui initient les workflows : réception d'email, changement en base de données, webhook, timer/cron, upload de fichier, événement métier (nouveau client, commande validée). Implémenter le debouncing pour éviter les exécutions multiples.</li>
-<li><strong>Orchestrer les actions chaînées</strong> — Implémenter les séquences d'actions avec gestion de l'état entre les étapes. Gérer les branchements conditionnels, les boucles et les sous-workflows. Implémenter la compensation (undo) pour les étapes en cas d'échec. Supporter les workflows long-running avec persistence d'état.</li>
-<li><strong>Intégrer la prise de décision intelligente</strong> — Utiliser un LLM pour les décisions qui nécessitent du jugement : classification de documents, extraction d'informations non structurées, gestion des cas ambigus. Définir des seuils de confiance avec escalade humaine en dessous.</li>
-<li><strong>Gérer les erreurs et la résilience</strong> — Implémenter les retry policies avec backoff exponentiel. Configurer les dead-letter queues pour les messages non traités. Mettre en place des alertes sur les échecs et des dashboards de suivi. Implémenter les timeout par étape et globaux.</li>
-<li><strong>Monitorer et améliorer</strong> — Mesurer les KPIs : temps de cycle, taux de succès, volume traité, interventions humaines. Identifier les goulots d'étranglement. Analyser les cas d'échec pour enrichir les règles métier. Implémenter le A/B testing sur les variantes de workflow.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Cartographier les processus métier</h3>
 <ul>
-<li>Toujours implémenter des mécanismes de compensation (rollback) pour chaque action modifiant un système externe afin de garantir la cohérence en cas d'échec partiel.</li>
-<li>Ne jamais automatiser un processus sans avoir d'abord documenté et validé le workflow manuel avec les parties prenantes métier.</li>
-<li>Toujours conserver un audit trail complet de chaque exécution de workflow (entrées, sorties, décisions, timestamps) pour la traçabilité et le debugging.</li>
-<li>Implémenter un circuit breaker sur chaque connecteur externe pour éviter les cascades de pannes quand un système tiers est indisponible.</li>
-<li>Toujours prévoir un mode de fallback manuel permettant aux utilisateurs de reprendre le contrôle quand l'agent ne peut pas traiter un cas automatiquement.</li>
+<li>Documenter chaque étape : acteur, système, volume, fréquence, temps moyen.</li>
+<li>Identifier les tâches 100 % déterministes (à automatiser en priorité) vs les tâches à jugement (LLM ou escalade humaine).</li>
+<li>Calculer le ROI : <code>(temps_manuel_h × taux_horaire × volume_annuel) − coût_implémentation</code>.</li>
+<li>Critère d'exclusion : si le processus change plus d'une fois par trimestre, différer ou abstraire la logique dans un fichier de configuration.</li>
+</ul>
+<h3>2. Choisir l'architecture de l'agent</h3>
+<table><thead><tr><th>Besoin</th><th>Pattern recommandé</th></tr></thead><tbody><tr><td>Étapes séquentielles simples</td><td>Pipeline linéaire (fonctions chaînées)</td></tr><tr><td>Branchements complexes + état persistant</td><td>State machine (XState, Temporal)</td></tr><tr><td>Processus long-running (jours/semaines)</td><td>Temporal Workflow ou Azure Durable Functions</td></tr><tr><td>Événements multi-sources</td><td>Chorégraphie via message broker (RabbitMQ, Kafka)</td></tr><tr><td>Pas d'API disponible</td><td>RPA UI avec Playwright ou UiPath</td></tr></tbody></table>
+<p>Exemple minimal Temporal (Python) :</p>
+<pre><code class="lang-python">@workflow.defn
+class OnboardingWorkflow:
+    @workflow.run
+    async def run(self, user_id: str) -&gt; str:
+        await workflow.execute_activity(create_account, user_id, start_to_close_timeout=timedelta(minutes=5))
+        await workflow.execute_activity(send_welcome_email, user_id, start_to_close_timeout=timedelta(minutes=2))
+        return &quot;done&quot;</code></pre>
+<h3>3. Implémenter les connecteurs</h3>
+<ul>
+<li>Un connecteur = une classe avec <code>execute()</code>, <code>compensate()</code>, <code>health_check()</code>.</li>
+<li>Toujours décorer avec retry + circuit breaker :</li>
+</ul>
+<pre><code class="lang-python">from tenacity import retry, stop_after_attempt, wait_exponential
+from circuitbreaker import circuit
+
+@circuit(failure_threshold=5, recovery_timeout=30)
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+def call_external_api(payload: dict) -&gt; dict:
+    response = requests.post(API_URL, json=payload, timeout=10)
+    response.raise_for_status()
+    return response.json()</code></pre>
+<ul>
+<li>RPA UI (sans API) : préférer les sélecteurs stables (<code>data-testid</code>, <code>aria-label</code>) aux sélecteurs CSS fragiles.</li>
+</ul>
+<pre><code class="lang-python"># Playwright — sélecteur robuste
+await page.get_by_role(&quot;button&quot;, name=&quot;Valider&quot;).click()
+# ❌ fragile
+await page.click(&quot;.btn-primary:nth-child(2)&quot;)</code></pre>
+<h3>4. Configurer les déclencheurs</h3>
+<table><thead><tr><th>Type</th><th>Outil / Exemple</th></tr></thead><tbody><tr><td>Timer/Cron</td><td><code>0 8 * * 1-5</code> — chaque matin ouvré à 8h</td></tr><tr><td>Webhook entrant</td><td>FastAPI <code>POST /webhook/{event_type}</code></td></tr><tr><td>Email reçu</td><td>IMAP IDLE ou SendGrid Inbound Parse</td></tr><tr><td>Changement DB</td><td>PostgreSQL <code>LISTEN/NOTIFY</code> ou CDC Debezium</td></tr><tr><td>Upload fichier</td><td>S3 Event Notification → Lambda → queue</td></tr></tbody></table>
+<p>Implémenter le <strong>debouncing</strong> pour éviter les doubles déclenchements :</p>
+<pre><code class="lang-python">LAST_TRIGGER: dict[str, float] = {}
+MIN_INTERVAL = 5.0  # secondes
+
+def debounce(key: str) -&gt; bool:
+    now = time.time()
+    if now - LAST_TRIGGER.get(key, 0) &lt; MIN_INTERVAL:
+        return False  # ignorer
+    LAST_TRIGGER[key] = now
+    return True</code></pre>
+<h3>5. Orchestrer les actions chaînées</h3>
+<ul>
+<li>Persister l'état entre les étapes (DB ou Redis) pour reprendre après crash :</li>
+</ul>
+<pre><code class="lang-python">@dataclass
+class WorkflowState:
+    workflow_id: str
+    step: str          # &quot;create_account&quot; | &quot;send_email&quot; | &quot;done&quot;
+    payload: dict
+    created_at: datetime
+    retries: int = 0</code></pre>
+<ul>
+<li>Implémenter la <strong>compensation</strong> (rollback) pour chaque étape modifiant un système externe :</li>
+</ul>
+<pre><code class="lang-python">executed_steps = []
+try:
+    create_order(order); executed_steps.append(&quot;create_order&quot;)
+    charge_payment(order); executed_steps.append(&quot;charge_payment&quot;)
+    send_confirmation(order)
+except Exception:
+    for step in reversed(executed_steps):
+        compensators[step](order)  # rollback dans l'ordre inverse
+    raise</code></pre>
+<ul>
+<li>Sous-workflows : encapsuler les blocs réutilisables (ex : <code>KYCWorkflow</code>, <code>NotificationWorkflow</code>).</li>
+</ul>
+<h3>6. Intégrer la décision intelligente (LLM)</h3>
+<ul>
+<li>Utiliser le LLM uniquement pour les cas non déterministes : classification, extraction de texte libre, cas ambigus.</li>
+<li>Définir un <strong>seuil de confiance</strong> : en dessous → escalade humaine.</li>
+</ul>
+<pre><code class="lang-python">result = llm_classify(document_text)
+if result.confidence &lt; 0.85:
+    escalate_to_human(document_id, reason=&quot;confiance insuffisante&quot;)
+else:
+    route_automatically(result.category)</code></pre>
+<ul>
+<li>Toujours valider la sortie LLM avec un schéma Pydantic avant de l'injecter dans le workflow.</li>
+</ul>
+<h3>7. Gérer les erreurs et la résilience</h3>
+<ul>
+<li><strong>Retry policy</strong> : exponentiel avec jitter pour éviter le thundering herd.</li>
+<li><strong>Dead-letter queue</strong> : messages non traités après N tentatives → DLQ avec alerte.</li>
+<li><strong>Timeout par étape</strong> et timeout global du workflow.</li>
+<li><strong>Idempotence</strong> : chaque action doit être réexécutable sans effet de bord. Utiliser un <code>idempotency_key</code> (UUID de la commande, hash de l'événement).</li>
+</ul>
+<pre><code class="lang-python">def process_payment(order_id: str, idempotency_key: str):
+    if db.exists(f&quot;payment:{idempotency_key}&quot;):
+        return db.get(f&quot;payment:{idempotency_key}&quot;)  # résultat déjà calculé
+    result = payment_gateway.charge(order_id)
+    db.set(f&quot;payment:{idempotency_key}&quot;, result, ex=86400)
+    return result</code></pre>
+<h3>8. Monitorer et améliorer</h3>
+<p>KPIs à collecter :</p>
+<ul>
+<li><strong>Taux de succès</strong> : <code>succeeded / total</code> par workflow et par étape.</li>
+<li><strong>Temps de cycle moyen</strong> et p95.</li>
+<li><strong>Taux d'escalade humaine</strong> : indicateur de maturité du modèle de décision.</li>
+<li><strong>Volume de la DLQ</strong> : indicateur de problèmes systémiques.</li>
+</ul>
+<p>Stack recommandée 2026 : OpenTelemetry (traces) + Prometheus (métriques) + Grafana (dashboards).</p>
+<pre><code class="lang-python">from opentelemetry import trace
+tracer = trace.get_tracer(&quot;workflow-agent&quot;)
+
+with tracer.start_as_current_span(&quot;step.create_order&quot;) as span:
+    span.set_attribute(&quot;order.id&quot;, order_id)
+    create_order(order_id)</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Pas de compensation</td><td>Données incohérentes après crash partiel</td><td>Implémenter <code>compensate()</code> pour chaque étape modifiante</td></tr><tr><td>État en mémoire uniquement</td><td>Perte d'état au redémarrage</td><td>Persister dans Redis/DB après chaque transition</td></tr><tr><td>Sélecteurs CSS fragiles en RPA</td><td>Breakage à chaque déploiement UI</td><td>Utiliser <code>data-testid</code> ou <code>aria-*</code></td></tr><tr><td>LLM sans validation de sortie</td><td>Crash imprévisible en production</td><td>Valider avec Pydantic avant injection</td></tr><tr><td>Automatiser sans fallback manuel</td><td>Blocage total si l'agent échoue</td><td>Toujours exposer une interface de reprise manuelle</td></tr><tr><td>Déclencheurs sans debounce</td><td>Exécutions dupliquées</td><td>Idempotency key + debounce</td></tr><tr><td>Timeout absent</td><td>Workflow bloqué indéfiniment</td><td>Timeout par étape ET timeout global</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Contract-first</strong> : définir le contrat d'interface (schéma Pydantic / OpenAPI) avant d'implémenter les connecteurs.</li>
+<li><strong>Infrastructure as Code</strong> : déclarer les queues, topics et schedulers dans Terraform/Bicep, pas en CLI.</li>
+<li><strong>Versioning de workflow</strong> : suffixer les définitions (<code>OnboardingWorkflow_v2</code>) pour coexistence avec les instances en cours.</li>
+<li><strong>Secrets</strong> : injecter via vault (Azure Key Vault, HashiCorp Vault) — jamais en variable d'environnement dans le code.</li>
+<li><strong>Tests</strong> : unit-tester chaque activité isolément ; integration-tester le workflow avec un Temporal test server ou mocks.</li>
+<li><strong>Observabilité dès le départ</strong> : ne pas ajouter les traces après coup ; instrumenter dès la première ligne de code.</li>
 </ul>
 </article>
 </main>

@@ -96,25 +96,103 @@ cp -r claude-skills-collection/skills/communication-presentation-builder ~/.clau
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Presentation Builder</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définition de l'objectif</strong> — Clarifier le message clé, l'audience cible, le contexte de présentation et l'action attendue à la fin</li>
-<li><strong>Structure narrative</strong> — Construire le plan de la présentation avec une ouverture accrocheuse, un développement progressif et une conclusion mémorable</li>
-<li><strong>Rédaction du contenu</strong> — Écrire le contenu de chaque slide en suivant la règle &quot;une idée par slide&quot; avec des titres affirmatifs et des points clés concis</li>
-<li><strong>Design des visuels</strong> — Proposer la mise en page, le choix des couleurs, la typographie et les éléments visuels (graphiques, icônes, images) cohérents avec la charte</li>
-<li><strong>Création des données visuelles</strong> — Transformer les données en graphiques clairs et impactants (choix du type de graphique adapté, simplification, mise en évidence)</li>
-<li><strong>Transitions et rythme</strong> — Organiser les transitions entre les sections, varier le rythme (slides denses vs slides de respiration) et placer les moments d'interaction</li>
-<li><strong>Notes du présentateur</strong> — Rédiger les notes d'accompagnement pour chaque slide avec les points à développer oralement et les réponses aux questions anticipées</li>
-<li><strong>Répétition et ajustement</strong> — Proposer un guide de répétition avec gestion du temps par section et conseils de delivery adaptés au format (présentiel, visio, enregistré)</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Cadrage initial</h3>
+<p>Avant tout, collecter :</p>
 <ul>
-<li>Limiter le texte à 6 lignes maximum par slide et utiliser des visuels pour soutenir le message plutôt que le remplacer</li>
-<li>Commencer toujours par le &quot;pourquoi&quot; avant le &quot;comment&quot; pour capter l'attention de l'audience dès les premières minutes</li>
-<li>Adapter le niveau de détail et le vocabulaire au public cible (technique, direction, client, investisseur)</li>
-<li>Proposer une version complète exportable avec les notes du présentateur et une version allégée pour le partage</li>
-<li>Inclure un slide de résumé avec l'appel à l'action clair et les prochaines étapes concrètes</li>
+<li><strong>Message clé</strong> (1 phrase) : ce que l'audience doit retenir après 48h</li>
+<li><strong>Audience</strong> : technique / direction / client / investisseur / mixte</li>
+<li><strong>Format</strong> : durée totale, présentiel / visio / enregistré, Q&amp;A inclus ?</li>
+<li><strong>Action attendue</strong> : décision, approbation budget, achat, adhésion</li>
 </ul>
+<blockquote>Exemple de cadrage : &quot;Convaincre le COMEX d'allouer 200k€ au projet X en 20 min, audience non-technique, décision demandée en séance.&quot;</blockquote>
+<h3>2. Structure narrative (Storyline)</h3>
+<p>Choisir le template selon l'objectif :</p>
+<table><thead><tr><th>Objectif</th><th>Template</th><th>Nb slides conseillé</th></tr></thead><tbody><tr><td>Convaincre / vendre</td><td>Problème → Coût du problème → Solution → Preuve → Call to action</td><td>10–15</td></tr><tr><td>Informer / reporting</td><td>Contexte → Faits → Analyse → Recommandations</td><td>8–12</td></tr><tr><td>Former / expliquer</td><td>Pourquoi apprendre → Concept → Demo → Pratique → Recap</td><td>12–20</td></tr><tr><td>Lancer un projet</td><td>Vision → Plan → Ressources → Risques → Next steps</td><td>8–12</td></tr></tbody></table>
+<p>Structure minimale universelle :</p>
+<pre><code>1. Hook (30s) — chiffre choc, question, anecdote
+2. Contexte / problème (1–2 slides)
+3. Corps du message (3–5 sections)
+4. Slide de synthèse
+5. Call to action clair + next steps</code></pre>
+<h3>3. Plan slide par slide</h3>
+<p>Pour chaque slide, définir :</p>
+<ul>
+<li><strong>Titre affirmatif</strong> (pas &quot;Résultats&quot; mais &quot;Les ventes ont augmenté de 40%&quot;)</li>
+<li><strong>1 idée principale</strong> — si 2 idées distinctes, couper en 2 slides</li>
+<li><strong>Support visuel</strong> : graphique, icône, photo, schéma ou texte seul</li>
+<li><strong>Durée prévue</strong> : 1–3 min par slide selon la densité</li>
+</ul>
+<h3>4. Rédaction du contenu</h3>
+<p>Règles de rédaction par type de slide :</p>
+<p><strong>Slide de données :</strong></p>
+<pre><code>Titre: &quot;Le marché a doublé en 3 ans&quot;
+Visuel: graphique ligne simple (3 courbes max)
+Label direct sur les courbes (pas de légende séparée)
+Source en bas, petite</code></pre>
+<p><strong>Slide de liste :</strong></p>
+<ul>
+<li>3 à 5 points maximum</li>
+<li>Commencer par un verbe d'action</li>
+<li>Éviter les sous-listes (si nécessaire → slide séparé)</li>
+</ul>
+<p><strong>Slide de citation / témoignage :</strong></p>
+<pre><code>&quot;Texte de la citation entre guillemets, court (&lt; 25 mots)&quot;
+— Prénom Nom, Titre, Entreprise</code></pre>
+<h3>5. Design et visuels</h3>
+<p><strong>Palette :</strong> 1 couleur primaire + 1 secondaire + blanc/gris neutre. Pas plus.</p>
+<p><strong>Typographie :</strong> 1 famille unique, 3 tailles : titre (36–44pt), corps (24–28pt), caption (16–18pt).</p>
+<p><strong>Grille :</strong> marges minimum 5% sur chaque bord. Aligner tous les éléments sur une grille.</p>
+<p><strong>Choix du graphique :</strong></p>
+<table><thead><tr><th>Besoin</th><th>Type</th></tr></thead><tbody><tr><td>Évolution temporelle</td><td>Courbe</td></tr><tr><td>Comparaison catégories</td><td>Barres horizontales</td></tr><tr><td>Répartition</td><td>Camembert (≤ 5 parts) ou barres empilées</td></tr><tr><td>Corrélation</td><td>Scatter plot</td></tr><tr><td>Part d'un tout</td><td>Donut ou barre à 100%</td></tr></tbody></table>
+<p>Simplification obligatoire : supprimer le fond de graphique, les lignes de grille sauf horizontales légères, les décimales inutiles.</p>
+<h3>6. Transitions et rythme</h3>
+<ul>
+<li><strong>Slide de respiration</strong> tous les 4–5 slides : slide visuel fort, peu de texte, pause naturelle</li>
+<li>Pas d'animations sur les objets sauf révélation progressive (build) pour guider l'attention</li>
+<li>Transition entre sections : slide de titre de section sobre (fond couleur + titre uniquement)</li>
+</ul>
+<h3>7. Notes du présentateur</h3>
+<p>Pour chaque slide :</p>
+<pre><code>[Slide 3 — Problème coût]
+Message oral: &quot;Aujourd'hui, chaque heure d'arrêt coûte X€. L'an dernier, 47 heures perdues.&quot;
+Transition: &quot;Voici comment on résout ça.&quot;
+Questions anticipées: &quot;Pourquoi ce chiffre est si élevé ?&quot; → réponse: ...</code></pre>
+<h3>8. Répétition et delivery</h3>
+<p><strong>Timing guide :</strong></p>
+<ul>
+<li>10 min : 6–8 slides, 1 min/slide avec 2 min de buffer</li>
+<li>20 min : 12–15 slides, 1–1.5 min/slide</li>
+<li>45 min : 25–30 slides avec Q&amp;A intégré</li>
+</ul>
+<p><strong>Checklist delivery :</strong></p>
+<ul>
+<li>[ ] Répétition à voix haute chronométrée (pas dans la tête)</li>
+<li>[ ] Première et dernière phrase mémorisées mot pour mot</li>
+<li>[ ] Slide de secours prêt si Q&amp;A déborde</li>
+<li>[ ] Mode présentateur activé (notes + diapo suivante visibles)</li>
+<li>[ ] Fichier exporté en PDF en backup</li>
+</ul>
+<hr>
+<h2>Anti-patterns — Ne pas faire</h2>
+<table><thead><tr><th>Pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td>Mur de texte</td><td>Audience lit, n'écoute pas</td><td>Max 6 lignes, titres affirmatifs</td></tr><tr><td>Bullet-point dumping</td><td>Pas de message clair</td><td>1 idée = 1 slide, titre = le message</td></tr><tr><td>Graphiques à 3D</td><td>Déforment les proportions</td><td>Toujours en 2D</td></tr><tr><td>Animations excessives</td><td>Distrait du fond</td><td>Transitions simples uniquement</td></tr><tr><td>Slide &quot;agenda&quot; générique</td><td>Perd l'attention dès le départ</td><td>Remplacer par le hook</td></tr><tr><td>Trop de slides pour &quot;être complet&quot;</td><td>Dilue l'impact</td><td>Moins de slides = plus de mémorisation</td></tr><tr><td>Police &lt; 20pt</td><td>Illisible en projection</td><td>Minimum 24pt pour le corps</td></tr><tr><td>Couleurs non-contrastées</td><td>Inaccessible (daltonisme)</td><td>Contraste WCAG AA minimum (4.5:1)</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Présentation hybride</strong> : toujours prévoir une version lisible sans commentaire oral (le PDF doit se suffire à lui-même si partagé)</li>
+<li><strong>IA générative</strong> : utiliser pour brouillon initial, mais relire systématiquement — les LLMs sur-utilisent les listes et sous-titres génériques</li>
+<li><strong>Accessibilité</strong> : ajouter un texte alternatif sur les images clés, s'assurer du contraste suffisant</li>
+<li><strong>Présentation courte gagne</strong> : une présentation de 10 slides bien préparée bat toujours une présentation de 40 slides exhaustive</li>
+<li><strong>Template PowerPoint / Keynote</strong> : créer un master avec styles définis une seule fois, ne jamais formater slide par slide</li>
+</ul>
+<hr>
+<h2>Output livré</h2>
+<ol>
+<li><strong>Plan structuré</strong> : storyline + liste des slides avec titre affirmatif et type de contenu</li>
+<li><strong>Contenu slide par slide</strong> : texte prêt à coller + recommandation visuelle</li>
+<li><strong>Notes du présentateur</strong> : message oral + transitions + Q&amp;A anticipées</li>
+<li><strong>Guide de delivery</strong> : timing par section + checklist avant J</li>
+</ol>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

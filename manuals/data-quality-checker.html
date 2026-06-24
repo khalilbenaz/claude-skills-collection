@@ -96,93 +96,162 @@ cp -r claude-skills-collection/skills/data-quality-checker ~/.claude/skills/</di
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Vérificateur de Qualité des Données</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Profiler</strong> : explorer les données pour comprendre la distribution et les patterns.</li>
-<li><strong>Définir les règles</strong> : complétude, unicité, validité, cohérence, fraîcheur.</li>
-<li><strong>Implémenter les checks</strong> : requêtes SQL ou framework de validation.</li>
-<li><strong>Alerter</strong> : notifier quand un seuil de qualité est dépassé.</li>
-</ol>
-<h2>Dimensions de la qualité</h2>
-<table><thead><tr><th>Dimension</th><th>Question</th><th>Exemple de check</th></tr></thead><tbody><tr><td><strong>Complétude</strong></td><td>Y a-t-il des valeurs manquantes ?</td><td><code>WHERE column IS NULL</code></td></tr><tr><td><strong>Unicité</strong></td><td>Y a-t-il des doublons ?</td><td><code>GROUP BY ... HAVING COUNT &gt; 1</code></td></tr><tr><td><strong>Validité</strong></td><td>Les valeurs respectent-elles le format ?</td><td>Regex, plages de valeurs</td></tr><tr><td><strong>Cohérence</strong></td><td>Les données sont-elles cohérentes entre tables ?</td><td>Jointures orphelines</td></tr><tr><td><strong>Fraîcheur</strong></td><td>Les données sont-elles à jour ?</td><td><code>MAX(updated_at)</code> vs maintenant</td></tr><tr><td><strong>Exactitude</strong></td><td>Les données reflètent-elles la réalité ?</td><td>Comparaison avec source de vérité</td></tr></tbody></table>
-<h2>Checks SQL essentiels</h2>
-<h3>Complétude</h3>
-<pre><code class="lang-sql">-- Taux de nullité par colonne
+<h2>Workflow en 5 étapes</h2>
+<h3>1. Profiler les données</h3>
+<p>Avant tout check, explorer la structure et la distribution réelle.</p>
+<pre><code class="lang-sql">-- Profil rapide d'une table (PostgreSQL / SQL Server compatible)
 SELECT
-    'email' AS column_name,
-    COUNT(*) AS total_rows,
-    SUM(CASE WHEN email IS NULL THEN 1 ELSE 0 END) AS null_count,
-    ROUND(100.0 * SUM(CASE WHEN email IS NULL THEN 1 ELSE 0 END) / COUNT(*), 2) AS null_pct
-FROM customers
-UNION ALL
-SELECT 'phone', COUNT(*), SUM(CASE WHEN phone IS NULL THEN 1 ELSE 0 END),
-    ROUND(100.0 * SUM(CASE WHEN phone IS NULL THEN 1 ELSE 0 END) / COUNT(*), 2)
-FROM customers;</code></pre>
-<h3>Unicité</h3>
-<pre><code class="lang-sql">-- Détecter les doublons
-SELECT email, COUNT(*) AS occurrences
-FROM customers
-WHERE email IS NOT NULL
-GROUP BY email
+    column_name,
+    data_type,
+    COUNT(*)                                                        AS total_rows,
+    SUM(CASE WHEN column_name IS NULL THEN 1 ELSE 0 END)           AS null_count,
+    COUNT(DISTINCT column_name)                                     AS distinct_count
+FROM information_schema.columns
+WHERE table_name = 'orders'
+GROUP BY column_name, data_type;</code></pre>
+<pre><code class="lang-python"># Profil pandas — snapshot en 3 lignes
+import pandas as pd
+df = pd.read_sql(&quot;SELECT * FROM orders LIMIT 500000&quot;, con=engine)
+print(df.describe(include=&quot;all&quot;))
+print(df.isnull().mean().sort_values(ascending=False))  # taux nullité par col</code></pre>
+<h3>2. Définir les règles de qualité</h3>
+<p>Chaque règle doit avoir : <strong>dimension</strong>, <strong>seuil warning</strong>, <strong>seuil error</strong>, <strong>justification métier</strong>.</p>
+<table><thead><tr><th>Dimension</th><th>Question</th><th>Seuil warning</th><th>Seuil error</th></tr></thead><tbody><tr><td><strong>Complétude</strong></td><td>Valeurs NULL ?</td><td>&gt; 1 %</td><td>&gt; 5 %</td></tr><tr><td><strong>Unicité</strong></td><td>Doublons ?</td><td>&gt; 0</td><td>&gt; 0 (clés primaires)</td></tr><tr><td><strong>Validité</strong></td><td>Format/plage respectés ?</td><td>&gt; 0,5 % invalides</td><td>&gt; 2 %</td></tr><tr><td><strong>Cohérence</strong></td><td>Jointures orphelines ?</td><td>&gt; 0</td><td>&gt; 0 (FK obligatoires)</td></tr><tr><td><strong>Fraîcheur</strong></td><td>Données périmées ?</td><td>&gt; 12 h</td><td>&gt; 24 h</td></tr><tr><td><strong>Volume</strong></td><td>Nombre de lignes anormal ?</td><td>± 20 % vs veille</td><td>± 50 %</td></tr></tbody></table>
+<h3>3. Implémenter les checks SQL</h3>
+<h4>Complétude</h4>
+<pre><code class="lang-sql">-- Taux de nullité multi-colonnes (SQL Server / PostgreSQL)
+SELECT
+    col,
+    COUNT(*)                                                                 AS total,
+    SUM(CASE WHEN val IS NULL THEN 1 ELSE 0 END)                            AS nulls,
+    ROUND(100.0 * SUM(CASE WHEN val IS NULL THEN 1 ELSE 0 END) / COUNT(*), 2) AS null_pct
+FROM (
+    SELECT 'email'  AS col, email  AS val FROM customers UNION ALL
+    SELECT 'phone'  AS col, phone  AS val FROM customers UNION ALL
+    SELECT 'status' AS col, status AS val FROM customers
+) t
+GROUP BY col
+ORDER BY null_pct DESC;</code></pre>
+<h4>Unicité</h4>
+<pre><code class="lang-sql">-- Doublons sur clé composite
+SELECT order_id, customer_id, COUNT(*) AS nb
+FROM orders
+GROUP BY order_id, customer_id
 HAVING COUNT(*) &gt; 1
-ORDER BY occurrences DESC;</code></pre>
-<h3>Validité</h3>
-<pre><code class="lang-sql">-- Valeurs hors plage
-SELECT * FROM orders
-WHERE amount &lt;= 0
-   OR amount &gt; 1000000
+ORDER BY nb DESC;</code></pre>
+<h4>Validité</h4>
+<pre><code class="lang-sql">-- Valeurs hors plage / enum invalide
+SELECT COUNT(*) AS invalid_rows
+FROM orders
+WHERE amount    &lt;= 0
+   OR amount    &gt; 999999
    OR order_date &gt; CURRENT_DATE
-   OR status NOT IN ('pending', 'processing', 'completed', 'cancelled');</code></pre>
-<h3>Cohérence</h3>
-<pre><code class="lang-sql">-- Orphelins : commandes sans client valide
+   OR status    NOT IN ('pending','processing','completed','cancelled');
+
+-- Format email (PostgreSQL)
+SELECT email FROM customers
+WHERE email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$';</code></pre>
+<h4>Cohérence (intégrité référentielle)</h4>
+<pre><code class="lang-sql">-- Commandes orphelines (sans client)
 SELECT o.order_id, o.customer_id
 FROM orders o
 LEFT JOIN customers c ON o.customer_id = c.id
-WHERE c.id IS NULL;</code></pre>
-<h3>Fraîcheur</h3>
-<pre><code class="lang-sql">-- Données périmées
-SELECT
-    'orders' AS table_name,
-    MAX(updated_at) AS last_update,
-    EXTRACT(EPOCH FROM (NOW() - MAX(updated_at))) / 3600 AS hours_since_update
+WHERE c.id IS NULL;
+
+-- Incohérence logique : date livraison avant date commande
+SELECT order_id, order_date, delivery_date
 FROM orders
-HAVING EXTRACT(EPOCH FROM (NOW() - MAX(updated_at))) / 3600 &gt; 24;</code></pre>
-<h2>Framework de validation (Python / Great Expectations)</h2>
+WHERE delivery_date &lt; order_date;</code></pre>
+<h4>Fraîcheur</h4>
+<pre><code class="lang-sql">-- Alerte si table non alimentée depuis N heures
+SELECT
+    'orders'                                                            AS tbl,
+    MAX(updated_at)                                                     AS last_update,
+    DATEDIFF(MINUTE, MAX(updated_at), GETUTCDATE())                     AS minutes_lag
+FROM orders
+HAVING DATEDIFF(MINUTE, MAX(updated_at), GETUTCDATE()) &gt; 60;
+-- PostgreSQL : remplacer DATEDIFF(...) par EXTRACT(EPOCH FROM (NOW()-MAX(updated_at)))/60</code></pre>
+<h4>Anomalie de volume</h4>
+<pre><code class="lang-sql">-- Comparer le volume du jour J vs J-1
+SELECT
+    CAST(created_at AS DATE) AS day,
+    COUNT(*)                  AS row_count,
+    LAG(COUNT(*)) OVER (ORDER BY CAST(created_at AS DATE)) AS prev_day,
+    ROUND(100.0 * (COUNT(*) - LAG(COUNT(*)) OVER (ORDER BY CAST(created_at AS DATE)))
+          / NULLIF(LAG(COUNT(*)) OVER (ORDER BY CAST(created_at AS DATE)), 0), 1) AS pct_change
+FROM orders
+GROUP BY CAST(created_at AS DATE)
+ORDER BY day DESC;</code></pre>
+<h3>4. Automatiser avec un framework</h3>
+<h4>Great Expectations (Python)</h4>
+<pre><code class="lang-bash">pip install great_expectations
+great_expectations init</code></pre>
 <pre><code class="lang-python">import great_expectations as gx
 
 context = gx.get_context()
-suite = context.add_expectation_suite(&quot;orders_quality&quot;)
-
-# Complétude
-suite.add_expectation(
-    gx.expectations.ExpectColumnValuesToNotBeNull(column=&quot;customer_id&quot;)
+ds = context.sources.add_pandas(&quot;orders_ds&quot;)
+da = ds.add_dataframe_asset(&quot;orders&quot;)
+batch = da.add_batch_definition_whole_dataframe(&quot;batch&quot;).get_batch(
+    batch_parameters={&quot;dataframe&quot;: df}
 )
 
-# Unicité
-suite.add_expectation(
-    gx.expectations.ExpectColumnValuesToBeUnique(column=&quot;order_id&quot;)
-)
+suite = context.add_expectation_suite(&quot;orders_suite&quot;)
+suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column=&quot;customer_id&quot;))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToBeUnique(column=&quot;order_id&quot;))
+suite.add_expectation(gx.expectations.ExpectColumnValuesToBeBetween(
+    column=&quot;amount&quot;, min_value=0.01, max_value=999999.99
+))
+suite.add_expectation(gx.expectations.ExpectTableRowCountToBeBetween(
+    min_value=1000, max_value=10_000_000
+))
 
-# Validité
-suite.add_expectation(
-    gx.expectations.ExpectColumnValuesToBeBetween(
-        column=&quot;amount&quot;, min_value=0.01, max_value=999999.99
-    )
-)
-
-# Volume
-suite.add_expectation(
-    gx.expectations.ExpectTableRowCountToBeBetween(
-        min_value=1000, max_value=10000000
-    )
-)</code></pre>
-<h2>Règles</h2>
+results = batch.validate(suite)
+print(results.success)  # False = au moins une règle KO</code></pre>
+<h4>dbt tests (si stack dbt)</h4>
+<pre><code class="lang-yaml"># models/schema.yml
+models:
+  - name: orders
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: amount
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.01
+              max_value: 999999
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['pending','processing','completed','cancelled']
+      - name: customer_id
+        tests:
+          - relationships:
+              to: ref('customers')
+              field: id</code></pre>
+<pre><code class="lang-bash">dbt test --select orders  # lancer les checks
+dbt test --select orders --store-failures  # stocker les lignes KO dans la BDD</code></pre>
+<h3>5. Monitorer et alerter</h3>
 <ul>
-<li>Chaque pipeline de données doit avoir des <strong>checks de qualité automatisés</strong>.</li>
-<li>Définir des <strong>seuils d'alerte</strong> (warning) et de <strong>blocage</strong> (error) distincts.</li>
-<li>Les checks doivent être <strong>documentés</strong> avec leur justification métier.</li>
-<li>Monitorer l'évolution de la qualité dans le temps (tendances).</li>
+<li>Stocker les résultats dans une <strong>table de métriques qualité</strong> (date, table, dimension, valeur, statut).</li>
+<li>Brancher un dashboard (Grafana, Metabase) sur cette table.</li>
+<li>Déclencher une alerte (Slack, email, PagerDuty) si <code>statut = ERROR</code>.</li>
 </ul>
+<pre><code class="lang-sql">-- Table de suivi recommandée
+CREATE TABLE dq_metrics (
+    run_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    table_name     VARCHAR(100),
+    dimension      VARCHAR(50),   -- completeness / uniqueness / validity / ...
+    metric_name    VARCHAR(100),
+    metric_value   DECIMAL(18,4),
+    threshold_warn DECIMAL(18,4),
+    threshold_err  DECIMAL(18,4),
+    status         VARCHAR(10)    -- OK / WARN / ERROR
+);</code></pre>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Piège</th><th>Bonne pratique</th></tr></thead><tbody><tr><td>Checker seulement en amont (ingestion)</td><td>Checker aussi <strong>après</strong> les transformations</td></tr><tr><td>Seuils identiques pour toutes les colonnes</td><td>Adapter les seuils au <strong>contexte métier</strong> (email optionnel ≠ FK obligatoire)</td></tr><tr><td>Bloquer le pipeline sur tout KO</td><td>Distinguer <strong>warning</strong> (log + continue) vs <strong>error</strong> (arrêt pipeline)</td></tr><tr><td>Ignorer les valeurs vides <code>&quot;&quot;</code> vs NULL</td><td>Traiter les deux : <code>IS NULL OR TRIM(col) = ''</code></td></tr><tr><td>Checks ponctuels sans historique</td><td>Stocker les métriques pour détecter les <strong>dérives graduelles</strong></td></tr><tr><td>Valider uniquement le schéma</td><td>Valider aussi les <strong>distributions</strong> (z-score, percentiles)</td></tr><tr><td>Checks trop lents sur grande table</td><td>Utiliser le <strong>sampling</strong> sur &gt; 100 M lignes (<code>TABLESAMPLE 1 PERCENT</code>)</td></tr></tbody></table>
+<h2>Critères de choix d'outil</h2>
+<table><thead><tr><th>Contexte</th><th>Outil recommandé</th></tr></thead><tbody><tr><td>Stack Python/Pandas ad hoc</td><td>Great Expectations</td></tr><tr><td>Pipeline dbt existant</td><td>dbt tests + dbt-utils</td></tr><tr><td>SQL pur, sans dépendance</td><td>Requêtes custom + table <code>dq_metrics</code></td></tr><tr><td>Scala/Spark</td><td>Deequ (AWS) ou spark-dq</td></tr><tr><td>Cloud AWS</td><td>AWS Glue Data Quality</td></tr><tr><td>Cloud Azure</td><td>Azure Purview / DQ rules</td></tr></tbody></table>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

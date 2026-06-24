@@ -97,37 +97,147 @@ cp -r claude-skills-collection/skills/data-kafka-patterns ~/.claude/skills/</div
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Kafka Patterns</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Concevoir la topologie des topics</strong> — Définir les topics en fonction des domaines métier (events, commands, changelog), choisir le nombre de partitions en fonction du débit cible et du parallélisme des consumers, et configurer la rétention (time-based, size-based, compaction).</li>
-</ol>
-<ol>
-<li><strong>Définir le schéma des messages</strong> — Concevoir les événements avec un format structuré (Avro, Protobuf ou JSON Schema), enregistrer les schémas dans un Schema Registry, définir les règles de compatibilité (backward, forward, full), et inclure les métadonnées standard (event_id, timestamp, source, correlation_id).</li>
-</ol>
-<ol>
-<li><strong>Implémenter les producers</strong> — Configurer les producers avec les garanties de livraison adaptées (<code>acks=all</code> pour la durabilité, <code>idempotence=true</code> pour éviter les doublons), le partitionnement par clé métier, le batching et la compression pour optimiser le débit.</li>
-</ol>
-<ol>
-<li><strong>Concevoir les consumer groups</strong> — Organiser les consumers en groupes logiques, gérer les offsets (auto-commit vs commit manuel), implémenter le rebalancing gracieux, et configurer les paramètres de performance (<code>max.poll.records</code>, <code>fetch.min.bytes</code>, <code>session.timeout.ms</code>).</li>
-</ol>
-<ol>
-<li><strong>Implémenter les patterns de traitement</strong> — Appliquer les patterns adaptés au besoin : Event Sourcing (journal d'événements comme source de vérité), CQRS (séparation lecture/écriture), Saga (transactions distribuées), et CDC (Change Data Capture avec Debezium).</li>
-</ol>
-<ol>
-<li><strong>Configurer Kafka Streams ou ksqlDB</strong> — Développer les traitements de streaming avec Kafka Streams (KStream, KTable, joins, windowing, aggregations) ou ksqlDB pour les transformations déclaratives en SQL, les materialized views et les stream-table joins.</li>
-</ol>
-<ol>
-<li><strong>Assurer l'exactly-once semantics</strong> — Configurer les transactions Kafka pour le traitement exactly-once : <code>enable.idempotence</code>, <code>transactional.id</code> pour les producers, <code>isolation.level=read_committed</code> pour les consumers, et les transactions Kafka Streams.</li>
-</ol>
-<ol>
-<li><strong>Monitorer et opérer</strong> — Surveiller les métriques clés : consumer lag, throughput par partition, latence end-to-end, taille des topics. Configurer les alertes sur le lag excessif, les erreurs de sérialisation, et les rebalancing fréquents. Utiliser Kafka UI ou Confluent Control Center.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Concevoir la topologie des topics</h3>
 <ul>
-<li>Choisis le nombre de partitions en fonction du débit cible — c'est le facteur limitant du parallélisme et il ne peut pas être réduit après création du topic.</li>
-<li>Utilise toujours un Schema Registry avec des règles de compatibilité pour éviter les breaking changes dans les formats de messages.</li>
-<li>Implémente la gestion des erreurs avec un dead letter topic pour les messages non traitables plutôt que de bloquer le consumer group.</li>
-<li>Ne stocke jamais de payloads volumineux dans Kafka — utilise le pattern Claim Check (référence vers un stockage externe) pour les données dépassant 1 MB.</li>
-<li>Monitore le consumer lag comme métrique principale de santé — un lag croissant indique un problème de capacité ou de traitement.</li>
+<li>Nommer les topics par domaine + type d'événement : <code>orders.created</code>, <code>payments.processed</code>, <code>inventory.updated</code></li>
+<li><strong>Calcul des partitions</strong> : <code>partitions = débit_cible_MB/s ÷ débit_par_partition_MB/s</code> (typiquement 10–20 MB/s par partition)</li>
+<li>Règle pratique : commencer avec <code>max(producteurs_parallèles, consommateurs_parallèles)</code> partitions</li>
+<li>Rétention selon le cas : time-based (<code>retention.ms=604800000</code> = 7j), size-based (<code>retention.bytes</code>), ou compaction pour les changelogs (KTable)</li>
+</ul>
+<pre><code class="lang-bash"># Créer un topic avec 12 partitions, réplication 3, rétention 7 jours
+kafka-topics.sh --bootstrap-server broker:9092 \
+  --create --topic orders.created \
+  --partitions 12 --replication-factor 3 \
+  --config retention.ms=604800000
+
+# Lister / décrire
+kafka-topics.sh --bootstrap-server broker:9092 --describe --topic orders.created</code></pre>
+<h3>2. Définir le schéma des messages</h3>
+<ul>
+<li>Avro (compact, Schema Registry natif) &gt; Protobuf &gt; JSON Schema selon l'éco-système</li>
+<li>Enregistrer dans Confluent Schema Registry avec compatibilité <code>BACKWARD</code> par défaut</li>
+<li>Inclure les champs obligatoires : <code>event_id</code> (UUID), <code>event_type</code>, <code>occurred_at</code> (ISO-8601), <code>source</code>, <code>correlation_id</code></li>
+</ul>
+<pre><code class="lang-json">// Avro schema — orders.created
+{
+  &quot;type&quot;: &quot;record&quot;,
+  &quot;name&quot;: &quot;OrderCreated&quot;,
+  &quot;namespace&quot;: &quot;com.example.orders&quot;,
+  &quot;fields&quot;: [
+    {&quot;name&quot;: &quot;event_id&quot;, &quot;type&quot;: &quot;string&quot;},
+    {&quot;name&quot;: &quot;order_id&quot;, &quot;type&quot;: &quot;string&quot;},
+    {&quot;name&quot;: &quot;customer_id&quot;, &quot;type&quot;: &quot;string&quot;},
+    {&quot;name&quot;: &quot;amount_cents&quot;, &quot;type&quot;: &quot;long&quot;},
+    {&quot;name&quot;: &quot;occurred_at&quot;, &quot;type&quot;: {&quot;type&quot;: &quot;long&quot;, &quot;logicalType&quot;: &quot;timestamp-millis&quot;}}
+  ]
+}</code></pre>
+<h3>3. Configurer les producers</h3>
+<p>Choisir les garanties selon le besoin :</p>
+<table><thead><tr><th>Cas</th><th><code>acks</code></th><th><code>enable.idempotence</code></th><th><code>transactional.id</code></th></tr></thead><tbody><tr><td>Fire-and-forget (logs)</td><td><code>0</code></td><td>false</td><td>—</td></tr><tr><td>At-least-once (défaut)</td><td><code>all</code></td><td>false</td><td>—</td></tr><tr><td>Exactly-once</td><td><code>all</code></td><td>true</td><td><code>txn-{service}-{instance}</code></td></tr></tbody></table>
+<pre><code class="lang-java">// Producer Java — exactly-once
+Properties props = new Properties();
+props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, &quot;broker:9092&quot;);
+props.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+props.put(ProducerConfig.ACKS_CONFIG, &quot;all&quot;);
+props.put(ProducerConfig.TRANSACTIONAL_ID_CONFIG, &quot;txn-orders-1&quot;);
+props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, &quot;lz4&quot;);
+props.put(ProducerConfig.LINGER_MS_CONFIG, 5);        // batching
+props.put(ProducerConfig.BATCH_SIZE_CONFIG, 65536);   // 64 KB
+
+KafkaProducer&lt;String, OrderCreated&gt; producer = new KafkaProducer&lt;&gt;(props);
+producer.initTransactions();
+
+producer.beginTransaction();
+producer.send(new ProducerRecord&lt;&gt;(&quot;orders.created&quot;, order.getId(), event));
+producer.commitTransaction();</code></pre>
+<h3>4. Concevoir les consumer groups</h3>
+<ul>
+<li>Un consumer group par cas d'usage logique (pas par microservice)</li>
+<li>Commit offset <strong>après</strong> traitement réussi, jamais avant</li>
+<li><code>max.poll.records</code> : réduire si le traitement par batch est lent (défaut 500)</li>
+<li><code>session.timeout.ms</code> &gt; temps max de traitement d'un batch</li>
+</ul>
+<pre><code class="lang-java">// Consumer Java — commit manuel
+props.put(ConsumerConfig.GROUP_ID_CONFIG, &quot;orders-billing-service&quot;);
+props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100);
+props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, &quot;earliest&quot;);
+
+while (true) {
+    ConsumerRecords&lt;String, OrderCreated&gt; records = consumer.poll(Duration.ofMillis(500));
+    for (ConsumerRecord&lt;String, OrderCreated&gt; record : records) {
+        process(record.value());
+    }
+    consumer.commitSync(); // après traitement complet
+}</code></pre>
+<h3>5. Patterns de traitement distribué</h3>
+<p><strong>Dead Letter Topic (DLT)</strong> — isoler les messages non traitables :</p>
+<pre><code>topic-principal → traitement → erreur → topic-principal.DLT</code></pre>
+<p><strong>Saga choreography</strong> — chaque service publie des events, les autres réagissent :</p>
+<pre><code>orders.created → payment-service → payments.processed → inventory-service → inventory.reserved
+                                 ↘ payments.failed   → orders.cancelled</code></pre>
+<p><strong>CDC avec Debezium</strong> — capturer les changements base de données :</p>
+<pre><code class="lang-json">// connector config (Postgres)
+{
+  &quot;connector.class&quot;: &quot;io.debezium.connector.postgresql.PostgresConnector&quot;,
+  &quot;database.hostname&quot;: &quot;postgres&quot;,
+  &quot;database.dbname&quot;: &quot;mydb&quot;,
+  &quot;table.include.list&quot;: &quot;public.orders&quot;,
+  &quot;topic.prefix&quot;: &quot;cdc&quot;
+}</code></pre>
+<p><strong>Claim Check</strong> — payload &gt; 1 MB : stocker dans S3/Blob, publier seulement la référence :</p>
+<pre><code class="lang-json">{&quot;event_id&quot;: &quot;...&quot;, &quot;payload_ref&quot;: &quot;s3://bucket/events/abc123.json&quot;}</code></pre>
+<h3>6. Kafka Streams — traitements stateful</h3>
+<pre><code class="lang-java">StreamsBuilder builder = new StreamsBuilder();
+
+// Comptage par client sur fenêtre de 1h (hopping)
+KStream&lt;String, OrderCreated&gt; orders = builder.stream(&quot;orders.created&quot;);
+orders
+  .groupByKey()
+  .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofHours(1)))
+  .count(Materialized.as(&quot;orders-per-customer&quot;))
+  .toStream()
+  .to(&quot;orders.count-per-customer-1h&quot;);
+
+// Stream-Table join
+KTable&lt;String, CustomerProfile&gt; profiles = builder.table(&quot;customers.profiles&quot;);
+orders.join(profiles,
+    (order, profile) -&gt; enrich(order, profile),
+    Joined.with(Serdes.String(), orderSerde, profileSerde))
+  .to(&quot;orders.enriched&quot;);</code></pre>
+<h3>7. Exactly-once semantics (EOS)</h3>
+<p>Configuration minimale pour EOS dans Kafka Streams :</p>
+<pre><code class="lang-java">props.put(StreamsConfig.PROCESSING_GUARANTEE_CONFIG, StreamsConfig.EXACTLY_ONCE_V2);
+props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, 3);
+props.put(StreamsConfig.NUM_STANDBY_REPLICAS_CONFIG, 1);</code></pre>
+<p>Pour les consumers en boucle read-process-write :</p>
+<ul>
+<li><code>isolation.level=read_committed</code> côté consumer</li>
+<li>Transactions produceur-consumer atomiques avec <code>sendOffsetsToTransaction()</code></li>
+</ul>
+<h3>8. Monitoring &amp; alertes</h3>
+<p>Métriques critiques à surveiller :</p>
+<table><thead><tr><th>Métrique</th><th>Outil</th><th>Seuil d'alerte</th></tr></thead><tbody><tr><td><code>kafka.consumer.lag</code></td><td>JMX / Prometheus</td><td>&gt; 10 000 msgs</td></tr><tr><td><code>under-replicated-partitions</code></td><td>Kafka MBean</td><td>&gt; 0</td></tr><tr><td><code>records-error-rate</code></td><td>Kafka MBean</td><td>&gt; 0</td></tr><tr><td>Latence end-to-end</td><td>OpenTelemetry</td><td>&gt; SLA défini</td></tr></tbody></table>
+<pre><code class="lang-bash"># Consumer lag via CLI
+kafka-consumer-groups.sh --bootstrap-server broker:9092 \
+  --describe --group orders-billing-service
+
+# Reset offset en cas d'incident (dry-run)
+kafka-consumer-groups.sh --bootstrap-server broker:9092 \
+  --group orders-billing-service --topic orders.created \
+  --reset-offsets --to-earliest --dry-run</code></pre>
+<h2>Critères de décision</h2>
+<table><thead><tr><th>Besoin</th><th>Choix</th></tr></thead><tbody><tr><td>Traitement stateless simple</td><td>Consumer KafkaConsumer</td></tr><tr><td>Aggregation / join / windowing</td><td>Kafka Streams ou ksqlDB</td></tr><tr><td>SQL déclaratif sur streams</td><td>ksqlDB</td></tr><tr><td>CDC depuis base relationnelle</td><td>Debezium + Kafka Connect</td></tr><tr><td>Garantie exactement-une-fois</td><td>EOS (<code>EXACTLY_ONCE_V2</code>)</td></tr><tr><td>Payload volumineux (&gt; 1 MB)</td><td>Claim Check pattern</td></tr></tbody></table>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
+<ul>
+<li><strong>Ne pas réduire les partitions</strong> : impossible sans recréer le topic ; sur-provisionner légèrement au départ.</li>
+<li><strong>Auto-commit activé + traitement lent</strong> : risque de perte de messages si le consumer crash après commit mais avant traitement. Toujours <code>enable.auto.commit=false</code>.</li>
+<li><strong>Un seul topic pour tout</strong> : casse l'isolation, le scaling et la rétention différenciée. Un topic par type d'événement.</li>
+<li><strong>Consumer group partagé entre envs</strong> (dev/prod sur le même cluster) : les offsets se mélangent. Utiliser des clusters ou des <code>group.id</code> stricts par environnement.</li>
+<li><strong>Pas de DLT</strong> : un message poison bloque tout le consumer group indéfiniment. Toujours prévoir <code>topic.DLT</code>.</li>
+<li><strong>Rebalancing fréquent</strong> : souvent dû à <code>max.poll.interval.ms</code> trop court ou traitement trop lent. Augmenter <code>max.poll.interval.ms</code> ou réduire <code>max.poll.records</code>.</li>
+<li><strong>Schema sans compatibilité</strong> : un changement de schéma casse les consumers existants. Toujours tester avec <code>kafka-schema-registry-test-compatibility</code>.</li>
+<li><strong><code>acks=1</code> sur topics critiques</strong> : perte de données si le leader crashe avant réplication. Utiliser <code>acks=all</code> + <code>min.insync.replicas=2</code>.</li>
 </ul>
 </article>
 </main>

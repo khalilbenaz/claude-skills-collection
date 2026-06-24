@@ -96,125 +96,176 @@ cp -r claude-skills-collection/skills/agent-hierarchy-designer ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Agent Hierarchy Designer</h1>
-<h2>Quand utiliser ce skill</h2>
-<p>Utiliser ce skill lorsqu'une tâche complexe nécessite plusieurs couches d'agents avec des responsabilités distinctes : stratégie, coordination et exécution. Il est particulièrement adapté quand le nombre d'agents devient trop grand pour être coordonné par un seul orchestrateur, ou quand les domaines d'exécution sont suffisamment distincts pour justifier des managers spécialisés.</p>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyse de la complexité (besoin d'une hiérarchie ?)</strong></li>
+<h2>1. Décider si une hiérarchie est justifiée</h2>
+<table><thead><tr><th>Signal</th><th>Action</th></tr></thead><tbody><tr><td>Tâche linéaire, &lt; 5 agents, domaine homogène</td><td>Agent unique ou flat pipeline — pas de hiérarchie</td></tr><tr><td>5–15 agents, 2–3 domaines distincts</td><td>Hiérarchie 2 niveaux (orchestrateur + workers)</td></tr><tr><td>&gt; 15 agents, domaines hétérogènes, charge variable</td><td>Hiérarchie 3 niveaux avec managers intermédiaires</td></tr><tr><td>Sous-tâches complètement isolées</td><td>Préférer une orchestration par événements plutôt qu'une pyramide</td></tr></tbody></table>
+<p>Coût réel d'une hiérarchie : +30–50 % de latence, débogage exponentiellement plus complexe, surface d'erreur plus large. N'ajouter un niveau que si le gain de parallélisme ou de spécialisation le justifie clairement.</p>
+<h2>2. Définir les niveaux et leur rôle</h2>
+<pre><code>Orchestrateur  (1 seul)
+├── Manager A  (domaine : recherche)
+│   ├── Specialist Web
+│   └── Specialist BDD
+├── Manager B  (domaine : rédaction)
+│   ├── Worker Draft
+│   └── Worker Révision
+└── Manager C  (domaine : validation)
+    └── Specialist Fact-checker</code></pre>
+<p>Règle absolue : <strong>maximum 4 niveaux</strong>. Au-delà, le gain de spécialisation ne compense plus le coût de coordination.</p>
+<table><thead><tr><th>Niveau</th><th>Rôle unique</th><th>Peut créer des agents ?</th><th>Portée des outils</th></tr></thead><tbody><tr><td>Orchestrateur</td><td>Stratégie, décomposition, agrégation finale</td><td>Oui (managers)</td><td>Toutes ressources</td></tr><tr><td>Manager</td><td>Coordination d'un domaine, allocation de budget</td><td>Oui (workers dans son domaine)</td><td>Ressources du domaine</td></tr><tr><td>Specialist</td><td>Expertise profonde dans une niche</td><td>Non</td><td>Outils spécialisés seulement</td></tr><tr><td>Worker</td><td>Exécution atomique, sans décision complexe</td><td>Non</td><td>Scope minimal</td></tr></tbody></table>
+<h2>3. Formaliser les responsabilités (prompt système de chaque niveau)</h2>
+<p>Chaque agent reçoit un system prompt qui précise <strong>exactement</strong> :</p>
 <ul>
-<li>Un seul agent suffit si la tâche est linéaire, sans parallélisme et sans spécialisation requise</li>
-<li>Une hiérarchie est justifiée si : nombre d'agents &gt; 5, domaines hétérogènes, ou charge variable</li>
-<li>Critères de décision : couplage des sous-tâches, diversité des outils, niveau d'autonomie requis</li>
-<li>Coût d'une hiérarchie : latence accrue, complexité de débogage, overhead de coordination</li>
+<li>Son rôle et ses limites d'autorité</li>
+<li>Ce qu'il peut décider seul vs ce qu'il doit escalader</li>
+<li>Le format des messages entrants et sortants</li>
+<li>Son budget token/API calls</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Design des niveaux (architecture de la pyramide)</strong></li>
+<pre><code class="lang-python">ORCHESTRATOR_PROMPT = &quot;&quot;&quot;
+Tu es l'orchestrateur. Tu reçois un objectif global.
+1. Décompose en sous-objectifs par domaine.
+2. Assigne chaque sous-objectif à un manager via un message JSON.
+3. Attends les résultats, agrège, et produis la réponse finale.
+Tu NE réalises pas de tâche atomique toi-même.
+Budget max : {budget_tokens} tokens pour toute la session.
+&quot;&quot;&quot;
+
+MANAGER_PROMPT = &quot;&quot;&quot;
+Tu es le manager du domaine {domain}.
+Tu reçois un sous-objectif. Décompose-le en tâches atomiques.
+Assigne chaque tâche à un worker. Supervise et agrège les résultats.
+Budget alloué : {child_budget} tokens. Escalade si insuffisant.
+&quot;&quot;&quot;</code></pre>
+<h2>4. Protocole de communication inter-niveaux</h2>
 <ul>
-<li><strong>Niveau 1 — Orchestrateur</strong> : vision globale, stratégie, décision finale, 1 seul agent</li>
-<li><strong>Niveau 2 — Managers</strong> : coordination d'un domaine (recherche, écriture, validation), 2-5 agents</li>
-<li><strong>Niveau 3 — Specialists</strong> : exécution experte dans une niche précise, 3-10 agents</li>
-<li><strong>Niveau 4 — Workers</strong> : tâches atomiques répétitives, pool dynamique</li>
-<li>Règle : ne jamais dépasser 4 niveaux pour garder le système déboguable</li>
+<li><strong>Top-down</strong> : l'orchestrateur envoie des objectifs de haut niveau aux managers uniquement.</li>
+<li><strong>Bottom-up</strong> : les workers remontent résultats et erreurs vers leur manager direct (jamais directement à l'orchestrateur).</li>
+<li><strong>Lateral</strong> : interdit entre niveaux différents ; toléré entre agents du même manager si le manager l'autorise explicitement.</li>
 </ul>
-</ol>
-<p>   ```    Orchestrateur    ├── Manager Recherche    │   ├── Specialist Web    │   └── Specialist Base de données    ├── Manager Rédaction    │   ├── Worker Draft    │   └── Worker Révision    └── Manager Validation        └── Specialist Fact-checker    ```</p>
-<ol>
-<li><strong>Rôle et responsabilités de chaque niveau</strong></li>
+<pre><code class="lang-python">from pydantic import BaseModel
+
+class AgentMessage(BaseModel):
+    msg_id: str
+    trace_id: str          # Trace bout-en-bout (propagé depuis l'orchestrateur)
+    sender_id: str
+    receiver_id: str
+    message_type: str      # &quot;task&quot; | &quot;result&quot; | &quot;error&quot; | &quot;status&quot; | &quot;escalate&quot;
+    payload: dict
+    budget_remaining: int  # Budget restant transmis à chaque message
+    depth: int             # Niveau hiérarchique du sender (0 = orchestrateur)</code></pre>
+<h2>5. Budget et délégation (éviter les dépassements de coût)</h2>
+<pre><code class="lang-python">class BudgetAllocator:
+    PARENT_RESERVE = 0.20  # Le parent garde 20% pour son propre traitement
+
+    def allocate(self, parent_budget: int, num_children: int) -&gt; int:
+        available = int(parent_budget * (1 - self.PARENT_RESERVE))
+        per_child = available // num_children
+        return max(per_child, 1_000)  # Minimum viable par enfant
+
+# Exemple : budget total 100k tokens, 3 managers
+# Manager reçoit : 100_000 * 0.8 / 3 = ~26_666 tokens chacun
+# Chaque manager applique la même règle pour ses workers</code></pre>
+<p>Règle : si un agent atteint 80 % de son budget sans résultat, il émet un message <code>escalate</code> vers son manager plutôt que de continuer.</p>
+<h2>6. Supervision et health checks</h2>
+<pre><code class="lang-python">import asyncio
+
+class ManagerAgent:
+    async def supervise(self):
+        while self.active:
+            for worker in self.workers:
+                status = await worker.ping(timeout=3)
+                if status.failed or status.stalled:
+                    await self.replace_worker(worker)
+                    self.log_event(&quot;worker_replaced&quot;, worker.id)
+            await asyncio.sleep(5)
+
+    async def replace_worker(self, failed_worker):
+        self.workers.remove(failed_worker)
+        new_worker = self.spawn_worker(spec=failed_worker.spec)
+        self.workers.append(new_worker)</code></pre>
+<p>Métriques minimales à collecter par manager :</p>
 <ul>
-<li><code>Orchestrateur</code> : décompose la mission globale, assigne aux managers, agrège les résultats finaux</li>
-<li><code>Manager</code> : reçoit un objectif de domaine, le décompose en tâches pour ses specialists/workers</li>
-<li><code>Specialist</code> : expertise profonde dans un outil ou domaine, peut utiliser des APIs spécifiques</li>
-<li><code>Worker</code> : exécution d'une tâche atomique sans prise de décision complexe</li>
+<li>Taux de succès des workers (cible &gt; 95 %)</li>
+<li>Temps moyen de traitement par tâche</li>
+<li>Nombre d'escalades vers l'orchestrateur</li>
 </ul>
-</ol>
-<p>   ```python    class AgentRole:        ORCHESTRATOR = &quot;orchestrator&quot;   # Stratégie + agrégation finale        MANAGER = &quot;manager&quot;             # Coordination de domaine        SPECIALIST = &quot;specialist&quot;       # Expertise métier        WORKER = &quot;worker&quot;               # Exécution atomique    ```</p>
-<ol>
-<li><strong>Communication inter-niveaux</strong></li>
+<h2>7. Scaling dynamique</h2>
+<pre><code class="lang-python">class HierarchyScaler:
+    SCALE_UP_RATIO = 3    # Ajouter un worker si queue &gt; workers * 3
+    IDLE_TIMEOUT_S = 30   # Supprimer un worker inactif depuis 30s
+
+    def scale_up(self, manager):
+        if len(manager.task_queue) &gt; len(manager.workers) * self.SCALE_UP_RATIO:
+            manager.workers.append(manager.spawn_worker())
+
+    def scale_down(self, manager):
+        idle = [w for w in manager.workers if w.idle_since &gt; self.IDLE_TIMEOUT_S]
+        for w in idle[:-1]:  # Garder au moins 1 worker actif
+            w.terminate()</code></pre>
+<h2>8. Implémentation par framework (2026)</h2>
+<p><strong>LangGraph Supervisor</strong> (recommandé pour hiérarchies dynamiques) :</p>
+<pre><code class="lang-python">from langgraph.prebuilt import create_react_agent
+from langgraph_supervisor import create_supervisor
+
+research = create_react_agent(model, [web_search, db_query], name=&quot;researcher&quot;)
+writer   = create_react_agent(model, [write_doc], name=&quot;writer&quot;)
+
+supervisor = create_supervisor(
+    agents=[research, writer],
+    model=model,
+    prompt=&quot;Coordonne la recherche et la rédaction. Agrège les résultats.&quot;
+)
+result = supervisor.invoke({&quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: task}]})</code></pre>
+<p><strong>CrewAI Hierarchical Process</strong> (recommandé pour équipes à rôles fixes) :</p>
+<pre><code class="lang-python">from crewai import Crew, Process
+
+crew = Crew(
+    agents=[manager_agent, researcher, writer, validator],
+    tasks=[research_task, write_task, validate_task],
+    process=Process.hierarchical,
+    manager_llm=ChatOpenAI(model=&quot;gpt-4o&quot;),
+)
+result = crew.kickoff()</code></pre>
+<p><strong>AutoGen GroupChatManager imbriqués</strong> (pour hiérarchies à 3+ niveaux) :</p>
+<pre><code class="lang-python">from autogen import GroupChat, GroupChatManager
+
+inner_group = GroupChat(agents=[worker1, worker2], messages=[], max_round=5)
+inner_mgr   = GroupChatManager(groupchat=inner_group, llm_config=llm_cfg)
+
+outer_group = GroupChat(agents=[orchestrator, inner_mgr], messages=[], max_round=10)
+outer_mgr   = GroupChatManager(groupchat=outer_group, llm_config=llm_cfg)</code></pre>
+<h2>9. Visualisation et debug</h2>
+<pre><code class="lang-python">def to_dot(orchestrator) -&gt; str:
+    &quot;&quot;&quot;Génère un graphe Graphviz de la hiérarchie courante.&quot;&quot;&quot;
+    lines = ['digraph AgentTree {', '  rankdir=TB;']
+    def walk(agent, parent=None):
+        label = f'{agent.role}\\n{agent.id[:8]}'
+        lines.append(f'  &quot;{agent.id}&quot; [label=&quot;{label}&quot;];')
+        if parent:
+            lines.append(f'  &quot;{parent.id}&quot; -&gt; &quot;{agent.id}&quot;;')
+        for child in getattr(agent, 'children', []):
+            walk(child, agent)
+    walk(orchestrator)
+    lines.append('}')
+    return '\n'.join(lines)
+
+# Rendre le graphe : echo &quot;$(python gen_dot.py)&quot; | dot -Tsvg -o hierarchy.svg</code></pre>
+<p>Pour le débogage en production : propager un <code>trace_id</code> unique depuis l'orchestrateur dans chaque message. Filtrer les logs par <code>trace_id</code> pour reconstituer la chaîne complète d'une exécution.</p>
+<h2>Anti-patterns / Pièges</h2>
 <ul>
-<li><code>Top-down</code> : l'orchestrateur envoie des objectifs de haut niveau aux managers</li>
-<li><code>Bottom-up</code> : les workers remontent les résultats et erreurs vers leur manager</li>
-<li><code>Lateral</code> : coordination entre agents du même niveau (rare, encadrée par le manager)</li>
-<li>Protocole : messages structurés avec <code>sender_id</code>, <code>receiver_id</code>, <code>message_type</code>, <code>payload</code></li>
+<li><strong>Hiérarchie pour une tâche simple</strong> : si la tâche peut tenir en &lt; 5 agents flat, la hiérarchie ajoute de la latence sans valeur. Vérifier d'abord si un flat pipeline suffit.</li>
+<li><strong>Manager qui exécute des tâches atomiques</strong> : le manager devient un goulot d'étranglement et annule le bénéfice du parallélisme. Les managers délèguent exclusivement.</li>
+<li><strong>Pas de feedback bottom-up</strong> : sans remontée d'état, l'orchestrateur est aveugle. Même un simple <code>status: running</code> toutes les 30 s est indispensable.</li>
+<li><strong>Budget non propagé</strong> : un agent sans contrainte de budget peut monopoliser les ressources et bloquer les autres. Toujours transmettre le budget restant dans chaque message.</li>
+<li><strong>Communication latérale non encadrée</strong> : un worker qui contacte directement un autre worker hors de son domaine crée des dépendances cachées impossibles à tracer. Tout flux latéral passe par le manager commun.</li>
+<li><strong>5+ niveaux</strong> : la latence cumulée (chaque niveau = 1+ LLM call) rend la hiérarchie inacceptablement lente. Aplatir ou regrouper des responsabilités.</li>
 </ul>
-</ol>
-<p>   ```python    class AgentMessage(BaseModel):        msg_id: str        sender_id: str        receiver_id: str        message_type: str  # &quot;task&quot; | &quot;result&quot; | &quot;error&quot; | &quot;status&quot;        payload: dict        timestamp: float        trace_id: str  # Pour suivre toute la chaîne    ```</p>
+<h2>Règles non négociables</h2>
 <ol>
-<li><strong>Scope et autorité par niveau</strong></li>
-<ul>
-<li><code>Orchestrateur</code> : peut créer/détruire des managers, accès à toutes les ressources</li>
-<li><code>Manager</code> : peut créer des workers dans son domaine, budget limité de tokens/API calls</li>
-<li><code>Specialist</code> : peut utiliser ses outils dédiés, pas de création de sous-agents</li>
-<li><code>Worker</code> : scope minimal, outils restreints, durée de vie courte</li>
-<li>Définir explicitement ce que chaque niveau peut décider seul vs ce qu'il doit escalader</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Delegation rules (règles de délégation formalisées)</strong></li>
-<ul>
-<li>Un manager ne crée des sous-agents que si la tâche dépasse sa capacité individuelle</li>
-<li>Limite de profondeur : max 2 niveaux de délégation depuis un manager</li>
-<li>Budget token propagé depuis l'orchestrateur : chaque niveau reçoit une fraction du budget total</li>
-</ul>
-</ol>
-<p>   ```python    class DelegationBudget:        def __init__(self, total_tokens: int, max_depth: int = 3):            self.total = total_tokens            self.max_depth = max_depth</p>
-<p>       def allocate_to_child(self, parent_budget: int, num_children: int) -&gt; int:            # Réserver 20% pour le parent, distribuer 80% entre enfants            child_budget = int(parent_budget * 0.8 / num_children)            return max(child_budget, 1000)  # Minimum 1000 tokens par enfant    ```</p>
-<ol>
-<li><strong>Supervision pattern (contrôle de la hiérarchie)</strong></li>
-<ul>
-<li>Chaque manager supervise ses directs reports via health checks périodiques</li>
-<li>Performance monitoring : taux de succès, temps d'exécution, qualité des outputs</li>
-<li>Un manager peut remplacer un worker défaillant en instanciant un nouveau depuis le pool</li>
-</ul>
-</ol>
-<p>   ```python    class ManagerAgent:        async def supervise_workers(self):            while self.active:                for worker in self.workers:                    health = await worker.health_check()                    if not health.ok:                        await self.replace_worker(worker)                await asyncio.sleep(5)  # Check toutes les 5 secondes    ```</p>
-<ol>
-<li><strong>Dynamic hierarchy (adaptabilité de la structure)</strong></li>
-<ul>
-<li>Auto-scaling : ajouter des workers si la file d'attente dépasse un seuil</li>
-<li>Pruning : supprimer les agents inactifs depuis plus de X secondes pour économiser les ressources</li>
-<li>Promotion : un worker très performant peut être promu specialist si nécessaire</li>
-<li>Merge : fusionner deux managers sous-utilisés en un seul pour réduire l'overhead</li>
-</ul>
-</ol>
-<p>   ```python    class HierarchyScaler:        def scale_up(self, manager, task_queue_size: int):            if task_queue_size &gt; manager.worker_count * 3:                new_worker = manager.spawn_worker()                manager.workers.append(new_worker)</p>
-<p>       def scale_down(self, manager):            idle = [w for w in manager.workers if w.idle_since &gt; 30]            for worker in idle[:-1]:  # Garder au moins 1 worker                worker.terminate()    ```</p>
-<ol>
-<li><strong>Implémentation concrète</strong></li>
-<ul>
-<li><strong>LangGraph Supervisor</strong> : pattern natif pour orchestrer des sous-agents avec un nœud supervisor</li>
-<li><strong>CrewAI Hierarchical</strong> : <code>Process.hierarchical</code> avec <code>manager_llm</code> dédié</li>
-<li><strong>AutoGen Nested Chats</strong> : <code>GroupChatManager</code> imbriqués pour simuler les niveaux</li>
-</ul>
-</ol>
-<p>   ```python    # LangGraph supervisor pattern    from langgraph.prebuilt import create_react_agent    from langgraph_supervisor import create_supervisor</p>
-<p>   research_agent = create_react_agent(model, [search_tool], name=&quot;researcher&quot;)    writer_agent = create_react_agent(model, [write_tool], name=&quot;writer&quot;)</p>
-<p>   supervisor = create_supervisor(        agents=[research_agent, writer_agent],        model=model,        prompt=&quot;Coordonne la recherche et la rédaction.&quot;    )    ```</p>
-<p>   ```python    # CrewAI hierarchical    from crewai import Crew, Process</p>
-<p>   crew = Crew(        agents=[manager, researcher, writer, validator],        tasks=[task1, task2, task3],        process=Process.hierarchical,        manager_llm=ChatOpenAI(model=&quot;gpt-4o&quot;),        verbose=True    )    ```</p>
-<ol>
-<li><strong>Visualisation et debug de la hiérarchie</strong></li>
-<ul>
-<li>Générer une <code>hierarchy map</code> en DOT/Graphviz pour visualiser la structure</li>
-<li>Task flow visualization : tracer chaque message entre agents avec le <code>trace_id</code></li>
-<li>Bottleneck detection : identifier quel agent ou niveau ralentit l'ensemble</li>
-</ul>
-</ol>
-<p>    ```python     def generate_hierarchy_map(orchestrator) -&gt; str:         lines = [&quot;digraph G {&quot;]         def traverse(agent, parent=None):             if parent:                 lines.append(f'  &quot;{parent.id}&quot; -&gt; &quot;{agent.id}&quot;;')             for child in agent.children:                 traverse(child, agent)         traverse(orchestrator)         lines.append(&quot;}&quot;)         return &quot;\n&quot;.join(lines)     ```</p>
-<h2>Anti-patterns</h2>
-<ul>
-<li><strong>Trop de niveaux</strong> : une hiérarchie de 5+ niveaux multiplie la latence et rend le débogage cauchemardesque. Au-delà de 4 niveaux, refactoriser en aplatissant ou en regroupant des responsabilités.</li>
-<li><strong>Manager qui fait le travail des workers</strong> : un manager qui exécute des tâches atomiques lui-même crée un goulot d'étranglement et annule le bénéfice de la parallélisation. Les managers délèguent, ils n'exécutent pas.</li>
-<li><strong>Pas de feedback bottom-up</strong> : une hiérarchie sans remontée d'information est aveugle. L'orchestrateur doit toujours savoir l'état de progression de chaque niveau, même grossièrement.</li>
-<li><strong>Hiérarchie rigide sans adaptabilité</strong> : une structure figée ne peut pas absorber les pics de charge ou les pannes partielles. Prévoir le scaling horizontal des workers et la promotion/dégradation dynamique des agents.</li>
-</ul>
-<h2>Règles</h2>
-<ol>
-<li><strong>Maximum 4 niveaux</strong> dans toute hiérarchie d'agents pour garantir la maintenabilité et la lisibilité du système.</li>
-<li><strong>Chaque agent a un seul manager direct</strong> (pas de double hiérarchie) pour éviter les conflits d'instructions et les deadlocks.</li>
-<li><strong>Les communications respectent la hiérarchie</strong> : un worker ne contacte pas directement l'orchestrateur — il passe par son manager.</li>
-<li><strong>Chaque niveau dispose d'un budget explicite</strong> (tokens, API calls, temps) alloué par son parent pour prévenir les dépassements de coût.</li>
-<li><strong>La hiérarchie est documentée et versionnée</strong> : tout changement de structure (ajout d'un niveau, nouveau manager) fait l'objet d'un changelog pour faciliter le débogage en production.</li>
+<li><strong>Maximum 4 niveaux</strong> dans toute hiérarchie.</li>
+<li><strong>Un seul manager direct par agent</strong> (pas de double hiérarchie).</li>
+<li><strong>Communications respectent la chaîne</strong> : un worker remonte vers son manager, jamais directement à l'orchestrateur.</li>
+<li><strong>Budget explicite à chaque niveau</strong>, transmis par le parent.</li>
+<li><strong>Chaque agent a un system prompt distinct</strong> définissant son scope et ses limites d'escalade.</li>
+<li><strong>Trace ID bout-en-bout</strong> pour chaque exécution (observabilité non optionnelle en production).</li>
 </ol>
 </article>
 </main>
