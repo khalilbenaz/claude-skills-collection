@@ -96,21 +96,99 @@ cp -r claude-skills-collection/skills/travel-trip-planner ~/.claude/skills/</div
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Trip Planner</h1>
-<h2>Étape 1 — Brief voyage</h2>
-<p>Destination, dates, durée, nombre de voyageurs, budget, centres d'intérêt, contraintes.</p>
+<h2>Étape 1 — Brief voyage (collecter AVANT de planifier)</h2>
+<p>Questions obligatoires à poser si non renseignées :</p>
+<table><thead><tr><th>Variable</th><th>Exemples / valeurs attendues</th></tr></thead><tbody><tr><td>Destination</td><td>Ville ou région précise (ex. Tokyo, côte amalfitaine)</td></tr><tr><td>Dates &amp; durée</td><td>&quot;15-25 juillet&quot; ou &quot;10 jours en septembre&quot;</td></tr><tr><td>Voyageurs</td><td>Nombre + profil (couple, famille enfants 4 et 8 ans, groupe amis)</td></tr><tr><td>Budget total</td><td>Fourchette en €/$ (vols inclus ou non ?)</td></tr><tr><td>Style de voyage</td><td>Backpacker / confort / luxe / culturel / aventure / gastronomique</td></tr><tr><td>Contraintes</td><td>Régime alimentaire, mobilité réduite, visa difficile, animaux, pass rail déjà acheté</td></tr><tr><td>Déjà réservé</td><td>Vol, hébergement, activités incontournables</td></tr></tbody></table>
+<p><strong>Critère de décision :</strong> si la destination comporte plusieurs villes ou régions, demander si circuit (déplacement quotidien) ou base fixe (rayonnement en journée). Ce choix impacte toute la logistique.</p>
+<hr>
 <h2>Étape 2 — Itinéraire jour par jour</h2>
-<table><thead><tr><th>Jour</th><th>Matin</th><th>Après-midi</th><th>Soir</th><th>Transport</th><th>Budget estimé</th></tr></thead><tbody></tbody></table>
-<h2>Étape 3 — Logistique</h2>
+<p>Générer un tableau condensé, puis développer chaque jour si demandé.</p>
+<pre><code>Jour 1 — Arrivée Tokyo (Narita → centre ~60 min Narita Express)
+  Matin     : Check-in Shinjuku, orientation quartier
+  Après-midi: Parc Shinjuku Gyoen (¥500) → Meiji Jingu (gratuit)
+  Soir      : Izakaya rue Omoide Yokocho (~¥2 000/pers)
+  Transport : JR Pass activé dès J1 si rentable (calculer seuil ci-dessous)
+  Budget J  : ~¥8 000 (hors hébergement)</code></pre>
+<p><strong>Règle de rythme :</strong> max 3 sites majeurs/jour ; laisser 1,5 h de marge entre activités pour transport + imprévus. Au-delà de 5 activités listées, l'utilisateur abandonnera le planning.</p>
+<p><strong>Seuil JR Pass (Japon — exemple type) :</strong></p>
 <ul>
-<li>Hébergement (suggestions par budget)</li>
-<li>Transport (vols, trains, location)</li>
-<li>Visa/documents nécessaires</li>
-<li>Assurance voyage</li>
+<li>Tokyo → Kyoto = ¥14 000 aller simple</li>
+<li>Si au moins 2 allers-retours Shinkansen → Pass 7 jours (¥50 000) rentable</li>
+<li>Sinon : IC Card (Suica/Pasmo) suffisante</li>
 </ul>
+<hr>
+<h2>Étape 3 — Logistique</h2>
+<h3>Hébergement — grille de décision</h3>
+<table><thead><tr><th>Profil</th><th>Option recommandée</th><th>Fourchette (nuit/chambre)</th></tr></thead><tbody><tr><td>Backpacker</td><td>Hostel dortoir (Hostelworld, Booking)</td><td>10–25 €</td></tr><tr><td>Confort standard</td><td>Hôtel 3★ ou appartement Airbnb</td><td>60–120 €</td></tr><tr><td>Famille</td><td>Aparthotel (cuisine équipée)</td><td>80–180 €</td></tr><tr><td>Luxe</td><td>Hôtel 4-5★ ou ryokan (Japon)</td><td>200 €+</td></tr></tbody></table>
+<p>Toujours vérifier : politique annulation gratuite si dates flexibles, quartier (sécurité, proximité transports), avis récents (&lt; 6 mois).</p>
+<h3>Transport — checklist logistique</h3>
+<ul>
+<li>[ ] Vols : comparer Google Flights + Skyscanner + site compagnie directe ; activer alerte prix si dates flexibles</li>
+<li>[ ] Aéroport → ville : train express &gt; taxi (coût, fiabilité) ; pré-réserver si heure de pointe</li>
+<li>[ ] Sur place : transport en commun (app officielle locale) &gt; location voiture en ville</li>
+<li>[ ] Location voiture : pertinente uniquement hors ville dense ou zone rurale/campagne</li>
+<li>[ ] Rail pass : calculer coût trajet par trajet avant d'acheter</li>
+</ul>
+<h3>Documents &amp; visa</h3>
+<p>Vérifier sur <a href="https://www.iatatravelcentre.com/" target="_blank" rel="noopener">IATA Travel Centre</a> ou site ambassade :</p>
+<ul>
+<li>Passeport valide 6 mois après retour</li>
+<li>Visa requis ? délai, coût, pièces</li>
+<li>Vaccins conseillés (CDC / Pasteur)</li>
+<li>Permis de conduire international si location voiture</li>
+</ul>
+<h3>Assurance voyage</h3>
+<p>Inclure systématiquement si hors UE ou activités à risque. Comparer sur :</p>
+<ul>
+<li>Chapka, Avi-on, WorldNomads (aventure)</li>
+<li>Carte bancaire premium : vérifier plafonds réels (souvent insuffisants &gt; 90 jours)</li>
+</ul>
+<hr>
 <h2>Étape 4 — Budget détaillé</h2>
-<table><thead><tr><th>Poste</th><th>Estimation</th><th>Notes</th></tr></thead><tbody><tr><td>Transport</td><td></td><td></td></tr><tr><td>Hébergement</td><td></td><td></td></tr><tr><td>Nourriture</td><td></td><td></td></tr><tr><td>Activités</td><td></td><td></td></tr><tr><td>Marge imprévus (10%)</td><td></td><td></td></tr><tr><td><strong>Total</strong></td><td></td><td></td></tr></tbody></table>
+<pre><code>Destination : Tokyo 10 jours, 2 personnes, confort standard
+─────────────────────────────────────────────────────────
+Transport aérien        800 € (400/pers Paris-Tokyo A/R)
+Hébergement            900 € (90 €/nuit × 10)
+Repas                  400 € (20 €/pers/repas × 2 × 10)
+Transport local        150 € (JR Pass 7j × 2 + Suica)
+Activités &amp; entrées    200 €
+Shopping / souvenirs   300 € (variable)
+Assurance voyage        80 €
+─────────────────────────────────────────────────────────
+Sous-total           2 830 €
+Marge imprévus (10%)   283 €
+TOTAL ESTIMÉ         3 113 € (1 557 €/personne)
+─────────────────────────────────────────────────────────</code></pre>
+<p><strong>Adapter le niveau de détail au budget fourni.</strong> Si budget serré, proposer d'abord les leviers d'économie (vols décalés, hostel, cuisine locale) avant de construire l'itinéraire.</p>
+<hr>
 <h2>Étape 5 — Conseils pratiques</h2>
-<p>Pourboires, sécurité, coutumes locales, météo, applications utiles.</p>
+<h3>Applications indispensables (2026)</h3>
+<table><thead><tr><th>Usage</th><th>App recommandée</th></tr></thead><tbody><tr><td>Navigation offline</td><td>Maps.me ou Google Maps (télécharger zone)</td></tr><tr><td>Traduction</td><td>Google Translate (OCR offline)</td></tr><tr><td>Transport en commun</td><td>App locale officielle + Citymapper</td></tr><tr><td>Météo fiable</td><td>Weather Underground (données locales)</td></tr><tr><td>Gestion dépenses</td><td>Tricount (partage groupe)</td></tr><tr><td>Cartes bancaires</td><td>Revolut ou Wise (taux de change, 0 frais)</td></tr></tbody></table>
+<h3>Précautions par type de destination</h3>
+<p><strong>Destination &quot;visa on arrival&quot; :</strong> apporter 50 USD cash exact, photos d'identité récentes, preuve hébergement imprimée.</p>
+<p><strong>Zone à risque sanitaire :</strong> eau du robinet non potable → budget eau en bouteille (0,50 €/j à intégrer), éviter glaçons, crudités marchés.</p>
+<p><strong>Zone monétaire cash-first :</strong> retirer localement (DAB aéroport à éviter : frais élevés), prévoir petites coupures pour marchés.</p>
+<hr>
+<h2>Anti-patterns / pièges fréquents</h2>
+<ul>
+<li><strong>Sur-planifier le J1</strong> : arrivée longue distance = décalage horaire, check-in tardif. Ne mettre qu'une activité légère.</li>
+<li><strong>Ignorer les jours fériés locaux</strong> : musées fermés, prix multipliés (ex. Golden Week Japon, fête nationale France). Vérifier avec <code>https://www.timeanddate.com/holidays/</code>.</li>
+<li><strong>Réserver trop tôt les activités</strong> : pour certains sites (Machu Picchu, Sagrada Familia), billets s'épuisent 2–3 mois à l'avance → réserver en premier.</li>
+<li><strong>Sous-estimer les temps de trajet</strong> : Google Maps en mode &quot;transit&quot; en heure de pointe × 1,3 pour être réaliste.</li>
+<li><strong>Budget sans marge</strong> : prévoir minimum 10 % d'imprévus, 15 % si zone instable (changes, grèves, météo).</li>
+<li><strong>Oublier le retour aéroport</strong> : durée trajet + 2 h (international) ou 1 h 30 (domestique) avant décollage ; noter le terminal exact.</li>
+</ul>
+<hr>
+<h2>Output final attendu</h2>
+<p>Proposer systématiquement :</p>
+<ol>
+<li><strong>Résumé exécutif</strong> (3 lignes : destination, durée, budget total)</li>
+<li><strong>Itinéraire condensé</strong> (tableau jour par jour)</li>
+<li><strong>Checklist logistique</strong> (documents, réservations prioritaires)</li>
+<li><strong>Budget estimé</strong> (tableau postes)</li>
+<li><strong>Top 3 conseils</strong> spécifiques à la destination</li>
+</ol>
+<p>Si l'utilisateur veut un export, proposer le format Markdown, ou un tableau copiable pour Notion/Google Sheets.</p>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

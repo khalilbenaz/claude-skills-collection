@@ -97,37 +97,158 @@ cp -r claude-skills-collection/skills/dev-react-component-builder ~/.claude/skil
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>React Component Builder</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Clarifier le besoin</strong> : identifier quel composant créer, quelles props il accepte, quel comportement est attendu, et quel framework est utilisé (React, Vue, Angular, Svelte). Poser les questions essentielles avant de coder.</li>
-</ol>
-<ol>
-<li><strong>Design de l'API du composant</strong> : définir l'interface publique — props avec types TypeScript, événements émis (emit/callbacks), slots ou children, valeurs par défaut, et ce qui est exposé via ref/forwardRef si nécessaire.</li>
-</ol>
-<ol>
-<li><strong>Structure du composant</strong> : choisir le bon pattern d'architecture — composition pattern, compound components (ex. <code>&lt;Select&gt;&lt;Option&gt;</code>) ou render props selon la complexité et la réutilisabilité requise.</li>
-</ol>
-<ol>
-<li><strong>State management</strong> : déterminer où vivre l'état — state local avec useState/ref, context API ou provide-inject pour partage inter-composants, ou store externe (Zustand, Pinia, NgRx, Svelte stores) pour l'état global.</li>
-</ol>
-<ol>
-<li><strong>Styling</strong> : appliquer la solution de style adaptée au projet — CSS Modules pour l'isolation, Tailwind pour l'utilitaire, Styled Components/Emotion pour le CSS-in-JS, ou scoped styles dans Vue/Svelte.</li>
-</ol>
-<ol>
-<li><strong>Accessibilité</strong> : intégrer les bonnes pratiques dès la conception — roles ARIA appropriés, navigation clavier complète (tabIndex, onKeyDown), gestion du focus (useRef + focus()), et attributs aria-label/describedby.</li>
-</ol>
-<ol>
-<li><strong>Tests du composant</strong> : écrire des tests avec React Testing Library ou Vue Test Utils — tester le comportement utilisateur (clics, saisie), les cas limites, et configurer des tests de régression visuelle si requis.</li>
-</ol>
-<ol>
-<li><strong>Documentation et Storybook</strong> : créer des stories Storybook couvrant les différents états et variantes, générer la props table automatiquement, et fournir des exemples d'utilisation copiables dans la documentation.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Cadrage rapide</h3>
+<p>Avant de coder, confirmer :</p>
 <ul>
-<li>Proposer du code prêt à copier-coller, typé TypeScript par défaut.</li>
-<li>Adapter systématiquement la syntaxe et les patterns au framework choisi par l'utilisateur.</li>
-<li>Prioriser l'accessibilité dès la conception du composant, jamais en correctif final.</li>
-<li>Favoriser la composition plutôt que l'héritage ; garder les composants petits et ciblés.</li>
-<li>Documenter toujours les props, événements et comportements attendus dans le code livré.</li>
+<li><strong>Framework</strong> : React 18+, Vue 3, Angular 17+, Svelte 5 ?</li>
+<li><strong>TypeScript</strong> : oui (défaut) / non ?</li>
+<li><strong>Props attendues</strong> : quelles données en entrée, quels callbacks en sortie ?</li>
+<li><strong>Réutilisabilité</strong> : composant générique (design system) ou spécifique page ?</li>
+<li><strong>Contexte de style</strong> : Tailwind, CSS Modules, CSS-in-JS, scoped ?</li>
+</ul>
+<h3>2. Design de l'API publique</h3>
+<p>Définir l'interface TypeScript avant toute implémentation.</p>
+<pre><code class="lang-tsx">// React — props typées avec valeurs par défaut
+interface ButtonProps {
+  label: string;
+  variant?: 'primary' | 'secondary' | 'danger';
+  disabled?: boolean;
+  loading?: boolean;
+  onClick?: (event: React.MouseEvent&lt;HTMLButtonElement&gt;) =&gt; void;
+  className?: string;
+}
+
+const Button = ({
+  label,
+  variant = 'primary',
+  disabled = false,
+  loading = false,
+  onClick,
+  className,
+}: ButtonProps) =&gt; { /* ... */ };</code></pre>
+<p><strong>Critères de décision — quoi exposer :</strong></p>
+<ul>
+<li>Props minimales : n'exposer que ce que l'appelant doit contrôler.</li>
+<li>Éviter les props booléennes multiples exclusives → préférer un <code>variant</code> enum.</li>
+<li>Utiliser <code>children</code> plutôt qu'une prop <code>content</code> dès qu'il y a du JSX à injecter.</li>
+<li>Exposer <code>className</code> / <code>style</code> pour permettre l'extension sans override.</li>
+</ul>
+<h3>3. Choix du pattern d'architecture</h3>
+<table><thead><tr><th>Cas d'usage</th><th>Pattern recommandé</th></tr></thead><tbody><tr><td>Composant simple, état local</td><td>Composant fonctionnel + hooks</td></tr><tr><td>Composant avec sous-parties couplées</td><td>Compound components (<code>&lt;Select&gt;&lt;Option&gt;</code>)</td></tr><tr><td>Logique réutilisable cross-composants</td><td>Custom hook</td></tr><tr><td>Inversion de contrôle sur le rendu</td><td>Render props / slot</td></tr><tr><td>Composant wrapper transparent</td><td><code>forwardRef</code> + <code>useImperativeHandle</code></td></tr></tbody></table>
+<pre><code class="lang-tsx">// Compound components — exemple Select
+const Select = ({ children, onChange }: SelectProps) =&gt; {
+  const [value, setValue] = useState('');
+  return (
+    &lt;SelectContext.Provider value={{ value, onChange: setValue }}&gt;
+      &lt;div role=&quot;listbox&quot;&gt;{children}&lt;/div&gt;
+    &lt;/SelectContext.Provider&gt;
+  );
+};
+Select.Option = SelectOption; // sous-composant attaché</code></pre>
+<h3>4. State management — où vivre l'état</h3>
+<pre><code>État local uniquement → useState / useReducer
+Partage parent→enfants proches → props drilling (acceptable jusqu'à 2 niveaux)
+Partage dans un sous-arbre → Context API + useContext
+État global UI (modales, thème) → Zustand (React) / Pinia (Vue) / NgRx (Angular)
+État serveur → React Query / SWR / Apollo (jamais dans un store global)</code></pre>
+<pre><code class="lang-tsx">// Zustand — slice minimal
+import { create } from 'zustand';
+
+interface ModalStore {
+  isOpen: boolean;
+  open: () =&gt; void;
+  close: () =&gt; void;
+}
+
+export const useModalStore = create&lt;ModalStore&gt;((set) =&gt; ({
+  isOpen: false,
+  open: () =&gt; set({ isOpen: true }),
+  close: () =&gt; set({ isOpen: false }),
+}));</code></pre>
+<h3>5. Styling — choix adapté au projet</h3>
+<pre><code class="lang-tsx">// CSS Modules (isolation, zéro runtime)
+import styles from './Button.module.css';
+&lt;button className={`${styles.btn} ${styles[variant]}`}&gt;{label}&lt;/button&gt;
+
+// Tailwind (utilitaire, tree-shaking natif)
+const variantClass = { primary: 'bg-blue-600', secondary: 'bg-gray-200' }[variant];
+&lt;button className={`px-4 py-2 rounded ${variantClass} ${className ?? ''}`}&gt;{label}&lt;/button&gt;
+
+// clsx pour conditions complexes (toujours préférer à template literals)
+import clsx from 'clsx';
+&lt;button className={clsx('px-4 py-2', { 'opacity-50 cursor-not-allowed': disabled }, variantClass)}&gt;</code></pre>
+<h3>6. Accessibilité — non négociable</h3>
+<p>Checklist systématique :</p>
+<ul>
+<li><code>role</code> ARIA correct (<code>button</code>, <code>dialog</code>, <code>listbox</code>, <code>alert</code>…).</li>
+<li>Navigation clavier : <code>tabIndex</code>, <code>onKeyDown</code> (Enter/Space pour les éléments cliquables).</li>
+<li>Labels : <code>aria-label</code> ou <code>aria-labelledby</code> sur tout élément interactif sans texte visible.</li>
+<li>Focus management : piéger le focus dans les modales (<code>focus-trap</code>), restaurer après fermeture.</li>
+<li>Contrastes : minimum 4.5:1 (texte normal), 3:1 (grand texte / UI).</li>
+</ul>
+<pre><code class="lang-tsx">// Dialogue accessible
+const Dialog = ({ title, onClose, children }: DialogProps) =&gt; {
+  const closeRef = useRef&lt;HTMLButtonElement&gt;(null);
+  useEffect(() =&gt; { closeRef.current?.focus(); }, []);
+
+  return (
+    &lt;div role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-labelledby=&quot;dialog-title&quot;&gt;
+      &lt;h2 id=&quot;dialog-title&quot;&gt;{title}&lt;/h2&gt;
+      {children}
+      &lt;button ref={closeRef} onClick={onClose} aria-label=&quot;Fermer&quot;&gt;✕&lt;/button&gt;
+    &lt;/div&gt;
+  );
+};</code></pre>
+<h3>7. Tests avec React Testing Library</h3>
+<pre><code class="lang-tsx">// Tester le comportement, pas l'implémentation
+import { render, screen, userEvent } from '@testing-library/react';
+
+test('appelle onClick avec le bon argument', async () =&gt; {
+  const handleClick = vi.fn();
+  render(&lt;Button label=&quot;Valider&quot; onClick={handleClick} /&gt;);
+  await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+  expect(handleClick).toHaveBeenCalledTimes(1);
+});
+
+test('bouton disabled ne déclenche pas onClick', async () =&gt; {
+  const handleClick = vi.fn();
+  render(&lt;Button label=&quot;Valider&quot; disabled onClick={handleClick} /&gt;);
+  await userEvent.click(screen.getByRole('button'));
+  expect(handleClick).not.toHaveBeenCalled();
+});</code></pre>
+<p>Sélecteurs par priorité (RTL) : <code>getByRole</code> &gt; <code>getByLabelText</code> &gt; <code>getByText</code> &gt; <code>getByTestId</code> (dernier recours).</p>
+<h3>8. Story Storybook</h3>
+<pre><code class="lang-tsx">// Button.stories.tsx
+import type { Meta, StoryObj } from '@storybook/react';
+import { Button } from './Button';
+
+const meta: Meta&lt;typeof Button&gt; = {
+  component: Button,
+  args: { label: 'Cliquer', variant: 'primary' },
+};
+export default meta;
+
+export const Primary: StoryObj&lt;typeof Button&gt; = {};
+export const Loading: StoryObj&lt;typeof Button&gt; = { args: { loading: true } };
+export const Disabled: StoryObj&lt;typeof Button&gt; = { args: { disabled: true } };</code></pre>
+<h2>Anti-patterns / Pièges</h2>
+<ul>
+<li><strong>Props drilling &gt; 2 niveaux</strong> → passer au Context ou store, pas ajouter une prop de plus.</li>
+<li><strong>useEffect pour dériver l'état</strong> → utiliser <code>useMemo</code> ou calculer directement dans le render.</li>
+<li><strong>Index comme key dans les listes</strong> → utiliser un identifiant stable ; l'index cause des bugs de réconciliation.</li>
+<li><strong>Mutation directe du state</strong> → toujours retourner un nouvel objet/tableau en React.</li>
+<li><strong>Composant &gt; 300 lignes</strong> → signe de violation du SRP, extraire en sous-composants ou hooks.</li>
+<li><strong>Typage <code>any</code> ou <code>object</code></strong> → typer précisément ; utiliser <code>unknown</code> + assertion si nécessaire.</li>
+<li><strong>Logique métier dans le composant</strong> → extraire dans un custom hook ou un service pur.</li>
+<li><strong>forwardRef oublié</strong> → tout composant wrappé par une librairie UI doit exposer <code>forwardRef</code>.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>React Compiler</strong> (React 19+) : ne plus écrire <code>useMemo</code>/<code>useCallback</code> manuellement sur les composants compilés — laisser le compiler optimiser.</li>
+<li><strong>Server Components</strong> (Next.js App Router) : composants sans état ni événements → <code>async</code> Server Component par défaut, Client Component (<code>'use client'</code>) uniquement si nécessaire.</li>
+<li><strong>Signals</strong> (Angular 17+) : préférer <code>signal()</code> + <code>computed()</code> à <code>BehaviorSubject</code> pour l'état local.</li>
+<li><strong>Runes</strong> (Svelte 5) : remplacent les stores réactifs legacy — utiliser <code>$state</code>, <code>$derived</code>, <code>$effect</code>.</li>
+<li><strong>Co-location</strong> : placer test + story + styles + composant dans le même dossier <code>Button/</code>.</li>
 </ul>
 </article>
 </main>

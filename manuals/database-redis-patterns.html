@@ -97,22 +97,160 @@ cp -r claude-skills-collection/skills/database-redis-patterns ~/.claude/skills/<
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Redis Patterns</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Identifier le cas d'usage</strong> — Déterminer le pattern Redis approprié : cache-aside, write-through, pub/sub, streams, session store, rate limiting, leaderboard ou file d'attente.</li>
-<li><strong>Choisir les structures de données</strong> — Sélectionner le type Redis optimal (String, Hash, List, Set, Sorted Set, Stream, HyperLogLog) en fonction des opérations nécessaires.</li>
-<li><strong>Définir la stratégie de clés</strong> — Concevoir un nommage de clés cohérent avec des namespaces (ex: app:user:123:session) et définir les politiques de TTL appropriées.</li>
-<li><strong>Configurer la politique d'éviction</strong> — Choisir la politique de mémoire adaptée (allkeys-lru, volatile-lfu, noeviction) selon le cas d'usage et les contraintes mémoire.</li>
-<li><strong>Implémenter le pattern</strong> — Coder l'implémentation avec gestion des erreurs, fallback en cas d'indisponibilité Redis et sérialisation/désérialisation efficace.</li>
-<li><strong>Gérer la haute disponibilité</strong> — Configurer Redis Sentinel ou Redis Cluster selon les besoins de failover automatique et de scalabilité horizontale.</li>
-<li><strong>Monitorer et optimiser</strong> — Suivre les métriques clés (hit ratio, mémoire utilisée, latence, connections) avec Redis INFO et SLOWLOG.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Identifier le pattern adapté</h3>
+<table><thead><tr><th>Besoin</th><th>Pattern</th><th>Structure de données</th></tr></thead><tbody><tr><td>Cache lecture</td><td>Cache-aside / Write-through</td><td>String, Hash</td></tr><tr><td>Session utilisateur</td><td>Session store</td><td>Hash + TTL</td></tr><tr><td>Communication asynchrone</td><td>Pub/Sub</td><td>Channel</td></tr><tr><td>File d'attente durable</td><td>Streams</td><td>Stream</td></tr><tr><td>Compteur / Rate limiting</td><td>Incr atomique</td><td>String</td></tr><tr><td>Classement</td><td>Leaderboard</td><td>Sorted Set</td></tr><tr><td>Déduplication / ensemble</td><td>Membership</td><td>Set</td></tr><tr><td>Comptage unique approx.</td><td>HyperLogLog</td><td>HLL</td></tr></tbody></table>
+<h3>2. Concevoir le nommage des clés</h3>
+<p>Convention : <code>{app}:{entité}:{id}:{sous-clé}</code> — toujours en minuscules, séparateur <code>:</code>.</p>
+<pre><code>user:42:session          # session utilisateur
+product:sku:A123:stock   # stock d'un produit
+rate:api:ip:1.2.3.4      # compteur rate limit
+stream:orders            # stream de commandes
+leaderboard:weekly       # classement hebdo</code></pre>
+<p>Critères :</p>
 <ul>
-<li>Toujours définir un TTL sur les clés de cache pour éviter une croissance mémoire non contrôlée, sauf pour les données de référence permanentes.</li>
-<li>Ne jamais utiliser KEYS en production ; utiliser SCAN pour itérer sur les clés de manière non-bloquante.</li>
-<li>Toujours implémenter un mécanisme de cache stampede prevention (mutex, probabilistic early expiration) pour les clés à fort trafic.</li>
-<li>Utiliser les pipelines Redis pour regrouper les commandes et réduire la latence réseau lors d'opérations multiples.</li>
-<li>Prévoir un fallback applicatif en cas d'indisponibilité de Redis pour garantir la résilience du système.</li>
+<li>Longueur &lt; 64 chars (impact mémoire des clés)</li>
+<li>Jamais d'informations sensibles dans la clé elle-même</li>
+<li>Préfixe par environnement si Redis partagé : <code>prod:</code>, <code>staging:</code></li>
+</ul>
+<h3>3. Définir les TTL</h3>
+<pre><code class="lang-bash"># Cache applicatif : TTL court
+SET product:sku:A123 '{&quot;price&quot;:29.99}' EX 300
+
+# Session : TTL glissant via EXPIRE à chaque accès
+HSET user:42:session token abc123 role admin
+EXPIRE user:42:session 3600
+
+# Données de référence : TTL long ou absent (refresh manuel)
+SET config:feature-flags '{&quot;darkMode&quot;:true}' EX 86400</code></pre>
+<p>Politique d'éviction conseillée :</p>
+<ul>
+<li>Cache pur → <code>allkeys-lfu</code></li>
+<li>Cache + données persistantes mixées → <code>volatile-lfu</code></li>
+<li>Jamais d'éviction → <code>noeviction</code> (monitoring mémoire obligatoire)</li>
+</ul>
+<pre><code class="lang-bash">redis-cli CONFIG SET maxmemory-policy allkeys-lfu
+redis-cli CONFIG SET maxmemory 2gb</code></pre>
+<h3>4. Implémenter les patterns courants</h3>
+<h4>Cache-aside (read-through manuel)</h4>
+<pre><code class="lang-python">import redis, json
+
+r = redis.Redis(host='localhost', port=6379, decode_responses=True)
+
+def get_product(sku: str) -&gt; dict:
+    key = f&quot;product:sku:{sku}&quot;
+    cached = r.get(key)
+    if cached:
+        return json.loads(cached)          # cache hit
+    product = db.fetch_product(sku)        # fallback DB
+    r.set(key, json.dumps(product), ex=300)
+    return product</code></pre>
+<h4>Rate limiting (fenêtre glissante)</h4>
+<pre><code class="lang-python">import time
+
+def is_allowed(user_id: str, limit: int = 100, window: int = 60) -&gt; bool:
+    key = f&quot;rate:{user_id}:{int(time.time()) // window}&quot;
+    current = r.incr(key)
+    if current == 1:
+        r.expire(key, window)
+    return current &lt;= limit</code></pre>
+<h4>Pub/Sub (fanout temps réel)</h4>
+<pre><code class="lang-python"># Publisher
+r.publish(&quot;orders:new&quot;, json.dumps({&quot;order_id&quot;: 99, &quot;amount&quot;: 150.0}))
+
+# Subscriber (thread séparé)
+pubsub = r.pubsub()
+pubsub.subscribe(&quot;orders:new&quot;)
+for message in pubsub.listen():
+    if message[&quot;type&quot;] == &quot;message&quot;:
+        process(json.loads(message[&quot;data&quot;]))</code></pre>
+<h4>Redis Streams (file durable avec consumer groups)</h4>
+<pre><code class="lang-bash"># Publier un événement
+XADD orders:stream * order_id 99 amount 150 status pending
+
+# Créer un consumer group
+XGROUP CREATE orders:stream processors $ MKSTREAM
+
+# Consommer (atomique, at-least-once)
+XREADGROUP GROUP processors worker1 COUNT 10 BLOCK 2000 STREAMS orders:stream &gt;
+
+# Acquitter après traitement
+XACK orders:stream processors &lt;message-id&gt;</code></pre>
+<h4>Leaderboard (Sorted Set)</h4>
+<pre><code class="lang-bash"># Ajouter / mettre à jour un score
+ZADD leaderboard:weekly NX 4250 &quot;user:42&quot;
+
+# Top 10
+ZREVRANGE leaderboard:weekly 0 9 WITHSCORES
+
+# Rang d'un utilisateur (0-based)
+ZREVRANK leaderboard:weekly &quot;user:42&quot;</code></pre>
+<h3>5. Pipeline et transactions</h3>
+<pre><code class="lang-python"># Pipeline : batch de commandes, 1 aller-retour réseau
+pipe = r.pipeline()
+pipe.set(&quot;key1&quot;, &quot;v1&quot;, ex=60)
+pipe.incr(&quot;counter:daily&quot;)
+pipe.zadd(&quot;leaderboard:weekly&quot;, {&quot;user:42&quot;: 100})
+pipe.execute()
+
+# Transaction (MULTI/EXEC) : atomicité, pas de rollback
+with r.pipeline() as pipe:
+    pipe.multi()
+    pipe.decrby(&quot;stock:A123&quot;, 1)
+    pipe.incr(&quot;orders:count&quot;)
+    pipe.execute()</code></pre>
+<h3>6. Haute disponibilité</h3>
+<p><strong>Sentinel</strong> (failover automatique, setup simple) :</p>
+<pre><code class="lang-bash"># sentinel.conf
+sentinel monitor mymaster 127.0.0.1 6379 2
+sentinel down-after-milliseconds mymaster 5000
+sentinel failover-timeout mymaster 10000</code></pre>
+<p><strong>Cluster</strong> (sharding horizontal, &gt;= 6 noeuds recommandés) :</p>
+<pre><code class="lang-bash">redis-cli --cluster create \
+  node1:6379 node2:6379 node3:6379 \
+  node4:6379 node5:6379 node6:6379 \
+  --cluster-replicas 1</code></pre>
+<p>Critères de choix :</p>
+<ul>
+<li>&lt; 50 GB, failover seul → <strong>Sentinel</strong></li>
+<li>&gt; 50 GB ou scaling horizontal → <strong>Cluster</strong></li>
+</ul>
+<h3>7. Monitoring</h3>
+<pre><code class="lang-bash"># Métriques essentielles
+redis-cli INFO stats | grep -E &quot;keyspace_hits|keyspace_misses&quot;
+redis-cli INFO memory | grep used_memory_human
+redis-cli INFO clients | grep connected_clients
+redis-cli SLOWLOG GET 10          # top 10 commandes lentes
+
+# Hit ratio cible : &gt; 90%
+# Formule : hits / (hits + misses)</code></pre>
+<p>Alertes à configurer :</p>
+<ul>
+<li><code>used_memory</code> &gt; 80% du <code>maxmemory</code></li>
+<li><code>connected_clients</code> proche de <code>maxclients</code> (défaut 10 000)</li>
+<li><code>keyspace_misses</code> en hausse soudaine</li>
+<li><code>blocked_clients</code> &gt; 0 de façon persistante</li>
+</ul>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<ul>
+<li>**<code>KEYS <em></code> en production</em>* — bloque Redis (mono-thread). Remplacer par <code>SCAN 0 MATCH prefix:* COUNT 100</code>.</li>
+<li><strong>Clés sans TTL</strong> — mémoire croissante non contrôlée. Toujours définir ex/px sauf données permanentes avérées.</li>
+<li><strong>Cache stampede</strong> — multiples threads rechargent simultanément une clé expirée. Utiliser un verrou distribué (SETNX + TTL) ou probabilistic early expiration.</li>
+<li><strong>Sérialisation coûteuse</strong> — éviter XML/YAML ; préférer JSON compact ou MessagePack.</li>
+<li><strong>Valeurs trop grandes</strong> — une valeur &gt; 1 MB impacte la latence. Chunker ou stocker en DB avec pointeur Redis.</li>
+<li><strong>Transactions sur Cluster</strong> — MULTI/EXEC ne fonctionne que si toutes les clés sont dans le même slot. Utiliser les hash tags : <code>{user:42}:cart</code> et <code>{user:42}:session</code>.</li>
+<li><strong>Pub/Sub sans persistance</strong> — messages perdus si le subscriber est déconnecté. Préférer Streams pour garantir la livraison.</li>
+<li><strong>SELECT (bases multiples)</strong> — déconseillé en production (non supporté en Cluster). Utiliser des préfixes de clés à la place.</li>
+<li><strong>Connexions sans pool</strong> — créer une connexion par requête HTTP tue les performances. Toujours utiliser un connection pool (redis-py, StackExchange.Redis, Lettuce).</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Utiliser <strong>Redis 7.x+</strong> : LMPOP, ZMPOP, SINTERCARD, expiration de champs de hash natifs (Hash field TTL).</li>
+<li>Activer <strong>ACL</strong> (Access Control Lists) pour segmenter les accès par service.</li>
+<li><strong>TLS</strong> obligatoire en production (<code>tls-port 6380</code>, certificats Let's Encrypt ou PKI interne).</li>
+<li>Prefer <strong>RESP3</strong> (Redis 7 default) pour les clients modernes : meilleur typage, push notifications.</li>
+<li><strong>Keyspace notifications</strong> (<code>notify-keyspace-events Ex</code>) pour réagir aux expirations sans polling.</li>
+<li>Tester les patterns de charge avec <code>redis-benchmark -n 100000 -c 50 -d 256</code>.</li>
 </ul>
 </article>
 </main>

@@ -96,24 +96,166 @@ cp -r claude-skills-collection/skills/testing-cypress-e2e-guide ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Cypress E2E Guide</h1>
-<h2>Workflow</h2>
+<h2>1. Installation et configuration initiale</h2>
+<pre><code class="lang-bash">npm install cypress --save-dev
+npx cypress open          # génère la structure + ouvre l'UI de sélection</code></pre>
+<p>Structure générée :</p>
+<pre><code>cypress/
+  e2e/          ← specs
+  fixtures/     ← données JSON
+  support/
+    commands.ts ← commandes personnalisées
+    e2e.ts      ← hooks globaux (beforeEach, etc.)
+cypress.config.ts</code></pre>
+<p><code>cypress.config.ts</code> minimal (Cypress 13+) :</p>
+<pre><code class="lang-ts">import { defineConfig } from 'cypress';
+
+export default defineConfig({
+  e2e: {
+    baseUrl: 'http://localhost:3000',
+    viewportWidth: 1280,
+    viewportHeight: 720,
+    video: false,           // activer en CI
+    screenshotOnRunFailure: true,
+    setupNodeEvents(on, config) {
+      // plugins ici
+    },
+  },
+});</code></pre>
+<h2>2. Organisation des specs</h2>
+<p>Convention : <code>cypress/e2e/&lt;module&gt;/&lt;feature&gt;.cy.ts</code></p>
+<pre><code>cypress/e2e/
+  auth/
+    login.cy.ts
+    logout.cy.ts
+  checkout/
+    cart.cy.ts
+    payment.cy.ts</code></pre>
+<p>Critère de découpage : <strong>un fichier = un parcours utilisateur</strong> (pas un composant). Garder chaque spec indépendante : elle doit passer en isolation (<code>npx cypress run --spec 'cypress/e2e/auth/login.cy.ts'</code>).</p>
+<h2>3. Sélecteurs robustes</h2>
+<p>Priorité décroissante :</p>
 <ol>
-<li><strong>Initialiser le projet Cypress</strong> — Installer Cypress via <code>npm install cypress --save-dev</code>, générer la structure de dossiers avec <code>npx cypress open</code>, et configurer <code>cypress.config.ts</code> avec les paramètres de base (baseUrl, viewportWidth, viewportHeight).</li>
-<li><strong>Structurer les fichiers de test</strong> — Organiser les specs dans <code>cypress/e2e/</code> par fonctionnalité ou module métier. Utiliser une convention de nommage claire (<code>login.cy.ts</code>, <code>checkout.cy.ts</code>).</li>
-<li><strong>Créer des commandes personnalisées</strong> — Définir des commandes réutilisables dans <code>cypress/support/commands.ts</code> pour les actions répétitives (login, navigation, remplissage de formulaires). Typer les commandes avec des déclarations TypeScript.</li>
-<li><strong>Préparer les fixtures et données de test</strong> — Créer des fichiers JSON dans <code>cypress/fixtures/</code> pour les données de test. Utiliser <code>cy.fixture()</code> pour charger les données et découpler les tests des données dynamiques.</li>
-<li><strong>Intercepter les appels réseau</strong> — Utiliser <code>cy.intercept()</code> pour stubber ou espionner les requêtes API. Définir des réponses mockées pour isoler le frontend et stabiliser les tests.</li>
-<li><strong>Implémenter les assertions et vérifications</strong> — Combiner <code>cy.get()</code>, <code>cy.contains()</code>, <code>.should()</code> et <code>.within()</code> pour des assertions précises. Privilégier les sélecteurs <code>data-testid</code> pour la robustesse.</li>
-<li><strong>Configurer l'exécution en CI</strong> — Ajouter Cypress au pipeline CI avec <code>npx cypress run --headless</code>. Configurer les enregistrements vidéo, les screenshots en cas d'échec, et le parallélisme avec Cypress Cloud si nécessaire.</li>
-<li><strong>Analyser les résultats et maintenir les tests</strong> — Exploiter les rapports (Mochawesome, JUnit) pour le suivi. Identifier et corriger les tests flaky. Maintenir les sélecteurs et les données à jour.</li>
+<li><code>data-testid</code> (jamais touché par les refactos CSS/texte)</li>
+<li><code>aria-label</code> / rôle ARIA (bonus accessibilité)</li>
+<li><code>cy.contains()</code> pour les textes stables (labels, titres de page)</li>
+<li>Sélecteur CSS — en dernier recours uniquement</li>
 </ol>
-<h2>Règles</h2>
+<pre><code class="lang-html">&lt;!-- HTML --&gt;
+&lt;button data-testid=&quot;submit-order&quot;&gt;Commander&lt;/button&gt;</code></pre>
+<pre><code class="lang-ts">// Test
+cy.get('[data-testid=&quot;submit-order&quot;]').click();</code></pre>
+<h2>4. Commandes personnalisées</h2>
+<p><code>cypress/support/commands.ts</code> :</p>
+<pre><code class="lang-ts">Cypress.Commands.add('login', (email: string, password: string) =&gt; {
+  cy.request('POST', '/api/auth/login', { email, password })
+    .its('body.token')
+    .then((token) =&gt; {
+      localStorage.setItem('auth_token', token);
+    });
+});
+
+Cypress.Commands.add('visitAs', (role: 'admin' | 'user', path: string) =&gt; {
+  const creds = Cypress.env(`credentials_${role}`);
+  cy.login(creds.email, creds.password);
+  cy.visit(path);
+});</code></pre>
+<p><code>cypress/support/index.d.ts</code> (typage) :</p>
+<pre><code class="lang-ts">declare namespace Cypress {
+  interface Chainable {
+    login(email: string, password: string): Chainable&lt;void&gt;;
+    visitAs(role: 'admin' | 'user', path: string): Chainable&lt;void&gt;;
+  }
+}</code></pre>
+<p>Règle : <strong>ne jamais dupliquer la logique de login dans chaque spec</strong> — une commande, un seul endroit à maintenir.</p>
+<h2>5. Fixtures et données de test</h2>
+<pre><code class="lang-json">// cypress/fixtures/user.json
+{
+  &quot;email&quot;: &quot;test@example.com&quot;,
+  &quot;name&quot;: &quot;Alice Dupont&quot;,
+  &quot;role&quot;: &quot;admin&quot;
+}</code></pre>
+<pre><code class="lang-ts">// Dans le test
+cy.fixture('user').then((user) =&gt; {
+  cy.get('[data-testid=&quot;name-field&quot;]').type(user.name);
+});
+
+// Ou avec alias (recommandé)
+beforeEach(() =&gt; {
+  cy.fixture('user').as('user');
+});
+it('affiche le nom', function () {
+  cy.get('[data-testid=&quot;name-field&quot;]').should('contain.value', this.user.name);
+});</code></pre>
+<h2>6. Interception réseau</h2>
+<pre><code class="lang-ts">// Stubber une réponse
+cy.intercept('GET', '/api/products', { fixture: 'products.json' }).as('getProducts');
+cy.visit('/shop');
+cy.wait('@getProducts');
+cy.get('[data-testid=&quot;product-list&quot;]').should('have.length', 3);
+
+// Intercepter et modifier à la volée
+cy.intercept('POST', '/api/orders', (req) =&gt; {
+  req.reply({ statusCode: 422, body: { error: 'Stock insuffisant' } });
+}).as('failOrder');
+
+// Espionner sans modifier
+cy.intercept('GET', '/api/cart').as('getCart');
+cy.wait('@getCart').its('response.statusCode').should('eq', 200);</code></pre>
+<p>Critère : utiliser <code>cy.intercept()</code> + <code>cy.wait('@alias')</code> systématiquement à la place de <code>cy.wait(ms)</code>.</p>
+<h2>7. Gestion des variables d'environnement</h2>
+<p><code>cypress.env.json</code> (gitignore) :</p>
+<pre><code class="lang-json">{
+  &quot;credentials_admin&quot;: { &quot;email&quot;: &quot;admin@example.com&quot;, &quot;password&quot;: &quot;secret&quot; },
+  &quot;api_url&quot;: &quot;https://staging-api.example.com&quot;
+}</code></pre>
+<p>En CI (GitHub Actions) :</p>
+<pre><code class="lang-yaml">- name: Run Cypress
+  run: npx cypress run --headless
+  env:
+    CYPRESS_credentials_admin: '{&quot;email&quot;:&quot;${{ secrets.ADMIN_EMAIL }}&quot;,&quot;password&quot;:&quot;${{ secrets.ADMIN_PASS }}&quot;}'
+    CYPRESS_api_url: ${{ secrets.STAGING_API_URL }}</code></pre>
+<p>Accès dans les tests : <code>Cypress.env('api_url')</code>.</p>
+<h2>8. Intégration CI</h2>
+<pre><code class="lang-yaml"># .github/workflows/e2e.yml
+name: E2E
+on: [push, pull_request]
+jobs:
+  cypress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cypress-io/github-action@v6
+        with:
+          start: npm run dev
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 60
+          browser: chrome
+          record: true          # Cypress Cloud optionnel
+        env:
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}</code></pre>
+<p>Pour le parallélisme : <code>--parallel --group &quot;E2E Chrome&quot;</code> avec Cypress Cloud ou <code>cypress-split</code> (open source).</p>
+<h2>9. Rapports</h2>
+<pre><code class="lang-bash">npm install --save-dev mochawesome mochawesome-merge mochawesome-report-generator</code></pre>
+<p><code>cypress.config.ts</code> :</p>
+<pre><code class="lang-ts">reporter: 'mochawesome',
+reporterOptions: {
+  reportDir: 'cypress/reports',
+  overwrite: false,
+  html: false,
+  json: true,
+},</code></pre>
+<p>Script de merge :</p>
+<pre><code class="lang-bash">npx mochawesome-merge cypress/reports/*.json &gt; merged.json
+npx marge merged.json --reportDir cypress/reports/html</code></pre>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Alternative</th></tr></thead><tbody><tr><td><code>cy.wait(3000)</code></td><td><code>cy.wait('@alias')</code> ou assertion <code>.should('be.visible')</code></td></tr><tr><td>Sélecteur CSS <code>.btn-primary</code></td><td><code>data-testid=&quot;submit-btn&quot;</code></td></tr><tr><td>Partager un état entre specs via <code>before()</code> global</td><td><code>beforeEach()</code> ou commandes qui remontent l'état</td></tr><tr><td>Tester la logique métier en E2E</td><td>Tests unitaires / intégration pour la logique</td></tr><tr><td>Hard-coder les credentials dans le code</td><td><code>cypress.env.json</code> + variables CI</td></tr><tr><td><code>cy.visit()</code> dans chaque <code>it()</code></td><td>Factoriser dans <code>beforeEach()</code></td></tr><tr><td>Ignorer les tests flaky</td><td>Identifier avec <code>--spec</code> isolé, corriger <code>cy.intercept()</code> manquant</td></tr></tbody></table>
+<h2>Critères de décision — quand écrire un test E2E</h2>
 <ul>
-<li>Toujours utiliser des attributs <code>data-testid</code> plutôt que des sélecteurs CSS fragiles ou des textes susceptibles de changer.</li>
-<li>Ne jamais utiliser <code>cy.wait(ms)</code> avec un délai fixe ; préférer <code>cy.intercept()</code> combiné avec <code>cy.wait('@alias')</code> pour attendre les réponses réseau.</li>
-<li>Isoler chaque test : chaque spec doit pouvoir s'exécuter indépendamment sans dépendre de l'état laissé par un test précédent.</li>
-<li>Stocker les variables d'environnement sensibles (URLs, credentials) dans <code>cypress.env.json</code> ou les variables CI, jamais en dur dans le code.</li>
-<li>Limiter la portée des tests E2E aux parcours critiques ; déléguer les vérifications unitaires et d'intégration aux outils appropriés.</li>
+<li>Parcours critique métier (login, paiement, inscription) → <strong>toujours E2E</strong></li>
+<li>Validation de formulaire simple → test unitaire suffit</li>
+<li>Comportement API seul → test d'intégration backend</li>
+<li>Rendu conditionnel d'un composant → test unitaire (Vitest/Jest + Testing Library)</li>
+<li>Flux multi-pages impliquant auth + state → <strong>E2E</strong></li>
 </ul>
 </article>
 </main>

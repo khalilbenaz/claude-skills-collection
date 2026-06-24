@@ -96,38 +96,157 @@ cp -r claude-skills-collection/skills/dev-responsive-design-helper ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Responsive Design Helper</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Approche mobile-first</strong> : commencer par concevoir et coder pour le plus petit écran (320-375px), puis enrichir progressivement avec des media queries <code>min-width</code> pour les écrans plus larges — jamais l'inverse (desktop-first génère des surcharges CSS inutiles).</li>
-</ol>
-<ol>
-<li><strong>Définition des breakpoints</strong> : choisir les breakpoints basés sur le contenu et non les devices spécifiques (les modèles changent). Points de référence courants : 480px (grand mobile), 768px (tablette portrait), 1024px (tablette paysage / petit desktop), 1280px (desktop standard).</li>
-</ol>
-<ol>
-<li><strong>Layout fluide</strong> : utiliser des unités relatives (<code>%</code>, <code>vw</code>, <code>vh</code>, <code>dvh</code>) plutôt que des pixels fixes, les <code>fr</code> units de CSS Grid pour les grilles fluides, et les fonctions <code>clamp()</code>, <code>min()</code>, <code>max()</code> pour des valeurs auto-adaptatives sans media queries.</li>
-</ol>
-<ol>
-<li><strong>Typographie responsive</strong> : appliquer <code>clamp(min, preferred, max)</code> pour une échelle de taille fluide (ex. <code>clamp(1rem, 2.5vw, 1.5rem)</code>), définir une échelle typographique cohérente, et éviter les textes trop petits sur mobile (minimum 16px pour le corps).</li>
-</ol>
-<ol>
-<li><strong>Images responsives</strong> : utiliser <code>srcset</code> et <code>sizes</code> pour charger la résolution adaptée, l'élément <code>&lt;picture&gt;</code> pour le format artistique (art direction), <code>loading=&quot;lazy&quot;</code> pour le chargement différé, et proposer WebP/AVIF avec fallback JPEG/PNG.</li>
-</ol>
-<ol>
-<li><strong>Navigation adaptative</strong> : implémenter un hamburger menu ou bottom navigation sur mobile, un drawer/sidebar sur tablette, et la navigation complète sur desktop. Assurer la cohérence de l'expérience entre les patterns.</li>
-</ol>
-<ol>
-<li><strong>Touch-friendly</strong> : dimensionner les zones tactiles à minimum 44×44px (recommandation Apple/Google), gérer les gestes swipe si pertinent, et fournir des alternatives aux interactions <code>hover</code> pour les écrans tactiles (pas d'info uniquement au survol).</li>
-</ol>
-<ol>
-<li><strong>Testing multi-appareils</strong> : utiliser Chrome DevTools Device Mode pour les tests rapides, BrowserStack ou LambdaTest pour les vrais navigateurs/OS, et tester impérativement sur des appareils réels avant livraison (comportements gyroscopiques, performances CPU réelles).</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en étapes</h2>
+<h3>1. Diagnostic du problème</h3>
+<p>Avant de coder, identifier la cause :</p>
 <ul>
-<li>Toujours partir du mobile-first : coder la version mobile en base, enrichir avec <code>min-width</code>.</li>
-<li>Éviter les breakpoints basés sur des modèles d'appareils — les contenus dictent les breakpoints.</li>
-<li>Fournir du code complet avec les media queries intégrées, pas en séparé.</li>
-<li>Tester les performances sur mobile (CPU throttling 4x dans DevTools) — un layout responsive lent n'est pas acceptable.</li>
-<li>Documenter les choix de breakpoints et les raisons dans les commentaires CSS.</li>
+<li>Overflow horizontal → contenu avec largeur fixe trop large, ou <code>overflow: hidden</code> manquant sur <code>body</code></li>
+<li>Texte trop petit → <code>viewport meta</code> absent ou <code>font-size</code> en px fixe</li>
+<li>Layout cassé → Flexbox/Grid avec valeurs non fluides</li>
+<li>Images débordantes → absence de <code>max-width: 100%</code></li>
+</ul>
+<p>Vérifier en priorité :</p>
+<pre><code class="lang-html">&lt;!-- Obligatoire dans &lt;head&gt; — sans ça, mobile-first ne fonctionne pas --&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;</code></pre>
+<hr>
+<h3>2. Choix de l'approche de layout</h3>
+<table><thead><tr><th>Cas d'usage</th><th>Approche recommandée</th></tr></thead><tbody><tr><td>Grille multi-colonnes</td><td>CSS Grid + <code>fr</code></td></tr><tr><td>Alignement 1D (nav, card row)</td><td>Flexbox</td></tr><tr><td>Mise en page page entière</td><td>CSS Grid outer + Flexbox inner</td></tr><tr><td>Spacing/padding adaptatif</td><td><code>clamp()</code> sans media query</td></tr><tr><td>Composant avec breakpoint précis</td><td>Container Queries (2024+)</td></tr></tbody></table>
+<hr>
+<h3>3. Mobile-first : structure de base</h3>
+<p>Toujours écrire le style mobile <strong>sans</strong> media query, puis enrichir avec <code>min-width</code> :</p>
+<pre><code class="lang-css">/* Mobile — base, aucun media query */
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+/* Tablette portrait ≥ 640px */
+@media (min-width: 40rem) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Desktop ≥ 1024px */
+@media (min-width: 64rem) {
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr);
+    padding: 2rem;
+  }
+}</code></pre>
+<p>Breakpoints de référence (contenu-first, pas device-first) :</p>
+<ul>
+<li><code>40rem</code> (640px) — smartphones paysage, petites tablettes</li>
+<li><code>48rem</code> (768px) — tablette portrait</li>
+<li><code>64rem</code> (1024px) — tablette paysage / petit desktop</li>
+<li><code>80rem</code> (1280px) — desktop standard</li>
+<li><code>96rem</code> (1536px) — large desktop</li>
+</ul>
+<hr>
+<h3>4. Typographie fluide avec <code>clamp()</code></h3>
+<pre><code class="lang-css">:root {
+  --text-sm:   clamp(0.875rem, 1.5vw, 1rem);
+  --text-base: clamp(1rem,     2vw,   1.125rem);
+  --text-lg:   clamp(1.125rem, 2.5vw, 1.5rem);
+  --text-xl:   clamp(1.5rem,   4vw,   2.5rem);
+  --text-hero: clamp(2rem,     6vw,   4rem);
+}
+
+body {
+  font-size: var(--text-base);
+  line-height: 1.6;
+}</code></pre>
+<p>Règle absolue : minimum <code>1rem</code> (16px) pour le corps de texte sur mobile — en dessous, iOS zoome automatiquement sur les inputs.</p>
+<hr>
+<h3>5. Images responsives</h3>
+<pre><code class="lang-html">&lt;!-- Image simple avec densité --&gt;
+&lt;img
+  src=&quot;photo-800.jpg&quot;
+  srcset=&quot;photo-400.jpg 400w, photo-800.jpg 800w, photo-1200.jpg 1200w&quot;
+  sizes=&quot;(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw&quot;
+  alt=&quot;Description&quot;
+  loading=&quot;lazy&quot;
+  decoding=&quot;async&quot;
+&gt;
+
+&lt;!-- Art direction (cadrage différent selon taille) --&gt;
+&lt;picture&gt;
+  &lt;source media=&quot;(max-width: 639px)&quot; srcset=&quot;hero-portrait.webp&quot;&gt;
+  &lt;source media=&quot;(min-width: 640px)&quot; srcset=&quot;hero-landscape.webp&quot;&gt;
+  &lt;img src=&quot;hero-landscape.jpg&quot; alt=&quot;Hero&quot; loading=&quot;eager&quot;&gt;
+&lt;/picture&gt;</code></pre>
+<pre><code class="lang-css">/* Obligatoire pour toutes les images */
+img, video, svg {
+  max-width: 100%;
+  height: auto;
+}</code></pre>
+<hr>
+<h3>6. Navigation adaptative</h3>
+<pre><code class="lang-css">/* Mobile : bottom nav ou hamburger */
+.nav-desktop { display: none; }
+.nav-mobile  { display: flex; }
+
+@media (min-width: 64rem) {
+  .nav-desktop { display: flex; }
+  .nav-mobile  { display: none; }
+}</code></pre>
+<p>Zones tactiles — minimum <code>44×44px</code> (Apple HIG) / <code>48×48dp</code> (Google Material 3) :</p>
+<pre><code class="lang-css">.btn, a, button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0.75rem 1rem;
+}</code></pre>
+<hr>
+<h3>7. Container Queries (2024+ — support universel)</h3>
+<p>Préférer aux media queries pour les composants réutilisables :</p>
+<pre><code class="lang-css">.card-wrapper {
+  container-type: inline-size;
+  container-name: card;
+}
+
+/* Réagit à la taille du parent, pas du viewport */
+@container card (min-width: 400px) {
+  .card {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+  }
+}</code></pre>
+<hr>
+<h3>8. Testing</h3>
+<pre><code># DevTools Chrome — ordre de test
+1. Responsive Mode → glisser de 320px à 1440px progressivement
+2. CPU throttling 4x + réseau &quot;Slow 3G&quot; → vérifier les Core Web Vitals
+3. Onglet Lighthouse → Mobile audit
+4. Outil &quot;Accessibility&quot; → vérifier les tailles de cibles tactiles
+
+# Vrais appareils (obligatoire avant livraison)
+- iOS Safari (comportements spécifiques : safe-area, 100vh, scroll)
+- Android Chrome
+- Samsung Internet si cible grand public</code></pre>
+<p>Pour l'encoche et la Dynamic Island :</p>
+<pre><code class="lang-css">.header {
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+.footer {
+  padding-bottom: env(safe-area-inset-bottom);
+}</code></pre>
+<hr>
+<h2>Anti-patterns / pièges courants</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td><code>height: 100vh</code> sur mobile Safari</td><td>Layout cassé (barre d'adresse)</td><td>Utiliser <code>height: 100dvh</code></td></tr><tr><td><code>overflow-x: hidden</code> sur <code>body</code></td><td>Bloque <code>position: sticky</code></td><td>Appliquer sur un wrapper intermédiaire</td></tr><tr><td>Breakpoints en <code>px</code> dans le CSS</td><td>Ignore le zoom navigateur</td><td>Utiliser <code>rem</code> pour les breakpoints</td></tr><tr><td><code>user-scalable=no</code> dans viewport</td><td>Inaccessible (WCAG 1.4.4)</td><td>Supprimer cette propriété</td></tr><tr><td><code>hover</code> comme seul indicateur d'état</td><td>Invisible sur tactile</td><td>Toujours doubler avec <code>:focus-visible</code></td></tr><tr><td>Grid avec colonnes en <code>px</code> fixes</td><td>Overflow sur petits écrans</td><td>Utiliser <code>minmax(0, 1fr)</code> ou <code>auto-fill</code></td></tr><tr><td>Images sans <code>width</code>/<code>height</code> attrs</td><td>Layout Shift (mauvais CLS)</td><td>Toujours spécifier <code>width</code> et <code>height</code></td></tr></tbody></table>
+<hr>
+<h2>Garde-fous</h2>
+<ul>
+<li>Ne jamais utiliser <code>!important</code> pour corriger un problème responsive — signe d'architecture CSS désorganisée.</li>
+<li>Ne pas créer plus de 4-5 breakpoints : si le contenu exige plus, restructurer le composant.</li>
+<li>Tester le zoom navigateur à 200% — obligation WCAG 1.4.4.</li>
+<li>Valider avec l'outil &quot;Responsive&quot; de Firefox DevTools en complément de Chrome (rendu légèrement différent).</li>
+<li>Pour les projets Tailwind : utiliser <code>sm:</code>, <code>md:</code>, <code>lg:</code>, <code>xl:</code>, <code>2xl:</code> en mobile-first ; ne pas ajouter de breakpoints custom sans justification.</li>
 </ul>
 </article>
 </main>

@@ -96,29 +96,104 @@ cp -r claude-skills-collection/skills/prompt-optimizer ~/.claude/skills/</div><b
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Prompt Optimizer</h1>
-<h2>Étape 1 — Analyse (7 critères)</h2>
-<table><thead><tr><th>Critère</th><th>Score (1-5)</th><th>Problème</th></tr></thead><tbody><tr><td>Clarté</td><td></td><td></td></tr><tr><td>Spécificité</td><td></td><td></td></tr><tr><td>Structure</td><td></td><td></td></tr><tr><td>Contexte (rôle, audience, format)</td><td></td><td></td></tr><tr><td>Exemples (few-shot)</td><td></td><td></td></tr><tr><td>Contraintes (limites, garde-fous)</td><td></td><td></td></tr><tr><td>Format de sortie</td><td></td><td></td></tr></tbody></table>
-<h2>Étape 2 — Diagnostic</h2>
-<p>Identifie : trop vague, trop long, mauvais résultat, incohérent, format non respecté.</p>
-<h2>Étape 3 — Techniques appliquées</h2>
+<h2>Étape 1 — Collecte d'infos (si manquantes)</h2>
+<p>Avant d'analyser, vérifie que tu as :</p>
 <ul>
-<li><strong>Role prompting</strong> : &quot;Tu es un expert en...&quot;</li>
-<li><strong>Few-shot</strong> : 2-3 exemples input/output</li>
-<li><strong>Chain of thought</strong> : &quot;Raisonne étape par étape&quot;</li>
-<li><strong>Negative prompting</strong> : &quot;Ne fais PAS...&quot;</li>
-<li><strong>Output formatting</strong> : JSON, tableau, XML tags</li>
-<li><strong>Délimiteurs</strong> : XML, ```, --- pour structurer</li>
-<li><strong>Décomposition</strong> : découper en sous-tâches</li>
+<li><strong>Le prompt brut</strong> à optimiser (obligatoire).</li>
+<li><strong>Le LLM cible</strong> : GPT-4o, Claude, Gemini, Llama 3, Mistral… (influence les délimiteurs et la longueur optimale).</li>
+<li><strong>Le problème observé</strong> : sortie trop vague, format non respecté, hallucinations, trop longue, hors-sujet.</li>
+<li><strong>L'usage</strong> : system prompt, one-shot, few-shot, chain, RAG, agent.</li>
 </ul>
+<p>Si rien n'est précisé, optimise pour Claude Sonnet et documente les hypothèses.</p>
+<hr>
+<h2>Étape 2 — Audit (grille 7 critères)</h2>
+<p>Score rapide 1-5 ; ne justifie que les cases ≤ 3.</p>
+<table><thead><tr><th>Critère</th><th>Score</th><th>Problème identifié</th></tr></thead><tbody><tr><td>Clarté de la tâche</td><td></td><td></td></tr><tr><td>Spécificité / périmètre</td><td></td><td></td></tr><tr><td>Contexte (rôle, audience, domaine)</td><td></td><td></td></tr><tr><td>Exemples few-shot (0 = aucun)</td><td></td><td></td></tr><tr><td>Contraintes / garde-fous</td><td></td><td></td></tr><tr><td>Format de sortie défini</td><td></td><td></td></tr><tr><td>Longueur / densité adaptée</td><td></td><td></td></tr></tbody></table>
+<p><strong>Seuils d'action</strong> :</p>
+<ul>
+<li>Score moyen &lt; 3 → réécriture complète.</li>
+<li>1-2 critères ≤ 2 → réécriture ciblée.</li>
+<li>Tous ≥ 4 → micro-ajustements + variante.</li>
+</ul>
+<hr>
+<h2>Étape 3 — Techniques disponibles (choisir selon diagnostic)</h2>
+<h3>Rôle + contexte</h3>
+<pre><code>Tu es un [rôle expert] travaillant pour [contexte]. 
+Ton audience est [profil]. Ton objectif est [but précis].</code></pre>
+<h3>Few-shot (2-3 exemples structurés)</h3>
+<pre><code>Entrée : [exemple 1]
+Sortie : [sortie attendue 1]
+
+Entrée : [exemple 2]
+Sortie : [sortie attendue 2]
+
+Entrée : {{USER_INPUT}}
+Sortie :</code></pre>
+<blockquote>Règle : les exemples doivent couvrir des cas-limites, pas seulement le cas nominal.</blockquote>
+<h3>Chain-of-thought</h3>
+<pre><code>Avant de répondre, raisonne étape par étape dans un bloc &lt;thinking&gt;…&lt;/thinking&gt;.
+Fournis uniquement la réponse finale hors de ce bloc.</code></pre>
+<h3>Contraintes négatives</h3>
+<pre><code>Ne génère PAS de code commenté en français si les noms de variables sont en anglais.
+Ne dépasse PAS 200 mots.
+N'invente JAMAIS de référence bibliographique.</code></pre>
+<h3>Format de sortie explicite</h3>
+<pre><code>Réponds UNIQUEMENT en JSON valide, sans markdown, avec ce schéma :
+{&quot;titre&quot;: string, &quot;score&quot;: number, &quot;recommandations&quot;: string[]}</code></pre>
+<h3>Délimiteurs XML (recommandés pour Claude)</h3>
+<pre><code class="lang-xml">&lt;context&gt;…&lt;/context&gt;
+&lt;instructions&gt;…&lt;/instructions&gt;
+&lt;examples&gt;…&lt;/examples&gt;
+&lt;input&gt;{{USER_INPUT}}&lt;/input&gt;</code></pre>
+<h3>Décomposition (prompts longs)</h3>
+<p>Découpe en sous-prompts enchaînés : extraction → analyse → formatage. Utilise un prompt de coordination si c'est un agent.</p>
+<hr>
 <h2>Étape 4 — Prompt optimisé</h2>
-<p>Prompt réécrit avec annotations expliquant chaque amélioration.</p>
+<p>Produis le prompt réécrit <strong>en bloc de code copiable</strong>, puis annote chaque section avec <code>// → raison</code>.</p>
+<p>Exemple de structure annotée :</p>
+<pre><code>Tu es un expert en sécurité applicative (OWASP Top 10). // → rôle ancré
+Analyse le code suivant et identifie les vulnérabilités. // → tâche précise
+
+&lt;code&gt;
+{{CODE}}
+&lt;/code&gt;
+
+Pour chaque vulnérabilité trouvée :
+1. Nom (CWE si disponible) // → format structuré
+2. Ligne concernée
+3. Risque (critique/haut/moyen/faible)
+4. Correction recommandée (max 3 lignes de code)
+
+Ne signale PAS les warnings de style ou de linting. // → contrainte négative</code></pre>
+<hr>
 <h2>Étape 5 — Variantes</h2>
+<p>Fournis systématiquement deux versions :</p>
+<p><strong>Version minimale</strong> — efficace en tokens, idéale pour API à coût par token :</p>
+<pre><code>[version courte — ≤ 5 lignes, essentiel uniquement]</code></pre>
+<p><strong>Version complète</strong> — contrôle maximal, idéale pour production / system prompt :</p>
+<pre><code>[version longue — rôle + contexte + exemples + contraintes + format]</code></pre>
+<hr>
+<h2>Étape 6 — Validation</h2>
+<p>Propose 3 inputs de test couvrant :</p>
+<ol>
+<li><strong>Cas nominal</strong> — entrée standard.</li>
+<li><strong>Cas limite</strong> — entrée ambiguë ou incomplète.</li>
+<li><strong>Cas adversarial</strong> — entrée qui pourrait faire dérailler le prompt original.</li>
+</ol>
+<p>Indique le comportement attendu pour chacun.</p>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Prompt &quot;mille-feuille&quot;</td><td>&gt; 10 instructions mélangées</td><td>Décomposer en sous-prompts</td></tr><tr><td>Rôle générique</td><td>&quot;Tu es un assistant utile&quot;</td><td>Spécifier le domaine et le niveau d'expertise</td></tr><tr><td>Format implicite</td><td>Le LLM choisit markdown ou prose aléatoirement</td><td>Toujours déclarer le format de sortie attendu</td></tr><tr><td>Few-shot biaisé</td><td>Tous les exemples sont du même type</td><td>Diversifier (cas limites inclus)</td></tr><tr><td>Contraintes en double négatif</td><td>&quot;Ne pas ne pas faire X&quot;</td><td>Reformuler en positif clair</td></tr><tr><td>Température ignorée</td><td>Créativité vs déterminisme non contrôlée</td><td>Mentionner <code>temperature=0</code> pour tâches déterministes</td></tr><tr><td>Variables non balisées</td><td><code>{input}</code> confondu avec texte littéral</td><td>Utiliser <code>{{double_accolades}}</code> ou balises XML</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li><strong>Version courte</strong> : prompt minimal efficace</li>
-<li><strong>Version complète</strong> : contrôle maximum</li>
+<li><strong>Claude Sonnet / Opus</strong> : préférer les balises XML aux triples backticks pour délimiter les blocs de données.</li>
+<li><strong>GPT-4o</strong> : les instructions system + user séparées surpassent un prompt unique long.</li>
+<li><strong>Llama 3 / Mistral</strong> : éviter les instructions imbriquées profondes ; privilégier les listes numérotées.</li>
+<li><strong>RAG</strong> : toujours isoler le contexte récupéré dans une balise dédiée (<code>&lt;retrieved_context&gt;</code>) pour éviter la contamination du raisonnement.</li>
+<li><strong>Agents</strong> : chaque tool call doit avoir une instruction de fallback explicite en cas d'échec.</li>
+<li><strong>Coût</strong> : un prompt few-shot bien construit réduit souvent les tokens de sortie de 30-50 % (moins de reformulations inutiles).</li>
 </ul>
-<h2>Étape 6 — Tests</h2>
-<p>3 inputs de test pour valider l'amélioration.</p>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -96,28 +96,130 @@ cp -r claude-skills-collection/skills/prompt-chain-of-thought-designer ~/.claude
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Chain of Thought Designer</h1>
-<h2>Étape 1 — La tâche</h2>
-<p>Tâche, complexité, type d'input, output attendu.</p>
-<h2>Étape 2 — Décomposition logique</h2>
+<h2>Critères de décision — Quand utiliser CoT ?</h2>
+<table><thead><tr><th>Situation</th><th>Approche recommandée</th></tr></thead><tbody><tr><td>Réponse factuelle simple</td><td>Prompt direct, pas de CoT</td></tr><tr><td>Calcul ou logique multi-étapes</td><td><strong>Zero-shot CoT</strong></td></tr><tr><td>Tâche répétitive avec format strict</td><td><strong>Structured CoT</strong></td></tr><tr><td>Erreurs fréquentes sur un type de raisonnement</td><td><strong>Few-shot CoT</strong></td></tr><tr><td>Agents autonomes / tool calling</td><td><strong>Self-consistency + vérification</strong></td></tr><tr><td>Sortie critique (finance, médical, code)</td><td><strong>CoT + validation explicite</strong></td></tr></tbody></table>
+<p>Règle de base : si un humain expert ferait une brouillon avant de répondre, utilisez CoT.</p>
+<hr>
+<h2>Étape 1 — Cadrer la tâche</h2>
+<p>Répondre à ces 4 questions avant de concevoir le prompt :</p>
 <ol>
-<li>Que comprendre en premier ?</li>
-<li>Quelles sous-questions résoudre ?</li>
-<li>Dans quel ordre ?</li>
-<li>Quelles vérifications entre étapes ?</li>
+<li><strong>Input</strong> : quel format d'entrée (texte libre, JSON, question, code) ?</li>
+<li><strong>Output attendu</strong> : nombre, décision binaire, texte structuré, code ?</li>
+<li><strong>Complexité</strong> : combien de sous-étapes de raisonnement minimum ?</li>
+<li><strong>Sensibilité</strong> : une erreur intermédiaire silencieuse est-elle acceptable ?</li>
 </ol>
-<h2>Étape 3 — Design du prompt</h2>
+<hr>
+<h2>Étape 2 — Décomposition logique</h2>
+<p>Lister les sous-questions dans l'ordre de dépendance :</p>
+<pre><code>Tâche : &quot;Évaluer si une transaction est frauduleuse&quot;
+
+1. Quel est le montant et la devise ? → normaliser
+2. L'heure est-elle inhabituelle pour ce compte ?
+3. La localisation correspond-elle au profil ?
+4. Y a-t-il eu plusieurs tentatives récentes ?
+5. Score de risque global → décision binaire</code></pre>
+<p>Chaque étape doit produire une valeur utilisée par la suivante. Si ce n'est pas le cas, la décomposition est incomplète.</p>
+<hr>
+<h2>Étape 3 — Patterns de prompt</h2>
 <h3>Zero-shot CoT</h3>
-<p>&quot;Raisonne étape par étape avant de donner ta réponse finale.&quot;</p>
+<p>La formule la plus simple. Ajouter à la fin du prompt :</p>
+<pre><code>Raisonne étape par étape avant de donner ta réponse finale.</code></pre>
+<p>Variantes efficaces (2026) :</p>
+<pre><code>Avant de répondre, expose ton raisonnement en détail.
+Pense à voix haute, puis conclus.
+Let's think step by step.   # anglais reste plus performant sur certains modèles</code></pre>
 <h3>Structured CoT</h3>
-<pre><code>Étape 1 : [Analyse X]
-Étape 2 : [Déduis Y à partir de X]
-Étape 3 : [Vérifie Z]
-Étape 4 : [Conclus]</code></pre>
+<p>Pour forcer un format de sortie prévisible :</p>
+<pre><code>Réponds en suivant exactement cette structure :
+
+ÉTAPE 1 — Identification : [que sais-tu avec certitude ?]
+ÉTAPE 2 — Analyse : [quelles déductions logiques ?]
+ÉTAPE 3 — Vérification : [y a-t-il une contradiction ou un cas limite ?]
+ÉTAPE 4 — Conclusion : [réponse finale et niveau de confiance]</code></pre>
 <h3>Few-shot CoT</h3>
-<p>1-2 exemples complets montrant le raisonnement, pas juste la réponse.</p>
+<p>Fournir 1 à 3 exemples complets avec le raisonnement visible :</p>
+<pre><code>Exemple :
+Q : Un train part à 14h00 à 120 km/h. Un autre part à 15h00 à 160 km/h dans le même sens. À quelle heure le second rattrape-t-il le premier ?
+
+Raisonnement :
+- À 15h00, le premier train a 1h d'avance = 120 km d'écart.
+- Vitesse relative du second = 160 - 120 = 40 km/h.
+- Temps pour combler l'écart = 120 / 40 = 3 heures.
+- Le second rattrape le premier à 15h00 + 3h = 18h00.
+
+Réponse : 18h00.
+
+---
+Maintenant résous : [NOUVELLE QUESTION]</code></pre>
+<h3>Self-Consistency (pour tâches critiques)</h3>
+<p>Demander N raisonnements indépendants, prendre la réponse majoritaire :</p>
+<pre><code>Résous ce problème de 3 façons différentes, en partant d'angles différents.
+Compare tes 3 réponses. Si elles divergent, identifie l'erreur et corrige.
+Donne ensuite ta réponse finale.</code></pre>
+<h3>Plan-then-Execute (agents / tâches longues)</h3>
+<pre><code>PHASE 1 — Plan : liste les étapes nécessaires sans encore les exécuter.
+PHASE 2 — Validation du plan : y a-t-il des dépendances manquantes ou des risques ?
+PHASE 3 — Exécution : exécute chaque étape dans l'ordre, en marquant chaque résultat intermédiaire.
+PHASE 4 — Synthèse finale.</code></pre>
+<hr>
 <h2>Étape 4 — Prompt final prêt à l'emploi</h2>
-<h2>Étape 5 — Validation</h2>
-<p>3 cas de test incluant un piège où le raccourci donne une mauvaise réponse mais le CoT corrige.</p>
+<p>Structure type à copier :</p>
+<pre><code>[CONTEXTE / RÔLE]
+Tu es un expert en [domaine]. 
+
+[TÂCHE]
+[Description précise de ce que tu demandes]
+
+[DONNÉES D'ENTRÉE]
+[Insérer ici les données ou laisser un placeholder {{input}}]
+
+[INSTRUCTIONS DE RAISONNEMENT]
+Avant de donner ta réponse, raisonne étape par étape :
+1. Identifie les éléments clés.
+2. Analyse chaque élément.
+3. Vérifie les hypothèses.
+4. Conclus.
+
+[FORMAT DE SORTIE]
+Réponds avec :
+- Raisonnement : [ton analyse en bullet points]
+- Réponse finale : [réponse concise]
+- Niveau de confiance : [élevé / moyen / faible] + justification si moyen/faible</code></pre>
+<hr>
+<h2>Étape 5 — Validation du prompt</h2>
+<p>Tester avec au moins 3 cas :</p>
+<table><thead><tr><th>Type de cas</th><th>Objectif</th></tr></thead><tbody><tr><td><strong>Cas nominal</strong></td><td>Vérifier que le raisonnement mène au bon résultat</td></tr><tr><td><strong>Cas limite</strong></td><td>Input ambigu ou incomplet — le modèle doit signaler l'incertitude</td></tr><tr><td><strong>Cas piège</strong></td><td>Problème où l'intuition est fausse mais le CoT corrige</td></tr></tbody></table>
+<p><strong>Exemple de cas piège classique :</strong></p>
+<pre><code>Q : &quot;Si 5 machines fabriquent 5 pièces en 5 minutes, combien de minutes faut-il
+     à 100 machines pour fabriquer 100 pièces ?&quot;
+Réponse intuitive (fausse) : 100 minutes.
+CoT correct : 1 machine = 1 pièce en 5 min → 100 machines = 100 pièces en 5 min.</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne pas faire :</strong></p>
+<ul>
+<li>Demander CoT sur une tâche triviale → surcharge inutile, verbosité sans valeur</li>
+<li>Oublier de spécifier le format de sortie → raisonnement visible mais conclusion noyée</li>
+<li>Utiliser CoT seul pour des tâches critiques sans validation externe</li>
+<li>Chaîner plus de 7-8 étapes sans checkpoint intermédiaire (dérive du contexte)</li>
+<li>Mélanger raisonnement et exécution dans le même token stream sans séparateur clair</li>
+</ul>
+<p><strong>Signaux d'alerte sur un prompt CoT existant :</strong></p>
+<ul>
+<li>Le modèle saute des étapes ou les réordonne → reforcer avec <code>Structured CoT</code></li>
+<li>Le raisonnement est correct mais la conclusion est erronée → ajouter <code>Vérifie ta conclusion par rapport à ton raisonnement</code></li>
+<li>Résultats incohérents entre runs → utiliser <code>Self-Consistency</code></li>
+<li>Le raisonnement est verbeux sans valeur → simplifier le nombre d'étapes demandées</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Séparer raisonnement et réponse</strong> avec des balises XML (<code>&lt;thinking&gt;...&lt;/thinking&gt;</code> puis <code>&lt;answer&gt;...&lt;/answer&gt;</code>) — Claude et GPT-4o les respectent mieux que les headers Markdown dans les pipelines programmatiques.</li>
+<li><strong>Préférer l'anglais</strong> pour les instructions de raisonnement sur les benchmarks numériques et logiques — les modèles ont été davantage entraînés en anglais sur ces domaines.</li>
+<li><strong>Limiter la température</strong> (0.0–0.3) pour les tâches de raisonnement logique strict ; monter à 0.5–0.7 uniquement pour la génération créative avec CoT.</li>
+<li><strong>Cacher le raisonnement</strong> à l'utilisateur final si nécessaire : générer en deux appels (1er appel CoT interne, 2e appel synthèse uniquement).</li>
+<li><strong>Versionner les prompts CoT</strong> comme du code — un changement mineur de formulation peut dégrader significativement les performances.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

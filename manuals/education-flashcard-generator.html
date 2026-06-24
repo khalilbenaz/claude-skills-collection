@@ -96,25 +96,84 @@ cp -r claude-skills-collection/skills/education-flashcard-generator ~/.claude/sk
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Flashcard Generator</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Source</strong> : identifier le contenu à transformer (texte, cours, notes).</li>
-<li><strong>Extraction</strong> : repérer les concepts clés, définitions, formules, dates, faits.</li>
-<li><strong>Création</strong> : pour chaque concept, générer une carte :</li>
+<h2>Workflow en 5 étapes</h2>
+<h3>1. Identifier la source et le niveau</h3>
+<p>Avant de générer quoi que ce soit, établir :</p>
 <ul>
-<li><strong>Recto</strong> : question claire et précise</li>
-<li><strong>Verso</strong> : réponse concise</li>
+<li><strong>Source</strong> : texte brut, chapitre de cours, notes, sujet libre ?</li>
+<li><strong>Niveau</strong> : débutant (définitions + exemples), intermédiaire (mécanismes, distinctions), avancé (edge cases, nuances, erreurs classiques).</li>
+<li><strong>Objectif</strong> : examen proche → densité maximale ; révision légère → 15 cartes ciblées.</li>
 </ul>
-<li><strong>Types variés</strong> : définitions, vrai/faux, compléter la phrase, associations.</li>
-<li><strong>Organisation</strong> : grouper par thème/chapitre.</li>
-<li>Format de sortie : tableau ou liste structurée.</li>
-</ol>
-<h2>Règles</h2>
+<p>Si l'utilisateur ne précise pas le niveau, inférer depuis le vocabulaire du texte fourni.</p>
+<hr>
+<h3>2. Extraire les concepts mémorisables</h3>
+<p>Parcourir la source et classer les éléments en 4 catégories :</p>
+<table><thead><tr><th>Catégorie</th><th>Ce qu'on cherche</th><th>Priorité</th></tr></thead><tbody><tr><td>Définitions</td><td>Termes techniques, concepts nommés</td><td>Haute</td></tr><tr><td>Mécanismes</td><td>Processus, algorithmes, étapes ordonnées</td><td>Haute</td></tr><tr><td>Distinctions</td><td>A vs B, quand utiliser X plutôt que Y</td><td>Moyenne</td></tr><tr><td>Faits isolés</td><td>Dates, valeurs numériques, auteurs</td><td>Basse (sauf si explicitement demandé)</td></tr></tbody></table>
+<p>Écarter les détails périphériques et les exemples illustratifs qui ne valent pas une carte seule.</p>
+<hr>
+<h3>3. Rédiger les cartes selon le bon type</h3>
+<p>Choisir le type de carte adapté au contenu extrait :</p>
+<p><strong>Type A — Définition</strong></p>
+<pre><code>Recto : Qu'est-ce que la mémoire de travail ?
+Verso  : Système cognitif de capacité limitée (~7 éléments) qui maintient
+         et manipule temporairement l'information pendant une tâche.</code></pre>
+<p><strong>Type B — Mécanisme / Processus</strong></p>
+<pre><code>Recto : Quelles sont les 3 phases de la consolidation mémorielle ?
+Verso  : 1. Encodage (acquisition)
+         2. Stockage (consolidation synaptique)
+         3. Récupération (rappel ou reconnaissance)</code></pre>
+<p><strong>Type C — Distinction / Critère de décision</strong></p>
+<pre><code>Recto : Rappel vs Reconnaissance — quelle différence clé ?
+Verso  : Rappel = reproduire sans indice (exam réponse libre)
+         Reconnaissance = identifier parmi des options (QCM)
+         → Rappel est plus difficile et plus durable pour la mémoire.</code></pre>
+<p><strong>Type D — Compléter la phrase (cloze)</strong></p>
+<pre><code>Recto : La répétition espacée repose sur l'effet _______.
+Verso  : …de l'espacement (spacing effect) — réviser à intervalles
+         croissants ancre mieux qu'une session longue unique.</code></pre>
+<p><strong>Type E — Vrai / Faux + justification</strong></p>
+<pre><code>Recto : Vrai ou Faux : relire un cours plusieurs fois suffit pour mémoriser.
+Verso  : FAUX. La relecture passive crée une illusion de maîtrise
+         (fluency illusion). Le rappel actif (testing effect) est 2×
+         plus efficace selon Roediger &amp; Karpicke (2006).</code></pre>
+<hr>
+<h3>4. Critères de qualité par carte</h3>
+<p>Chaque carte doit passer ce filtre avant d'être incluse :</p>
 <ul>
-<li>Questions courtes et sans ambiguïté.</li>
-<li>Une seule idée par carte.</li>
-<li>Évite les questions trop faciles ou trop vagues.</li>
-<li>Propose 15-30 cartes par session pour ne pas surcharger.</li>
+<li>[ ] <strong>Une seule idée</strong> — si le verso dépasse 3 lignes, couper en 2 cartes.</li>
+<li>[ ] <strong>Question sans ambiguïté</strong> — on ne peut pas répondre &quot;ça dépend&quot; sans autre information.</li>
+<li>[ ] <strong>Verso auto-suffisant</strong> — lisible seul, sans contexte extérieur.</li>
+<li>[ ] <strong>Niveau adéquat</strong> — ni trivial (&quot;De quelle couleur est le ciel ?&quot;), ni trop dense (5 faits entassés).</li>
+<li>[ ] <strong>Ancrage concret</strong> — inclure un exemple, une formule ou un contre-exemple si le concept est abstrait.</li>
+</ul>
+<hr>
+<h3>5. Organiser et formater la sortie</h3>
+<p><strong>Volume recommandé :</strong></p>
+<ul>
+<li>Session initiale : 15–25 cartes (au-delà, fatigue cognitive).</li>
+<li>Révision ciblée : 8–12 cartes sur un sous-thème.</li>
+<li>Deck complet d'un cours : découper par chapitre, pas en une liste unique.</li>
+</ul>
+<p><strong>Format de sortie standard (Markdown tableau) :</strong></p>
+<pre><code class="lang-markdown">| # | Recto (Question) | Verso (Réponse) |
+|---|-----------------|-----------------|
+| 1 | ... | ... |
+| 2 | ... | ... |</code></pre>
+<p><strong>Format alternatif Anki-compatible (CSV copiable) :</strong></p>
+<pre><code>Question;Réponse;Étiquette
+&quot;Qu'est-ce que la potentialisation à long terme ?&quot;; &quot;Renforcement durable d'une synapse après stimulation répétée — mécanisme clé de l'apprentissage.&quot;;&quot;neurosciences&quot;</code></pre>
+<p>Proposer le format CSV si l'utilisateur mentionne Anki, Quizlet ou un outil de flashcards.</p>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Pourquoi c'est un problème</th><th>Correction</th></tr></thead><tbody><tr><td>Question trop vague : &quot;Parle-moi de X&quot;</td><td>Impossible à évaluer, réponse ouverte infinie</td><td>Reformuler : &quot;Quel est le rôle de X dans Y ?&quot;</td></tr><tr><td>Verso encyclopédique (&gt;5 lignes)</td><td>Surcharge cognitive, mémorisation impossible</td><td>Découper en N cartes atomiques</td></tr><tr><td>Recto contient la réponse</td><td>Aucune valeur de rappel actif</td><td>Reformuler sans indices dans la question</td></tr><tr><td>100% de cartes de définition</td><td>Monotonie, pas de transfert</td><td>Varier les types (A à E ci-dessus)</td></tr><tr><td>Cartes sans ancrage</td><td>Mémorisation fragile, pas de sens</td><td>Ajouter exemple concret ou contexte d'usage</td></tr><tr><td>Traduire mot à mot un chapitre dense</td><td>Mauvaise sélection, signal/bruit faible</td><td>Filtrer : seuls les concepts <em>testables</em> deviennent des cartes</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Répétition espacée</strong> : signaler à l'utilisateur d'importer dans Anki / RemNote pour bénéficier de l'algorithme SM-2 ou FSRS — ne pas faire des sessions de révision à la volée en une seule fois.</li>
+<li><strong>Interleaving</strong> : mélanger les thèmes dans un deck plutôt que de bloquer par chapitre — améliore la discrimination des concepts.</li>
+<li><strong>Testing effect</strong> : encourager l'utilisateur à se tester <em>avant</em> de relire le cours, pas après.</li>
+<li><strong>Génération active</strong> : proposer quelques cartes incomplètes (type cloze) même pour un débutant — l'effort de complétion renforce l'encodage.</li>
+<li><strong>Revue des erreurs</strong> : après une session, identifier les cartes ratées et créer des cartes &quot;correctif&quot; qui expliquent pourquoi l'erreur fréquente est fausse.</li>
 </ul>
 </article>
 </main>

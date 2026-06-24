@@ -97,37 +97,130 @@ cp -r claude-skills-collection/skills/marketing-growth-hacking-strategist ~/.cla
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Growth Hacking Strategist</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le funnel AARRR existant</strong> — cartographier les cinq étapes du framework Pirate Metrics : Acquisition (d'où viennent les utilisateurs), Activation (première expérience de valeur), Rétention (reviennent-ils), Referral (recommandent-ils), Revenue (paient-ils), et identifier les taux de conversion entre chaque étape.</li>
-</ol>
-<ol>
-<li><strong>Identifier le goulot d'étranglement principal</strong> — analyser les données pour trouver l'étape du funnel avec le plus grand potentiel d'amélioration, prioriser avec le framework ICE (Impact, Confiance, Facilité) ou RICE (Reach, Impact, Confidence, Effort), et concentrer les efforts sur le levier à plus fort impact.</li>
-</ol>
-<ol>
-<li><strong>Concevoir des expériences d'acquisition</strong> — tester différents canaux d'acquisition (SEO, content marketing, paid ads, partenariats, communautés, Product-Led Growth), calculer le CAC (coût d'acquisition client) par canal, et doubler les investissements sur les canaux les plus rentables.</li>
-</ol>
-<ol>
-<li><strong>Optimiser l'activation</strong> — réduire le time-to-value (temps entre l'inscription et la première valeur perçue), simplifier l'onboarding avec des guides interactifs et des tooltips, identifier le &quot;Aha moment&quot; du produit, et mesurer le taux d'activation par cohorte.</li>
-</ol>
-<ol>
-<li><strong>Renforcer la rétention</strong> — analyser les courbes de rétention par cohorte (J1, J7, J30), implémenter des mécanismes d'engagement (emails de réactivation, notifications push, gamification), identifier les features qui corrèlent avec la rétention long terme, et réduire le churn avec des enquêtes de sortie.</li>
-</ol>
-<ol>
-<li><strong>Créer des boucles virales</strong> — concevoir des mécanismes de referral (programme de parrainage, partage social intégré, invitations), mesurer le coefficient viral (K-factor = invitations x taux de conversion), optimiser chaque étape de la boucle, et tester les incitations (crédits, features premium, réductions).</li>
-</ol>
-<ol>
-<li><strong>Optimiser le revenue</strong> — tester les modèles de pricing (freemium, essai gratuit, tiers), optimiser les pages de pricing avec des tests A/B, réduire le churn des abonnés avec des offres de rétention, augmenter le LTV (Lifetime Value) avec l'upsell et le cross-sell, et s'assurer que LTV &gt; 3x CAC.</li>
-</ol>
-<ol>
-<li><strong>Itérer avec un processus structuré</strong> — maintenir un backlog d'expériences priorisées, exécuter des sprints de growth hebdomadaires (hypothèse, test, mesure, apprentissage), documenter chaque expérience avec les résultats, et partager les learnings avec l'équipe pour accélérer l'apprentissage collectif.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Cartographier le funnel AARRR actuel</h3>
+<p>Collecter les métriques réelles pour chaque étape avant toute action :</p>
+<table><thead><tr><th>Étape</th><th>Métrique clé</th><th>Outil de mesure</th></tr></thead><tbody><tr><td>Acquisition</td><td>Visiteurs uniques, CAC par canal</td><td>GA4, Mixpanel</td></tr><tr><td>Activation</td><td>Taux &quot;Aha moment&quot; (ex: premier post, premier achat)</td><td>Amplitude, Heap</td></tr><tr><td>Rétention</td><td>Courbe J1/J7/J30, churn mensuel</td><td>Mixpanel cohort</td></tr><tr><td>Referral</td><td>K-factor, taux de partage</td><td>Viral Loops, custom</td></tr><tr><td>Revenue</td><td>MRR, LTV, LTV/CAC</td><td>Stripe, ChartMogul</td></tr></tbody></table>
+<p>Exemple de calcul K-factor :</p>
+<pre><code>K = invitations_envoyées_par_user × taux_conversion_invitation
+# K &gt; 1 = croissance virale, K &lt; 1 = croissance linéaire
+# Ex : 3 invitations × 0,25 de conversion = K 0,75</code></pre>
+<h3>2. Identifier le goulot d'étranglement prioritaire</h3>
+<p>Utiliser le framework ICE pour prioriser les expériences :</p>
+<pre><code>Score ICE = (Impact × Confiance × Facilité) / 3
+# Impact  : 1-10 (combien ça déplace la métrique nord ?)
+# Confiance : 1-10 (données probantes ?)
+# Facilité : 1-10 (effort d'implémentation inversé)</code></pre>
+<p>Critères de décision :</p>
 <ul>
-<li>Toujours baser les décisions sur les données et non sur l'intuition — chaque expérience doit avoir une hypothèse mesurable et un critère de succès défini avant lancement.</li>
-<li>Prioriser la rétention avant l'acquisition — acquérir des utilisateurs dans un produit qui ne retient pas est comme remplir un seau percé.</li>
-<li>Respecter l'éthique et l'expérience utilisateur — les dark patterns et les tactiques manipulatrices détruisent la confiance et nuisent à la croissance long terme.</li>
-<li>Mesurer le LTV/CAC ratio comme indicateur de santé global — un ratio inférieur à 3 indique un modèle non viable à long terme.</li>
-<li>Documenter rigoureusement chaque expérience (hypothèse, méthode, résultats, apprentissages) — la valeur du growth hacking réside autant dans les apprentissages que dans les succès.</li>
+<li><strong>Rétention J7 &lt; 25 %</strong> → priorité #1 avant toute acquisition</li>
+<li><strong>Taux d'activation &lt; 40 %</strong> → optimiser l'onboarding avant le referral</li>
+<li><strong>LTV/CAC &lt; 3</strong> → revoir le pricing ou réduire le CAC avant de scaler</li>
+<li><strong>K-factor &gt; 0,5</strong> → investir dans la boucle virale</li>
+</ul>
+<h3>3. Acquisition — trouver les canaux rentables</h3>
+<p>Tester 3 à 5 canaux en parallèle avec un budget fixe, mesurer le CAC réel :</p>
+<pre><code class="lang-bash"># Template de suivi CAC par canal (CSV / Google Sheets)
+Canal,Dépense,Inscriptions,Activations,CAC_brut,CAC_activé
+SEO,0,450,180,0,0
+Paid_Google,1200,95,62,12.6,19.4
+LinkedIn_Ads,800,40,28,20,28.6
+Referral,150,220,195,0.7,0.8
+Cold_email,200,38,22,5.3,9.1</code></pre>
+<p>Règle de coupure : si CAC_activé &gt; LTV/3 après 2 semaines → stopper le canal.</p>
+<p>Canaux PLG (Product-Led Growth) à privilégier en 2026 :</p>
+<ul>
+<li>Freemium avec limite qui crée la friction au bon moment</li>
+<li>Intégrations (embed dans Slack, Notion, etc.)</li>
+<li>Templates publics/communauté (SEO + activation)</li>
+<li>API publique pour les développeurs</li>
+</ul>
+<h3>4. Activation — réduire le time-to-value</h3>
+<p>Identifier l'Aha moment avec une analyse de corrélation :</p>
+<pre><code class="lang-python"># Pseudocode : trouver les actions corrélées à la rétention J30
+actions = ['created_first_project', 'invited_teammate', 'exported_report']
+for action in actions:
+    users_who_did = cohort[cohort[action] == True]['retained_d30'].mean()
+    users_who_not = cohort[cohort[action] == False]['retained_d30'].mean()
+    lift = users_who_did / users_who_not
+    print(f&quot;{action}: lift rétention J30 = {lift:.2f}x&quot;)</code></pre>
+<p>Checklist onboarding haute conversion :</p>
+<ul>
+<li>[ ] Inscription en &lt; 60 secondes (SSO obligatoire)</li>
+<li>[ ] Valeur perçue en &lt; 5 minutes (demo data ou template pré-rempli)</li>
+<li>[ ] Séquence email J0/J1/J3/J7 déclenchée par comportement (pas par temps)</li>
+<li>[ ] Progress bar ou checklist de démarrage visible</li>
+<li>[ ] Supprimer tout champ de formulaire non-indispensable à l'étape 1</li>
+</ul>
+<h3>5. Rétention — analyser par cohorte</h3>
+<pre><code class="lang-sql">-- Courbe de rétention par semaine d'inscription (BigQuery / Redshift)
+SELECT
+  DATE_TRUNC(first_seen, WEEK) AS cohort_week,
+  DATE_DIFF(activity_date, first_seen, DAY) AS day_number,
+  COUNT(DISTINCT user_id) AS active_users
+FROM user_activity
+GROUP BY 1, 2
+ORDER BY 1, 2;</code></pre>
+<p>Leviers rétention selon le day_number critique :</p>
+<ul>
+<li><strong>Churn J1-J3</strong> → problème d'activation, revoir l'onboarding</li>
+<li><strong>Churn J7-J14</strong> → manque d'habitude, ajouter triggers comportementaux</li>
+<li><strong>Churn J30+</strong> → problème de valeur core, revoir le product-market fit</li>
+</ul>
+<h3>6. Referral — construire la boucle virale</h3>
+<p>Structure d'un programme de referral efficace :</p>
+<pre><code>Incitation bilatérale :  parrain +X  /  filleul +Y
+Déclencheur timing :     juste après l'Aha moment (pas à l'inscription)
+Friction minimale :      lien unique, pas de création de compte pour partager
+Tracking :               UTM + referral_code dans l'URL</code></pre>
+<p>Exemple de calcul de ROI referral :</p>
+<pre><code>Coût referral = reward_parrain + reward_filleul = 10€ + 10€ = 20€
+LTV filleul moyen = 180€
+ROI = (180 - 20) / 20 = 800%
+vs CAC paid ads = 45€ → referral 2,25x moins cher</code></pre>
+<h3>7. Revenue — optimiser le pricing</h3>
+<p>Tests A/B pricing à prioriser :</p>
+<ul>
+<li><strong>Ancrage</strong> : afficher le plan le plus cher en premier</li>
+<li><strong>Plan recommandé</strong> : badge visuel sur le plan milieu de gamme</li>
+<li><strong>Facturation annuelle</strong> : proposer -20 % pour réduire le churn</li>
+<li><strong>Grandfathering</strong> : protéger les anciens clients lors d'une hausse de prix</li>
+</ul>
+<p>Métriques de santé revenue (seuils 2026) :</p>
+<pre><code>LTV/CAC   &gt; 3x      → viable
+CAC payback &lt; 12 mois → sain pour SaaS B2B
+Net Revenue Retention (NRR) &gt; 110 % → expansion &gt; churn
+Logo churn mensuel  &lt; 2 %   → rétention correcte</code></pre>
+<h3>8. Itérer — processus de growth sprint</h3>
+<p>Template d'une expérience documentée :</p>
+<pre><code class="lang-markdown">## Expérience #42 — [Titre court]
+**Hypothèse** : Si [action], alors [métrique] augmentera de [X]% car [raison].
+**Critère de succès** : +15% taux d'activation J7 (stat sig 95%, n=500)
+**Durée** : 2 semaines
+**Résultat** : +8% (non significatif, p=0.12)
+**Apprentissage** : Le segment mobile ne répond pas à ce trigger — à retester desktop.
+**Prochaine étape** : segmenter par device dans l'expérience suivante.</code></pre>
+<p>Cadence recommandée :</p>
+<ul>
+<li>Lundi : revue métriques + priorisation ICE</li>
+<li>Mardi-Jeudi : implémentation + lancement</li>
+<li>Vendredi : analyse résultats + documentation</li>
+</ul>
+<h2>Anti-patterns et pièges</h2>
+<ul>
+<li><strong>Scaler avant product-market fit</strong> : dépenser en paid ads quand la rétention J30 &lt; 20 % = argent brûlé.</li>
+<li><strong>Dark patterns</strong> : faux comptes à rebours, abonnements cachés, désinscription difficile — détruisent la confiance et exposent aux régulations (RGPD, DSA 2026).</li>
+<li><strong>Optimiser une étape isolée</strong> : améliorer le taux d'inscription sans regarder le taux d'activation fausse les métriques.</li>
+<li><strong>Tests A/B trop courts</strong> : conclure avant la taille d'échantillon requise → faux positifs. Utiliser un calculateur de puissance statistique.</li>
+<li><strong>Ignorer les cohortes</strong> : les métriques agrégées cachent la dégradation de rétention sur les nouvelles cohortes.</li>
+<li><strong>Copier les tactiques hors contexte</strong> : le growth loop Dropbox (stockage bonus) ne fonctionne que si le produit est naturellement collaboratif.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>AI-powered personalization</strong> : utiliser les LLMs pour personnaliser les séquences d'onboarding en temps réel selon le comportement (ex: contenu de l'email J1 adapté au job title détecté).</li>
+<li><strong>Zero-party data</strong> : collecter les préférences explicitement (quiz d'onboarding) plutôt que d'inférer — conformité RGPD + meilleure personnalisation.</li>
+<li><strong>Community-Led Growth</strong> : Discord/Slack communautaire comme canal d'acquisition et de rétention — coût d'acquisition proche de zéro à maturité.</li>
+<li><strong>Micro-conversions tracking</strong> : instrumenter les étapes intermédiaires (scroll depth, feature hover) pour diagnostiquer les frictions avant que les utilisateurs quittent.</li>
+<li><strong>PLG + Sales motion</strong> : déclencher un contact Sales automatiquement quand un utilisateur freemium atteint les limites du plan (PQL = Product Qualified Lead).</li>
 </ul>
 </article>
 </main>

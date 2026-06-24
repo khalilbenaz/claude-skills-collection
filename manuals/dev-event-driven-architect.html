@@ -97,22 +97,179 @@ cp -r claude-skills-collection/skills/dev-event-driven-architect ~/.claude/skill
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Event-Driven Architect</h1>
 <h2>Workflow</h2>
-<ol>
-<li>Identification des événements métier (domain events, integration events) — modéliser les faits immuables qui se sont produits dans le domaine, nommés au passé (OrderPlaced, PaymentProcessed)</li>
-<li>Choix du broker (RabbitMQ, Kafka, Azure Service Bus, Redis Streams) avec justification — évaluer les besoins de débit, de rétention, d'ordering et de rejeu avant de choisir</li>
-<li>Design des topics/queues et routing (exchanges, partitions, consumer groups) — définir la topologie de messages selon les patterns de consommation et les exigences de scalabilité</li>
-<li>Implémentation du pattern choisi (pub/sub, saga, event sourcing, CQRS) — fournir le code complet des producteurs, consommateurs et handlers dans le langage de l'utilisateur</li>
-<li>Gestion de l'idempotence et du ordering (deduplication, exactly-once, outbox pattern) — chaque consommateur doit gérer les doublons ; l'outbox pattern garantit la cohérence avec la base de données</li>
-<li>Error handling (dead letter queue, retry policies, poison messages) — définir les stratégies de retry exponentielles, les DLQ et les alertes sur les messages empoisonnés</li>
-<li>Monitoring et observabilité des flux (message lag, consumer health, tracing) — instrumenter les producers et consumers avec correlation IDs et métriques de lag pour détecter les blocages</li>
-<li>Schema evolution et versioning des événements — adopter une stratégie de compatibilité (forward/backward) et un schema registry pour éviter les ruptures de contrat</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Identifier les événements métier</h3>
+<p>Modéliser les faits immuables nommés <strong>au passé</strong> (verbe passé + sujet) :</p>
+<pre><code>OrderPlaced / PaymentProcessed / UserRegistered / ShipmentDispatched</code></pre>
+<p>Distinguer deux types :</p>
 <ul>
-<li>Adapte l'implémentation au stack de l'utilisateur (.NET, Node, Python, Java, Go...) avec des exemples de code concrets utilisant les bibliothèques adaptées à son broker</li>
-<li>Privilégie la simplicité : une architecture événementielle ajoute de la complexité opérationnelle ; ne l'adopter que si les bénéfices (découplage, scalabilité, auditabilité) le justifient</li>
-<li>Fournis toujours des exemples de code pour les patterns critiques (outbox, saga, consumer idempotent)</li>
-<li>Justifie chaque choix technique (broker, pattern) avec ses trade-offs (latence, cohérence éventuelle, complexité)</li>
+<li><strong>Domain event</strong> : interne à un bounded context (même déploiement possible).</li>
+<li><strong>Integration event</strong> : traverse les frontières de service → passe obligatoirement par un broker.</li>
+</ul>
+<p>Pratiquer l'<strong>Event Storming</strong> pour découvrir les événements avec les parties métier avant d'écrire la moindre ligne de code.</p>
+<hr>
+<h3>2. Choisir le broker</h3>
+<table><thead><tr><th>Critère</th><th>RabbitMQ</th><th>Kafka</th><th>Azure Service Bus</th><th>Redis Streams</th></tr></thead><tbody><tr><td>Débit</td><td>Moyen (50 k msg/s)</td><td>Très élevé (M msg/s)</td><td>Moyen</td><td>Faible-moyen</td></tr><tr><td>Rétention</td><td>Non (ack = supprimé)</td><td>Oui (configurable)</td><td>14 jours max</td><td>Configurable</td></tr><tr><td>Ordering strict</td><td>Par queue</td><td>Par partition</td><td>Par session</td><td>Par stream</td></tr><tr><td>Rejeu</td><td>Non natif</td><td>Oui</td><td>Non natif</td><td>Oui</td></tr><tr><td>Complexité opé.</td><td>Faible</td><td>Élevée</td><td>Faible (SaaS)</td><td>Très faible</td></tr></tbody></table>
+<p><strong>Règle de sélection :</strong></p>
+<ul>
+<li>Audit trail / event sourcing / gros débit → <strong>Kafka</strong></li>
+<li>Workflow, saga, routing complexe → <strong>RabbitMQ</strong></li>
+<li>Équipe Azure sans infra dédiée → <strong>Azure Service Bus</strong></li>
+<li>Cache + messaging léger → <strong>Redis Streams</strong></li>
+</ul>
+<hr>
+<h3>3. Topologie topics / queues</h3>
+<p><strong>RabbitMQ — exchange fanout + routing :</strong></p>
+<pre><code>Exchange: order.events (type: topic)
+  → order.placed        → queue: billing.order-placed
+  → order.placed        → queue: inventory.order-placed
+  → order.cancelled     → queue: billing.order-cancelled</code></pre>
+<p><strong>Kafka — topics + partitions :</strong></p>
+<pre><code>Topic: order-events          (partitions: 12, replication: 3)
+Topic: payment-events        (partitions: 6,  replication: 3)
+Consumer group: billing-svc  → offset par partition géré par Kafka</code></pre>
+<p>Règle : <strong>1 consumer group = 1 responsabilité</strong>. Ne pas partager un group entre services différents.</p>
+<hr>
+<h3>4. Implémenter le pattern</h3>
+<h4>Pub/Sub (découplage simple)</h4>
+<pre><code class="lang-csharp">// Producteur (.NET + MassTransit + RabbitMQ)
+await _publishEndpoint.Publish(new OrderPlaced
+{
+    OrderId   = order.Id,
+    CustomerId = order.CustomerId,
+    OccurredAt = DateTimeOffset.UtcNow
+});
+
+// Consommateur
+public class OrderPlacedConsumer : IConsumer&lt;OrderPlaced&gt;
+{
+    public async Task Consume(ConsumeContext&lt;OrderPlaced&gt; context)
+    {
+        // logique idempotente ici
+    }
+}</code></pre>
+<h4>Outbox Pattern (cohérence sans saga)</h4>
+<pre><code class="lang-sql">-- Table outbox dans la même base que l'entité
+CREATE TABLE outbox_messages (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type        VARCHAR(200) NOT NULL,
+    payload     JSONB        NOT NULL,
+    created_at  TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    processed_at TIMESTAMPTZ
+);</code></pre>
+<pre><code class="lang-csharp">// Dans la même transaction que la mutation métier
+await db.OutboxMessages.AddAsync(new OutboxMessage
+{
+    Type    = nameof(OrderPlaced),
+    Payload = JsonSerializer.Serialize(evt)
+});
+await db.SaveChangesAsync(); // atomique avec l'entité
+
+// Worker séparé publie les messages non traités toutes les N secondes</code></pre>
+<h4>Saga (orchestration de compensation)</h4>
+<pre><code class="lang-csharp">// MassTransit StateMachine
+public class OrderSaga : MassTransitStateMachine&lt;OrderSagaState&gt;
+{
+    public State PaymentPending { get; private set; }
+    public State Completed      { get; private set; }
+    public State Compensating   { get; private set; }
+
+    public OrderSaga()
+    {
+        Initially(
+            When(OrderPlaced)
+                .TransitionTo(PaymentPending)
+                .Publish(ctx =&gt; new RequestPayment { OrderId = ctx.Saga.CorrelationId }));
+
+        During(PaymentPending,
+            When(PaymentFailed)
+                .TransitionTo(Compensating)
+                .Publish(ctx =&gt; new CancelOrder { OrderId = ctx.Saga.CorrelationId }));
+    }
+}</code></pre>
+<h4>CQRS + Event Sourcing (audit total)</h4>
+<pre><code class="lang-csharp">// Aggregate reconstruit depuis les events
+public class Order
+{
+    private readonly List&lt;IDomainEvent&gt; _events = new();
+
+    public static Order Reconstitute(IEnumerable&lt;IDomainEvent&gt; history)
+    {
+        var order = new Order();
+        foreach (var e in history) order.Apply(e);
+        return order;
+    }
+
+    private void Apply(OrderPlaced e) { /* muter l'état */ }
+}</code></pre>
+<hr>
+<h3>5. Idempotence et ordering</h3>
+<p><strong>Idempotence :</strong></p>
+<pre><code class="lang-csharp">// Vérifier si l'événement a déjà été traité (stocké dans DB ou cache Redis)
+if (await _processedEvents.ExistsAsync(context.Message.EventId))
+    return; // skip silencieux
+
+await ProcessAsync(context.Message);
+await _processedEvents.MarkAsync(context.Message.EventId, ttl: TimeSpan.FromDays(7));</code></pre>
+<p><strong>Ordering strict :</strong> utiliser une clé de partition cohérente (<code>CustomerId</code>, <code>OrderId</code>) pour que les messages d'une même entité atterrissent dans la même partition Kafka ou la même queue RabbitMQ.</p>
+<hr>
+<h3>6. Error handling</h3>
+<pre><code>Tentative 1 → échec → retry après 5 s
+Tentative 2 → échec → retry après 30 s
+Tentative 3 → échec → Dead Letter Queue (DLQ)</code></pre>
+<pre><code class="lang-csharp">// MassTransit retry + DLQ
+cfg.ReceiveEndpoint(&quot;order-placed&quot;, ep =&gt;
+{
+    ep.UseMessageRetry(r =&gt; r.Exponential(3, TimeSpan.FromSeconds(5),
+                                             TimeSpan.FromSeconds(60),
+                                             TimeSpan.FromSeconds(5)));
+    ep.UseDeadLetterQueue(&quot;order-placed-dlq&quot;);
+    ep.ConfigureConsumer&lt;OrderPlacedConsumer&gt;(context);
+});</code></pre>
+<p>Alerter sur toute montée du DLQ (metric : <code>dlq_message_count &gt; 0</code>).</p>
+<hr>
+<h3>7. Monitoring et observabilité</h3>
+<p>Métriques essentielles :</p>
+<ul>
+<li><strong>Consumer lag</strong> (Kafka) : <code>kafka_consumer_lag_sum</code> — alerter si &gt; seuil sur 5 min.</li>
+<li><strong>Queue depth</strong> (RabbitMQ/ASB) : messages accumulés = consumer lent ou mort.</li>
+<li><strong>DLQ count</strong> : tout message en DLQ = bug ou données invalides.</li>
+<li><strong>End-to-end latency</strong> : temps entre publication et traitement (tracer via <code>CorrelationId</code>).</li>
+</ul>
+<pre><code class="lang-csharp">// Injecter le CorrelationId dans le header de chaque message
+Activity.Current?.SetTag(&quot;messaging.message_id&quot;, message.EventId.ToString());
+Activity.Current?.SetTag(&quot;messaging.destination&quot;,  topicName);</code></pre>
+<hr>
+<h3>8. Schema evolution</h3>
+<p>Stratégie recommandée : <strong>backward + forward compatible</strong> via <strong>Confluent Schema Registry</strong> (Avro) ou <strong>JSON Schema</strong> versioned.</p>
+<p>Règles :</p>
+<ul>
+<li><strong>Ajouter</strong> un champ optionnel → OK (backward compatible).</li>
+<li><strong>Supprimer</strong> un champ → KO sans migration consommateurs.</li>
+<li><strong>Renommer</strong> → créer un nouveau champ, déprécier l'ancien, supprimer après migration.</li>
+</ul>
+<pre><code class="lang-json">// v1
+{ &quot;orderId&quot;: &quot;...&quot;, &quot;amount&quot;: 100 }
+
+// v2 — ajout optionnel, rétrocompatible
+{ &quot;orderId&quot;: &quot;...&quot;, &quot;amount&quot;: 100, &quot;currency&quot;: &quot;TND&quot; }</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td><strong>Event as command</strong> nommé <code>ProcessOrder</code></td><td>Couplage fort, orchestration cachée</td><td>Renommer en <code>OrderPlaced</code> — le fait, pas l'ordre</td></tr><tr><td><strong>Payload trop gros</strong> (embed entité complète)</td><td>Overhead réseau, couplage schéma</td><td>Stocker l'ID + champs essentiels ; consumer fetch si besoin</td></tr><tr><td><strong>Saga trop large</strong> (10+ étapes)</td><td>Impossible à déboguer</td><td>Découper en sous-sagas ou passer à chorégraphie</td></tr><tr><td><strong>Pas d'idempotence</strong></td><td>Messages dupliqués → double facturation</td><td>EventId unique + table <code>processed_events</code></td></tr><tr><td><strong>Topic générique</strong> (<code>events</code>)</td><td>Impossible à scaler/monitorer</td><td>1 topic par aggregate type ou domaine</td></tr><tr><td><strong>Consumer partage l'ORM</strong></td><td>Couplage DB inter-services</td><td>Consumer expose sa propre projection (read model)</td></tr><tr><td><strong>Ignorer le DLQ</strong></td><td>Perte de données silencieuse</td><td>Alertes + runbook de replay obligatoires</td></tr></tbody></table>
+<hr>
+<h2>Critères pour adopter ou non l'EDA</h2>
+<p><strong>Adopter si :</strong></p>
+<ul>
+<li>Services distincts qui doivent réagir au même fait métier.</li>
+<li>Besoin d'audit trail complet / event sourcing.</li>
+<li>Pic de charge absorbable par queue (découplage producteur/consommateur).</li>
+<li>Intégration avec systèmes tiers asynchrones.</li>
+</ul>
+<p><strong>Ne pas adopter si :</strong></p>
+<ul>
+<li>CRUD simple sans logique distribuée.</li>
+<li>Équipe &lt; 5 devs sans expertise ops messaging.</li>
+<li>Latence &lt; 10 ms requise (préférer appel REST synchrone).</li>
+<li>Pas de budget pour infrastructure broker + monitoring.</li>
 </ul>
 </article>
 </main>

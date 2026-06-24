@@ -96,43 +96,64 @@ cp -r claude-skills-collection/skills/devops-helm-chart-builder ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Constructeur de Charts Helm</h1>
-<h2>Workflow</h2>
+<h2>Workflow en étapes</h2>
 <ol>
-<li><strong>Structurer</strong> : créer le squelette du chart avec les templates essentiels.</li>
-<li><strong>Paramétrer</strong> : définir les values avec des défauts sensibles.</li>
-<li><strong>Tester</strong> : <code>helm template</code> et <code>helm lint</code> avant l'installation.</li>
-<li><strong>Déployer</strong> : install/upgrade avec les values par environnement.</li>
+<li><strong>Analyser</strong> — identifier : type d'app (stateless/stateful), dépendances externes, environnements cibles, besoins ingress/secret/HPA.</li>
+<li><strong>Scaffolder</strong> — <code>helm create mychart</code> puis nettoyer les exemples inutiles.</li>
+<li><strong>Modéliser <code>values.yaml</code></strong> — définir des defaults qui fonctionnent en dev sans surcharge. Tout ce qui varie par env = exposé en value.</li>
+<li><strong>Écrire les templates</strong> — utiliser <code>_helpers.tpl</code> pour les labels/noms ; ajouter <code>checksum/config</code> pour forcer le rollout sur changement de ConfigMap.</li>
+<li><strong>Valider localement</strong> — <code>helm lint</code>, <code>helm template</code>, <code>helm diff</code> (plugin) avant tout push.</li>
+<li><strong>Déployer par env</strong> — <code>helm upgrade --install</code> avec <code>-f values-prod.yaml</code> et <code>--set image.tag=$TAG</code>.</li>
+<li><strong>Opérations post-deploy</strong> — vérifier <code>helm status</code>, inspecter les logs, prévoir <code>helm rollback</code> si nécessaire.</li>
 </ol>
-<h2>Structure d'un chart</h2>
+<h2>Structure type</h2>
 <pre><code>mychart/
-├── Chart.yaml              # Métadonnées du chart
-├── values.yaml             # Valeurs par défaut
-├── values-dev.yaml         # Override par environnement
+├── Chart.yaml              # Métadonnées + dépendances
+├── values.yaml             # Defaults (dev fonctionnel sans override)
+├── values-staging.yaml
 ├── values-prod.yaml
 ├── templates/
-│   ├── _helpers.tpl        # Fonctions réutilisables
+│   ├── _helpers.tpl        # include réutilisables (labels, fullname…)
 │   ├── deployment.yaml
 │   ├── service.yaml
-│   ├── hpa.yaml
 │   ├── ingress.yaml
+│   ├── hpa.yaml
 │   ├── configmap.yaml
-│   ├── secret.yaml
-│   └── serviceaccount.yaml
-└── charts/                 # Dépendances</code></pre>
+│   ├── secret.yaml         # ou ExternalSecret si ESO
+│   ├── serviceaccount.yaml
+│   └── NOTES.txt           # affiché après install
+└── charts/                 # dépendances téléchargées</code></pre>
 <h2>Chart.yaml</h2>
 <pre><code class="lang-yaml">apiVersion: v2
 name: payment-api
 description: API de gestion des paiements
-type: application
-version: 1.2.0        # Version du chart
-appVersion: &quot;3.1.0&quot;   # Version de l'application
+type: application          # ou &quot;library&quot; pour un chart utilitaire
+version: 1.3.0             # SemVer du chart (indépendant de l'app)
+appVersion: &quot;3.2.0&quot;        # version de l'image applicative
 dependencies:
   - name: postgresql
-    version: &quot;12.x.x&quot;
-    repository: &quot;https://charts.bitnami.com/bitnami&quot;
-    condition: postgresql.enabled</code></pre>
-<h2>Templates essentiels</h2>
-<h3>Deployment</h3>
+    version: &quot;15.x.x&quot;
+    repository: &quot;oci://registry-1.docker.io/bitnamicharts&quot;
+    condition: postgresql.enabled   # désactivable via values</code></pre>
+<blockquote><strong>Critère</strong> : incrémenter <code>version</code> à chaque changement de template ; incrémenter <code>appVersion</code> à chaque release applicative.</blockquote>
+<h2><code>_helpers.tpl</code> — base minimale</h2>
+<pre><code class="lang-yaml">{{- define &quot;mychart.fullname&quot; -}}
+{{- printf &quot;%s-%s&quot; .Release.Name .Chart.Name | trunc 63 | trimSuffix &quot;-&quot; }}
+{{- end }}
+
+{{- define &quot;mychart.labels&quot; -}}
+helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+app.kubernetes.io/name: {{ .Chart.Name }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{- define &quot;mychart.selectorLabels&quot; -}}
+app.kubernetes.io/name: {{ .Chart.Name }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}</code></pre>
+<h2>Deployment — template de référence</h2>
 <pre><code class="lang-yaml">apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -140,7 +161,9 @@ metadata:
   labels:
     {{- include &quot;mychart.labels&quot; . | nindent 4 }}
 spec:
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include &quot;mychart.selectorLabels&quot; . | nindent 6 }}
@@ -151,31 +174,48 @@ spec:
       annotations:
         checksum/config: {{ include (print $.Template.BasePath &quot;/configmap.yaml&quot;) . | sha256sum }}
     spec:
+      serviceAccountName: {{ include &quot;mychart.fullname&quot; . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
         - name: {{ .Chart.Name }}
           image: &quot;{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}&quot;
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.service.targetPort }}
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
           envFrom:
             - configMapRef:
                 name: {{ include &quot;mychart.fullname&quot; . }}
+          {{- if .Values.secret.enabled }}
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include &quot;mychart.fullname&quot; . }}
+                  key: db-password
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             httpGet:
-              path: /health/live
-              port: {{ .Values.service.targetPort }}
+              path: {{ .Values.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
           readinessProbe:
             httpGet:
-              path: /health/ready
-              port: {{ .Values.service.targetPort }}</code></pre>
-<h3>Values par défaut</h3>
-<pre><code class="lang-yaml"># values.yaml
-replicaCount: 2
+              path: {{ .Values.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10</code></pre>
+<h2><code>values.yaml</code> — defaults complets</h2>
+<pre><code class="lang-yaml">replicaCount: 1   # override à 2+ en prod
 
 image:
   repository: myregistry.azurecr.io/payment-api
-  tag: &quot;&quot;
+  tag: &quot;&quot;          # vide = Chart.AppVersion
   pullPolicy: IfNotPresent
 
 service:
@@ -184,12 +224,14 @@ service:
   targetPort: 8080
 
 ingress:
-  enabled: true
+  enabled: false   # activé par values-prod.yaml
   className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
   hosts:
     - host: api.company.com
       paths:
-        - path: /payments
+        - path: /
           pathType: Prefix
 
 resources:
@@ -204,21 +246,74 @@ autoscaling:
   enabled: false
   minReplicas: 2
   maxReplicas: 10
-  targetCPUUtilization: 70</code></pre>
+  targetCPUUtilizationPercentage: 70
+
+probes:
+  liveness:
+    path: /health/live
+  readiness:
+    path: /health/ready
+
+secret:
+  enabled: false
+
+postgresql:
+  enabled: false   # activer localement si nécessaire</code></pre>
 <h2>Commandes essentielles</h2>
-<pre><code class="lang-bash">helm create mychart              # Créer un nouveau chart
-helm lint mychart                # Vérifier la syntaxe
-helm template mychart            # Prévisualiser les manifestes
-helm install myrelease mychart   # Installer
-helm upgrade myrelease mychart   # Mettre à jour
-helm rollback myrelease 1       # Rollback à la révision 1
-helm diff upgrade myrelease mychart  # Voir les différences (plugin)</code></pre>
-<h2>Règles</h2>
+<pre><code class="lang-bash"># Scaffolding
+helm create mychart
+
+# Validation locale (toujours avant push)
+helm lint mychart
+helm template myrelease mychart -f values-prod.yaml | kubectl apply --dry-run=client -f -
+
+# Déploiement
+helm upgrade --install myrelease ./mychart \
+  -f values-prod.yaml \
+  --set image.tag=v3.2.0 \
+  --namespace prod \
+  --create-namespace \
+  --atomic \           # rollback auto si échec
+  --timeout 5m
+
+# Différences avant upgrade (plugin helm-diff requis)
+helm diff upgrade myrelease ./mychart -f values-prod.yaml --set image.tag=v3.2.0
+
+# Rollback
+helm rollback myrelease 1   # révision 1
+
+# Dépendances
+helm dependency update mychart
+
+# Inspecter une release
+helm status myrelease -n prod
+helm get values myrelease -n prod
+helm history myrelease -n prod
+
+# OCI registry (Helm 3.8+)
+helm push mychart-1.3.0.tgz oci://myregistry.azurecr.io/charts
+helm install myrelease oci://myregistry.azurecr.io/charts/mychart --version 1.3.0</code></pre>
+<h2>Critères de décision</h2>
+<table><thead><tr><th>Besoin</th><th>Solution recommandée</th></tr></thead><tbody><tr><td>Secret sensible en prod</td><td>ExternalSecret (ESO) ou Vault Agent Injector, pas <code>kind: Secret</code> en clair</td></tr><tr><td>Multi-environnements</td><td><code>values-&lt;env&gt;.yaml</code> + <code>-f</code> à l'install, pas de Helm templating conditionnel excessif</td></tr><tr><td>Dépendance DB locale en dev</td><td><code>postgresql.enabled: true</code> dans <code>values-dev.yaml</code></td></tr><tr><td>App stateful (DB, Kafka…)</td><td><code>StatefulSet</code> + PVC dans le template, pas <code>Deployment</code></td></tr><tr><td>Chart réutilisable entre équipes</td><td>Chart de type <code>library</code> dans un registry OCI partagé</td></tr><tr><td>Rollout zero-downtime</td><td><code>strategy.type: RollingUpdate</code> + <code>minReadySeconds</code> + probes correctes</td></tr></tbody></table>
+<h2>Anti-patterns / pièges</h2>
 <ul>
-<li>Toujours utiliser <code>helm lint</code> et <code>helm template</code> avant un déploiement.</li>
-<li>Les values par défaut doivent produire un chart fonctionnel en dev.</li>
-<li>Utiliser <code>_helpers.tpl</code> pour les labels et noms réutilisables.</li>
-<li>Versionner le chart (<code>version</code>) indépendamment de l'application (<code>appVersion</code>).</li>
+<li><strong><code>image.tag: latest</code></strong> — non reproductible. Toujours passer <code>--set image.tag=$CI_SHA</code>.</li>
+<li><strong>Secrets en clair dans values.yaml</strong> — ne jamais committer des credentials ; utiliser ESO, Vault ou <code>--set secret.password=$VAR</code> depuis CI.</li>
+<li><strong><code>helm install</code> sans <code>--atomic</code></strong> — laisse une release en état <code>FAILED</code> ; préférer <code>--atomic</code> en CI/CD.</li>
+<li><strong>Omettre <code>checksum/config</code></strong> — le pod ne redémarre pas quand la ConfigMap change sans cette annotation.</li>
+<li><strong>Oublier <code>helm dependency update</code></strong> — dossier <code>charts/</code> vide → install échoue silencieusement.</li>
+<li><strong>Versioning mal séparé</strong> — ne pas synchroniser <code>version</code> (chart) et <code>appVersion</code> (image) : les deux bougent indépendamment.</li>
+<li><strong>Templates trop conditionnels</strong> — <code>{{- if .Values.featureX }}…{{- end }}</code> partout rend le chart illisible ; préférer des charts séparés ou des overlays Kustomize pour des variantes majeures.</li>
+<li><strong>Pas de <code>NOTES.txt</code></strong> — priver les utilisateurs du mode d'emploi post-install.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Publier dans un <strong>registry OCI</strong> (ACR, ECR, GHCR) plutôt qu'un chart repo HTTP classique.</li>
+<li>Utiliser <strong><code>helm diff</code></strong> en CI pour générer un résumé lisible dans la PR avant merge.</li>
+<li>Coupler avec <strong><code>ct</code> (chart-testing)</strong> pour le lint et les tests d'intégration automatisés.</li>
+<li>Activer <strong><code>NetworkPolicy</code></strong> par défaut dans le chart pour limiter le blast radius.</li>
+<li>Générer la <strong>documentation</strong> des values avec <code>helm-docs</code> (annotations <code># -- description</code>).</li>
+<li>Préférer <strong><code>--atomic --timeout</code></strong> en CD pour garantir un rollback automatique en cas d'échec de rollout.</li>
 </ul>
 </article>
 </main>

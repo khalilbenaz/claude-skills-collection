@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>education-study-planner — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Organise un planning de révision ou d'étude avec répétition espacée et priorisation.">
+<meta name="description" content="Organise un planning de révision ou d'étude avec répétition espacée, priorisation et checkpoints de rétention.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🎓 Éducation</span>
 <h1 class="skill-title">education-study-planner</h1>
-<p class="lead">Organise un planning de révision ou d'étude avec répétition espacée et priorisation.</p>
+<p class="lead">Organise un planning de révision ou d'étude avec répétition espacée, priorisation et checkpoints de rétention.</p>
 
 
 
@@ -96,21 +96,82 @@ cp -r claude-skills-collection/skills/education-study-planner ~/.claude/skills/<
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Study Planner</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Contexte</strong> : quel examen/sujet ? Quelle date ? Combien de temps disponible ?</li>
-<li><strong>Inventaire</strong> : lister toutes les matières/chapitres à couvrir.</li>
-<li><strong>Priorisation</strong> : difficulté × importance × familiarité.</li>
-<li><strong>Planning</strong> : répartition par semaine avec répétition espacée (J+1, J+3, J+7, J+14).</li>
-<li><strong>Sessions</strong> : blocs de 25-50 min (Pomodoro) avec pauses.</li>
-<li><strong>Checkpoints</strong> : tests/quiz prévus pour vérifier la rétention.</li>
-<li>Termine par un tableau semaine par semaine.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 7 étapes</h2>
+<h3>1. Collecte du contexte (obligatoire avant tout)</h3>
+<p>Demander (ou déduire du message) :</p>
+<table><thead><tr><th>Information</th><th>Exemple</th></tr></thead><tbody><tr><td>Sujet / examen</td><td>&quot;Cloud AWS Practitioner&quot;, &quot;maths S1&quot;</td></tr><tr><td>Date limite</td><td>&quot;dans 3 semaines&quot;, &quot;15 juillet&quot;</td></tr><tr><td>Temps dispo/jour</td><td>&quot;2 h le soir, 5 h le week-end&quot;</td></tr><tr><td>Niveau actuel</td><td>&quot;débutant&quot;, &quot;déjà vu en cours&quot;, &quot;besoin de réviser&quot;</td></tr><tr><td>Ressources dispo</td><td>syllabus, livres, cours Udemy, docs officielles</td></tr></tbody></table>
+<p>Sans la date et le temps disponible, aucun planning ne peut être construit. Bloquer là si manquant.</p>
+<h3>2. Inventaire des chapitres / sujets</h3>
+<p>Lister exhaustivement les thèmes à couvrir. Si l'utilisateur n'a pas de liste, proposer un squelette basé sur le syllabus standard du domaine.</p>
+<p>Exemple pour AWS Cloud Practitioner :</p>
+<pre><code>1. Concepts cloud (15 %)
+2. Sécurité &amp; conformité (25 %)
+3. Services clés AWS (33 %)
+4. Facturation &amp; pricing (17 %)
+5. Support &amp; SLA (10 %)</code></pre>
+<h3>3. Priorisation — matrice 3 critères</h3>
+<p>Évaluer chaque chapitre sur 1-3 :</p>
+<pre><code>Score = Difficulté × Importance × (3 - Familiarité)</code></pre>
 <ul>
-<li>Adapte au rythme de l'utilisateur (temps de travail, cours, etc.).</li>
-<li>Intègre des jours de repos.</li>
-<li>Commence par les matières les plus difficiles quand l'énergie est haute.</li>
+<li><strong>Difficulté</strong> : 1 = facile, 3 = complexe</li>
+<li><strong>Importance</strong> : 1 = optionnel, 3 = incontournable (pondération exam)</li>
+<li><strong>Familiarité</strong> : 1 = déjà maîtrisé, 3 = inconnu</li>
+</ul>
+<p>Trier par score décroissant → ceux-là passent en premier dans le planning.</p>
+<h3>4. Construction du planning avec répétition espacée</h3>
+<p>Intervalles de révision à respecter (courbe d'Ebbinghaus) :</p>
+<pre><code>J0  : apprentissage initial (lecture + prise de notes)
+J1  : première révision (résumé / flashcards)
+J3  : deuxième révision (quiz)
+J7  : troisième révision (exercices pratiques)
+J14 : consolidation (test complet)</code></pre>
+<p><strong>Format tableau semaine par semaine</strong> — toujours générer ce tableau :</p>
+<pre><code>| Semaine | Lundi | Mardi | Mercredi | Jeudi | Vendredi | Week-end |
+|---------|-------|-------|----------|-------|----------|----------|
+| S1      | Ch1 J0 | Ch1 J1 | Ch2 J0 | Ch2 J1 + Ch1 J3 | Repos | Ch3 J0 + Ch1 J7 |</code></pre>
+<p>Contraintes de génération :</p>
+<ul>
+<li>Max 3 nouveaux chapitres par semaine</li>
+<li>Alterner apprentissage neuf et révisions</li>
+<li>Conserver au moins 1 jour de repos complet par semaine</li>
+</ul>
+<h3>5. Structure des sessions de travail</h3>
+<p>Blocs recommandés selon durée disponible :</p>
+<pre><code>≤ 1 h/jour  → 1 bloc de 50 min (pas de Pomodoro, trop fragmenté)
+1-3 h/jour  → blocs 25 min + pause 5 min, long break après 4 blocs (Pomodoro)
+&gt; 3 h/jour  → blocs 45 min + pause 15 min (deep work)</code></pre>
+<p>Ordre des matières dans une session :</p>
+<ol>
+<li>Matière difficile (énergie haute)</li>
+<li>Révision d'une session précédente</li>
+<li>Matière légère ou exercices pratiques</li>
+</ol>
+<h3>6. Checkpoints de rétention</h3>
+<p>Prévoir systématiquement :</p>
+<ul>
+<li><strong>Quiz quotidien</strong> (5-10 min) : 5 questions sur la session du jour — Anki, Quizlet, ou questions générées ici</li>
+<li><strong>Test hebdomadaire</strong> : examen blanc ou QCM sur la semaine (30-60 min)</li>
+<li><strong>Test global J-7</strong> avant l'examen : conditions réelles, chrono</li>
+</ul>
+<p>Si le score au quiz &lt; 60 % → reprogrammer le chapitre J+1 au lieu de J+3.</p>
+<h3>7. Livrable final</h3>
+<p>Toujours terminer avec :</p>
+<ol>
+<li>Tableau planning semaine par semaine (markdown)</li>
+<li>Liste des ressources recommandées pour chaque chapitre</li>
+<li>Rappel des dates clés (révisions, tests blancs, examen)</li>
+</ol>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Alternative</th></tr></thead><tbody><tr><td>Relire passivement ses notes</td><td>Illusion de maîtrise, rétention faible</td><td>Active recall : fermer le livre, écrire de mémoire</td></tr><tr><td>Tout réviser la veille</td><td>Surcharge, stress, oubli immédiat</td><td>Étaler sur minimum 2 semaines</td></tr><tr><td>Sauter les jours de repos</td><td>Fatigue cognitive, contre-productif après J4</td><td>Imposer 1 jour off/semaine</td></tr><tr><td>Commencer par ce qu'on sait déjà</td><td>Fausse confiance, gaps cachés</td><td>Priorité aux chapitres score élevé</td></tr><tr><td>Planning trop dense</td><td>Abandon après 3 jours</td><td>Réserver 20 % du temps comme buffer</td></tr><tr><td>Changer de méthode chaque semaine</td><td>Perte de repères, pas de mesure</td><td>Choisir une méthode, tenir 2 semaines avant d'ajuster</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Anki + IA</strong> : générer les flashcards Anki depuis le résumé de chaque chapitre — taux de rétention supérieur à toute autre méthode pour les connaissances factuelles.</li>
+<li><strong>Calendrier externe</strong> : exporter le planning en bloc <code>.ics</code> ou le coller dans Google Calendar / Notion pour les rappels.</li>
+<li><strong>Révisions actives &gt; passives</strong> : Feynman Technique — expliquer le concept à voix haute comme si on l'enseignait.</li>
+<li><strong>Suivi de progrès</strong> : tenir un journal simple (date, chapitre, score quiz) pour ajuster le planning si les scores stagnent.</li>
+<li><strong>Groupes de révision (optionnel)</strong> : 1 session/semaine en groupe pour les questions difficiles ; le reste en solo pour le focus.</li>
 </ul>
 </article>
 </main>

@@ -96,38 +96,211 @@ cp -r claude-skills-collection/skills/dev-technical-writing-guide ~/.claude/skil
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Technical Writing Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identifier l'audience</strong> : Déterminer qui lira le document (développeurs, ops, management, utilisateurs finaux). Adapter le niveau de détail, le vocabulaire et la structure en conséquence. Un README pour devs peut être technique ; une doc pour utilisateurs finaux doit être simple et guidée.</li>
-</ol>
-<ol>
-<li><strong>Structurer le document</strong> : Appliquer une structure claire selon le type : titre explicite, contexte (pourquoi ce doc existe), problème adressé, solution proposée, alternatives envisagées, conséquences et décisions prises. Utiliser des titres hiérarchiques (H1 → H2 → H3).</li>
-</ol>
-<ol>
-<li><strong>Rédiger un README efficace</strong> : Inclure les badges (CI status, coverage, version), une description courte, les prérequis, les étapes d'installation pas-à-pas, des exemples d'usage concrets, la référence API, un guide de contribution (CONTRIBUTING.md) et la licence. Le README est la vitrine du projet.</li>
-</ol>
-<ol>
-<li><strong>Créer des Architecture Decision Records (ADR)</strong> : Format standard : titre numéroté (ADR-001), statut (proposed/accepted/deprecated/superseded), contexte (situation actuelle), décision prise, conséquences (avantages et inconvénients). Stocker dans <code>/docs/adr/</code>. Lier les ADR entre eux quand ils se succèdent.</li>
-</ol>
-<ol>
-<li><strong>Documenter les APIs</strong> : Couvrir chaque endpoint avec méthode HTTP, URL, paramètres (path, query, body), exemples de requête/réponse, codes d'erreur détaillés, mécanismes d'authentification et rate limits. Préférer OpenAPI/Swagger pour la génération automatique et la testabilité.</li>
-</ol>
-<ol>
-<li><strong>Intégrer des diagrammes</strong> : Utiliser le modèle C4 (Context, Containers, Components, Code) pour l'architecture. Ajouter des sequence diagrams pour les flux complexes, des flowcharts pour les algorithmes, des ERD pour les bases de données. Outils recommandés : Mermaid (intégré GitHub/GitLab), PlantUML, draw.io. Versionner les sources des diagrammes, pas seulement les images.</li>
-</ol>
-<ol>
-<li><strong>Garantir style et clarté</strong> : Phrases courtes (max 20 mots). Voix active (&quot;Le service envoie une requête&quot; vs &quot;Une requête est envoyée&quot;). Définir tout terme technique à sa première occurrence. Ajouter des exemples concrets et des cas d'usage réels. Éviter le jargon inutile. Relire à voix haute pour détecter les formulations lourdes.</li>
-</ol>
-<ol>
-<li><strong>Assurer la maintenance</strong> : Adopter docs-as-code (documentation dans le même repo que le code). Versionner avec le code. Ajouter des checks automatiques (liens cassés, orthographe, freshness). Définir un owner par document. Planifier des revues périodiques (tous les 3-6 mois). Marquer les docs obsolètes clairement avec une bannière et un lien vers la version à jour.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de choix du format</h2>
+<table><thead><tr><th>Besoin</th><th>Format recommandé</th></tr></thead><tbody><tr><td>Décision d'architecture irréversible</td><td>ADR</td></tr><tr><td>Proposition de changement à débattre</td><td>RFC</td></tr><tr><td>Point d'entrée d'un projet</td><td>README</td></tr><tr><td>Procédure d'exploitation</td><td>Runbook</td></tr><tr><td>Endpoint HTTP/REST</td><td>OpenAPI YAML</td></tr><tr><td>Flux complexe multi-acteurs</td><td>Sequence diagram Mermaid</td></tr><tr><td>Post-incident</td><td>Post-mortem</td></tr></tbody></table>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Identifier l'audience avant d'écrire</h3>
+<p>Poser trois questions avant la première ligne :</p>
 <ul>
-<li><strong>Commencer par l'audience</strong> : Toujours demander &quot;Qui va lire ça ?&quot; avant d'écrire une ligne. La forme suit le lecteur cible.</li>
-<li><strong>Docs-as-code obligatoire</strong> : La documentation vit dans le même repo que le code, versionnée avec Git, reviewée en PR. Pas de wikis isolés sans lien au code.</li>
-<li><strong>Exemples avant tout</strong> : Chaque concept abstrait doit être illustré par un exemple concret. Les développeurs apprennent par l'exemple.</li>
-<li><strong>Un document = une responsabilité</strong> : Chaque doc a un owner nommé, responsable de sa maintenance et de sa fraîcheur. Sans owner, la doc se dégrade.</li>
-<li><strong>Templates prêts à l'emploi</strong> : Fournir des templates pour ADR, RFC, README, runbook et post-mortem pour standardiser la qualité sans effort.</li>
+<li>Qui lit ? (dev junior, ops, management, utilisateur final)</li>
+<li>Quel niveau technique ?</li>
+<li>Quel objectif du lecteur ? (installer, comprendre, décider, opérer)</li>
+</ul>
+<p><strong>Règle de test</strong> : si tu ne peux pas répondre à ces trois questions, n'écris pas encore.</p>
+<hr>
+<h3>2. README — structure minimale copiable</h3>
+<pre><code class="lang-markdown"># Nom du projet
+
+Badge CI · Badge coverage · Badge version
+
+&gt; Une ligne : ce que fait le projet et pourquoi.
+
+## Prérequis
+- Node 20+ / Java 21+ / Python 3.12+
+- Variables d'env : `cp .env.example .env`
+
+## Installation</code></pre>
+<p>git clone https://github.com/org/repo cd repo make install   # ou npm ci / mvn install</p>
+<pre><code>
+## Usage rapide</code></pre>
+<h1>Lancer en local</h1>
+<p>make dev</p>
+<h1>Appel API minimal</h1>
+<p>curl -X POST http://localhost:8080/api/v1/resource \   -H &quot;Authorization: Bearer $TOKEN&quot; \   -H &quot;Content-Type: application/json&quot; \   -d '{&quot;key&quot;: &quot;value&quot;}'</p>
+<pre><code>
+## Structure du projet
+src/
+├── api/        # controllers REST
+├── domain/     # logique métier pure
+└── infra/      # adapters DB, messaging
+
+## Contribuer
+Voir [CONTRIBUTING.md](./CONTRIBUTING.md)
+
+## Licence
+MIT</code></pre>
+<p><strong>Anti-patterns README</strong> :</p>
+<ul>
+<li>Pas de section &quot;About&quot; vide ou copiée-collée du nom du repo.</li>
+<li>Pas d'instructions d'installation sans exemple de commande testable.</li>
+<li>Pas de README sans section &quot;Usage&quot; avec une commande concrète.</li>
+</ul>
+<hr>
+<h3>3. ADR — Architecture Decision Record</h3>
+<p>Stocker dans <code>/docs/adr/ADR-NNN-titre-court.md</code>. Numérotation séquentielle, jamais réutilisée.</p>
+<p><strong>Template ADR</strong> :</p>
+<pre><code class="lang-markdown"># ADR-001 : Utiliser PostgreSQL comme base de données principale
+
+**Statut** : Accepted  
+**Date** : 2026-03-15  
+**Auteur** : @khalil  
+**Remplacé par** : —
+
+## Contexte
+Le service Payment nécessite des transactions ACID, des requêtes complexes avec
+jointures et un volume prévu de 10 M lignes/mois.
+
+## Décision
+Adopter PostgreSQL 16 (géré via RDS), avec schéma versionné par Flyway.
+
+## Alternatives écartées
+| Option | Raison d'exclusion |
+|---|---|
+| MySQL 8 | JSON support moins mature, window functions limitées |
+| MongoDB | Pas d'ACID multi-document natif (pré-4.0) |
+| DynamoDB | Modèle de coût imprévisible, jointures impossibles |
+
+## Conséquences
+**Positif** : transactions ACID garanties, écosystème outillage riche.  
+**Négatif** : coût opérationnel RDS, compétence DBA requise.  
+**Neutre** : migrations Flyway obligatoires dès le sprint 1.</code></pre>
+<p><strong>Statuts valides</strong> : <code>Proposed</code> → <code>Accepted</code> → <code>Deprecated</code> / <code>Superseded by ADR-NNN</code>.</p>
+<hr>
+<h3>4. RFC — Request for Comments</h3>
+<p>Utiliser quand la décision est ouverte au débat (&gt; 2 équipes concernées, impact cross-service, durée de vie &gt; 6 mois).</p>
+<p><strong>Structure RFC</strong> :</p>
+<pre><code class="lang-markdown"># RFC-012 : Stratégie d'authentification inter-services
+
+**Statut** : Draft | In Review | Accepted | Rejected  
+**Deadline feedback** : 2026-07-01  
+**Auteur** : @khalil  
+**Reviewers** : @ops-lead, @security-team
+
+## Résumé (TL;DR)
+Remplacer les API keys partagées par des JWT signés (RS256) avec rotation automatique.
+
+## Problème
+[Décrire le pain point actuel avec métriques si possible]
+
+## Proposition
+[Solution détaillée, schéma si utile]
+
+## Alternatives
+[Tableau comparatif]
+
+## Questions ouvertes
+- [ ] Durée de vie des tokens (15 min vs 1h) ?
+- [ ] Révocation : blocklist Redis ou rotation ?
+
+## Plan de migration
+Phase 1 : dual-mode (clé + JWT). Phase 2 : JWT seul (M+3).</code></pre>
+<hr>
+<h3>5. Documentation API — OpenAPI first</h3>
+<p>Générer la spec OpenAPI en amont (contract-first), pas après coup.</p>
+<pre><code class="lang-yaml"># openapi.yaml — extrait
+paths:
+  /v1/payments:
+    post:
+      summary: Initier un paiement
+      tags: [Payments]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+            example:
+              amount: 1500
+              currency: TND
+              reference: &quot;PAY-2026-001&quot;
+      responses:
+        '201':
+          description: Paiement créé
+          content:
+            application/json:
+              example:
+                id: &quot;pay_xyz&quot;
+                status: pending
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'</code></pre>
+<p><strong>À couvrir obligatoirement</strong> : auth (Bearer/API key), codes d'erreur métier (pas seulement HTTP), rate limits, exemples requête + réponse, pagination.</p>
+<hr>
+<h3>6. Diagrammes — Mermaid en priorité</h3>
+<p>Mermaid est rendu nativement dans GitHub, GitLab, Notion, Obsidian. Versionner la source dans le repo.</p>
+<p><strong>Sequence diagram</strong> :</p>
+<pre><code class="lang-mermaid">sequenceDiagram
+    participant Client
+    participant API Gateway
+    participant AuthService
+    participant PaymentService
+
+    Client-&gt;&gt;API Gateway: POST /payments (Bearer token)
+    API Gateway-&gt;&gt;AuthService: Valider token
+    AuthService--&gt;&gt;API Gateway: 200 OK (claims)
+    API Gateway-&gt;&gt;PaymentService: Créer paiement
+    PaymentService--&gt;&gt;API Gateway: 201 Created {id}
+    API Gateway--&gt;&gt;Client: 201 Created {id}</code></pre>
+<p><strong>Quand utiliser quoi</strong> :</p>
+<ul>
+<li><code>sequenceDiagram</code> → flux HTTP/event entre services</li>
+<li><code>flowchart TD</code> → algorithme, arbre de décision</li>
+<li><code>erDiagram</code> → schéma de base de données</li>
+<li>C4 PlantUML → vues d'architecture (Context/Container)</li>
+</ul>
+<hr>
+<h3>7. Style et clarté — règles concrètes</h3>
+<table><thead><tr><th>Règle</th><th>Mauvais</th><th>Bon</th></tr></thead><tbody><tr><td>Voix active</td><td>&quot;Une requête est envoyée par le service&quot;</td><td>&quot;Le service envoie une requête&quot;</td></tr><tr><td>Phrases courtes</td><td>Bloc de 50 mots sans ponctuation</td><td>Max 20 mots par phrase</td></tr><tr><td>Définir l'acronyme</td><td>&quot;Le JWT est validé&quot;</td><td>&quot;Le JWT (JSON Web Token) est validé&quot;</td></tr><tr><td>Exemple avant abstrait</td><td>&quot;La méthode retry gère les erreurs&quot;</td><td><code>retry(fn, {attempts: 3, delay: 500})</code></td></tr><tr><td>Titres actionnables</td><td>&quot;Informations&quot;</td><td>&quot;Comment configurer l'authentification&quot;</td></tr></tbody></table>
+<hr>
+<h3>8. Maintenance et docs-as-code</h3>
+<pre><code>repo/
+├── docs/
+│   ├── adr/          # ADR-NNN-titre.md
+│   ├── runbooks/     # procédures ops
+│   └── api/          # openapi.yaml
+├── README.md
+└── CONTRIBUTING.md</code></pre>
+<p><strong>CI checks à ajouter</strong> :</p>
+<pre><code class="lang-yaml"># .github/workflows/docs.yml
+- name: Vérifier liens cassés
+  uses: lycheeverse/lychee-action@v1
+  with:
+    args: --verbose --no-progress './**/*.md'
+
+- name: Spell check
+  uses: streetsidesoftware/cspell-action@v6
+  with:
+    files: &quot;**/*.md&quot;</code></pre>
+<p><strong>Règles de maintenance</strong> :</p>
+<ul>
+<li>Chaque doc a un <code>owner</code> dans le frontmatter ou en en-tête.</li>
+<li>Revue obligatoire si la feature associée change (PR checklist).</li>
+<li>Doc obsolète → bannière <code>&gt; ⚠️ Cette page est obsolète. Voir [lien].</code> + archivage dans <code>/docs/archive/</code>.</li>
+<li>Jamais de wiki isolé sans lien depuis le repo.</li>
+</ul>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<ul>
+<li><strong>Doc écrite après coup</strong> : la doc rédigée 3 sprints après le code ne reflète plus la réalité — écrire en même temps que le code.</li>
+<li><strong>Screenshots d'interface</strong> : vieillissent vite ; préférer des commandes textuelles ou des exemples JSON.</li>
+<li><strong>&quot;TODO: documenter&quot;</strong> : bloquer le merge PR si la section doc est vide.</li>
+<li><strong>Un seul long document</strong> : diviser par audience et par cas d'usage, pas par chronologie.</li>
+<li><strong>Jargon interne non défini</strong> : &quot;ledger&quot;, &quot;extourne&quot;, &quot;régularisation&quot; doivent être définis à la première occurrence dans tout document partagé hors équipe.</li>
+<li><strong>Diagrammes en image PNG sans source</strong> : impossible à versionner et à faire évoluer ; toujours committer la source Mermaid/PlantUML.</li>
 </ul>
 </article>
 </main>

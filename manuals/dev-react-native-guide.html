@@ -96,24 +96,167 @@ cp -r claude-skills-collection/skills/dev-react-native-guide ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>React Native Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Setup du projet</strong> — Choisir entre Expo (Managed Workflow pour démarrage rapide sans configuration native) ou Bare Workflow (accès complet aux fichiers natifs iOS/Android). Configurer Expo Router pour le file-based routing, sélectionner un template TypeScript adapté, et initialiser les outils de qualité (ESLint, Prettier, Husky).</li>
-<li><strong>Navigation</strong> — Implémenter la navigation avec React Navigation (v6+) : Stack Navigator (transitions d'écrans), Tab Navigator (bottom tabs, top tabs), Drawer Navigator (menu latéral), ou Expo Router (routing basé sur les fichiers, idéal avec Expo). Configurer le deep linking (scheme URI, Universal Links/App Links) et les typages TypeScript des routes.</li>
-<li><strong>State management</strong> — Sélectionner la solution selon la complexité : React Context + useReducer (simple, sans dépendance), Zustand (léger, API simple, performant), Redux Toolkit (projets complexes, DevTools, middlewares), React Query/TanStack Query (cache serveur, synchronisation, revalidation), ou Jotai (state atomique, simple et composable).</li>
-<li><strong>UI et styling</strong> — Construire l'interface avec StyleSheet natif (performant, compilé nativement), NativeWind (Tailwind CSS adapté React Native, className), react-native-paper ou React Native Elements (composants Material Design), et react-native-reanimated 3 + Gesture Handler pour les animations fluides 60fps sur le thread UI.</li>
-<li><strong>Native modules</strong> — Intégrer les fonctionnalités natives : Expo modules (caméra, notifications, biométrie, localisation — couverture 90% des besoins), Turbo Modules (nouvelle architecture, JSI, performances améliorées), ou ponts natifs personnalisés (Swift/Kotlin) pour les modules non disponibles dans l'écosystème Expo.</li>
-<li><strong>Data et storage</strong> — Gérer la persistance : AsyncStorage (simple, clé-valeur, asynchrone), MMKV (synchrone, très performant, recommandé), expo-sqlite ou op-sqlite pour les bases relationnelles, et Axios ou fetch natif avec interceptors pour les appels API REST, avec gestion d'erreurs et retry automatique.</li>
-<li><strong>Performance</strong> — Optimiser avec Hermes (moteur JS optimisé, activé par défaut), Flashlist à la place de FlatList (performances 10x supérieures pour les longues listes), React.memo/useMemo/useCallback pour éviter les re-rendus inutiles, Reanimated pour les animations sur le thread UI, et le profiler React DevTools pour identifier les goulots d'étranglement.</li>
-<li><strong>Build et déploiement</strong> — Automatiser avec EAS Build (Expo Application Services, cloud build iOS/Android sans Mac requis), EAS Update pour les mises à jour OTA (over-the-air) sans passer par les stores, CodePush (Microsoft, alternative OTA), configuration des build profiles (development/preview/production), et publication sur l'App Store et le Play Store avec les métadonnées et captures d'écran.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Choix du workflow — critères de décision</h2>
+<table><thead><tr><th>Critère</th><th>Expo Managed</th><th>Expo Bare</th><th>RN CLI pur</th></tr></thead><tbody><tr><td>Démarrage rapide</td><td>✅</td><td>✅</td><td>❌</td></tr><tr><td>Accès natif complet</td><td>❌</td><td>✅</td><td>✅</td></tr><tr><td>EAS Build/Update</td><td>✅</td><td>✅</td><td>❌</td></tr><tr><td>SDK Expo prêt à l'emploi</td><td>✅</td><td>Partiel</td><td>❌</td></tr><tr><td>Maintenance long terme</td><td>Facile</td><td>Moyenne</td><td>Élevée</td></tr></tbody></table>
+<p>Règle : commencer <strong>Expo Managed</strong>, migrer en Bare uniquement si un module natif custom est indispensable.</p>
+<pre><code class="lang-bash"># Expo SDK 52 (LTS 2026), TypeScript, file-based routing
+npx create-expo-app@latest MyApp --template blank-typescript
+cd MyApp &amp;&amp; npx expo install expo-router react-native-safe-area-context react-native-screens</code></pre>
+<h2>2. Navigation — Expo Router (recommandé 2026)</h2>
+<p>Expo Router v3+ : routing basé sur les fichiers, deep linking automatique, typages TypeScript natifs.</p>
+<pre><code>app/
+  _layout.tsx        ← root layout (Stack ou Tabs)
+  index.tsx          ← écran &quot;/&quot;
+  (tabs)/
+    _layout.tsx      ← Tabs layout
+    home.tsx         ← &quot;/home&quot;
+    profile.tsx      ← &quot;/profile&quot;
+  [id].tsx           ← route dynamique &quot;/123&quot;</code></pre>
+<pre><code class="lang-tsx">// app/_layout.tsx
+import { Stack } from 'expo-router';
+export default function RootLayout() {
+  return &lt;Stack screenOptions={{ headerShown: false }} /&gt;;
+}
+
+// Navigation typée
+import { router } from 'expo-router';
+router.push('/profile');
+router.push({ pathname: '/[id]', params: { id: '42' } });</code></pre>
+<p>Si React Navigation v6 standalone : préférer <code>createNativeStackNavigator</code> (performances natives) sur <code>createStackNavigator</code> (JS pur).</p>
+<h2>3. State management — arbre de décision</h2>
+<pre><code>Données locales à un composant  →  useState / useReducer
+Partage entre quelques écrans   →  Context + useReducer
+Cache serveur / API             →  TanStack Query v5
+État global UI                  →  Zustand
+Projet legacy complexe          →  Redux Toolkit</code></pre>
+<pre><code class="lang-ts">// Zustand — store minimal typé
+import { create } from 'zustand';
+interface AuthStore { token: string | null; setToken: (t: string) =&gt; void; }
+export const useAuthStore = create&lt;AuthStore&gt;((set) =&gt; ({
+  token: null,
+  setToken: (token) =&gt; set({ token }),
+}));
+
+// TanStack Query — fetch avec cache
+const { data, isLoading, error } = useQuery({
+  queryKey: ['user', id],
+  queryFn: () =&gt; api.getUser(id),
+  staleTime: 60_000,
+});</code></pre>
+<h2>4. UI et styling</h2>
 <ul>
-<li>Fournis du code React Native complet en TypeScript, avec les imports et les types explicites pour chaque exemple.</li>
-<li>Adapte les recommandations aux versions actuelles : React Native 0.73+, Expo SDK 50+, React Navigation 6+, nouvelle architecture (Fabric, JSI, TurboModules).</li>
-<li>Priorise la performance et l'UX : signal les anti-patterns courants (setState dans les boucles, FlatList sans keyExtractor, animations sur le JS thread).</li>
-<li>Mentionne les alternatives Expo vs bare workflow et leurs implications sur la maintenance et les mises à jour natives.</li>
-<li>En cas de problème lié aux modules natifs, précise si le projet utilise Expo Managed, Bare Workflow, ou React Native CLI pur avant de proposer une solution.</li>
+<li><strong>StyleSheet natif</strong> : seule option garantissant les perfs sur les deux plateformes.</li>
+<li><strong>NativeWind v4</strong> : Tailwind CSS → StyleSheet, sans overhead runtime.</li>
+<li><strong>Animations</strong> : toujours <code>react-native-reanimated</code> v3 (thread UI) ; éviter <code>Animated</code> de RN core pour tout ce qui dépasse un simple fade.</li>
+</ul>
+<pre><code class="lang-tsx">// Reanimated — animation sur le thread UI
+import Animated, { useSharedValue, withSpring, useAnimatedStyle } from 'react-native-reanimated';
+
+const offset = useSharedValue(0);
+const style = useAnimatedStyle(() =&gt; ({ transform: [{ translateX: offset.value }] }));
+// Déclencher : offset.value = withSpring(100);
+&lt;Animated.View style={[styles.box, style]} /&gt;</code></pre>
+<h2>5. Listes performantes</h2>
+<p>FlatList cause des janks sur les longues listes. Migrer vers <strong>FlashList</strong> :</p>
+<pre><code class="lang-bash">npx expo install @shopify/flash-list</code></pre>
+<pre><code class="lang-tsx">import { FlashList } from '@shopify/flash-list';
+&lt;FlashList
+  data={items}
+  renderItem={({ item }) =&gt; &lt;ItemCard item={item} /&gt;}
+  estimatedItemSize={80}   // ← obligatoire, détermine les perfs
+  keyExtractor={(item) =&gt; item.id}
+/&gt;</code></pre>
+<h2>6. Stockage local</h2>
+<table><thead><tr><th>Besoin</th><th>Solution</th></tr></thead><tbody><tr><td>Simple clé-valeur async</td><td><code>@react-native-async-storage/async-storage</code></td></tr><tr><td>Haute perf synchrone</td><td><code>react-native-mmkv</code></td></tr><tr><td>SQLite relationnel</td><td><code>expo-sqlite</code> (Expo) ou <code>op-sqlite</code> (Bare/RN CLI)</td></tr><tr><td>Sécurisé (tokens)</td><td><code>expo-secure-store</code></td></tr></tbody></table>
+<pre><code class="lang-ts">// MMKV — synchrone, 10x plus rapide qu'AsyncStorage
+import { MMKV } from 'react-native-mmkv';
+const storage = new MMKV();
+storage.set('token', 'abc123');
+const token = storage.getString('token'); // synchrone</code></pre>
+<h2>7. Modules natifs et nouvelle architecture</h2>
+<p>React Native 0.74+ : nouvelle architecture activée par défaut (JSI, Fabric, TurboModules).</p>
+<pre><code class="lang-bash"># Vérifier la compatibilité d'un package
+npx react-native-new-architecture-check</code></pre>
+<p>Ordre de priorité pour les modules natifs :</p>
+<ol>
+<li><strong>Expo SDK</strong> (caméra, notifications, biométrie, localisation) — zéro config</li>
+<li><strong>Community packages</strong> compatibles nouvelle architecture</li>
+<li><strong>Expo Modules API</strong> (Swift/Kotlin) pour un module custom</li>
+</ol>
+<pre><code class="lang-kotlin">// Expo Module API (Kotlin) — module natif minimal
+class MyModule : Module() {
+  override fun definition() = ModuleDefinition {
+    Name(&quot;MyModule&quot;)
+    Function(&quot;greet&quot;) { name: String -&gt; &quot;Hello, $name!&quot; }
+  }
+}</code></pre>
+<h2>8. Build et déploiement — EAS</h2>
+<pre><code class="lang-bash">npm install -g eas-cli
+eas login &amp;&amp; eas build:configure
+
+# Build cloud (sans Mac pour iOS)
+eas build --platform ios --profile production
+eas build --platform android --profile production
+
+# OTA update (sans passer par le store)
+eas update --branch production --message &quot;fix: crash liste&quot;
+
+# Soumettre au store
+eas submit --platform ios
+eas submit --platform android</code></pre>
+<p><strong>eas.json</strong> — profils types :</p>
+<pre><code class="lang-json">{
+  &quot;build&quot;: {
+    &quot;development&quot;: { &quot;developmentClient&quot;: true, &quot;distribution&quot;: &quot;internal&quot; },
+    &quot;preview&quot;: { &quot;distribution&quot;: &quot;internal&quot; },
+    &quot;production&quot;: { &quot;autoIncrement&quot;: true }
+  }
+}</code></pre>
+<h2>9. Performance — checklist</h2>
+<ul>
+<li>[ ] Hermes activé (<code>&quot;jsEngine&quot;: &quot;hermes&quot;</code> dans app.json)</li>
+<li>[ ] FlashList à la place de FlatList pour listes &gt; 20 items</li>
+<li>[ ] <code>React.memo</code> sur les composants pures de liste</li>
+<li>[ ] <code>useCallback</code> sur les handlers passés en props</li>
+<li>[ ] Animations sur thread UI via Reanimated (jamais <code>Animated.event</code> JS-driven)</li>
+<li>[ ] Images : <code>expo-image</code> (cache LRU, formats WebP/AVIF, placeholder blurhash)</li>
+<li>[ ] Lazy loading des écrans : <code>React.lazy</code> + <code>Suspense</code> ou <code>lazyComponent</code> d'Expo Router</li>
+</ul>
+<h2>10. Garde-fous et anti-patterns</h2>
+<p><strong>Ne pas faire :</strong></p>
+<pre><code class="lang-tsx">// ❌ setState dans une boucle → re-rendus en cascade
+items.forEach(item =&gt; setCount(count + 1));
+// ✅ un seul setState avec la valeur finale
+setCount(items.length);
+
+// ❌ inline function dans renderItem → rerend à chaque frame
+&lt;FlatList renderItem={({ item }) =&gt; &lt;Card item={item} /&gt;} /&gt;
+// ✅ extraire le composant ou mémoïser
+const renderItem = useCallback(({ item }) =&gt; &lt;Card item={item} /&gt;, []);
+
+// ❌ StyleSheet inline → nouvel objet à chaque rendu
+&lt;View style={{ flex: 1, padding: 16 }} /&gt;
+// ✅ StyleSheet.create (compilé une fois)
+const styles = StyleSheet.create({ container: { flex: 1, padding: 16 } });
+
+// ❌ useEffect sans cleanup sur les listeners
+useEffect(() =&gt; { subscription = subscribe(); }, []);
+// ✅
+useEffect(() =&gt; { const sub = subscribe(); return () =&gt; sub.remove(); }, []);</code></pre>
+<p><strong>Pièges courants :</strong></p>
+<ul>
+<li><code>KeyboardAvoidingView</code> : comportement différent iOS (<code>padding</code>) vs Android (<code>height</code>).</li>
+<li>Permissions (caméra, localisation) : demander au runtime, jamais assumer l'accord.</li>
+<li>SafeAreaView : utiliser <code>react-native-safe-area-context</code> (pas le composant RN core) pour un comportement cohérent sur les notches et Dynamic Island.</li>
+<li>Metro bundler cache corrompu : <code>npx expo start --clear</code> ou <code>npx react-native start --reset-cache</code>.</li>
+<li>Nouvelle architecture : certains packages populaires restent incompatibles — vérifier <code>reactnative.directory</code> avant toute installation.</li>
+</ul>
+<h2>Références rapides</h2>
+<ul>
+<li><a href="https://expo.dev/changelog" target="_blank" rel="noopener">expo.dev/changelog</a> — SDK changelog</li>
+<li><a href="https://reactnative.directory" target="_blank" rel="noopener">reactnative.directory</a> — compatibilité nouvelle architecture</li>
+<li><a href="https://docs.expo.dev/router/introduction/" target="_blank" rel="noopener">docs.expo.dev/router</a> — Expo Router</li>
+<li><a href="https://rnr.io" target="_blank" rel="noopener">rnr.io</a> — React Native Reusables (composants accessibles + NativeWind)</li>
 </ul>
 </article>
 </main>

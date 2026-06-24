@@ -96,22 +96,76 @@ cp -r claude-skills-collection/skills/productivity-decision-matrix ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Decision Matrix</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identifier les options</strong> : lister toutes les alternatives.</li>
-<li><strong>Définir les critères</strong> : qu'est-ce qui compte ? (coût, temps, qualité, risque, plaisir…)</li>
-<li><strong>Pondérer</strong> : quels critères sont les plus importants ? (poids 1-5)</li>
-<li><strong>Évaluer</strong> : noter chaque option sur chaque critère (1-5).</li>
-<li><strong>Matrice</strong> : tableau options × critères avec scores pondérés.</li>
-<li><strong>Analyse</strong> : quelle option gagne ? Quels sont les trade-offs ?</li>
-<li>Termine par un résumé clair : &quot;Si tu privilégies X → option A. Si tu privilégies Y → option B.&quot;</li>
-</ol>
-<h2>Règles</h2>
+<h2>Quand utiliser ce skill</h2>
 <ul>
-<li>Ne choisis pas pour l'utilisateur — éclaire le choix.</li>
-<li>Signale les biais possibles (sunk cost, status quo…).</li>
-<li>Demande les critères avant de noter.</li>
+<li>2 options ou plus avec des trade-offs non évidents.</li>
+<li>Décisions techniques : choix de stack, d'outil, de cloud provider, d'architecture.</li>
+<li>Décisions stratégiques : priorisation de projets, choix de prestataire, recrutement.</li>
+<li>Décisions personnelles : changement de poste, investissement, formation.</li>
 </ul>
+<h2>Workflow en 7 étapes</h2>
+<h3>1. Inventorier les options</h3>
+<p>Lister toutes les alternatives réalistes. Ne pas en exclure prématurément.</p>
+<pre><code>Options identifiées :
+- A : PostgreSQL
+- B : MongoDB
+- C : DynamoDB</code></pre>
+<h3>2. Collecter les critères</h3>
+<p>Poser la question : &quot;Qu'est-ce qui ferait que vous regretteriez votre choix dans 12 mois ?&quot;</p>
+<p>Exemples de critères courants selon le contexte :</p>
+<table><thead><tr><th>Contexte</th><th>Critères typiques</th></tr></thead><tbody><tr><td>Tech/outil</td><td>Coût, courbe d'apprentissage, scalabilité, support</td></tr><tr><td>Architecture</td><td>Couplage, testabilité, temps de déploiement, dette</td></tr><tr><td>Prestataire</td><td>Prix, délai, références, risque de dépendance</td></tr><tr><td>Projet/produit</td><td>Valeur métier, effort, time-to-market, risque</td></tr></tbody></table>
+<h3>3. Pondérer les critères (poids 1–5)</h3>
+<p>Chaque critère reçoit un poids reflétant son importance relative.</p>
+<pre><code>Critère          | Poids
+-----------------|------
+Performance      |   5
+Coût licence     |   4
+Facilité d'admin |   3
+Écosystème OSS   |   2</code></pre>
+<h3>4. Évaluer chaque option (note 1–5)</h3>
+<p>Note objective par critère. Demander les données concrètes si disponibles (bench, devis, avis).</p>
+<h3>5. Construire la matrice pondérée</h3>
+<p>Score pondéré = note × poids. Score total = somme des scores pondérés.</p>
+<pre><code>Option       | Perf (×5) | Coût (×4) | Admin (×3) | OSS (×2) | TOTAL
+-------------|-----------|-----------|------------|----------|------
+PostgreSQL   | 4×5=20    | 5×4=20    | 4×3=12     | 5×2=10   |  62
+MongoDB      | 4×5=20    | 4×4=16    | 3×3=9      | 4×2=8    |  53
+DynamoDB     | 5×5=25    | 2×4=8     | 5×3=15     | 1×2=2    |  50</code></pre>
+<h3>6. Analyser les résultats</h3>
+<ul>
+<li>L'option avec le <strong>score total le plus élevé</strong> est le choix rationnel pondéré.</li>
+<li>Identifier les <strong>trade-offs clés</strong> : où l'option gagnante sacrifie quoi.</li>
+<li>Vérifier les <strong>dealbreakers</strong> : un critère à poids 5 avec note 1 peut éliminer une option indépendamment du total.</li>
+</ul>
+<h3>7. Résumer de façon décisionnelle</h3>
+<p>Toujours conclure par une formule conditionnelle :</p>
+<blockquote>&quot;Si tu privilégies <strong>la maîtrise des coûts</strong> → <strong>PostgreSQL</strong> (score 62).<br>Si la <strong>scalabilité serverless</strong> est prioritaire → <strong>DynamoDB</strong> malgré le coût.<br>Recommandation neutre : PostgreSQL couvre 90% des critères avec le meilleur équilibre.&quot;</blockquote>
+<h2>Critères de qualité d'une bonne matrice</h2>
+<ul>
+<li><strong>Exhaustivité</strong> : 3–7 options, 4–8 critères (au-delà, la lisibilité chute).</li>
+<li><strong>Indépendance</strong> : critères non redondants (ne pas avoir &quot;coût&quot; ET &quot;budget&quot; séparément).</li>
+<li><strong>Mesurabilité</strong> : chaque critère doit pouvoir être noté sans ambiguïté.</li>
+<li><strong>Représentativité</strong> : les poids reflètent les vraies priorités du décideur, pas des suppositions.</li>
+</ul>
+<h2>Anti-patterns / pièges</h2>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Correctif</th></tr></thead><tbody><tr><td><strong>Sunk cost fallacy</strong></td><td>&quot;On a déjà investi 6 mois sur X&quot;</td><td>Ignorer le passé, évaluer sur les coûts futurs</td></tr><tr><td><strong>Status quo bias</strong></td><td>Note systématiquement plus haute à l'existant</td><td>Forcer une évaluation à blanc sans label</td></tr><tr><td><strong>Critères post-rationalisation</strong></td><td>Critères ajoutés pour justifier un choix déjà fait</td><td>Définir les critères AVANT de noter les options</td></tr><tr><td><strong>Paralysie par l'analyse</strong></td><td>Matrice infinie avec 15 critères</td><td>Limiter à 6 critères max, timebox la réflexion</td></tr><tr><td><strong>Score total trompeur</strong></td><td>Une option domine mais a un 1 sur un critère critique</td><td>Vérifier les minimums acceptables par critère</td></tr><tr><td><strong>Poids uniformes</strong></td><td>Tous les critères à 3</td><td>Forcer un tri : au moins un critère à 5, un à 1</td></tr></tbody></table>
+<h2>Garde-fous</h2>
+<ul>
+<li>Ne pas choisir <strong>à la place</strong> de l'utilisateur : présenter les résultats, nommer le gagnant, laisser la décision finale.</li>
+<li>Si deux options sont à moins de <strong>10% d'écart</strong>, signaler que la différence n'est pas significative : d'autres facteurs (intuition, politique interne, contrainte cachée) peuvent primer.</li>
+<li>Signaler explicitement si un critère important <strong>manque de données objectives</strong> (ex. : estimation de coût incertaine).</li>
+<li>En contexte technique, toujours mentionner le <strong>coût de réversibilité</strong> : changer d'avis dans 18 mois, quelle est la peine ?</li>
+</ul>
+<h2>Exemple complet condensé (choix de framework frontend)</h2>
+<pre><code>Critères          | Poids | React | Vue | Svelte
+------------------|-------|-------|-----|-------
+Ecosystem/libs    |   5   |   5   |  4  |   3
+Courbe apprenti.  |   4   |   3   |  5  |   5
+Perf bundle       |   3   |   3   |  3  |   5
+Recrutement       |   5   |   5   |  3  |   2
+Community/support |   4   |   5   |  4  |   3
+TOTAL PONDÉRÉ     |       |  91   | 80  |  72</code></pre>
+<blockquote>Recommandation : <strong>React</strong> si l'équipe grossit (recrutement critique).<br><strong>Svelte</strong> si projet solo ou perf bundle primordiale.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>devops-docker-swarm-guide — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Orchestration avec Docker Swarm incluant services, stacks, overlay networks, secrets et rolling updates.">
+<meta name="description" content="Orchestration avec Docker Swarm incluant services, stacks, overlay networks, secrets, rolling updates et haute disponibilité.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🔁 DevOps</span>
 <h1 class="skill-title">devops-docker-swarm-guide</h1>
-<p class="lead">Orchestration avec Docker Swarm incluant services, stacks, overlay networks, secrets et rolling updates.</p>
+<p class="lead">Orchestration avec Docker Swarm incluant services, stacks, overlay networks, secrets, rolling updates et haute disponibilité.</p>
 
 
 
@@ -96,23 +96,254 @@ cp -r claude-skills-collection/skills/devops-docker-swarm-guide ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Docker Swarm Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Initialiser le cluster Swarm</strong> — Activer le swarm mode avec <code>docker swarm init</code> sur le premier manager. Joindre les noeuds workers et managers additionnels. Configurer un nombre impair de managers (3 ou 5) pour le consensus Raft. Vérifier l'état du cluster avec <code>docker node ls</code>.</li>
-<li><strong>Configurer les overlay networks</strong> — Créer des réseaux overlay pour la communication inter-services (<code>docker network create --driver overlay</code>). Isoler les services par réseau fonctionnel (frontend, backend, data). Activer le chiffrement réseau avec <code>--opt encrypted</code> pour les données sensibles.</li>
-<li><strong>Déployer les services</strong> — Créer les services avec <code>docker service create</code> ou via des stacks Compose. Définir le nombre de réplicas, les contraintes de placement (<code>--constraint</code>), les resource limits (CPU, mémoire) et les health checks. Configurer les ports publiés avec le routing mesh.</li>
-<li><strong>Gérer les stacks avec Compose</strong> — Écrire les fichiers <code>docker-compose.yml</code> (version 3.x) avec la section <code>deploy</code> pour les paramètres Swarm. Déployer avec <code>docker stack deploy -c docker-compose.yml</code>. Organiser les stacks par domaine fonctionnel pour faciliter la gestion.</li>
-<li><strong>Sécuriser avec les secrets et configs</strong> — Stocker les données sensibles avec <code>docker secret create</code>. Référencer les secrets dans les services via la section <code>secrets</code> du Compose. Utiliser <code>docker config</code> pour les fichiers de configuration non sensibles. Les secrets sont montés en mémoire dans <code>/run/secrets/</code>.</li>
-<li><strong>Configurer les rolling updates</strong> — Définir la stratégie de mise à jour : <code>--update-parallelism</code> (nombre de tasks mises à jour simultanément), <code>--update-delay</code> (délai entre chaque batch), <code>--update-failure-action</code> (pause, continue, rollback). Configurer le rollback automatique en cas d'échec du health check.</li>
-<li><strong>Planifier le placement et la haute disponibilité</strong> — Utiliser les labels de noeuds pour le placement stratégique (SSD, GPU, zone). Configurer les placement preferences pour la distribution par rack/zone. Définir les global services pour les agents de monitoring déployés sur chaque noeud.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de choix : Swarm vs Kubernetes</h2>
+<table><thead><tr><th>Critère</th><th>Swarm</th><th>Kubernetes</th></tr></thead><tbody><tr><td>Équipe &lt; 5 devops</td><td>✅</td><td>❌ complexité op</td></tr><tr><td>Infra on-premise simple</td><td>✅</td><td>possible mais lourd</td></tr><tr><td>Multitenancy avancé</td><td>❌</td><td>✅</td></tr><tr><td>RBAC fin, CRDs, Operators</td><td>❌</td><td>✅</td></tr><tr><td>Stack existante Docker Compose</td><td>✅ migration facile</td><td>conversion nécessaire</td></tr></tbody></table>
+<p>Choisis Swarm si tu as déjà des Compose files, une petite équipe, et pas besoin de scaling horizontal à 100+ nœuds.</p>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Initialiser le cluster</h3>
+<pre><code class="lang-bash"># Sur le premier manager (remplace l'IP par l'IP privée réseau inter-nœuds)
+docker swarm init --advertise-addr 192.168.1.10
+
+# Récupérer les tokens
+docker swarm join-token manager   # pour ajouter un manager
+docker swarm join-token worker    # pour ajouter un worker
+
+# Rejoindre depuis un autre nœud
+docker swarm join --token SWMTKN-1-xxx 192.168.1.10:2377
+
+# Vérifier l'état du cluster
+docker node ls</code></pre>
+<p><strong>Règle de quorum Raft</strong> : toujours un nombre impair de managers.</p>
 <ul>
-<li>Toujours utiliser un nombre impair de managers (3 ou 5) pour maintenir le quorum Raft et tolérer les pannes sans perte de consensus.</li>
-<li>Ne jamais stocker de secrets dans les variables d'environnement des services ; toujours utiliser <code>docker secret</code> qui monte les secrets en mémoire de manière sécurisée.</li>
-<li>Toujours définir des health checks sur chaque service pour permettre au Swarm de détecter et remplacer automatiquement les containers défaillants.</li>
-<li>Configurer des resource limits (CPU et mémoire) sur chaque service pour éviter qu'un service défaillant ne consomme toutes les ressources du noeud.</li>
-<li>Toujours tester les rolling updates sur un environnement de staging avec <code>--update-failure-action rollback</code> avant de déployer en production.</li>
+<li>3 managers → tolère 1 panne</li>
+<li>5 managers → tolère 2 pannes</li>
+<li>Ne jamais dépasser 7 managers (latence consensus)</li>
+</ul>
+<pre><code class="lang-bash"># Promouvoir un worker en manager
+docker node promote &lt;node-id&gt;
+
+# Vérifier la santé du Raft
+docker node inspect self --format '{{ .ManagerStatus.Reachability }}'</code></pre>
+<hr>
+<h3>2. Configurer les overlay networks</h3>
+<pre><code class="lang-bash"># Réseau chiffré pour données sensibles
+docker network create \
+  --driver overlay \
+  --opt encrypted \
+  --subnet 10.0.1.0/24 \
+  backend-net
+
+# Réseau frontend non chiffré (moins de CPU)
+docker network create --driver overlay frontend-net</code></pre>
+<p><strong>Pattern d'isolation recommandé</strong> :</p>
+<ul>
+<li><code>frontend-net</code> : load balancer ↔ app</li>
+<li><code>backend-net</code> : app ↔ base de données</li>
+<li><code>monitoring-net</code> : agents de monitoring (attachable)</li>
+</ul>
+<pre><code class="lang-bash"># Réseau attachable pour debug/tests ad hoc
+docker network create --driver overlay --attachable debug-net</code></pre>
+<hr>
+<h3>3. Déployer un service</h3>
+<pre><code class="lang-bash"># Service minimal avec réplicas
+docker service create \
+  --name api \
+  --replicas 3 \
+  --network backend-net \
+  --publish published=8080,target=3000 \
+  --limit-cpu 0.5 \
+  --limit-memory 256M \
+  --reserve-cpu 0.25 \
+  --reserve-memory 128M \
+  --health-cmd &quot;curl -f http://localhost:3000/health || exit 1&quot; \
+  --health-interval 10s \
+  --health-retries 3 \
+  myrepo/api:1.2.0
+
+# Inspecter les tasks et leur état
+docker service ps api --no-trunc</code></pre>
+<p><strong>Contraintes de placement</strong> :</p>
+<pre><code class="lang-bash"># Forcer sur nœuds labellisés SSD
+docker node update --label-add disk=ssd worker-1
+
+docker service create \
+  --constraint 'node.labels.disk == ssd' \
+  --name db \
+  postgres:16</code></pre>
+<hr>
+<h3>4. Stacks avec docker-compose (méthode recommandée)</h3>
+<pre><code class="lang-yaml"># docker-compose.prod.yml
+version: &quot;3.9&quot;
+
+services:
+  api:
+    image: myrepo/api:${API_VERSION:-latest}
+    networks:
+      - frontend-net
+      - backend-net
+    secrets:
+      - db_password
+    environment:
+      DB_HOST: db
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 15s
+        failure_action: rollback
+        monitor: 30s
+        order: start-first       # zero-downtime : nouveau container avant l'arrêt
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: pause
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: &quot;0.5&quot;
+          memory: 256M
+        reservations:
+          cpus: &quot;0.25&quot;
+          memory: 128M
+      placement:
+        constraints:
+          - node.role == worker
+    healthcheck:
+      test: [&quot;CMD&quot;, &quot;curl&quot;, &quot;-f&quot;, &quot;http://localhost:3000/health&quot;]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  db:
+    image: postgres:16
+    networks:
+      - backend-net
+    secrets:
+      - db_password
+    environment:
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.disk == ssd
+
+networks:
+  frontend-net:
+    driver: overlay
+  backend-net:
+    driver: overlay
+    driver_opts:
+      encrypted: &quot;true&quot;
+
+volumes:
+  db-data:
+
+secrets:
+  db_password:
+    external: true</code></pre>
+<pre><code class="lang-bash"># Déployer / mettre à jour la stack
+docker stack deploy -c docker-compose.prod.yml myapp
+
+# Lister les services de la stack
+docker stack services myapp
+
+# Retirer la stack (ne supprime pas les volumes)
+docker stack rm myapp</code></pre>
+<hr>
+<h3>5. Gérer secrets et configs</h3>
+<pre><code class="lang-bash"># Créer un secret depuis stdin (jamais depuis un fichier en clair en prod)
+echo &quot;S3cr3tP@ss&quot; | docker secret create db_password -
+
+# Depuis un fichier
+docker secret create tls_cert ./cert.pem
+
+# Lister / inspecter (le contenu n'est jamais affiché)
+docker secret ls
+docker secret inspect db_password
+
+# Config (non sensible — fichiers de conf, templates)
+docker config create nginx_conf ./nginx.conf
+
+# Usage dans un service
+docker service update \
+  --config-add source=nginx_conf,target=/etc/nginx/nginx.conf \
+  nginx</code></pre>
+<p>Les secrets sont montés en RAM (<code>tmpfs</code>) dans <code>/run/secrets/&lt;nom&gt;</code>. Ils ne touchent jamais le disque du worker.</p>
+<hr>
+<h3>6. Rolling updates et rollbacks</h3>
+<pre><code class="lang-bash"># Mise à jour de l'image (zero-downtime avec order: start-first)
+docker service update \
+  --image myrepo/api:1.3.0 \
+  --update-parallelism 1 \
+  --update-delay 15s \
+  --update-failure-action rollback \
+  api
+
+# Suivre la progression
+docker service ps api --filter desired-state=running
+
+# Rollback manuel immédiat
+docker service rollback api
+
+# Forcer un redémarrage sans changer l'image (ex. secrets modifiés)
+docker service update --force api</code></pre>
+<hr>
+<h3>7. Services globaux et monitoring</h3>
+<pre><code class="lang-bash"># Déployer un agent Prometheus Node Exporter sur CHAQUE nœud
+docker service create \
+  --name node-exporter \
+  --mode global \
+  --network monitoring-net \
+  --mount type=bind,src=/proc,dst=/host/proc,ro=true \
+  --mount type=bind,src=/sys,dst=/host/sys,ro=true \
+  prom/node-exporter:latest</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<h3>❌ Ne jamais faire</h3>
+<pre><code class="lang-bash"># DANGER : expose les secrets dans docker inspect / logs
+docker service create -e DB_PASSWORD=secret123 myapp
+
+# DANGER : manager utilisé comme worker en prod
+# (le manager gère le Raft — surcharge CPU = instabilité quorum)
+docker node update --availability drain manager-1  # ← correct pour drainer
+
+# DANGER : volume local partagé entre réplicas sans NFS/Ceph
+# Chaque réplica sur son nœud a sa propre copie locale → incohérence</code></pre>
+<h3>⚠️ Pièges courants</h3>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Solution</th></tr></thead><tbody><tr><td><code>update_config.order: stop-first</code> (défaut)</td><td>Downtime pendant update</td><td>Passer à <code>start-first</code></td></tr><tr><td>Pas de <code>healthcheck</code></td><td>Tasks &quot;Running&quot; mais app down</td><td>Toujours définir un healthcheck</td></tr><tr><td>Pas de <code>resource limits</code></td><td>Un service OOM tue le nœud</td><td>Toujours limiter CPU + RAM</td></tr><tr><td>Quorum perdu (2 managers sur 3 HS)</td><td>Cluster en read-only</td><td>Restaurer via <code>docker swarm init --force-new-cluster</code></td></tr><tr><td>Image <code>latest</code> en prod</td><td>Rollback impossible</td><td>Toujours tagger les versions</td></tr><tr><td>Drain d'un nœud sans vérifier les réplicas</td><td>Réplicas reschedulés sur nœuds surchargés</td><td>Surveiller <code>docker service ps</code> après drain</td></tr></tbody></table>
+<hr>
+<h2>Commandes de diagnostic</h2>
+<pre><code class="lang-bash"># État global du cluster
+docker node ls
+docker service ls
+
+# Tasks en échec
+docker service ps &lt;service&gt; --filter desired-state=shutdown
+
+# Logs d'un service (toutes les tasks)
+docker service logs --follow --tail 100 api
+
+# Inspecter un nœud (labels, ressources)
+docker node inspect &lt;node-id&gt; --pretty
+
+# Stats CPU/mémoire des containers sur le nœud local
+docker stats --no-stream</code></pre>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Registre privé avec TLS</strong> : configurer <code>--with-registry-auth</code> sur <code>docker stack deploy</code> pour que le swarm puisse puller depuis un registre privé.</li>
+<li><strong>Rotation des secrets</strong> : créer un nouveau secret versionné (<code>db_password_v2</code>), mettre à jour le service, puis supprimer l'ancien — le Swarm ne supporte pas la mise à jour in-place d'un secret.</li>
+<li><strong>Drain avant maintenance</strong> : <code>docker node update --availability drain &lt;node&gt;</code> migre proprement les tasks avant de toucher au nœud.</li>
+<li><strong>Labels structurés</strong> : utiliser des labels hiérarchiques (<code>zone=eu-west</code>, <code>disk=ssd</code>, <code>gpu=true</code>) pour des contraintes de placement précises.</li>
+<li><strong>CI/CD</strong> : coupler <code>docker stack deploy</code> à un pipeline GitLab/GitHub Actions avec le tag de commit comme version d'image — jamais de <code>latest</code> en production.</li>
 </ul>
 </article>
 </main>

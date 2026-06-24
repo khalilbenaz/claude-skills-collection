@@ -97,34 +97,171 @@ cp -r claude-skills-collection/skills/linux-systemd-manager ~/.claude/skills/</d
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Systemd Manager</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Comprendre l'architecture systemd</strong> — identifier les types d'unités (service, timer, socket, mount, target, path), comprendre l'arborescence des fichiers (<code>/etc/systemd/system/</code> pour les personnalisations, <code>/lib/systemd/system/</code> pour les unités fournies par les paquets), et utiliser <code>systemctl list-units</code> pour l'état global.</li>
-</ol>
-<ol>
-<li><strong>Créer un fichier unit service</strong> — rédiger un fichier <code>.service</code> avec les sections <code>[Unit]</code> (description, dépendances <code>After=</code>, <code>Requires=</code>, <code>Wants=</code>), <code>[Service]</code> (type, ExecStart, ExecReload, Restart, User, WorkingDirectory, Environment), et <code>[Install]</code> (WantedBy pour le target de démarrage).</li>
-</ol>
-<ol>
-<li><strong>Configurer les timers</strong> — remplacer les cron jobs par des timers systemd en créant un fichier <code>.timer</code> avec <code>OnCalendar=</code> (syntaxe calendaire) ou <code>OnBootSec=</code>/<code>OnUnitActiveSec=</code> (monotonic), associer le timer à son service correspondant, et activer avec <code>systemctl enable --now mon-timer.timer</code>.</li>
-</ol>
-<ol>
-<li><strong>Gérer le cycle de vie des services</strong> — démarrer (<code>start</code>), arrêter (<code>stop</code>), redémarrer (<code>restart</code>), recharger la configuration (<code>reload</code>), vérifier le statut (<code>status</code>), et utiliser <code>daemon-reload</code> après chaque modification d'un fichier unit pour recharger la configuration systemd.</li>
-</ol>
-<ol>
-<li><strong>Analyser les logs avec journalctl</strong> — filtrer par unité (<code>-u service</code>), par priorité (<code>-p err</code>), par période (<code>--since</code>, <code>--until</code>), suivre en temps réel (<code>-f</code>), afficher les boots précédents (<code>-b -1</code>), et exporter les logs au format JSON (<code>-o json-pretty</code>).</li>
-</ol>
-<ol>
-<li><strong>Gérer les dépendances et l'ordre de boot</strong> — utiliser <code>systemd-analyze</code> pour mesurer le temps de démarrage, <code>systemd-analyze blame</code> pour identifier les services lents, <code>systemd-analyze critical-chain</code> pour la chaîne critique, et configurer les dépendances avec <code>Before=</code>, <code>After=</code>, <code>Requires=</code>, <code>Wants=</code>.</li>
-</ol>
-<ol>
-<li><strong>Sécuriser les services</strong> — appliquer les options de sandboxing : <code>ProtectSystem=strict</code>, <code>ProtectHome=yes</code>, <code>NoNewPrivileges=yes</code>, <code>PrivateTmp=yes</code>, <code>ReadOnlyPaths=</code>, et utiliser <code>systemd-analyze security &lt;service&gt;</code> pour évaluer le score de sécurité.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Identifier le besoin et le type d'unité</h3>
+<table><thead><tr><th>Besoin</th><th>Type d'unité</th></tr></thead><tbody><tr><td>Démon applicatif</td><td><code>.service</code></td></tr><tr><td>Tâche planifiée</td><td><code>.timer</code> + <code>.service</code></td></tr><tr><td>Démarrage sur connexion réseau</td><td><code>.socket</code></td></tr><tr><td>Montage de système de fichiers</td><td><code>.mount</code> / <code>.automount</code></td></tr><tr><td>Regrouper des services</td><td><code>.target</code></td></tr><tr><td>Surveiller un fichier/dossier</td><td><code>.path</code></td></tr></tbody></table>
+<p>Vérifier si une unité existe déjà :</p>
+<pre><code class="lang-bash">systemctl list-unit-files | grep monapp
+systemctl cat monapp.service        # lire le fichier actuel</code></pre>
+<hr>
+<h3>2. Créer un fichier <code>.service</code></h3>
+<p>Emplacement : <code>/etc/systemd/system/monapp.service</code></p>
+<pre><code class="lang-ini">[Unit]
+Description=Mon application Go
+Documentation=https://example.com/docs
+After=network-online.target postgresql.service
+Wants=network-online.target
+Requires=postgresql.service
+
+[Service]
+Type=simple                   # simple | forking | oneshot | notify | idle
+User=monapp
+Group=monapp
+WorkingDirectory=/opt/monapp
+ExecStart=/opt/monapp/bin/monapp --config /etc/monapp/config.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+StartLimitIntervalSec=60s
+StartLimitBurst=3
+
+# Sécurité minimale recommandée
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/monapp /var/log/monapp
+
+# Variables d'environnement
+EnvironmentFile=-/etc/monapp/env       # le &quot;-&quot; rend le fichier optionnel
+Environment=&quot;LOG_LEVEL=info&quot;
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<p>Activer et démarrer :</p>
+<pre><code class="lang-bash">systemctl daemon-reload
+systemctl enable --now monapp.service
+systemctl status monapp.service</code></pre>
+<hr>
+<h3>3. Créer un timer (remplacement cron)</h3>
+<p>Deux fichiers du même nom (<code>backup.timer</code> + <code>backup.service</code>) :</p>
+<pre><code class="lang-ini"># /etc/systemd/system/backup.timer
+[Unit]
+Description=Sauvegarde quotidienne à 2h
+
+[Timer]
+OnCalendar=*-*-* 02:00:00      # syntaxe calendaire
+RandomizedDelaySec=300          # étalement aléatoire jusqu'à 5 min
+Persistent=true                 # rattraper si machine éteinte à l'heure prévue
+
+[Install]
+WantedBy=timers.target</code></pre>
+<pre><code class="lang-ini"># /etc/systemd/system/backup.service
+[Unit]
+Description=Script de sauvegarde
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup.sh
+User=backup</code></pre>
+<pre><code class="lang-bash">systemctl enable --now backup.timer
+systemctl list-timers --all          # voir prochaine activation</code></pre>
+<p>Syntaxes <code>OnCalendar=</code> utiles :</p>
+<pre><code>daily                    # 00:00:00 chaque jour
+weekly                   # lundi 00:00
+Mon-Fri 09:00            # jours ouvrés à 9h
+*:0/15                   # toutes les 15 minutes
+2026-*-1 00:00           # 1er de chaque mois</code></pre>
+<hr>
+<h3>4. Cycle de vie et commandes essentielles</h3>
+<pre><code class="lang-bash"># Contrôle
+systemctl start|stop|restart|reload monapp
+systemctl enable|disable monapp        # activation au boot
+systemctl mask|unmask monapp           # empêche tout démarrage
+systemctl status monapp                # état + dernières lignes de log
+
+# Introspection
+systemctl show monapp                  # toutes les propriétés
+systemctl list-dependencies monapp     # arbre de dépendances
+systemctl list-units --state=failed    # services en erreur
+
+# Modifier sans casser
+systemctl edit monapp                  # drop-in dans /etc/systemd/system/monapp.d/override.conf
+systemctl edit --full monapp           # copie complète éditable
+systemctl revert monapp                # supprimer les drop-ins</code></pre>
+<p>Après toute modification de fichier unit :</p>
+<pre><code class="lang-bash">systemctl daemon-reload</code></pre>
+<hr>
+<h3>5. Analyser les logs avec journalctl</h3>
+<pre><code class="lang-bash"># Basique
+journalctl -u monapp                   # tous les logs de l'unité
+journalctl -u monapp -n 100 --no-pager # 100 dernières lignes
+journalctl -u monapp -f                # suivi temps réel
+
+# Filtres temporels
+journalctl -u monapp --since &quot;1 hour ago&quot;
+journalctl -u monapp --since &quot;2026-06-24 08:00&quot; --until &quot;2026-06-24 09:00&quot;
+
+# Filtres par priorité (0=emerg à 7=debug)
+journalctl -u monapp -p err            # erreurs et au-dessus
+journalctl -u monapp -p warning..err  # plage de priorités
+
+# Boots précédents
+journalctl --list-boots                # liste des boots enregistrés
+journalctl -u monapp -b -1             # boot précédent
+
+# Export
+journalctl -u monapp -o json-pretty    # JSON structuré
+journalctl -u monapp --output=cat      # lignes brutes sans métadonnées
+
+# Purge (libérer de l'espace)
+journalctl --vacuum-size=500M
+journalctl --vacuum-time=30d</code></pre>
+<hr>
+<h3>6. Diagnostiquer les problèmes de boot</h3>
+<pre><code class="lang-bash">systemd-analyze                        # temps total de boot
+systemd-analyze blame                  # services triés par durée de démarrage
+systemd-analyze critical-chain         # chemin critique (goulot d'étranglement)
+systemd-analyze plot &gt; boot.svg        # graphe SVG du boot
+systemd-analyze verify monapp.service  # valider la syntaxe d'un unit file</code></pre>
+<hr>
+<h3>7. Sécuriser un service</h3>
+<p>Évaluer le score de sécurité actuel :</p>
+<pre><code class="lang-bash">systemd-analyze security monapp.service</code></pre>
+<p>Options de sandboxing par ordre d'impact :</p>
+<pre><code class="lang-ini">[Service]
+NoNewPrivileges=yes            # interdit l'escalade de privilèges
+ProtectSystem=strict           # / en lecture seule (sauf /dev, /proc, /sys)
+ProtectHome=yes                # /home, /root, /run/user inaccessibles
+PrivateTmp=yes                 # /tmp isolé pour ce service
+PrivateDevices=yes             # pas d'accès aux devices raw
+ProtectKernelTunables=yes      # /proc/sys en lecture seule
+ProtectControlGroups=yes       # cgroups en lecture seule
+RestrictSUIDSGID=yes           # interdit création de fichiers SUID/SGID
+SystemCallFilter=@system-service  # whitelist d'appels système
+CapabilityBoundingSet=         # vide = aucune capability
+AmbientCapabilities=           # vide = aucune capability ambiante</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<p><strong>Ne jamais modifier <code>/lib/systemd/system/</code></strong> — écrasé à chaque mise à jour du paquet. Toujours utiliser <code>/etc/systemd/system/</code> ou <code>systemctl edit</code>.</p>
+<p><strong>Oublier <code>daemon-reload</code></strong> après modification d'un fichier unit : systemd continue d'utiliser la version en mémoire. Le service peut sembler &quot;fonctionner&quot; avec la vieille config.</p>
+<p><strong><code>Type=forking</code> mal configuré</strong> sans <code>PIDFile=</code> : systemd ne peut pas suivre le PID du processus fils et le considère mort immédiatement.</p>
+<p><strong>Boucle de redémarrage infinie</strong> avec <code>Restart=always</code> sans <code>StartLimitBurst</code> : un service qui plante immédiatement monopolise les ressources. Toujours coupler :</p>
+<pre><code class="lang-ini">Restart=on-failure
+RestartSec=10s
+StartLimitIntervalSec=120s
+StartLimitBurst=5</code></pre>
+<p><strong><code>After=network.target</code> insuffisant</strong> pour les services qui ont besoin d'une IP assignée : utiliser <code>After=network-online.target</code> + <code>Wants=network-online.target</code>.</p>
+<p><strong>Variables d'env dans ExecStart</strong> via <code>$VAR</code> sans les déclarer dans <code>Environment=</code> ou <code>EnvironmentFile=</code> : elles ne sont PAS héritées du shell courant.</p>
+<p><strong>Timer sans <code>Persistent=true</code></strong> pour les tâches critiques : si la machine est éteinte à l'heure prévue, la tâche ne sera jamais rattrapée.</p>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Toujours exécuter <code>systemctl daemon-reload</code> après toute modification d'un fichier unit — sans cela, systemd utilise l'ancienne version en mémoire.</li>
-<li>Placer les unités personnalisées dans <code>/etc/systemd/system/</code> et non dans <code>/lib/systemd/system/</code> — ce dernier est géré par le gestionnaire de paquets et sera écrasé lors des mises à jour.</li>
-<li>Configurer <code>Restart=on-failure</code> et <code>RestartSec=5s</code> pour les services critiques afin d'assurer la résilience automatique sans boucle de redémarrage trop rapide.</li>
-<li>Utiliser les overrides avec <code>systemctl edit &lt;service&gt;</code> plutôt que modifier directement les fichiers unit fournis par les paquets — cela crée un fichier drop-in dans <code>/etc/systemd/system/&lt;service&gt;.d/</code>.</li>
-<li>Toujours vérifier les logs avec <code>journalctl -u &lt;service&gt; -n 50 --no-pager</code> avant de déclarer un service fonctionnel.</li>
+<li><strong>Prefer <code>Type=notify</code></strong> pour les services modernes qui supportent <code>sd_notify()</code> — systemd sait exactement quand le service est prêt.</li>
+<li><strong>Utiliser <code>RuntimeDirectory=</code> / <code>StateDirectory=</code> / <code>LogsDirectory=</code></strong> plutôt que de créer les dossiers manuellement dans les scripts d'init.</li>
+<li><strong>Isoler les credentials</strong> avec <code>LoadCredential=</code> (systemd 247+) : stocker les secrets hors de l'EnvironmentFile, accessibles via <code>$CREDENTIALS_DIRECTORY</code>.</li>
+<li><strong>Activer le rate-limiting des logs</strong> via <code>LogRateLimitIntervalSec=</code> et <code>LogRateLimitBurst=</code> pour éviter la saturation du journal sur un service verbeux.</li>
+<li><strong>Versionner les unit files</strong> dans un dépôt Git et les déployer via Ansible/Salt — pas de modification manuelle en production.</li>
+<li><strong>Tester la syntaxe</strong> avant de déployer : <code>systemd-analyze verify /etc/systemd/system/monapp.service</code>.</li>
 </ul>
 </article>
 </main>

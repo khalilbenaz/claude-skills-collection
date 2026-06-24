@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-database-migration-helper — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Gestion des migrations de bases de données et changements de schéma.">
+<meta name="description" content="Gestion des migrations de bases de données et changements de schéma avec stratégies zero-downtime, rollback et data migration.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-database-migration-helper</h1>
-<p class="lead">Gestion des migrations de bases de données et changements de schéma.</p>
+<p class="lead">Gestion des migrations de bases de données et changements de schéma avec stratégies zero-downtime, rollback et data migration.</p>
 
 
 
@@ -96,24 +96,165 @@ cp -r claude-skills-collection/skills/dev-database-migration-helper ~/.claude/sk
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Database Migration Helper</h1>
-<h2>Workflow</h2>
+<h2>1. Qualifier le changement</h2>
+<p>Avant tout, caractériser l'opération :</p>
+<table><thead><tr><th>Type</th><th>Risque</th><th>Stratégie recommandée</th></tr></thead><tbody><tr><td>Ajout colonne nullable</td><td>Faible</td><td>Migration directe</td></tr><tr><td>Ajout colonne NOT NULL sans default</td><td>Élevé</td><td>Expand-contract obligatoire</td></tr><tr><td>Renommage colonne/table</td><td>Élevé</td><td>Alias + expand-contract</td></tr><tr><td>Suppression colonne/table</td><td>Élevé</td><td>Phase contract après code nettoyé</td></tr><tr><td>Changement de type</td><td>Élevé</td><td>Colonne intermédiaire + backfill</td></tr><tr><td>Ajout index (grande table)</td><td>Moyen</td><td>Index CONCURRENTLY / online</td></tr><tr><td>Data migration (backfill)</td><td>Variable</td><td>Batches, jamais full-table en une passe</td></tr></tbody></table>
+<hr>
+<h2>2. Choisir la stratégie</h2>
+<h3>Expand-Contract (zero-downtime, recommandé pour prod)</h3>
+<p>Trois phases déployées séparément :</p>
 <ol>
-<li>Analyser le changement requis : caractériser précisément l'opération (ajout de colonne nullable/non-nullable, suppression, renommage, changement de type, ajout d'index, data migration, splitting/merging de tables) et évaluer l'impact sur le code existant.</li>
-<li>Définir la stratégie de migration : choisir entre expand-contract (pattern pour zero-downtime), blue-green deployment (bascule d'environnement), migration backward compatible (ancien et nouveau code peuvent coexister) ou migration avec fenêtre de maintenance si inévitable.</li>
-<li>Écrire la migration avec l'outil adapté à la stack : EF Core Migrations (dotnet ef migrations add), Flyway (fichiers SQL versionnés V1__desc.sql), Liquibase (XML/YAML/JSON changelogs), Alembic (Python/SQLAlchemy), Knex.js (Node.js), ou SQL brut avec scripts versionnés.</li>
-<li>Gérer les données existantes : rédiger les scripts de transformation (data migration), configurer les valeurs par défaut pour les nouvelles colonnes non-nullables, prévoir le backfill des données historiques en batch pour éviter les locks tables prolongés.</li>
-<li>Implémenter le zero-downtime en 2 phases : Phase 1 — déployer la migration additive (nouvelle colonne, nouvel index) sans retirer l'ancien schéma, déployer le code compatible double-écriture ; Phase 2 — une fois le trafic migré, supprimer les anciennes colonnes/tables en toute sécurité.</li>
-<li>Préparer la rollback strategy : écrire systématiquement la migration inverse (Down() en EF Core, undo scripts en Flyway), tester le rollback en staging, documenter les snapshots DB et les procédures de point-in-time recovery selon le cloud provider.</li>
-<li>Tester la migration en staging : utiliser des données réalistes (dump anonymisé de prod), mesurer la durée d'exécution, identifier les table locks et les blocking queries (pg_locks, sys.dm_exec_requests), valider les performances post-migration avec EXPLAIN ANALYZE.</li>
-<li>Exécuter et monitorer en production : planifier l'exécution en période de faible charge si nécessaire, surveiller les locks actifs, suivre la progression des opérations longues (ALTER TABLE sur grandes tables), valider l'intégrité des données et les contraintes post-migration.</li>
+<li><strong>Expand</strong> — ajouter la nouvelle colonne/table, sans toucher à l'ancienne.</li>
+<li><strong>Migrate</strong> — double-écriture dans le code, backfill des données existantes.</li>
+<li><strong>Contract</strong> — supprimer l'ancienne colonne/table une fois le code nettoyé déployé.</li>
 </ol>
-<h2>Règles</h2>
+<h3>Migration avec fenêtre de maintenance</h3>
+<p>Acceptable uniquement si : trafic &lt; 100 rps OU table &lt; 100k lignes OU downtime explicitement accepté par le métier.</p>
+<h3>Blue-Green</h3>
+<p>Maintenir deux environnements avec bascule DNS/load-balancer. Adapté aux changements majeurs de schéma impossibles à rendre backward-compatible.</p>
+<hr>
+<h2>3. Écrire la migration selon l'outil</h2>
+<h3>EF Core (C#)</h3>
+<pre><code class="lang-bash">dotnet ef migrations add AddUserEmailIndex --project src/Infrastructure
+dotnet ef database update --connection &quot;Server=...;Database=...;&quot;
+# Rollback vers migration précédente
+dotnet ef database update NomMigrationPrecedente</code></pre>
+<pre><code class="lang-csharp">// Migration générée — toujours vérifier le SQL produit
+protected override void Up(MigrationBuilder mb)
+{
+    mb.AddColumn&lt;string&gt;(&quot;email_verified&quot;, &quot;users&quot;, nullable: true);
+    mb.CreateIndex(&quot;IX_users_email&quot;, &quot;users&quot;, &quot;email&quot;, unique: true);
+}
+protected override void Down(MigrationBuilder mb)
+{
+    mb.DropIndex(&quot;IX_users_email&quot;, &quot;users&quot;);
+    mb.DropColumn(&quot;email_verified&quot;, &quot;users&quot;);
+}</code></pre>
+<h3>Flyway (SQL versionné)</h3>
+<pre><code>db/migration/
+  V1__create_users.sql
+  V2__add_email_verified.sql
+  V20260624_001__backfill_email.sql   # préfixe date pour éviter conflits</code></pre>
+<pre><code class="lang-bash">flyway -url=jdbc:postgresql://host/db -user=x -password=y migrate
+flyway info        # état des migrations
+flyway repair      # si checksum corrompu</code></pre>
+<h3>Liquibase</h3>
+<pre><code class="lang-yaml"># changelog-v3.yaml
+databaseChangeLog:
+  - changeSet:
+      id: add-email-verified
+      author: k.benazzouz
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: email_verified
+                  type: boolean
+                  defaultValueBoolean: false
+      rollback:
+        - dropColumn:
+            tableName: users
+            columnName: email_verified</code></pre>
+<h3>Alembic (Python)</h3>
+<pre><code class="lang-bash">alembic revision --autogenerate -m &quot;add_email_verified&quot;
+alembic upgrade head
+alembic downgrade -1   # rollback d'une révision</code></pre>
+<h3>SQL brut versionné</h3>
+<p>Nommage : <code>V&lt;YYYYMMDD&gt;_&lt;NNN&gt;__&lt;description&gt;.sql</code> + script <code>rollback/R&lt;YYYYMMDD&gt;_&lt;NNN&gt;__&lt;description&gt;.sql</code> obligatoire.</p>
+<hr>
+<h2>4. Backfill de données existantes (batches)</h2>
+<p>Ne jamais backfiller une grande table en une seule transaction — risque de lock prolongé et timeout.</p>
+<pre><code class="lang-sql">-- PostgreSQL / SQL Server : backfill par batch de 10 000 lignes
+DO $$
+DECLARE
+  last_id BIGINT := 0;
+  batch   BIGINT := 10000;
+BEGIN
+  LOOP
+    UPDATE users
+    SET email_verified = false
+    WHERE id &gt; last_id AND id &lt;= last_id + batch
+      AND email_verified IS NULL;
+    EXIT WHEN NOT FOUND;
+    last_id := last_id + batch;
+    PERFORM pg_sleep(0.1);  -- respiration entre batches
+  END LOOP;
+END $$;</code></pre>
+<pre><code class="lang-sql">-- SQL Server : même principe avec TOP
+DECLARE @batch INT = 10000;
+WHILE 1=1
+BEGIN
+  UPDATE TOP (@batch) users
+  SET email_verified = 0
+  WHERE email_verified IS NULL;
+  IF @@ROWCOUNT = 0 BREAK;
+  WAITFOR DELAY '00:00:00.100';
+END</code></pre>
+<hr>
+<h2>5. Grandes tables — opérations online</h2>
+<h3>PostgreSQL</h3>
+<pre><code class="lang-sql">-- Index sans lock table (peut prendre du temps, c'est voulu)
+CREATE INDEX CONCURRENTLY idx_users_email ON users(email);
+-- Contrainte NOT NULL sans réécriture complète (PG 12+)
+ALTER TABLE users ALTER COLUMN email SET NOT NULL; -- rapide si CHECK déjà validé
+ALTER TABLE users ADD CONSTRAINT chk_email_notnull CHECK (email IS NOT NULL) NOT VALID;
+ALTER TABLE users VALIDATE CONSTRAINT chk_email_notnull; -- scan en arrière-plan</code></pre>
+<h3>MySQL</h3>
+<pre><code class="lang-bash"># pt-online-schema-change (Percona Toolkit) — pas de lock table
+pt-online-schema-change --alter &quot;ADD COLUMN email_verified TINYINT(1) DEFAULT 0&quot; \
+  D=mydb,t=users --execute
+# gh-ost (GitHub) — alternative sans triggers
+gh-ost --database mydb --table users \
+  --alter &quot;ADD COLUMN email_verified TINYINT(1) DEFAULT 0&quot; \
+  --execute</code></pre>
+<hr>
+<h2>6. Tester avant production</h2>
+<pre><code class="lang-bash"># Dump anonymisé de prod vers staging
+pg_dump prod_db | psql staging_db
+# Mesurer la durée réelle
+\timing on   -- psql
+# Détecter les locks
+-- PostgreSQL
+SELECT pid, query, wait_event_type, wait_event FROM pg_stat_activity WHERE wait_event IS NOT NULL;
+-- SQL Server
+SELECT * FROM sys.dm_exec_requests WHERE blocking_session_id &lt;&gt; 0;
+# Valider le plan post-migration
+EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM users WHERE email = 'test@test.com';</code></pre>
+<p>Checklist staging :</p>
 <ul>
-<li>Toujours tester les migrations sur un environnement staging avec des données représentatives avant la production.</li>
-<li>Privilégier les migrations backward compatible et le pattern expand-contract pour tout changement sur une table à fort trafic.</li>
-<li>Fournir systématiquement le script de rollback avec chaque migration.</li>
-<li>Adapter les exemples de code à l'ORM/outil de migration de la stack de l'utilisateur.</li>
-<li>Pour les grandes tables (&gt; 1M lignes), proposer des stratégies de migration online (pt-online-schema-change, gh-ost pour MySQL ; CREATE INDEX CONCURRENTLY pour PostgreSQL).</li>
+<li>[ ] Durée d'exécution mesurée sur volume réaliste</li>
+<li>[ ] Aucun lock bloquant &gt; 5 s</li>
+<li>[ ] Rollback testé et fonctionnel</li>
+<li>[ ] Contraintes et index vérifiés (<code>\d+ tablename</code> en psql, <code>sp_help</code> en SQL Server)</li>
+<li>[ ] Application validée fonctionnellement après migration</li>
+</ul>
+<hr>
+<h2>7. Rollback strategy</h2>
+<ul>
+<li><strong>EF Core</strong> : <code>dotnet ef database update &lt;PreviousMigration&gt;</code></li>
+<li><strong>Flyway</strong> : écrire <code>U2__undo_add_email_verified.sql</code> (Flyway Pro) ou script manuel</li>
+<li><strong>Liquibase</strong> : <code>liquibase rollbackCount 1</code> ou <code>rollbackToDate</code></li>
+<li><strong>SQL brut</strong> : script <code>R_&lt;version&gt;__rollback.sql</code> toujours en binôme avec le script Up</li>
+<li>Snapshot DB avant migration sur prod (RDS automated backup, Azure point-in-time restore)</li>
+</ul>
+<hr>
+<h2>8. Garde-fous et anti-patterns</h2>
+<p><strong>Ne jamais faire :</strong></p>
+<ul>
+<li><code>ALTER TABLE</code> bloquant sur table &gt; 500k lignes en heures de pointe.</li>
+<li>Supprimer une colonne/table sans vérifier que TOUT le code ne l'utilise plus (y compris BI, jobs, legacy services).</li>
+<li>Écrire des migrations non idempotentes (<code>IF NOT EXISTS</code> manquant → crash à la re-exécution).</li>
+<li>Modifier une migration déjà appliquée en prod (casse les checksums Flyway/EF).</li>
+<li>Backfill en une seule transaction sur millions de lignes.</li>
+<li>Déployer code et migration dans le même release sans ordre défini.</li>
+</ul>
+<p><strong>Toujours faire :</strong></p>
+<ul>
+<li>Ordonner : migration d'abord (backward compatible), code ensuite ; puis nettoyage contract.</li>
+<li>Versionner les migrations avec le code source dans le même repo, même PR.</li>
+<li>Logger la durée et l'issue de chaque migration en prod (table <code>migration_log</code> ou outil dédié).</li>
+<li>Prévoir une alerte monitoring post-migration (latence, erreurs applicatives).</li>
 </ul>
 </article>
 </main>

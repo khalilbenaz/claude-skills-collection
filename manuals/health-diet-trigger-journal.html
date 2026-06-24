@@ -96,40 +96,77 @@ cp -r claude-skills-collection/skills/health-diet-trigger-journal ~/.claude/skil
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Diet Trigger Journal</h1>
-<p>Quand l'utilisateur décrit un lien entre alimentation et symptômes, suis ce workflow.</p>
-<h2>Étape 1 — Séparation des données</h2>
-<p>Sépare clairement :</p>
+<p>Outil d'observation structuré : met en relation repas et symptômes pour dégager des hypothèses à explorer avec un professionnel de santé. Ne produit jamais de diagnostic.</p>
+<hr>
+<h2>Étape 1 — Recueil des données brutes</h2>
+<p>Demande ou structure les informations suivantes. Si l'utilisateur n'en fournit qu'une partie, travaille avec ce qui est disponible et signale ce qui manque.</p>
+<table><thead><tr><th>Champ</th><th>Ce qu'on cherche</th></tr></thead><tbody><tr><td>Aliment / repas</td><td>Nom, préparation (cru/cuit/transformé), marque si pertinente</td></tr><tr><td>Quantité</td><td>Petite portion, portion normale, excès</td></tr><tr><td>Heure de consommation</td><td>Matin à jeun, avec d'autres aliments, avant de dormir…</td></tr><tr><td>Délai symptômes</td><td>Immédiat (&lt; 30 min), court (30 min–2 h), long (2–8 h), lendemain</td></tr><tr><td>Type de symptôme</td><td>Digestif, cutané, respiratoire, fatigue, douleur, autre</td></tr><tr><td>Intensité</td><td>Légère / modérée / invalidante (scale 1–10 si l'utilisateur veut)</td></tr><tr><td>Contexte</td><td>Stress, repas rapide, médicament pris ce jour, cycle menstruel</td></tr><tr><td>Fréquence</td><td>Première fois, rare, récurrent, systématique</td></tr></tbody></table>
+<p><strong>Action concrète</strong> : si l'utilisateur décrit un épisode précis, extrais ces champs directement depuis son texte et affiche un résumé structuré avant de passer à l'analyse.</p>
+<hr>
+<h2>Étape 2 — Journal des épisodes</h2>
+<p>Construis (ou aide à construire) un tableau cumulatif au fil des échanges :</p>
+<pre><code>| Date       | Aliment / Repas          | Qté   | Heure | Symptôme          | Délai  | Contexte notable     | Confiance |
+|------------|--------------------------|-------|-------|-------------------|--------|----------------------|-----------|
+| 2026-06-10 | Pâtes blé complet + sauce| norm. | 19h30 | Ballonnements ++  | 1 h    | Repas rapide, stress | Modérée   |
+| 2026-06-14 | Pâtes blé complet seules | norm. | 12h00 | Ballonnements +   | 45 min | Calme                | Modérée   |
+| 2026-06-18 | Riz blanc + légumes      | norm. | 13h00 | Aucun             | —      | —                    | —         |</code></pre>
+<p>Le tableau s'allonge à chaque nouvel épisode. Propose à l'utilisateur de le copier-coller dans un fichier texte ou une note pour le tenir à jour.</p>
+<hr>
+<h2>Étape 3 — Évaluation des corrélations</h2>
+<p>Une fois plusieurs épisodes enregistrés, classe chaque aliment suspect selon :</p>
 <ul>
-<li><strong>Aliments ou repas</strong> consommés</li>
-<li><strong>Délai</strong> avant apparition des symptômes</li>
-<li><strong>Type de symptômes</strong> ressentis</li>
-<li><strong>Intensité</strong> des symptômes</li>
-<li><strong>Répétition du schéma</strong> (première fois ou récurrent)</li>
+<li><strong>Corrélation forte</strong> : même aliment → même symptôme, reproduit ≥ 3 fois, délai constant, symptôme absent avec aliment de substitution.</li>
+<li><strong>Corrélation modérée</strong> : 2 occurrences, délai variable, d'autres facteurs présents (stress, quantité, combinaison d'aliments).</li>
+<li><strong>Corrélation faible / hasard</strong> : 1 seul épisode, contexte très différent entre les fois, d'autres aliments communs au repas.</li>
+<li><strong>Non concluant</strong> : données insuffisantes — précise ce qu'il faudrait observer pour avancer.</li>
 </ul>
-<h2>Étape 2 — Évaluation des corrélations</h2>
-<p>Distingue :</p>
+<p><strong>Exemple de formulation correcte</strong> :</p>
+<blockquote>&quot;Les deux épisodes avec des pâtes au blé complet suggèrent un lien possible à explorer. La présence de sauce la première fois et l'absence d'autres céréales la deuxième rendent l'hypothèse modérément plausible. Un test sans gluten pendant 2 semaines, sous supervision d'un professionnel, pourrait aider à clarifier.&quot;</blockquote>
+<hr>
+<h2>Étape 4 — Facteurs confondants à vérifier</h2>
+<p>Avant de conclure, explore ces variables qui brouillent souvent le signal :</p>
 <ul>
-<li><strong>Corrélation forte</strong> : schéma répété plusieurs fois, même aliment → même symptôme.</li>
-<li><strong>Corrélation faible</strong> : observé une ou deux fois, autres facteurs possibles.</li>
-<li><strong>Incertaine</strong> : trop peu de données pour conclure.</li>
+<li><strong>Combinaisons</strong> : l'aliment seul versus avec d'autres (ex. lactose + fibres → effet amplifié).</li>
+<li><strong>Mode de préparation</strong> : cru versus cuit, frit versus vapeur, fermenté versus frais.</li>
+<li><strong>Quantité seuil</strong> : symptômes seulement au-delà d'une certaine dose.</li>
+<li><strong>Stress et rythme</strong> : repas avalé en 5 min, repas sous tension = symptômes plus intenses même sans aliment trigger.</li>
+<li><strong>Médicaments / compléments</strong> : AINS, antibiotiques, probiotiques introduits récemment.</li>
+<li><strong>Cycle hormonal</strong> : transit souvent modifié en phase prémenstruelle.</li>
+<li><strong>Hydratation</strong> : consommation d'alcool ou caféine le même jour.</li>
 </ul>
-<h2>Étape 3 — Journal structuré</h2>
-<table><thead><tr><th>Date</th><th>Repas / Aliment</th><th>Quantité approx.</th><th>Heure</th><th>Symptôme</th><th>Délai</th><th>Confiance corrélation</th></tr></thead><tbody></tbody></table>
-<h2>Étape 4 — Prudence</h2>
-<ul>
-<li>Ne parle <strong>pas</strong> d'intolérance ou d'allergie comme certitude sans confirmation médicale.</li>
-<li>Formule les liens comme des hypothèses (ex. &quot;un lien possible à explorer…&quot;).</li>
-</ul>
-<h2>Étape 5 — Conclusion</h2>
-<p>Termine par :</p>
+<hr>
+<h2>Étape 5 — Hypothèses et plan d'observation</h2>
 <h3>Hypothèses prudentes</h3>
-<p>Ce qui semble se dégager des données, formulé avec précaution.</p>
-<h3>Variables à suivre</h3>
-<p>Ce que l'utilisateur devrait noter les prochaines fois (quantité, contexte, stress…).</p>
-<h3>Questions pour un gastro-entérologue ou nutritionniste</h3>
-<p>5 questions concrètes et personnalisées.</p>
+<p>Liste les aliments suspects par niveau de corrélation. Formule systématiquement avec des modérateurs : &quot;semble&quot;, &quot;pourrait&quot;, &quot;à vérifier&quot;, &quot;lien possible&quot;.</p>
+<h3>Variables à noter les prochaines fois</h3>
+<p>Adapte à ce qui manque dans le journal. Exemple :</p>
+<ul>
+<li>Quantité exacte consommée.</li>
+<li>Heure du dernier repas avant celui-ci.</li>
+<li>Niveau de stress (0–10) au moment du repas.</li>
+<li>Qualité du sommeil la nuit précédente.</li>
+</ul>
+<h3>Journal simplifié à tenir soi-même</h3>
+<pre><code>DATE :
+REPAS (liste tous les aliments) :
+HEURE :
+SYMPTÔMES (oui/non + description) :
+DÉLAI :
+CONTEXTE (stress, fatigue, médicament…) :</code></pre>
+<h3>Questions concrètes pour le professionnel de santé</h3>
+<p>Génère 4 à 6 questions personnalisées basées sur les données recueillies. Exemples de structure :</p>
+<ul>
+<li>&quot;Est-ce que les symptômes que je décris (ballonnements récurrents après blé complet) peuvent orienter vers une intolérance au gluten non-cœliaque ?&quot;</li>
+<li>&quot;Faut-il faire un test d'éviction ou des examens biologiques en premier ?&quot;</li>
+<li>&quot;Comment distinguer une intolérance aux FODMAPs d'une intolérance au gluten ?&quot;</li>
+<li>&quot;Mon transit est très variable selon le stress — comment séparer la composante alimentaire de la composante fonctionnelle ?&quot;</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>A éviter</th><th>Pourquoi</th><th>Alternative</th></tr></thead><tbody><tr><td>Diagnostiquer une &quot;intolérance au gluten&quot; ou &quot;allergie&quot;</td><td>Sans test médical, c'est une hypothèse</td><td>&quot;Lien possible à confirmer avec un médecin&quot;</td></tr><tr><td>Recommander une éviction longue sans suivi</td><td>Peut créer des carences</td><td>Suggérer un suivi nutritionnel</td></tr><tr><td>Conclure sur 1 seul épisode</td><td>Trop peu de données</td><td>Inviter à tenir le journal 2–4 semaines</td></tr><tr><td>Ignorer les facteurs de stress</td><td>Biais fréquent</td><td>Inclure contexte dans chaque entrée</td></tr><tr><td>Proposer des listes d'aliments &quot;interdits&quot;</td><td>Nocif sans bilan complet</td><td>Identifier des pistes, pas des règles</td></tr></tbody></table>
+<hr>
 <h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce journal est un outil d'observation. Seul un professionnel de santé peut diagnostiquer une intolérance ou une allergie alimentaire.</blockquote>
+<blockquote>Ce journal est un outil d'observation personnelle. Il ne remplace pas une consultation médicale. Seul un médecin, gastro-entérologue ou allergologue peut poser un diagnostic d'intolérance ou d'allergie alimentaire. Si les symptômes sont intenses, s'aggravent, ou s'accompagnent de perte de poids, saignements ou fièvre, consulte sans attendre.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

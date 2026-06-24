@@ -96,20 +96,106 @@ cp -r claude-skills-collection/skills/finance-expense-analyzer ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Expense Analyzer</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Catégorisation</strong> : classe chaque dépense (logement, transport, alimentation, loisirs, abonnements, santé, divers).</li>
-<li><strong>Résumé par catégorie</strong> : total et pourcentage du budget.</li>
-<li><strong>Détection d'anomalies</strong> : dépenses inhabituelles, doublons, abonnements oubliés.</li>
-<li><strong>Tendances</strong> : comparaison avec mois précédents si fournis.</li>
-<li><strong>Top 5 postes de dépense</strong> : les plus gros consommateurs.</li>
-<li><strong>Pistes d'économie</strong> : suggestions concrètes et réalistes, chiffrées si possible.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Étape 0 — Réception et nettoyage des données</h2>
+<p>Avant toute analyse, évalue la qualité de l'input :</p>
 <ul>
-<li>Ne juge pas les choix de consommation.</li>
-<li>Adapte à la devise locale.</li>
-<li>Signale les données manquantes.</li>
+<li><strong>Format CSV</strong> : vérifie séparateur (<code>,</code> ou <code>;</code>), encodage (UTF-8), présence des colonnes date/libellé/montant.</li>
+<li><strong>Copier-coller bancaire</strong> : extrais date, libellé, débit/crédit avec regex si nécessaire.</li>
+<li><strong>Liste informelle</strong> : reformate en tableau structuré avant de continuer.</li>
+</ul>
+<p>Si des lignes sont ambiguës, liste-les explicitement et propose une catégorie par défaut.</p>
+<p>Exemple de normalisation rapide (Python) :</p>
+<pre><code class="lang-python">import pandas as pd
+
+df = pd.read_csv(&quot;releve.csv&quot;, sep=&quot;;&quot;, parse_dates=[&quot;Date&quot;])
+df.columns = [&quot;date&quot;, &quot;libelle&quot;, &quot;debit&quot;, &quot;credit&quot;]
+df[&quot;montant&quot;] = df[&quot;debit&quot;].fillna(0) - df[&quot;credit&quot;].fillna(0)
+df = df[df[&quot;montant&quot;] &gt; 0]  # garder uniquement les dépenses</code></pre>
+<hr>
+<h2>Étape 1 — Catégorisation</h2>
+<p>Classe chaque ligne dans une catégorie. Hiérarchie recommandée :</p>
+<table><thead><tr><th>Catégorie</th><th>Exemples de libellés clés</th></tr></thead><tbody><tr><td>Logement</td><td>loyer, EDF, GDF, assurance habitation, syndic</td></tr><tr><td>Transport</td><td>SNCF, Uber, essence, péage, assurance auto</td></tr><tr><td>Alimentation</td><td>Carrefour, Leclerc, Lidl, Monoprix, boulangerie</td></tr><tr><td>Santé</td><td>pharmacie, mutuelle, médecin, laboratoire</td></tr><tr><td>Abonnements</td><td>Netflix, Spotify, SFR, Orange, Adobe, Amazon Prime</td></tr><tr><td>Loisirs</td><td>restaurant, cinéma, sport, voyage, culture</td></tr><tr><td>Épargne/invest.</td><td>virement épargne, assurance-vie, courtier</td></tr><tr><td>Divers</td><td>tout ce qui ne rentre pas ailleurs</td></tr></tbody></table>
+<p>Règle de décision : si un libellé contient un mot-clé connu → catégorie directe. Sinon → heuristique sur le montant + contexte. Si incertain → marque <code>?</code> et indique la règle appliquée.</p>
+<hr>
+<h2>Étape 2 — Résumé par catégorie</h2>
+<p>Pour chaque catégorie, fournis :</p>
+<ul>
+<li><strong>Total</strong> en devise locale</li>
+<li><strong>% du revenu net</strong> (si fourni) ou <strong>% du total dépenses</strong></li>
+<li><strong>Nombre de transactions</strong></li>
+</ul>
+<p>Format de sortie attendu :</p>
+<pre><code>Catégorie       | Total    | % dépenses | Nb txn
+----------------|----------|------------|-------
+Logement        | 950 €    | 32 %       | 3
+Alimentation    | 480 €    | 16 %       | 22
+Abonnements     | 120 €    | 4 %        | 8
+...
+TOTAL           | 2 980 €  | 100 %      | 67</code></pre>
+<p>Repères budgétaires (règle 50/30/20) :</p>
+<ul>
+<li>Besoins (logement + transport + santé) : ≤ 50 % du revenu net</li>
+<li>Envies (loisirs, restaurants, abonnements) : ≤ 30 %</li>
+<li>Épargne : ≥ 20 %</li>
+</ul>
+<hr>
+<h2>Étape 3 — Détection d'anomalies</h2>
+<p>Cherche systématiquement :</p>
+<ol>
+<li><strong>Doublons</strong> : même libellé + même montant + écart &lt; 3 jours → signal fort.</li>
+<li><strong>Abonnements oubliés</strong> : récurrences mensuelles &lt; 20 € souvent invisibles (ex. essais gratuits devenus payants).</li>
+<li><strong>Pics inhabituels</strong> : montant &gt; 2× la médiane de la catégorie sur la période.</li>
+<li><strong>Charges fantômes</strong> : libellé inconnu + montant rond (5, 10, 15 €/mois) → risque de souscription non voulue.</li>
+<li><strong>Frais bancaires</strong> : agios, frais de tenue de compte, commissions de change.</li>
+</ol>
+<p>Pour chaque anomalie, indique : libellé exact, montant, date, impact annuel estimé.</p>
+<hr>
+<h2>Étape 4 — Tendances (si données multi-périodes)</h2>
+<p>Si au moins 2 mois sont fournis :</p>
+<ul>
+<li>Calcule la variation mensuelle par catégorie (en € et %).</li>
+<li>Identifie les catégories en hausse continue (tendance à surveiller).</li>
+<li>Calcule le solde moyen mensuel : <code>revenus - dépenses</code>.</li>
+</ul>
+<pre><code>Alimentation : jan 420 € → fév 510 € → mar 480 € (+14 % sur 3 mois, pic fév)
+Abonnements  : jan 95 €  → fév 95 €  → mar 120 € (+26 %, nouvel abonnement détecté en mar)</code></pre>
+<hr>
+<h2>Étape 5 — Top 5 des postes de dépense</h2>
+<p>Liste les 5 transactions ou sous-catégories les plus élevées avec :</p>
+<ul>
+<li>Montant exact</li>
+<li>Libellé bancaire</li>
+<li>Impact annuel projeté (× 12 si récurrent)</li>
+<li>Levier d'action possible (oui/non/partiel)</li>
+</ul>
+<hr>
+<h2>Étape 6 — Pistes d'économie</h2>
+<p>Formule 3 à 6 recommandations <strong>chiffrées et actionnables</strong>, classées par potentiel d'économie décroissant :</p>
+<p>Exemples :</p>
+<ul>
+<li>&quot;Cumul abonnements streaming : 35 €/mois. Conserver 1 seul → économie 25 €/mois = <strong>300 €/an</strong>.&quot;</li>
+<li>&quot;Frais bancaires : 7 €/mois. Compte en ligne (Boursorama, Fortuneo) : 0 €. → <strong>84 €/an</strong>.&quot;</li>
+<li>&quot;Restaurants midi : 18 repas × 14 € = 252 €/mois. Panier repas 3j/sem → <strong>-90 €/mois</strong>.&quot;</li>
+</ul>
+<p>Ne propose pas d'optimisation sur les postes déjà raisonnables (logement dans la moyenne régionale, mutuelle obligatoire, etc.).</p>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<ul>
+<li><strong>Ne jamais juger</strong> les choix de consommation (loisirs, restaurants, mode). Ton neutre et factuel.</li>
+<li><strong>Ne pas extrapoler</strong> sans base : si un seul mois est fourni, pas de &quot;tendance&quot;.</li>
+<li><strong>Ne pas inventer</strong> des libellés ou catégories non présents dans les données.</li>
+<li><strong>Ne pas arrondir</strong> les montants dans les calculs intermédiaires ; arrondi uniquement à l'affichage.</li>
+<li><strong>Devise</strong> : utilise systématiquement la devise des données. Si mixte (€ + $), convertis au taux du jour et signale-le.</li>
+<li><strong>Données manquantes</strong> : si revenus non fournis, omets les ratios % du revenu et indique-le clairement.</li>
+<li><strong>Confidentialité</strong> : ne répète pas les IBAN, numéros de carte ou données personnelles détectées dans les libellés.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Propose d'exporter l'analyse en CSV ou Markdown si l'utilisateur veut archiver.</li>
+<li>Si l'utilisateur utilise un outil de gestion (YNAB, Bankin', Linxo, Copilot), adapte la nomenclature des catégories à cet outil.</li>
+<li>Pour les indépendants/freelances : sépare dépenses pro et perso dès le début ; signale les dépenses potentiellement déductibles (repas pro, abonnements métier, matériel).</li>
+<li>Recommande une revue trimestrielle des abonnements plutôt qu'annuelle (les offres changent vite).</li>
 </ul>
 </article>
 </main>

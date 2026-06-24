@@ -96,37 +96,98 @@ cp -r claude-skills-collection/skills/health-question-builder ~/.claude/skills/<
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Health Question Builder</h1>
-<p>Quand l'utilisateur prépare une consultation, suis ce workflow.</p>
-<h2>Étape 1 — Problème principal</h2>
-<p>Identifie le problème principal de l'utilisateur en une phrase.</p>
-<h2>Étape 2 — Zones d'incertitude</h2>
-<p>Déduis les zones d'incertitude à clarifier :</p>
+<p>Aide l'utilisateur à transformer une inquiétude de santé floue en une liste de questions claires, priorisées et prêtes à poser en consultation (médecin généraliste, spécialiste, pharmacien, sage-femme, etc.).</p>
+<hr>
+<h2>Workflow en 6 étapes</h2>
+<h3>Étape 1 — Collecter le contexte minimal</h3>
+<p>Pose 2 à 3 questions courtes si l'information manque. Ne noie pas l'utilisateur de questions d'emblée.</p>
+<p>Questions types à poser :</p>
 <ul>
-<li>Ce que l'utilisateur ne comprend pas</li>
-<li>Ce qui n'a pas été exploré</li>
-<li>Ce qui a changé récemment</li>
+<li>&quot;C'est quel type de consultation ? (généraliste, spécialiste, urgences, pharmacien…)&quot;</li>
+<li>&quot;Quel est le problème principal ou la raison de la visite ?&quot;</li>
+<li>&quot;Y a-t-il quelque chose que vous avez peur d'oublier de dire ?&quot;</li>
 </ul>
-<h2>Étape 3 — Génération de questions</h2>
-<p>Génère des questions <strong>courtes, concrètes et priorisées</strong>, faciles à lire à voix haute en consultation.</p>
-<h2>Étape 4 — Organisation en 4 groupes</h2>
-<h3>Diagnostic</h3>
-<p>Questions sur ce que c'est, les causes possibles, les examens utiles.</p>
-<h3>Examens</h3>
-<p>Questions sur les tests à faire, leur utilité, leur urgence.</p>
-<h3>Traitement</h3>
-<p>Questions sur les options, les effets secondaires, la durée, les alternatives.</p>
-<h3>Suivi</h3>
-<p>Questions sur la surveillance, les signes d'alerte, le prochain rendez-vous.</p>
-<h2>Étape 5 — Version &quot;Top 5&quot;</h2>
-<p>Termine par une version <strong>Top 5 questions</strong> pour les consultations courtes où le temps est limité.</p>
-<h2>Règles</h2>
+<p>Si l'utilisateur donne déjà un contexte suffisant, passe directement à l'étape 2.</p>
+<h3>Étape 2 — Résumer le problème en une phrase</h3>
+<p>Formule une phrase-résumé du problème pour que l'utilisateur confirme la bonne compréhension.</p>
+<p>Exemple :</p>
+<blockquote>&quot;Si je comprends bien : vous avez des douleurs abdominales récurrentes depuis 3 semaines et vous avez un rendez-vous chez le gastro-entérologue. C'est bien ça ?&quot;</blockquote>
+<h3>Étape 3 — Identifier les zones d'incertitude</h3>
+<p>Analyse ce qui mérite d'être éclairci. Cherche notamment :</p>
 <ul>
-<li>Ton naturel et accessible, comme si l'utilisateur parlait à voix haute.</li>
-<li>Questions concrètes, pas vagues.</li>
-<li>Personnalisées au contexte de l'utilisateur.</li>
+<li>Ce que l'utilisateur ne comprend pas dans son diagnostic ou traitement actuel</li>
+<li>Ce qui n'a jamais été évoqué ou exploré</li>
+<li>Ce qui a changé récemment (nouveau symptôme, nouveau médicament, nouveau contexte de vie)</li>
+<li>Les craintes non dites (&quot;j'ai peur que ce soit grave mais je n'ose pas demander&quot;)</li>
+<li>Les décisions à prendre (chirurgie, arrêt d'un médicament, changement de traitement)</li>
 </ul>
+<h3>Étape 4 — Générer les questions par groupe</h3>
+<p>Produis les questions regroupées en 4 catégories. Chaque question doit être :</p>
+<ul>
+<li>courte (max 15 mots)</li>
+<li>formulée à la première personne</li>
+<li>formulée sans jargon médical</li>
+</ul>
+<p><strong>Diagnostic</strong></p>
+<ul>
+<li>&quot;Est-ce qu'on sait ce que c'est exactement ?&quot;</li>
+<li>&quot;Y a-t-il d'autres causes possibles ?&quot;</li>
+<li>&quot;Est-ce que c'est lié à [symptôme connexe] ?&quot;</li>
+</ul>
+<p><strong>Examens</strong></p>
+<ul>
+<li>&quot;Faut-il faire des analyses ou une imagerie ?&quot;</li>
+<li>&quot;Ces examens sont-ils urgents ?&quot;</li>
+<li>&quot;Comment vais-je recevoir les résultats et dans quel délai ?&quot;</li>
+</ul>
+<p><strong>Traitement</strong></p>
+<ul>
+<li>&quot;Quels sont les effets secondaires possibles ?&quot;</li>
+<li>&quot;Y a-t-il des alternatives si ce traitement ne fonctionne pas ?&quot;</li>
+<li>&quot;Pendant combien de temps je prends ce médicament ?&quot;</li>
+<li>&quot;Est-ce compatible avec [médicament déjà pris] ?&quot;</li>
+</ul>
+<p><strong>Suivi</strong></p>
+<ul>
+<li>&quot;Quand est-ce que je dois revenir vous voir ?&quot;</li>
+<li>&quot;Quels signes doivent m'alerter avant le prochain rendez-vous ?&quot;</li>
+<li>&quot;Que faire si ça empire dans la semaine ?&quot;</li>
+</ul>
+<p>Adapte les questions au contexte exact de l'utilisateur. Supprime les groupes non pertinents.</p>
+<h3>Étape 5 — Version &quot;Top 5&quot; pour consultation courte</h3>
+<p>Sélectionne les 5 questions les plus importantes en cas de consultation rapide (généraliste surchargé, urgences, etc.).</p>
+<p>Présente-les sous forme de liste numérotée, prêtes à être copiées ou montrées au téléphone.</p>
+<h3>Étape 6 — Conseils pratiques de préparation</h3>
+<p>Propose un ou deux conseils concrets selon la situation :</p>
+<ul>
+<li>Arriver avec une liste de médicaments actuels (nom + dosage + fréquence)</li>
+<li>Noter les symptômes et leur fréquence les jours précédents</li>
+<li>Apporter les résultats d'examens récents (moins de 6 mois)</li>
+<li>Venir accompagné si la consultation est complexe ou stressante</li>
+<li>Activer le mode &quot;ne pas déranger&quot; et avoir la liste ouverte sur le téléphone</li>
+</ul>
+<hr>
+<h2>Critères de décision</h2>
+<table><thead><tr><th>Situation</th><th>Approche recommandée</th></tr></thead><tbody><tr><td>Première consultation pour un problème nouveau</td><td>Commencer par &quot;Diagnostic&quot; + &quot;Examens&quot;</td></tr><tr><td>Suivi d'un diagnostic existant</td><td>Commencer par &quot;Traitement&quot; + &quot;Suivi&quot;</td></tr><tr><td>Consultation pharmacien</td><td>Focaliser sur &quot;Traitement&quot; + interactions</td></tr><tr><td>Consultation urgences / médecin de garde</td><td>Utiliser uniquement le Top 5</td></tr><tr><td>Annonce médicale grave (cancer, chirurgie…)</td><td>Ajouter une question sur les délais de décision et les recours possibles</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<ul>
+<li>Ne pas formuler de questions qui impliquent un diagnostic (&quot;Est-ce que c'est un cancer ?&quot;) — reformuler en &quot;Faut-il explorer d'autres causes ?&quot;</li>
+<li>Ne pas produire plus de 12 questions au total : le médecin a 15 à 20 minutes</li>
+<li>Ne pas écrire des questions longues et complexes — une question = une idée</li>
+<li>Ne pas ignorer les craintes émotionnelles de l'utilisateur ; les transformer en question si pertinent (&quot;Est-ce grave ? Qu'est-ce que je dois anticiper ?&quot;)</li>
+<li>Ne pas donner d'avis médical personnel sur ce que le médecin devrait répondre</li>
+</ul>
+<hr>
+<h2>Garde-fous</h2>
+<ul>
+<li>Si l'utilisateur décrit un symptôme urgent (douleur thoracique, difficulté à respirer, confusion, AVC suspected), interrompre le workflow et orienter vers les urgences (15, 15, 18 ou 112 selon le pays).</li>
+<li>Si la situation semble très anxiogène ou que l'utilisateur semble en détresse, proposer aussi le skill <code>health-red-flag-checker</code> ou <code>psy-anxiety-debrief</code>.</li>
+<li>Ne jamais formuler de diagnostic, même partiel, même sous forme de question suggestive.</li>
+</ul>
+<hr>
 <h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ces questions sont un guide de préparation. Votre médecin adaptera ses réponses à votre situation clinique complète.</blockquote>
+<blockquote>Ces questions sont un outil de préparation personnelle. Elles ne remplacent pas l'évaluation clinique de votre médecin, qui seul peut adapter ses réponses à votre situation complète. En cas de doute urgent, contactez le 15 (SAMU) ou votre médecin traitant.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

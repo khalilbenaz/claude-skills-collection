@@ -96,137 +96,205 @@ cp -r claude-skills-collection/skills/devops-terraform-guide ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide Terraform</h1>
-<h2>Workflow</h2>
+<h2>1. Workflow opérationnel (étapes numérotées)</h2>
 <ol>
-<li><strong>Concevoir</strong> : identifier les ressources, organiser en modules.</li>
-<li><strong>Écrire</strong> : fichiers HCL avec variables, outputs et data sources.</li>
-<li><strong>Planifier</strong> : <code>terraform plan</code> pour prévisualiser les changements.</li>
-<li><strong>Appliquer</strong> : <code>terraform apply</code> avec review et approbation.</li>
-<li><strong>Maintenir</strong> : state management, drift detection, mises à jour.</li>
+<li><strong>Initialiser</strong> — configurer le backend et télécharger les providers.</li>
 </ol>
-<h2>Structure d'un projet</h2>
+<p>   ```bash    terraform init -upgrade          # première fois ou mise à jour providers    terraform init -reconfigure      # changer de backend sans migrer l'état    ```</p>
+<ol>
+<li><strong>Valider</strong> — vérifier la syntaxe avant de planifier.</li>
+</ol>
+<p>   ```bash    terraform validate    terraform fmt -recursive         # formater tout le répertoire    ```</p>
+<ol>
+<li><strong>Planifier</strong> — toujours sauvegarder le plan pour un apply déterministe.</li>
+</ol>
+<p>   ```bash    terraform plan -out=tfplan.bin    terraform show -json tfplan.bin | jq '.resource_changes[] | select(.change.actions != [&quot;no-op&quot;])'    ```</p>
+<ol>
+<li><strong>Appliquer</strong> — uniquement depuis le plan sauvegardé.</li>
+</ol>
+<p>   ```bash    terraform apply tfplan.bin    ```</p>
+<ol>
+<li><strong>Vérifier le drift</strong> — détecter les divergences entre state et réalité.</li>
+</ol>
+<p>   ```bash    terraform plan -refresh-only     # voir ce qui a changé hors Terraform    terraform apply -refresh-only    # re-synchroniser le state sans modifier les ressources    ```</p>
+<ol>
+<li><strong>Détruire proprement</strong> — cibler d'abord, jamais en masse sans review.</li>
+</ol>
+<p>   ```bash    terraform destroy -target=module.networking.azurerm_subnet.main    ```</p>
+<hr>
+<h2>2. Structure de projet recommandée</h2>
 <pre><code>infrastructure/
 ├── environments/
 │   ├── dev/
-│   │   ├── main.tf
+│   │   ├── main.tf          # appels aux modules
 │   │   ├── variables.tf
 │   │   ├── terraform.tfvars
 │   │   └── backend.tf
 │   ├── staging/
 │   └── production/
 ├── modules/
-│   ├── networking/
+│   ├── networking/          # un module = une responsabilité
 │   │   ├── main.tf
 │   │   ├── variables.tf
 │   │   └── outputs.tf
 │   ├── database/
 │   └── app-service/
 └── shared/
-    └── providers.tf</code></pre>
-<h2>Module réutilisable</h2>
-<pre><code class="lang-hcl"># modules/app-service/main.tf
-variable &quot;app_name&quot; {
-  type        = string
-  description = &quot;Nom de l'application&quot;
-}
-
-variable &quot;environment&quot; {
-  type        = string
-  description = &quot;Environnement (dev, staging, production)&quot;
+    └── versions.tf          # contraintes de version providers</code></pre>
+<p><strong>Critère de découpage</strong> : un module par &quot;domaine fonctionnel&quot; (réseau, stockage, compute). Éviter les modules à 1 ressource (sur-découpage) et les modules &quot;tout en un&quot; (couplage fort).</p>
+<hr>
+<h2>3. Module réutilisable — exemple complet</h2>
+<pre><code class="lang-hcl"># modules/app-service/variables.tf
+variable &quot;app_name&quot;           { type = string }
+variable &quot;environment&quot;        {
+  type    = string
   validation {
     condition     = contains([&quot;dev&quot;, &quot;staging&quot;, &quot;production&quot;], var.environment)
-    error_message = &quot;L'environnement doit être dev, staging ou production.&quot;
+    error_message = &quot;Valeurs acceptées : dev, staging, production.&quot;
   }
 }
+variable &quot;sku&quot;                { type = string; default = &quot;B1&quot; }
+variable &quot;location&quot;           { type = string }
+variable &quot;resource_group_name&quot;{ type = string }
+variable &quot;app_settings&quot;       { type = map(string); default = {} }
 
-variable &quot;sku&quot; {
-  type    = string
-  default = &quot;B1&quot;
-}
-
-resource &quot;azurerm_service_plan&quot; &quot;main&quot; {
-  name                = &quot;plan-${var.app_name}-${var.environment}&quot;
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  os_type             = &quot;Linux&quot;
-  sku_name            = var.sku
-
-  tags = local.common_tags
-}
-
-resource &quot;azurerm_linux_web_app&quot; &quot;main&quot; {
-  name                = &quot;app-${var.app_name}-${var.environment}&quot;
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  service_plan_id     = azurerm_service_plan.main.id
-
-  site_config {
-    always_on = var.environment == &quot;production&quot;
-
-    application_stack {
-      dotnet_version = &quot;8.0&quot;
-    }
-  }
-
-  app_settings = var.app_settings
-
-  tags = local.common_tags
-}
-
-output &quot;app_url&quot; {
-  value = &quot;https://${azurerm_linux_web_app.main.default_hostname}&quot;
-}
-
+# modules/app-service/main.tf
 locals {
   common_tags = {
     Environment = var.environment
     ManagedBy   = &quot;terraform&quot;
     Application = var.app_name
   }
+}
+
+resource &quot;azurerm_service_plan&quot; &quot;this&quot; {
+  name                = &quot;plan-${var.app_name}-${var.environment}&quot;
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  os_type             = &quot;Linux&quot;
+  sku_name            = var.sku
+  tags                = local.common_tags
+}
+
+resource &quot;azurerm_linux_web_app&quot; &quot;this&quot; {
+  name                = &quot;app-${var.app_name}-${var.environment}&quot;
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  service_plan_id     = azurerm_service_plan.this.id
+  tags                = local.common_tags
+
+  site_config {
+    always_on = var.environment == &quot;production&quot;
+    application_stack { dotnet_version = &quot;8.0&quot; }
+  }
+
+  app_settings = var.app_settings
+}
+
+# modules/app-service/outputs.tf
+output &quot;app_url&quot;     { value = &quot;https://${azurerm_linux_web_app.this.default_hostname}&quot; }
+output &quot;app_id&quot;      { value = azurerm_linux_web_app.this.id }
+output &quot;plan_id&quot;     { value = azurerm_service_plan.this.id }</code></pre>
+<p>Appel depuis un environnement :</p>
+<pre><code class="lang-hcl">module &quot;api&quot; {
+  source              = &quot;../../modules/app-service&quot;
+  app_name            = &quot;myapi&quot;
+  environment         = &quot;production&quot;
+  sku                 = &quot;P1v3&quot;
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
 }</code></pre>
-<h2>State Management</h2>
-<h3>Backend distant (recommandé)</h3>
-<pre><code class="lang-hcl"># backend.tf
+<hr>
+<h2>4. State management</h2>
+<h3>Backend distant avec locking (Azure)</h3>
+<pre><code class="lang-hcl"># environments/production/backend.tf
 terraform {
   backend &quot;azurerm&quot; {
     resource_group_name  = &quot;rg-terraform-state&quot;
-    storage_account_name = &quot;stterraformstate&quot;
+    storage_account_name = &quot;stterraformstprod&quot;
     container_name       = &quot;tfstate&quot;
-    key                  = &quot;myapp.dev.tfstate&quot;
+    key                  = &quot;myapp.production.tfstate&quot;
+    use_azuread_auth     = true   # évite les clés de compte (2025+)
   }
 }</code></pre>
-<h3>Commandes utiles</h3>
-<pre><code class="lang-bash">terraform init              # Initialiser le backend et les providers
-terraform plan -out=plan.tf # Planifier et sauvegarder
-terraform apply plan.tf     # Appliquer le plan sauvegardé
-terraform state list        # Lister les ressources dans le state
-terraform state show        # Afficher une ressource spécifique
-terraform import            # Importer une ressource existante</code></pre>
-<h2>Bonnes pratiques</h2>
-<h3>À faire</h3>
+<h3>Backend S3 + DynamoDB (AWS)</h3>
+<pre><code class="lang-hcl">terraform {
+  backend &quot;s3&quot; {
+    bucket         = &quot;myco-tfstate-prod&quot;
+    key            = &quot;myapp/production/terraform.tfstate&quot;
+    region         = &quot;eu-west-1&quot;
+    encrypt        = true
+    dynamodb_table = &quot;terraform-state-lock&quot;
+  }
+}</code></pre>
+<h3>Commandes de gestion du state</h3>
+<pre><code class="lang-bash">terraform state list                              # toutes les ressources
+terraform state show azurerm_linux_web_app.this   # détail d'une ressource
+terraform state mv  module.old.res module.new.res # renommer sans recréer
+terraform state rm  azurerm_resource_group.legacy # retirer du state sans détruire
+terraform import    azurerm_resource_group.legacy /subscriptions/.../rg-name</code></pre>
+<hr>
+<h2>5. Versions et contraintes providers</h2>
+<pre><code class="lang-hcl"># shared/versions.tf — à copier dans chaque environnement
+terraform {
+  required_version = &quot;&gt;= 1.7, &lt; 2.0&quot;
+  required_providers {
+    azurerm = {
+      source  = &quot;hashicorp/azurerm&quot;
+      version = &quot;~&gt; 3.110&quot;
+    }
+    random = {
+      source  = &quot;hashicorp/random&quot;
+      version = &quot;~&gt; 3.6&quot;
+    }
+  }
+}</code></pre>
+<p>Verrouiller le <code>.terraform.lock.hcl</code> dans Git — il garantit la reproductibilité des builds.</p>
+<hr>
+<h2>6. Garde-fous et pièges fréquents</h2>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Remède</th></tr></thead><tbody><tr><td>State en local / commité dans Git</td><td>Conflits d'équipe, secrets exposés</td><td>Backend distant + <code>.gitignore</code> sur <code>*.tfstate*</code></td></tr><tr><td><code>terraform apply</code> sans plan sauvegardé</td><td>Apply incohérent si state a changé entre-temps</td><td>Toujours <code>-out=tfplan.bin</code> + <code>apply tfplan.bin</code></td></tr><tr><td>Hard-coding de secrets dans HCL</td><td>Secrets dans Git</td><td><code>var</code> + Key Vault / Secrets Manager ou <code>sensitive = true</code></td></tr><tr><td>Modules trop fins (1 ressource)</td><td>Overhead de composition, appels imbriqués</td><td>Regrouper par domaine fonctionnel</td></tr><tr><td><code>terraform destroy</code> sans <code>-target</code></td><td>Destruction de toute l'infra</td><td>Toujours cibler ou utiliser des workspaces isolés</td></tr><tr><td>Drift ignoré</td><td>État réel diverge du plan</td><td><code>plan -refresh-only</code> en CI hebdomadaire</td></tr><tr><td>Pas de <code>lifecycle.prevent_destroy</code> sur ressources critiques</td><td>Suppression accidentelle BDD/stockage</td><td>Ajouter <code>prevent_destroy = true</code> sur les ressources stateful</td></tr></tbody></table>
+<pre><code class="lang-hcl"># Protéger une base de données critique
+resource &quot;azurerm_postgresql_flexible_server&quot; &quot;main&quot; {
+  # ...
+  lifecycle {
+    prevent_destroy = true
+  }
+}</code></pre>
+<hr>
+<h2>7. Bonnes pratiques 2026</h2>
 <ul>
-<li>Utiliser des <strong>modules</strong> pour le code réutilisable</li>
-<li>Séparer les <strong>environnements</strong> dans des dossiers distincts</li>
-<li>Stocker le state dans un <strong>backend distant</strong> avec locking</li>
-<li>Utiliser <code>terraform plan</code> avant chaque <code>apply</code></li>
-<li>Taguer toutes les ressources avec <code>ManagedBy = &quot;terraform&quot;</code></li>
-<li>Valider les variables avec des blocs <code>validation</code></li>
+<li><strong>Épingler les versions</strong> providers via <code>.terraform.lock.hcl</code> (commité dans Git).</li>
+<li><strong>Secrets</strong> : ne jamais les mettre dans <code>.tfvars</code>; utiliser <code>sensitive = true</code> + injection CI (env vars <code>TF_VAR_*</code>).</li>
+<li><strong>Tagging systématique</strong> : module <code>locals</code> avec <code>common_tags</code> hérité par toutes les ressources.</li>
+<li><strong>Outputs sensibles</strong> : marquer <code>sensitive = true</code> pour éviter les logs en clair.</li>
+<li><strong>CI/CD</strong> : <code>terraform plan</code> en PR (commentaire automatique), <code>terraform apply</code> uniquement sur merge main.</li>
+<li><strong>Workspaces</strong> : réservés aux environnements éphémères (feature branches) — ne pas les utiliser pour prod/staging (préférer des dossiers séparés avec leur propre state).</li>
+<li><strong>Tflint + Checkov</strong> : linting et scan de sécurité avant le plan.</li>
 </ul>
-<h3>À éviter</h3>
-<ul>
-<li>Stocker le state en local ou dans Git</li>
-<li>Hard-coder des valeurs — utiliser des variables</li>
-<li>Créer des modules trop granulaires ou trop monolithiques</li>
-<li>Ignorer le drift entre le state et la réalité</li>
-<li>Appliquer sans plan préalable</li>
-</ul>
-<h2>Règles</h2>
-<ul>
-<li>Le state Terraform ne doit <strong>jamais</strong> être commité dans Git.</li>
-<li>Chaque environnement a son propre state file.</li>
-<li>Les modules doivent avoir des <code>variables.tf</code> et <code>outputs.tf</code> documentés.</li>
-<li>Toujours utiliser <code>-out</code> avec <code>terraform plan</code> pour des applies déterministes.</li>
-</ul>
+<p>  ```bash   tflint --recursive   checkov -d . --framework terraform   ```</p>
+<hr>
+<h2>8. Commandes de référence rapide</h2>
+<pre><code class="lang-bash"># Init &amp; format
+terraform init -upgrade &amp;&amp; terraform fmt -recursive &amp;&amp; terraform validate
+
+# Plan sécurisé
+terraform plan -var-file=environments/prod.tfvars -out=tfplan.bin
+
+# Inspection du plan
+terraform show tfplan.bin                   # lisible humain
+terraform show -json tfplan.bin | jq '.'   # JSON pour scripts
+
+# State ops
+terraform state list
+terraform state show &lt;resource_address&gt;
+terraform state mv   &lt;src&gt; &lt;dst&gt;
+terraform state rm   &lt;resource_address&gt;
+
+# Import ressource existante
+terraform import &lt;resource_address&gt; &lt;cloud_id&gt;
+
+# Drift
+terraform plan -refresh-only</code></pre>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

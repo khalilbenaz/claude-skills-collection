@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>finance-tax-prep-checklist — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Aide à préparer sa déclaration d'impôts avec une checklist de documents et étapes.">
+<meta name="description" content="Aide à préparer sa déclaration d'impôts avec une checklist de documents et étapes, adaptée au profil fiscal (salarié, freelance, auto-entrepreneur, SCI, mixte).">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💰 Finance</span>
 <h1 class="skill-title">finance-tax-prep-checklist</h1>
-<p class="lead">Aide à préparer sa déclaration d'impôts avec une checklist de documents et étapes.</p>
+<p class="lead">Aide à préparer sa déclaration d'impôts avec une checklist de documents et étapes, adaptée au profil fiscal (salarié, freelance, auto-entrepreneur, SCI, mixte).</p>
 
 
 
@@ -96,29 +96,101 @@ cp -r claude-skills-collection/skills/finance-tax-prep-checklist ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Tax Prep Checklist</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Profil fiscal</strong> : salarié, freelance, auto-entrepreneur, mixte ?</li>
-<li><strong>Checklist documents</strong> adaptée au profil :</li>
+<h2>Étape 1 — Qualifier le profil fiscal</h2>
+<p>Demander :</p>
 <ul>
-<li>Revenus (fiches de paie, CA, relevés)</li>
-<li>Charges déductibles possibles</li>
-<li>Justificatifs (loyer, dons, frais pro…)</li>
-<li>Documents bancaires</li>
+<li><strong>Pays</strong> (France par défaut si non précisé)</li>
+<li><strong>Statut</strong> : salarié seul / salarié + revenus annexes / freelance / auto-entrepreneur / gérant de société / SCI / mixte</li>
+<li><strong>Situation familiale</strong> : célibataire, pacsé, marié, enfants à charge</li>
+<li><strong>Changements N-1</strong> : mariage, naissance, achat immobilier, déménagement, licenciement, héritage</li>
 </ul>
-<li><strong>Timeline</strong> : dates clés et deadlines.</li>
-<li><strong>Questions à clarifier</strong> : points à vérifier avec un comptable.</li>
-<li><strong>Tableau récapitulatif</strong> :</li>
-</ol>
-<table><thead><tr><th>Document</th><th>Statut</th><th>Où le trouver</th><th>Notes</th></tr></thead><tbody></tbody></table>
-<h2>Règles</h2>
+<p>Ce profil détermine quelles sections de la checklist sont pertinentes.</p>
+<hr>
+<h2>Étape 2 — Checklist documents par catégorie</h2>
+<h3>Identité &amp; situation</h3>
 <ul>
-<li>Ne calcule PAS l'impôt dû — trop de variables.</li>
-<li>Adapte au pays de l'utilisateur si mentionné.</li>
-<li>Oriente vers un comptable pour les cas complexes.</li>
-<li>Ne donne pas de conseil d'optimisation fiscale.</li>
+<li>[ ] Avis d'imposition N-2 (pour pré-remplissage et comparaison)</li>
+<li>[ ] Justificatif de domicile récent (&lt; 3 mois)</li>
+<li>[ ] Changement de situation : acte de mariage/PACS, livret de famille, jugement de divorce</li>
 </ul>
-<blockquote>⚠️ Cette checklist est un outil d'organisation. Consultez un expert-comptable ou l'administration fiscale pour des questions spécifiques.</blockquote>
+<h3>Revenus salariés</h3>
+<ul>
+<li>[ ] Dernière fiche de paie de l'année (décembre N-1) — récapitulatif annuel brut/net</li>
+<li>[ ] Attestation de l'employeur si différente des fiches</li>
+<li>[ ] Indemnités chômage (ARE) : relevé annuel Pôle Emploi / France Travail</li>
+<li>[ ] Indemnités journalières maladie : relevé CPAM</li>
+</ul>
+<h3>Revenus d'activité indépendante (freelance / AE)</h3>
+<ul>
+<li>[ ] Relevé CA annuel (plateforme AE, logiciel compta, export bancaire)</li>
+<li>[ ] Déclarations CA mensuelles/trimestrielles déposées (URSSAF)</li>
+<li>[ ] Charges réelles déductibles si régime réel : factures fournisseurs, loyer pro, matériel, logiciels, déplacements</li>
+<li>[ ] Relevé cotisations sociales payées (URSSAF, CIPAV, SSI)</li>
+</ul>
+<h3>Revenus fonciers (SCI / location nue ou meublée)</h3>
+<ul>
+<li>[ ] Bail(s) en cours + montant loyers perçus</li>
+<li>[ ] Charges : intérêts d'emprunt, taxe foncière, charges de copropriété, travaux</li>
+<li>[ ] Relevé de prêt immobilier (part intérêts vs capital)</li>
+<li>[ ] Statut LMNP/LMP si meublé : bilan comptable ou liasse fiscale</li>
+</ul>
+<h3>Revenus financiers</h3>
+<ul>
+<li>[ ] IFU (Imprimé Fiscal Unique) de chaque établissement bancaire / courtier</li>
+<li>[ ] Relevés PEA, assurance-vie : rachats, dividendes, plus-values réalisées</li>
+<li>[ ] Cryptomonnaies : export CSV des transactions 2025 (Koinly, CoinTracking, ou export brut)</li>
+</ul>
+<h3>Charges déductibles &amp; réductions d'impôt</h3>
+<ul>
+<li>[ ] Dons associations loi 1901 / cultuelles : reçus fiscaux</li>
+<li>[ ] Emploi à domicile (garde enfant, ménage) : attestation CESU ou Pajemploi</li>
+<li>[ ] Frais réels salariés (si option frais réels) : km pro, repas, double résidence — tous justificatifs</li>
+<li>[ ] Investissement Pinel / Denormandie / Malraux : attestation promoteur</li>
+<li>[ ] Versements PER (Plan Épargne Retraite) : attestation déductible</li>
+<li>[ ] Frais de scolarité enfants : attestation établissement</li>
+</ul>
+<hr>
+<h2>Étape 3 — Timeline France 2025 (déclaration revenus 2024)</h2>
+<table><thead><tr><th>Date</th><th>Action</th></tr></thead><tbody><tr><td>Début avril 2025</td><td>Ouverture du service en ligne impots.gouv.fr</td></tr><tr><td>~22 mai 2025</td><td>Date limite zones 1 (dep. 1–19 + DOM)</td></tr><tr><td>~28 mai 2025</td><td>Date limite zones 2 (dep. 20–54)</td></tr><tr><td>~5 juin 2025</td><td>Date limite zones 3 (dep. 55–976)</td></tr><tr><td>Juillet–août</td><td>Avis d'imposition disponibles, ajustement taux PAS</td></tr></tbody></table>
+<blockquote>Pour les autres pays, demander à l'utilisateur ou consulter le site de l'administration fiscale locale.</blockquote>
+<hr>
+<h2>Étape 4 — Tableau de suivi (à personnaliser)</h2>
+<pre><code class="lang-markdown">| Document              | Statut     | Source                        | Notes              |
+|-----------------------|------------|-------------------------------|--------------------|
+| Fiche de paie déc.    | ✅ Reçu    | Espace RH / coffre-fort RH    |                    |
+| IFU Boursorama        | ⏳ Attente | Espace client &gt; Fiscalité     | Disponible fév.    |
+| Attestation dons      | ✅ Reçu    | Email association             | Montant : 150 €    |
+| Export crypto         | ❌ Manque  | Koinly export CSV 2024        | À faire            |</code></pre>
+<hr>
+<h2>Étape 5 — Points à clarifier avec un comptable</h2>
+<p>Orienter vers un expert-comptable ou l'administration (impots.gouv.fr) pour :</p>
+<ul>
+<li>Choix régime micro vs réel (freelance / foncier)</li>
+<li>Optimisation PER, déficits fonciers, moins-values reportables</li>
+<li>Impatrié / expatrié : convention fiscale applicable</li>
+<li>Indivision, SCI IS vs IR</li>
+<li>Régularisation taux PAS après changement de situation</li>
+</ul>
+<hr>
+<h2>Garde-fous et pièges fréquents</h2>
+<ul>
+<li><strong>IFU manquant</strong> : disponible mi-février ; ne pas déclarer avant réception sinon correction obligatoire.</li>
+<li><strong>Frais réels</strong> : option irrévocable pour l'année ; vérifier si gain &gt; abattement 10 % avant de cocher.</li>
+<li><strong>Cryptomonnaies</strong> : obligation déclarative dès la première cession taxable (art. 150 VH bis CGI) ; chaque swap crypto/crypto peut être taxable selon jurisprudence 2024.</li>
+<li><strong>Déclaration pré-remplie ≠ déclaration juste</strong> : toujours vérifier les cases pré-remplies (revenus étrangers, AEA, frais réels oubliés).</li>
+<li><strong>Délai de reprise</strong> : l'administration peut redresser jusqu'à 3 ans (N+3) ; conserver tous justificatifs au moins 3 ans après l'avis.</li>
+<li><strong>Pénalités de retard</strong> : 10 % du montant dû après mise en demeure, intérêts de retard 0,2 %/mois.</li>
+<li><strong>Option frais réels déclarée en ligne</strong> : cocher la case 1AK/1BK ET saisir le montant ; oublier le montant = 0 € déductible.</li>
+</ul>
+<hr>
+<h2>Règles du skill</h2>
+<ul>
+<li>Ne calcule PAS l'impôt dû (trop de variables).</li>
+<li>Ne donne pas de conseil d'optimisation fiscale (orienter vers un comptable).</li>
+<li>Adapter au pays si précisé ; sinon France par défaut.</li>
+<li>Pour tout cas complexe (SCI, expatrié, succession), orienter vers un expert-comptable.</li>
+</ul>
+<blockquote>Cette checklist est un outil d'organisation. Pour toute question spécifique, consultez impots.gouv.fr ou un expert-comptable agréé.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

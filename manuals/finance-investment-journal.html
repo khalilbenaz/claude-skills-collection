@@ -96,32 +96,104 @@ cp -r claude-skills-collection/skills/finance-investment-journal ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Investment Journal</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Entrée</strong> : pour chaque investissement, note :</li>
+<p>Outil de documentation rigoureuse des décisions d'investissement : raisonnement ex-ante, suivi de performance, bilan et apprentissage. Ne constitue pas un conseil financier.</p>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Saisir une nouvelle position</h3>
+<p>Collecter les données minimales pour une entrée utile :</p>
+<pre><code>Actif         : [ex. ETF MSCI World / BTC / SCPI Primopierre / SCI Immo]
+Type          : [action, ETF, crypto, immobilier, obligataire, SCPI, autre]
+Montant (EUR) : [ex. 2 500]
+Prix d'entrée : [ex. 82,40 €/part ou 31 200 €/lot]
+Quantité      : [ex. 30 parts]
+Date          : [YYYY-MM-DD]
+Broker/enveloppe : [PEA / CTO / AV / PER]
+Horizon       : [court &lt;1 an | moyen 1-5 ans | long &gt;5 ans]
+Risque perçu  : [1=très faible ... 5=très élevé]
+Thèse         : [1-3 phrases : pourquoi maintenant, pourquoi cet actif]
+Déclencheur de sortie : [objectif de prix, durée, événement]</code></pre>
+<p><strong>Exemple complet :</strong></p>
+<pre><code>Actif         : Amundi MSCI World (CW8)
+Type          : ETF
+Montant       : 3 000 EUR
+Prix d'entrée : 500,00 EUR/part
+Quantité      : 6 parts
+Date          : 2026-06-24
+Enveloppe     : PEA
+Horizon       : long (&gt;10 ans)
+Risque        : 3/5
+Thèse         : Exposition globale diversifiée, faibles frais (0,20% TER),
+                DCA mensuel automatique, pas de stock-picking.
+Sortie        : retraite ~2040 ou rééquilibrage si poids &gt;70% portefeuille.</code></pre>
+<hr>
+<h3>2. Tableau de suivi consolidé</h3>
+<p>Maintenir un tableau unique, mis à jour à chaque révision (hebdomadaire ou mensuelle) :</p>
+<table><thead><tr><th>Date entrée</th><th>Actif</th><th>Enveloppe</th><th>Montant (EUR)</th><th>Prix entrée</th><th>Prix actuel</th><th>Qté</th><th>Val. actuelle</th><th>+/- EUR</th><th>+/- %</th><th>Statut</th></tr></thead><tbody><tr><td>2026-01-10</td><td>CW8</td><td>PEA</td><td>2 500</td><td>480,00</td><td>512,00</td><td>5</td><td>2 560</td><td>+60</td><td>+2,4</td><td>OPEN</td></tr><tr><td>2026-03-05</td><td>BTC</td><td>CTO</td><td>1 000</td><td>72 000</td><td>65 000</td><td>0,014</td><td>910</td><td>-90</td><td>-9,0</td><td>OPEN</td></tr><tr><td>2025-11-20</td><td>XYZ</td><td>CTO</td><td>500</td><td>18,50</td><td>—</td><td>27</td><td>—</td><td>—</td><td>—</td><td>CLOSED</td></tr></tbody></table>
+<p>Formule P&amp;L simple (copiable dans Excel/Sheets) :</p>
+<pre><code>= (Prix_actuel - Prix_entrée) / Prix_entrée * 100   → % gain/perte
+= Prix_actuel * Quantité - Montant_investi           → EUR gain/perte</code></pre>
+<hr>
+<h3>3. Critères de décision — avant d'entrer</h3>
+<p>Poser ces questions avant toute entrée :</p>
+<table><thead><tr><th>Critère</th><th>Question clé</th><th>Réponse attendue</th></tr></thead><tbody><tr><td>Compréhension</td><td>Puis-je expliquer l'actif en 2 min ?</td><td>Oui sinon stop</td></tr><tr><td>Allocation</td><td>Quel % du portefeuille total ?</td><td>&lt;10% par ligne risquée</td></tr><tr><td>Liquidité</td><td>Puis-je sortir en &lt;5j si besoin ?</td><td>Oui pour les fonds d'urgence</td></tr><tr><td>Corrélation</td><td>Cet actif corrèle-t-il mes autres ?</td><td>Minimiser si possible</td></tr><tr><td>Coût total</td><td>Frais de courtage + spread + TER ?</td><td>Calculé avant achat</td></tr><tr><td>Fiscalité</td><td>Enveloppe optimale ?</td><td>PEA &gt; AV &gt; CTO selon durée</td></tr></tbody></table>
+<hr>
+<h3>4. Bilan périodique (mensuel/trimestriel)</h3>
+<p>Calculer :</p>
 <ul>
-<li>Actif (action, crypto, immobilier, business…)</li>
-<li>Montant investi</li>
-<li>Date d'entrée</li>
-<li>Raisonnement (pourquoi cet investissement ?)</li>
-<li>Horizon de temps</li>
-<li>Risque perçu</li>
+<li><strong>Performance globale</strong> : <code>(Valeur totale actuelle - Capital total investi) / Capital investi * 100</code></li>
+<li><strong>Diversification</strong> : répartition par type d'actif, géographie, secteur</li>
+<li><strong>Exposition au risque</strong> : % du portefeuille en actifs risque &gt;=4</li>
+<li><strong>Benchmark</strong> : comparer à un indice de référence (ex. MSCI World, inflation)</li>
 </ul>
-<li><strong>Tableau de suivi</strong> :</li>
-</ol>
-<table><thead><tr><th>Date</th><th>Actif</th><th>Montant</th><th>Prix d'entrée</th><th>Prix actuel</th><th>+/- %</th><th>Raisonnement initial</th></tr></thead><tbody></tbody></table>
-<ol>
-<li><strong>Bilan</strong> : performance globale, diversification, exposition au risque.</li>
-<li><strong>Leçons</strong> : qu'est-ce qui a fonctionné ? Qu'est-ce qui n'a pas marché ?</li>
-</ol>
-<h2>Règles</h2>
+<p>Template bilan trimestriel :</p>
+<pre><code>Période      : Q2 2026
+Capital total: 15 000 EUR
+Valeur totale: 15 780 EUR
+Performance  : +5,2% / Benchmark MSCI World: +4,8%
+Meilleure ligne : CW8 +8,1%
+Moins bonne   : BTC -9,0%
+Répartition  : ETF 60% | Crypto 7% | Oblig 20% | Cash 13%
+Action Q3    : renforcer ETF obligataire, pas de nouvelle crypto</code></pre>
+<hr>
+<h3>5. Journal des sorties et leçons</h3>
+<p>À chaque clôture de position, documenter :</p>
+<pre><code>Actif         : [nom]
+Date sortie   : [YYYY-MM-DD]
+Prix de sortie: [valeur]
+Durée         : [jours détenus]
+Résultat      : [+/- EUR et %]
+Thèse validée : [oui / non / partielle]
+Raison sortie : [objectif atteint / stop-loss / besoin liquidité / erreur initiale]
+Leçon         : [1-2 phrases concrètes pour les prochaines décisions]</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne pas faire :</strong></p>
 <ul>
-<li>Ne recommande JAMAIS un investissement spécifique.</li>
-<li>Ne prédit pas l'évolution des marchés.</li>
-<li>Rappelle que tout investissement comporte des risques.</li>
-<li>Encourage la documentation du raisonnement, pas seulement du résultat.</li>
+<li>Investir sans thèse écrite — &quot;j'ai un bon feeling&quot; n'est pas une thèse.</li>
+<li>Ignorer les frais : 1% de frais annuels = -26% sur 30 ans (règle des 72).</li>
+<li>Concentrer &gt;30% sur un seul actif risqué.</li>
+<li>Modifier la thèse a posteriori pour justifier une perte (biais de confirmation).</li>
+<li>Trader sur des actifs non compris (mème stocks, options exotiques, leviers x5+).</li>
+<li>Négliger la fiscalité : PEA vs CTO peut faire plusieurs milliers d'euros d'écart.</li>
 </ul>
-<blockquote>⚠️ Ce journal est un outil d'organisation. Il ne constitue pas un conseil financier. Consultez un conseiller financier agréé pour des décisions d'investissement.</blockquote>
+<p><strong>Pièges fréquents (2026) :</strong></p>
+<ul>
+<li>Effet FOMO crypto/IA : entrée au pic d'un narrative viral.</li>
+<li>Frais cachés des plateformes &quot;0 commission&quot; (spread élargi, change EUR/USD).</li>
+<li>Rééquilibrage trop fréquent : génère des frais et événements fiscaux inutiles.</li>
+<li>Confondre investissement et épargne de précaution (fonds d'urgence non investissable).</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques (2026)</h2>
+<ul>
+<li><strong>DCA</strong> (Dollar-Cost Averaging) : automatiser des achats récurrents — réduit l'impact du timing.</li>
+<li><strong>Rééquilibrage annuel</strong> : ramener les poids cibles sans sur-trader.</li>
+<li><strong>Règle des 5%</strong> : aucune ligne spéculative &gt;5% du portefeuille total.</li>
+<li><strong>Enveloppes fiscales en priorité</strong> : PEA avant CTO pour actions européennes/ETF éligibles ; AV pour l'horizon successoral.</li>
+<li><strong>Tenir le journal même en perte</strong> : les erreurs documentées valent plus que les succès non analysés.</li>
+</ul>
+<hr>
+<blockquote>Ce journal est un outil d'organisation personnelle. Il ne constitue pas un conseil financier. Consultez un conseiller financier agréé (CIF) pour toute décision significative.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

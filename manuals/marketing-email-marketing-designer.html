@@ -97,37 +97,142 @@ cp -r claude-skills-collection/skills/marketing-email-marketing-designer ~/.clau
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Email Marketing Designer</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Définir la stratégie email</strong> — identifier les objectifs (nurturing, conversion, fidélisation, réactivation), cartographier le parcours client et les points de contact email, choisir la plateforme adaptée (Mailchimp, SendGrid, Brevo, ConvertKit), et planifier le calendrier d'envoi.</li>
-</ol>
-<ol>
-<li><strong>Construire et segmenter la liste</strong> — collecter les adresses via des formulaires opt-in conformes RGPD (double opt-in recommandé), segmenter la base par critères démographiques, comportementaux (historique d'achat, engagement) et lifecycle stage, et nettoyer régulièrement les contacts inactifs.</li>
-</ol>
-<ol>
-<li><strong>Concevoir les séquences automatisées</strong> — créer les flux clés : séquence de bienvenue (welcome series), abandon de panier, post-achat, réactivation des inactifs, anniversaire, et onboarding produit, avec des délais et conditions de branchement adaptés au comportement du destinataire.</li>
-</ol>
-<ol>
-<li><strong>Rédiger le contenu des emails</strong> — écrire des objets accrocheurs (40-50 caractères, personnalisation, urgence sans clickbait), structurer le corps avec une hiérarchie claire (un message principal, un CTA visible), personnaliser avec les merge tags (<code>{{prenom}}</code>, <code>{{produit}}</code>), et adapter le ton à la marque.</li>
-</ol>
-<ol>
-<li><strong>Designer le template HTML</strong> — créer des templates responsive qui s'affichent correctement sur tous les clients mail (Outlook, Gmail, Apple Mail), utiliser les tables pour la mise en page, inclure une version texte, respecter le ratio texte/image (60/40 minimum), et tester le rendu avec Litmus ou Email on Acid.</li>
-</ol>
-<ol>
-<li><strong>Configurer la délivrabilité</strong> — authentifier le domaine d'envoi avec SPF, DKIM et DMARC, surveiller la réputation IP avec les outils des FAI, maintenir un taux de plainte inférieur à 0.1%, gérer les bounces (hard et soft), et respecter les bonnes pratiques anti-spam (lien de désinscription visible, adresse physique).</li>
-</ol>
-<ol>
-<li><strong>Lancer des tests A/B</strong> — tester systématiquement les variables clés : objet (formulation, longueur, emoji), heure d'envoi, contenu (long vs. court), CTA (couleur, texte, position), et expéditeur (nom de la marque vs. nom personnel), en envoyant à un échantillon significatif avant le déploiement complet.</li>
-</ol>
-<ol>
-<li><strong>Analyser et optimiser</strong> — suivre les KPIs essentiels (taux d'ouverture, taux de clic, taux de conversion, taux de désinscription, revenue par email), comparer par segment et par type de campagne, identifier les tendances, et itérer sur le contenu et la stratégie en fonction des résultats.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Cadrage stratégique</h3>
+<p>Avant tout, définir l'objectif principal de la campagne :</p>
+<table><thead><tr><th>Objectif</th><th>Type de séquence</th><th>Métrique cible</th></tr></thead><tbody><tr><td>Acquisition</td><td>Welcome series (3-5 emails)</td><td>Taux de clic J7</td></tr><tr><td>Nurturing</td><td>Drip éducatif (7-14 jours)</td><td>Engagement score</td></tr><tr><td>Conversion</td><td>Abandon panier (3 relances)</td><td>Taux de conversion</td></tr><tr><td>Fidélisation</td><td>Post-achat + upsell</td><td>Revenue par email</td></tr><tr><td>Réactivation</td><td>Win-back (inactifs 90j+)</td><td>Réactivation rate</td></tr></tbody></table>
+<p>Choix de la plateforme selon le volume et le besoin :</p>
 <ul>
-<li>Respecter strictement le RGPD et le consentement — ne jamais envoyer d'emails à des contacts qui n'ont pas explicitement opté in, et rendre la désinscription simple et immédiate.</li>
-<li>Nettoyer la liste régulièrement en supprimant les hard bounces et les inactifs depuis plus de 6 mois — une liste propre améliore la délivrabilité et réduit les coûts.</li>
-<li>Ne jamais sacrifier la délivrabilité pour le volume — un email qui arrive en spam a un impact nul, prioriser la qualité de la liste et la réputation de l'expéditeur.</li>
-<li>Tester le rendu sur au moins 5 clients mail différents avant chaque envoi — un email cassé visuellement détruit la crédibilité de la marque.</li>
-<li>Toujours fournir de la valeur avant de demander quelque chose — les emails purement promotionnels sans contenu utile augmentent les désinscriptions.</li>
+<li><strong>Brevo (Sendinblue)</strong> — RGPD natif, API REST, bon rapport qualité/prix EU</li>
+<li><strong>SendGrid</strong> — API robuste, volume élevé, webhooks granulaires</li>
+<li><strong>Mailchimp</strong> — Interfaces marketing, idéal PME non-technique</li>
+<li><strong>ConvertKit</strong> — Créateurs de contenu, séquences visuelles simples</li>
+</ul>
+<h3>2. Collecte et segmentation de la liste</h3>
+<p>Double opt-in obligatoire (RGPD). Exemple de formulaire HTML minimal conforme :</p>
+<pre><code class="lang-html">&lt;form action=&quot;/api/subscribe&quot; method=&quot;POST&quot;&gt;
+  &lt;input type=&quot;email&quot; name=&quot;email&quot; required placeholder=&quot;votre@email.com&quot;&gt;
+  &lt;input type=&quot;hidden&quot; name=&quot;source&quot; value=&quot;footer-newsletter&quot;&gt;
+  &lt;!-- Confirmation envoyée par email, activation requise --&gt;
+  &lt;button type=&quot;submit&quot;&gt;S'inscrire&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+<p>Segmentation prioritaire à mettre en place dès le départ :</p>
+<ul>
+<li><strong>Lifecycle</strong> : prospect / client actif / client inactif / churné</li>
+<li><strong>Engagement</strong> : ouvreur actif (&lt; 30j) / tiède (30-90j) / inactif (&gt; 90j)</li>
+<li><strong>Source d'acquisition</strong> : organique / paid / parrainage</li>
+<li><strong>Valeur client</strong> : RFM (Recency, Frequency, Monetary)</li>
+</ul>
+<h3>3. Séquences automatisées clés</h3>
+<p><strong>Welcome series (5 emails, jours 0-7-14-21-30) :</strong></p>
+<ul>
+<li>J0 : Confirmation + promesse de valeur (livraison instantanée)</li>
+<li>J2 : Contenu éducatif sans vente</li>
+<li>J5 : Preuve sociale (témoignages, chiffres)</li>
+<li>J10 : Offre d'entrée (première conversion)</li>
+<li>J14 : Approfondissement ou segmentation comportementale</li>
+</ul>
+<p><strong>Abandon panier (3 emails) :</strong></p>
+<ul>
+<li>+1h : Rappel neutre + photo produit</li>
+<li>+24h : Objection-busting + FAQ</li>
+<li>+72h : Urgence / offre limitée (10% discount ou shipping offert)</li>
+</ul>
+<p><strong>Réactivation win-back :</strong></p>
+<ul>
+<li>Email 1 : &quot;Vous nous manquez&quot; + contenu utile</li>
+<li>Email 2 : Offre exclusive inactifs</li>
+<li>Email 3 : Dernière chance + opt-out ou changement de fréquence</li>
+<li>Si pas de réponse : supprimer ou archiver → protège la délivrabilité</li>
+</ul>
+<h3>4. Rédaction du contenu</h3>
+<p>Objet : formule à tester avec le template <code>[Bénéfice concret] + [Urgence/Curiosité]</code></p>
+<p>Exemples performants :</p>
+<pre><code>&quot;Votre commande est prête à être envoyée 🚀&quot;          # transactionnel
+&quot;3 erreurs que font 90% des débutants en SEO&quot;          # éducatif
+&quot;[Prénom], votre accès expire dans 48h&quot;                # urgence personnalisée
+&quot;On a quelque chose pour vous (limité à 48h)&quot;          # curiosité + urgence</code></pre>
+<p>Règles de structure corps :</p>
+<ul>
+<li><strong>1 email = 1 message = 1 CTA</strong> — jamais deux objectifs concurrents</li>
+<li>Paragraphes courts (2-3 lignes max), ton conversationnel</li>
+<li>CTA : bouton + lien texte de repli pour clients bloquant les images</li>
+<li>Merge tags courants : <code>{{first_name}}</code>, <code>{{order_id}}</code>, <code>{{product_name}}</code></li>
+</ul>
+<h3>5. Template HTML responsive</h3>
+<p>Squelette minimal compatible Outlook/Gmail (tables obligatoires) :</p>
+<pre><code class="lang-html">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;meta charset=&quot;UTF-8&quot;&gt;
+  &lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+  &lt;style&gt;
+    @media only screen and (max-width: 600px) {
+      .container { width: 100% !important; }
+      .mobile-hide { display: none !important; }
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body style=&quot;margin:0; background:#f4f4f4;&quot;&gt;
+  &lt;table width=&quot;600&quot; class=&quot;container&quot; align=&quot;center&quot;
+         style=&quot;background:#ffffff; font-family:Arial,sans-serif;&quot;&gt;
+    &lt;tr&gt;&lt;td style=&quot;padding:24px;&quot;&gt;
+      &lt;!-- Contenu ici --&gt;
+      &lt;a href=&quot;{{cta_url}}&quot;
+         style=&quot;background:#0066cc; color:#fff; padding:12px 24px;
+                text-decoration:none; border-radius:4px; display:inline-block;&quot;&gt;
+        {{cta_label}}
+      &lt;/a&gt;
+    &lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td style=&quot;padding:12px; font-size:11px; color:#999; text-align:center;&quot;&gt;
+      &lt;a href=&quot;{{unsubscribe_url}}&quot;&gt;Se désinscrire&lt;/a&gt; |
+      123 rue de la Paix, 75001 Paris
+    &lt;/td&gt;&lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p>Ratio texte/image : minimum 60/40. Images avec <code>alt</code> rempli, poids &lt; 200 Ko. Outils de test rendu : <strong>Litmus</strong>, <strong>Email on Acid</strong>, ou preview native Brevo/Mailchimp.</p>
+<h3>6. Délivrabilité — configuration DNS</h3>
+<p>Indispensable avant tout envoi en volume :</p>
+<pre><code class="lang-dns">; SPF — autoriser le serveur d'envoi
+v=spf1 include:sendgrid.net include:_spf.brevo.com ~all
+
+; DKIM — clé fournie par la plateforme, à placer en TXT
+; Exemple SendGrid :
+s1._domainkey.votredomaine.com  TXT  &quot;v=DKIM1; k=rsa; p=MIGf...&quot;
+
+; DMARC — politique de base
+_dmarc.votredomaine.com  TXT  &quot;v=DMARC1; p=quarantine; rua=mailto:dmarc@votredomaine.com; pct=100&quot;</code></pre>
+<p>Seuils à surveiller en continu :</p>
+<ul>
+<li>Taux de plainte (spam) : &lt; <strong>0,1%</strong> (seuil Gmail/Yahoo 2024+)</li>
+<li>Hard bounce : &lt; <strong>2%</strong> — supprimer immédiatement</li>
+<li>Soft bounce : 3 échecs consécutifs → archiver le contact</li>
+</ul>
+<p>Outils de monitoring : <strong>Google Postmaster Tools</strong>, <strong>MXToolbox</strong>, <strong>Mail-tester.com</strong> (score avant envoi).</p>
+<h3>7. A/B Testing — protocole</h3>
+<p>Variable à tester <strong>une à la fois</strong>. Taille d'échantillon minimum : 1 000 contacts par variant.</p>
+<p>Priorité de test recommandée :</p>
+<ol>
+<li>Objet (impact direct sur open rate)</li>
+<li>Heure/jour d'envoi</li>
+<li>CTA (texte + couleur + position)</li>
+<li>Longueur du corps (court vs. long)</li>
+<li>Expéditeur (marque vs. prénom humain)</li>
+</ol>
+<p>Durée de test : 4h minimum avant de déclarer un gagnant, puis envoi du winner au reste.</p>
+<h3>8. KPIs et benchmarks 2026</h3>
+<table><thead><tr><th>Métrique</th><th>Bon</th><th>Excellent</th></tr></thead><tbody><tr><td>Taux d'ouverture</td><td>&gt; 25%</td><td>&gt; 40%</td></tr><tr><td>Taux de clic (CTOR)</td><td>&gt; 3%</td><td>&gt; 8%</td></tr><tr><td>Taux de conversion</td><td>&gt; 1%</td><td>&gt; 3%</td></tr><tr><td>Taux de désabo</td><td>&lt; 0,5%</td><td>&lt; 0,2%</td></tr><tr><td>Revenue per email</td><td>&gt; 0,10€</td><td>&gt; 0,50€</td></tr></tbody></table>
+<p>Attention : l'open rate est biaisé depuis iOS 15 (Apple Mail Privacy Protection). Prioriser <strong>CTOR</strong> (Click-to-Open Rate) et <strong>revenue par email</strong> comme métriques fiables.</p>
+<h2>Garde-fous / Anti-patterns</h2>
+<ul>
+<li><strong>Envoyer à toute la base sans segmentation</strong> → taux de plainte élevé, réputation IP dégradée durablement</li>
+<li><strong>Un seul envoi sans séquence</strong> → 80% des conversions se font après le 4e contact</li>
+<li><strong>Image seule sans texte</strong> → bloqué par filtres anti-spam, rendu cassé si images désactivées</li>
+<li><strong>CTA vague (&quot;Cliquez ici&quot;, &quot;En savoir plus&quot;)</strong> → remplacer par le bénéfice (&quot;Obtenir mon guide gratuit&quot;)</li>
+<li><strong>Objet clickbait trompeur</strong> → taux de plainte explose, réputation détruite</li>
+<li><strong>Ne pas nettoyer la liste</strong> → coûts qui gonflent + délivrabilité qui chute ; nettoyer tous les 90 jours</li>
+<li><strong>Désabonnement difficile</strong> → illégal RGPD + accélère les plaintes spam ; lien visible dans CHAQUE email</li>
+<li><strong>Tester sans groupe contrôle</strong> → résultats inexploitables ; toujours un variant A vs. B pur</li>
 </ul>
 </article>
 </main>

@@ -96,32 +96,95 @@ cp -r claude-skills-collection/skills/education-learning-roadmap ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Learning Roadmap</h1>
-<h2>Workflow</h2>
+<h2>Étape 1 — Cadrage initial (obligatoire avant de produire la roadmap)</h2>
+<p>Collecte ces 4 données avant tout :</p>
+<table><thead><tr><th>Question</th><th>Pourquoi</th></tr></thead><tbody><tr><td>Objectif final précis</td><td>&quot;Dev web&quot; ≠ &quot;déployer une API REST en prod sous 3 mois&quot;</td></tr><tr><td>Niveau actuel</td><td>Évite de reformuler des bases déjà connues</td></tr><tr><td>Disponibilité (h/semaine)</td><td>Calibre la durée et la densité de chaque phase</td></tr><tr><td>Contrainte de format</td><td>Préférence vidéo / texte / projets / certifications</td></tr></tbody></table>
+<p>Si ces infos sont absentes, pose les questions en une seule fois. Ne génère pas la roadmap à l'aveugle.</p>
+<hr>
+<h2>Étape 2 — Critères de découpage en phases</h2>
+<p>Utilise <strong>3 phases maximum</strong> par défaut :</p>
+<ul>
+<li><strong>Phase 1 — Fondamentaux</strong> : concepts et outils incontournables, temps de mise en place de l'environnement.</li>
+<li><strong>Phase 2 — Pratique guidée</strong> : projets structurés, tutoriels actifs, premières contributions / déploiements réels.</li>
+<li><strong>Phase 3 — Autonomie</strong> : projets personnels, debugging sans aide, benchmarks et optimisation.</li>
+</ul>
+<p>Critères de passage de phase :</p>
+<ul>
+<li>Ne pas basculer tant que les checkpoints de la phase courante ne sont pas validés.</li>
+<li>Chaque checkpoint = livrable concret (commande qui tourne, fichier produit, PR mergée, score de quiz, etc.).</li>
+</ul>
+<hr>
+<h2>Étape 3 — Structure d'une phase (template)</h2>
+<pre><code>### Phase N — &lt;Nom&gt; (semaines W1 à W2)
+
+**Concepts clés**
+- Concept A
+- Concept B
+
+**Ressources (priorité gratuit)**
+- [Titre](URL) — format, durée estimée
+- Docs officielles : &lt;lien&gt;
+
+**Projet de validation**
+&gt; Exemple copiable : &quot;Crée une CLI en Python qui lit un fichier CSV et génère un rapport JSON.&quot;
+
+**Checkpoint — critère de passage**
+- [ ] Tu peux expliquer X sans regarder tes notes.
+- [ ] Le projet tourne sans erreur sur une machine tierce.</code></pre>
+<hr>
+<h2>Étape 4 — Calibrage de la timeline</h2>
+<p>Formule de base :</p>
+<pre><code>durée_totale (semaines) = charge_totale (heures) / disponibilité (h/semaine)</code></pre>
+<p>Barèmes indicatifs (tech, full débutant) :</p>
+<table><thead><tr><th>Domaine</th><th>Charge estimée jusqu'au premier emploi / projet prod</th></tr></thead><tbody><tr><td>Python scripting</td><td>80–120 h</td></tr><tr><td>Dev web frontend</td><td>150–250 h</td></tr><tr><td>Backend API REST</td><td>200–350 h</td></tr><tr><td>Data / ML (bases)</td><td>200–300 h</td></tr><tr><td>DevOps / Cloud</td><td>250–400 h</td></tr><tr><td>Cybersécurité</td><td>300–500 h</td></tr></tbody></table>
+<p>Ajuste selon le niveau de départ et le critère de succès (personnel, professionnel, certif).</p>
+<hr>
+<h2>Étape 5 — Ressources : règles de sélection</h2>
+<p>Priorité décroissante :</p>
 <ol>
-<li><strong>Objectif</strong> : qu'est-ce que l'utilisateur veut savoir faire à la fin ?</li>
-<li><strong>Niveau actuel</strong> : débutant total, bases acquises, intermédiaire ?</li>
-<li><strong>Temps disponible</strong> : combien d'heures par semaine ?</li>
-<li><strong>Roadmap</strong> structurée en phases :</li>
-<ul>
-<li>Phase 1 : Fondamentaux (semaines 1-X)</li>
-<li>Phase 2 : Intermédiaire (semaines X-Y)</li>
-<li>Phase 3 : Avancé / Projets pratiques</li>
-</ul>
-<li>Pour chaque phase :</li>
-<ul>
-<li>Concepts à maîtriser</li>
-<li>Ressources recommandées (gratuites en priorité)</li>
-<li>Projet pratique pour valider</li>
-<li>Critère de passage à la phase suivante</li>
-</ul>
-<li><strong>Timeline</strong> : estimation réaliste de la durée totale.</li>
+<li>Docs officielles (toujours à jour, référence de vérité)</li>
+<li>Ressources gratuites reconnues : MDN, freeCodeCamp, Exercism, roadmap.sh, The Odin Project, CS50, Fast.ai</li>
+<li>Plateformes payantes si le ROI est justifié (Udemy &lt;15 €, Pluralsight, O'Reilly)</li>
+<li>Livres : préfère les éditions &lt; 3 ans pour les sujets évoluant vite</li>
 </ol>
-<h2>Règles</h2>
+<p>Ne propose jamais plus de 2–3 ressources par phase — trop de choix paralyse.</p>
+<hr>
+<h2>Étape 6 — Exemples concrets par domaine</h2>
+<h3>Exemple : apprendre Python de zéro, 10 h/semaine, objectif scripting</h3>
+<pre><code>Phase 1 — Fondamentaux (semaines 1–4, ~40 h)
+Concepts : types, fonctions, boucles, modules, fichiers
+Ressource : https://docs.python.org/3/tutorial/ + Exercism Python track
+Projet : script CLI qui parse un CSV et sort des stats (min/max/moyenne par colonne)
+Checkpoint : script tourne avec pytest sans erreur, explique la différence list/tuple/dict
+
+Phase 2 — Pratique (semaines 5–10, ~60 h)
+Concepts : requests, pathlib, argparse, logging, venv, pyproject.toml
+Ressource : Real Python (realpython.com) articles ciblés
+Projet : outil CLI packagé installable via pip install -e .
+Checkpoint : le tool est publié sur TestPyPI et documenté dans un README
+
+Phase 3 — Autonomie (semaines 11–14, ~40 h)
+Concepts : typing, tests unitaires (pytest), CI GitHub Actions
+Projet : automatise une tâche réelle du quotidien de l'utilisateur
+Checkpoint : pipeline CI verte, coverage &gt; 80 %</code></pre>
+<hr>
+<h2>Anti-patterns / pièges à éviter</h2>
 <ul>
-<li>Privilégie la pratique sur la théorie.</li>
-<li>Propose des ressources gratuites en priorité.</li>
-<li>Adapte au rythme de l'utilisateur.</li>
-<li>Inclus des checkpoints pour mesurer la progression.</li>
+<li><strong>Tutorial hell</strong> : enchaîner les tutos sans jamais produire un projet personnel. Règle : max 1 tuto actif, toujours avec un projet parallèle.</li>
+<li><strong>Phases trop longues</strong> : au-delà de 6–8 semaines sans livrable, la motivation s'effondre. Découpe davantage.</li>
+<li><strong>Ressources obsolètes</strong> : vérifier la date de publication pour tout ce qui touche cloud, frameworks JS, LLMs, Kubernetes. Seuil d'alerte : &gt; 2 ans.</li>
+<li><strong>Overengineering précoce</strong> : ne pas enseigner les design patterns ou l'architecture avant que l'utilisateur ait un premier projet fonctionnel.</li>
+<li><strong>Roadmap générique</strong> : une roadmap sans nom de projet concret n'est pas actionnable. Chaque phase doit avoir un livrable unique nommé.</li>
+<li><strong>Ignorer le backtracking</strong> : si un checkpoint échoue après 2 essais, prévoir un retour en phase précédente plutôt qu'une progression forcée.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Intègre <strong>roadmap.sh</strong> comme référence visuelle pour les domaines couverts (dev, devops, AI, etc.).</li>
+<li>Pour les sujets IA/ML : recommande fast.ai v2 + Hugging Face course comme socle gratuit et à jour.</li>
+<li>Pour le cloud : oriente vers les sandbox gratuits (AWS Free Tier, GCP 90-day, Azure for Students) dès la phase 2.</li>
+<li>Mentionne <strong>Anki</strong> ou équivalent pour les sujets à mémorisation dense (certifications, algorithmique).</li>
+<li>Propose un <strong>planning hebdomadaire type</strong> si la disponibilité est &lt; 8 h/semaine (sessions courtes = risque de fragmentation).</li>
 </ul>
 </article>
 </main>

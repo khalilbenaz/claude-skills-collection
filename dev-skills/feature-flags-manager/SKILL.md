@@ -5,179 +5,262 @@ description: Gestion de feature toggles avec LaunchDarkly, OpenFeature et implé
 
 # Feature Flags Manager
 
-## Workflow
+## Workflow en étapes
 
-1. **Choisir l'approche** : SDK managé (LaunchDarkly, Unleash) ou custom avec OpenFeature.
-2. **Configurer** : provider, contexte d'évaluation, fallback values.
-3. **Implémenter** : évaluation des flags, segmentation, analytics.
-4. **Gérer le cycle de vie** : nettoyage, audit, monitoring.
+1. **Choisir le type de flag** (voir tableau de décision ci-dessous)
+2. **Choisir le provider** : Microsoft.FeatureManagement (simple, .NET natif) ou OpenFeature (multi-provider, standard industrie)
+3. **Configurer le contexte d'évaluation** : qui est l'utilisateur, quel environnement, quelles dimensions de ciblage
+4. **Implémenter le flag** avec fallback sûr et valeur par défaut explicite
+5. **Tester les deux branches** (flag ON et OFF) avant merge
+6. **Définir la stratégie de rollout** : % progressif, liste blanche, time window
+7. **Monitorer** : log chaque évaluation, alerter sur les anomalies de taux d'activation
+8. **Nettoyer** : supprimer le flag et le code conditionnel après adoption complète
 
-## OpenFeature (.NET Standard)
+## Critères de décision : quel type de flag ?
 
-### Configuration
+| Besoin | Type | TTL conseillé |
+|--------|------|--------------|
+| Activer une feature en prod sans redéploiement | Release toggle | < 1 sprint |
+| Rollout progressif (canary, blue/green) | Percentage rollout | < 2 semaines |
+| A/B test avec métriques | Experiment toggle | Durée de l'exp |
+| Config différente par env/région | Config toggle | Long terme |
+| Kill switch / circuit breaker | Ops toggle | Permanent |
 
-```csharp
-// Installation : dotnet add package OpenFeature
-// + un provider : dotnet add package LaunchDarkly.OpenFeature.ServerProvider
+**Règle clé** : 1 feature = 1 flag. Ne jamais empiler plusieurs features sous un seul flag.
 
-using OpenFeature;
-using LaunchDarkly.OpenFeature.ServerProvider;
+## Choix du provider
 
-// Configurer le provider
-var ldProvider = new Provider(Configuration.Builder("sdk-key").Build());
-await Api.Instance.SetProviderAsync(ldProvider);
+| Critère | Microsoft.FeatureManagement | LaunchDarkly (via OpenFeature) | Unleash |
+|---------|----------------------------|-------------------------------|---------|
+| Coût | Gratuit | Payant ($) | Open source |
+| Complexité setup | Minimale | Moyenne | Moyenne |
+| Ciblage utilisateur | Basique (Targeting filter) | Avancé (segments, règles) | Avancé |
+| Evaluation server-side | Oui | Oui | Oui |
+| Multi-langage | .NET uniquement | Multi-SDK | Multi-SDK |
+| Dashboard UI | Azure App Config | LaunchDarkly console | Unleash UI |
 
-// Obtenir le client
-var client = Api.Instance.GetClient();
-```
+Pour un projet .NET sans budget : **Microsoft.FeatureManagement + Azure App Configuration**.
+Pour un produit multi-équipes avec A/B testing poussé : **LaunchDarkly via OpenFeature**.
 
-### Évaluation des flags
-
-```csharp
-public class PaymentService
-{
-    private readonly IFeatureClient _featureClient;
-
-    public PaymentService(IFeatureClient featureClient)
-    {
-        _featureClient = featureClient;
-    }
-
-    public async Task<PaymentResult> ProcessPayment(PaymentRequest request)
-    {
-        var context = EvaluationContext.Builder()
-            .Set("userId", request.UserId)
-            .Set("country", request.Country)
-            .Set("plan", request.Plan)
-            .Build();
-
-        // Flag booléen
-        var useNewEngine = await _featureClient.GetBooleanValueAsync(
-            "new-payment-engine", false, context);
-
-        if (useNewEngine)
-            return await ProcessWithNewEngine(request);
-
-        return await ProcessWithLegacyEngine(request);
-    }
-
-    public async Task<decimal> CalculateFees(decimal amount)
-    {
-        // Flag numérique (pourcentage de frais)
-        var feePercentage = await _featureClient.GetDoubleValueAsync(
-            "payment-fee-percentage", 2.5);
-
-        return amount * (decimal)(feePercentage / 100);
-    }
-
-    public async Task<CheckoutConfig> GetCheckoutConfig()
-    {
-        // Flag JSON (configuration complexe)
-        var config = await _featureClient.GetObjectValueAsync(
-            "checkout-config",
-            new Value(new Structure(new Dictionary<string, Value>
-            {
-                ["maxRetries"] = new Value(3),
-                ["showPromo"] = new Value(false)
-            })));
-
-        return MapToCheckoutConfig(config);
-    }
-}
-```
+---
 
 ## Microsoft Feature Management (.NET)
 
-### Configuration
+```bash
+dotnet add package Microsoft.FeatureManagement.AspNetCore
+```
+
+### Enregistrement
 
 ```csharp
-// dotnet add package Microsoft.FeatureManagement.AspNetCore
-
+// Program.cs
 builder.Services.AddFeatureManagement()
     .AddFeatureFilter<PercentageFilter>()
     .AddFeatureFilter<TimeWindowFilter>()
     .AddFeatureFilter<TargetingFilter>();
+
+// Optionnel : depuis Azure App Configuration
+builder.Configuration.AddAzureAppConfiguration(opts =>
+    opts.Connect("<connection-string>")
+        .UseFeatureFlags(ff => ff.CacheExpirationInterval = TimeSpan.FromSeconds(30)));
 ```
 
-### appsettings.json
+### appsettings.json — patterns courants
 
 ```json
 {
   "FeatureManagement": {
-    "NewDashboard": true,
-    "BetaFeature": {
-      "EnabledFor": [
-        {
-          "Name": "Targeting",
-          "Parameters": {
-            "Audience": {
-              "Users": ["user1@company.com", "user2@company.com"],
-              "Groups": [
-                { "Name": "beta-testers", "RolloutPercentage": 100 },
-                { "Name": "internal", "RolloutPercentage": 50 }
-              ],
-              "DefaultRolloutPercentage": 5
-            }
-          }
-        }
-      ]
+    "SimpleFlag": true,
+
+    "RolloutFlag": {
+      "EnabledFor": [{
+        "Name": "Percentage",
+        "Parameters": { "Value": 10 }
+      }]
     },
-    "HolidayPromo": {
-      "EnabledFor": [
-        {
-          "Name": "TimeWindow",
-          "Parameters": {
-            "Start": "2025-12-20T00:00:00Z",
-            "End": "2025-12-31T23:59:59Z"
+
+    "TargetedFlag": {
+      "EnabledFor": [{
+        "Name": "Targeting",
+        "Parameters": {
+          "Audience": {
+            "Users": ["admin@company.com"],
+            "Groups": [
+              { "Name": "beta", "RolloutPercentage": 100 },
+              { "Name": "all",  "RolloutPercentage": 5 }
+            ],
+            "DefaultRolloutPercentage": 0
           }
         }
-      ]
+      }]
+    },
+
+    "HolidayPromo": {
+      "EnabledFor": [{
+        "Name": "TimeWindow",
+        "Parameters": {
+          "Start": "2026-12-20T00:00:00Z",
+          "End":   "2026-12-31T23:59:59Z"
+        }
+      }]
     }
   }
 }
 ```
 
-### Utilisation
+### Utilisation dans le code
 
 ```csharp
+// Via attribut (gate au niveau contrôleur/action)
 [FeatureGate("NewDashboard")]
 [ApiController]
-public class DashboardController : ControllerBase
+public class DashboardController : ControllerBase { }
+
+// Via injection
+public class PaymentService(IFeatureManager fm)
 {
-    private readonly IFeatureManager _featureManager;
-
-    [HttpGet]
-    public async Task<IActionResult> GetDashboard()
+    public async Task<PaymentResult> Process(PaymentRequest req)
     {
-        if (await _featureManager.IsEnabledAsync("BetaFeature"))
-        {
-            return Ok(await GetBetaDashboard());
-        }
+        if (await fm.IsEnabledAsync("NewPaymentEngine"))
+            return await ProcessV2(req);
 
-        return Ok(await GetStandardDashboard());
+        return await ProcessV1(req); // fallback explicite, toujours présent
     }
 }
 
 // Dans les vues Razor
-@if (await FeatureManager.IsEnabledAsync("NewDashboard"))
+@inject IFeatureManager FeatureManager
+@if (await FeatureManager.IsEnabledAsync("NewCheckout"))
 {
-    <NewDashboardComponent />
+    <CheckoutV2 />
 }
 ```
 
-## Cycle de vie des flags
+---
+
+## OpenFeature (.NET — standard multi-provider)
+
+```bash
+dotnet add package OpenFeature
+dotnet add package LaunchDarkly.OpenFeature.ServerProvider
+```
+
+```csharp
+// Program.cs
+var ldConfig = Configuration.Builder("sdk-key-xxx").Build();
+await Api.Instance.SetProviderAsync(new Provider(ldConfig));
+builder.Services.AddSingleton(Api.Instance.GetClient());
+```
+
+### Évaluation typique avec contexte
+
+```csharp
+public class FeatureFlagService(FeatureClient client)
+{
+    public async Task<bool> IsNewEngineEnabledAsync(string userId, string country)
+    {
+        var ctx = EvaluationContext.Builder()
+            .Set("userId", userId)
+            .Set("country", country)
+            .Build();
+
+        // Toujours fournir une valeur par défaut sûre en 2e argument
+        return await client.GetBooleanValueAsync("new-payment-engine", false, ctx);
+    }
+
+    public async Task<double> GetFeePercentageAsync()
+    {
+        // Flag numérique avec fallback
+        return await client.GetDoubleValueAsync("fee-percentage", 2.5);
+    }
+}
+```
+
+**Avantage OpenFeature** : changer de provider (LaunchDarkly → Unleash → custom) sans toucher au code métier.
+
+---
+
+## Stratégie de rollout progressif
+
+```
+Jour 1  : 0% → internes seulement (liste blanche)
+Jour 3  : 1%  → surveiller erreurs / latences
+Jour 5  : 10% → confirmer métriques OK
+Jour 8  : 30%
+Jour 10 : 100% → planifier nettoyage du flag
+```
+
+**Critères de go/no-go avant chaque palier** :
+- Taux d'erreur < seuil baseline + 0.1%
+- Latence p99 stable
+- Pas d'alerte on-call dans les 24h précédentes
+
+---
+
+## Cycle de vie & gouvernance
 
 | Phase | Action | Responsable |
 |-------|--------|-------------|
-| **Création** | Définir le flag, sa description et sa date d'expiration | Dev |
-| **Développement** | Implémenter le code derrière le flag | Dev |
-| **Rollout** | Activer progressivement (1% → 10% → 50% → 100%) | Product |
-| **Stabilisation** | Confirmer que la fonctionnalité est stable | Équipe |
-| **Nettoyage** | Supprimer le flag et le code conditionnel | Dev |
+| Création | Nommer le flag, documenter la finalité, fixer date d'expiration | Dev |
+| Dev | Implémenter les deux branches, écrire les tests | Dev |
+| Staging | Activer à 100% en staging, valider | QA |
+| Prod rollout | Incrémenter par paliers | Product + Dev |
+| Nettoyage | Supprimer le flag ET le code conditionnel de l'ancienne branche | Dev |
 
-## Règles
-- Chaque flag doit avoir une **date d'expiration** et un responsable.
-- Le code derrière un flag doit fonctionner **sans le flag** (fallback sûr).
-- Nettoyer les flags après adoption complète — pas de dette technique.
-- Logger chaque évaluation de flag pour l'audit et l'analytics.
-- Préférer OpenFeature pour la portabilité entre providers.
+```bash
+# Exemple : recherche des flags à nettoyer dans le codebase
+grep -r "IsEnabledAsync\|FeatureGate\|GetBooleanValue" src/ \
+  | grep -v "\.md:" | grep -v "_test" \
+  | sort | uniq
+```
+
+---
+
+## Monitoring & observabilité
+
+```csharp
+// Middleware de logging des évaluations
+public class FlagAuditMiddleware(RequestDelegate next, ILogger<FlagAuditMiddleware> logger)
+{
+    public async Task InvokeAsync(HttpContext ctx, IFeatureManager fm)
+    {
+        var flags = new[] { "NewDashboard", "NewPaymentEngine" };
+        foreach (var flag in flags)
+        {
+            var enabled = await fm.IsEnabledAsync(flag);
+            logger.LogInformation("FeatureFlag:{Flag} Enabled:{Enabled} User:{User}",
+                flag, enabled, ctx.User.Identity?.Name);
+        }
+        await next(ctx);
+    }
+}
+```
+
+Métriques à exposer (Prometheus/OTLP) :
+- `feature_flag_evaluation_total{flag, result}` — compteur d'évaluations
+- `feature_flag_latency_ms{flag}` — temps d'évaluation (alerte si SDK distant)
+
+---
+
+## Garde-fous & anti-patterns
+
+| Anti-pattern | Risque | Correction |
+|---|---|---|
+| Imbriquer 3+ flags | Logique impossible à tester | Max 2 flags imbriqués ; refactorer sinon |
+| Pas de valeur par défaut | Exception ou comportement indéterminé si provider down | Toujours passer le fallback en 2e argument |
+| Flag permanent sans owner | Dette technique, "flag zombie" | Ajouter `expires:` et owner dans le nom ou le tag |
+| Même flag pour A/B et kill switch | Confusion opérationnelle | Un flag = un seul rôle |
+| Évaluer le flag dans une boucle serrée | Latence si évaluation réseau | Évaluer une seule fois en début de requête, passer le résultat en paramètre |
+| Supprimer le flag sans supprimer le code mort | Code mort, branches unreachable | PR de nettoyage obligatoire avant fermeture du ticket |
+
+## Conventions de nommage
+
+```
+<domaine>-<feature>-<type>
+payment-new-engine-release       # release toggle
+checkout-promo-experiment        # A/B test
+api-rate-limit-ops               # kill switch
+dashboard-v2-rollout             # rollout progressif
+```
+
+Préfixe par domaine → facilite le filtrage dans les dashboards et les recherches `grep`.

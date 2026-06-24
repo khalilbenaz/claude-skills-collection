@@ -96,27 +96,147 @@ cp -r claude-skills-collection/skills/dev-code-reviewer ~/.claude/skills/</div><
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Code Reviewer</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Lecture globale</strong> : comprendre le but du code avant de critiquer.</li>
-<li><strong>Analyse structurée</strong> en 5 axes :</li>
+<h2>Workflow de revue (étapes dans l'ordre)</h2>
+<h3>1. Contexte avant tout</h3>
+<p>Avant d'analyser une ligne : identifier le langage, le framework, et l'intention du code. Si le contexte manque et est déterminant, poser UNE question ciblée. Sinon, déduire et avancer.</p>
+<h3>2. Analyse sur 5 axes — ordre de criticité décroissant</h3>
+<h4>🔴 Axe 1 — Bugs &amp; correctness</h4>
 <ul>
-<li><strong>Bugs &amp; erreurs</strong> : erreurs logiques, edge cases non gérés, crashes potentiels</li>
-<li><strong>Sécurité</strong> : injections, données exposées, permissions</li>
-<li><strong>Performance</strong> : complexité algorithmique, requêtes inutiles, boucles coûteuses</li>
-<li><strong>Lisibilité</strong> : nommage, structure, commentaires manquants</li>
-<li><strong>Bonnes pratiques</strong> : DRY, SOLID, patterns adaptés au langage</li>
+<li>Race conditions, nullpointer / undefined, edge cases non gérés (tableau vide, valeur négative, overflow)</li>
+<li>Mauvaise gestion des erreurs : <code>catch</code> vide, erreur avalée, retry sans backoff</li>
+<li>Off-by-one, mauvaise comparaison (<code>==</code> vs <code>===</code>, <code>=</code> au lieu de <code>==</code>)</li>
 </ul>
-<li><strong>Priorisation</strong> : critique (à corriger) → important → suggestion</li>
-<li>Pour chaque point, montre le code problématique ET la correction proposée.</li>
-<li>Termine par un <strong>résumé</strong> : note globale, top 3 actions prioritaires.</li>
-</ol>
-<h2>Règles</h2>
+<p><strong>Exemple concret :</strong></p>
+<pre><code class="lang-python"># ❌ Bug silencieux
+def get_user(id):
+    try:
+        return db.query(f&quot;SELECT * FROM users WHERE id={id}&quot;)
+    except:
+        pass  # exception avalée, retourne None sans le signaler
+
+# ✅ Correct
+def get_user(user_id: int) -&gt; User | None:
+    try:
+        return db.query(&quot;SELECT * FROM users WHERE id = ?&quot;, (user_id,))
+    except DatabaseError as e:
+        logger.error(&quot;get_user failed: %s&quot;, e)
+        raise</code></pre>
+<h4>🔴 Axe 2 — Sécurité</h4>
 <ul>
-<li>Adapte le niveau au langage détecté.</li>
-<li>Sois constructif, pas condescendant.</li>
-<li>Si le code est bon, dis-le.</li>
+<li>Injection SQL/NoSQL/command : interpolation de chaîne dans une requête → requête paramétrée</li>
+<li>Secrets en dur : clé API, mot de passe dans le code → variable d'environnement / vault</li>
+<li>Données sensibles exposées dans les logs ou les réponses API</li>
+<li>Autorisation manquante (endpoint accessible sans auth)</li>
+<li>Désérialisation non sécurisée, path traversal</li>
 </ul>
+<p><strong>Commande rapide audit dépendances :</strong></p>
+<pre><code class="lang-bash"># npm / Node
+npm audit --audit-level=high
+
+# Python
+pip-audit
+
+# .NET
+dotnet list package --vulnerable</code></pre>
+<h4>🟡 Axe 3 — Performance</h4>
+<ul>
+<li>Complexité algorithmique : O(n²) évitable, boucle dans une boucle avec accès DB</li>
+<li>N+1 : requête dans une boucle → eager load ou batch</li>
+<li>Allocation inutile en boucle critique (création d'objets, concaténation de string)</li>
+<li>Pas de cache sur des résultats coûteux et stables</li>
+</ul>
+<p><strong>Exemple N+1 → batch :</strong></p>
+<pre><code class="lang-typescript">// ❌ N+1
+for (const order of orders) {
+  order.user = await db.users.findById(order.userId); // 1 requête/itération
+}
+
+// ✅ Batch
+const ids = orders.map(o =&gt; o.userId);
+const users = await db.users.findByIds(ids); // 1 requête
+const userMap = Object.fromEntries(users.map(u =&gt; [u.id, u]));
+orders.forEach(o =&gt; (o.user = userMap[o.userId]));</code></pre>
+<h4>🟡 Axe 4 — Lisibilité &amp; maintenabilité</h4>
+<ul>
+<li>Nommage : <code>data</code>, <code>temp</code>, <code>x</code> → noms qui expriment l'intention</li>
+<li>Fonction longue (&gt;30 lignes) → extraire des sous-fonctions nommées</li>
+<li>Commentaires qui paraphrasent le code au lieu d'expliquer le <em>pourquoi</em></li>
+<li>Magic numbers : <code>86400</code> → <code>const SECONDS_PER_DAY = 86_400</code></li>
+<li>Nesting profond (&gt;3 niveaux) → early return / guard clauses</li>
+</ul>
+<h4>🟢 Axe 5 — Bonnes pratiques &amp; patterns</h4>
+<ul>
+<li>DRY : copier-coller détecté → extraire</li>
+<li>SOLID : classe qui fait trop de choses, dépendances dures au lieu d'injection</li>
+<li>Gestion des types : <code>any</code> en TypeScript, absence de type hints en Python</li>
+<li>Tests : code non testable (dépendances statiques, side effects cachés)</li>
+<li>Immutabilité : mutation de paramètres, state partagé sans lock</li>
+</ul>
+<h3>3. Priorisation &amp; format de sortie</h3>
+<p>Classer chaque finding selon ce tableau :</p>
+<table><thead><tr><th>Niveau</th><th>Critère</th><th>Action</th></tr></thead><tbody><tr><td><strong>CRITIQUE</strong></td><td>Bug fonctionnel ou faille de sécurité exploitable</td><td>Bloquer le merge</td></tr><tr><td><strong>IMPORTANT</strong></td><td>Dégradation significative perf/maintenabilité</td><td>Corriger avant merge</td></tr><tr><td><strong>SUGGESTION</strong></td><td>Amélioration de style ou pattern alternatif</td><td>À discuter</td></tr></tbody></table>
+<h3>4. Format de chaque finding</h3>
+<pre><code>[NIVEAU] Titre court
+Problème : ...
+Correction :</code></pre>
+<pre><code>
+### 5. Résumé final obligatoire
+
+- **Note globale** : ✅ Prêt à merger / ⚠️ À corriger / 🚫 Refactoring nécessaire
+- **Top 3 actions prioritaires** (numérotées)
+- **Points forts** du code (au moins 1 si applicable)
+
+---
+
+## Garde-fous &amp; anti-patterns à signaler systématiquement
+
+| Anti-pattern | Symptôme | Remède |
+|---|---|---|
+| Swallowed exception | `catch {}` vide ou `catch (e) { }` | Logger + propager ou retourner Result |
+| God function | Fonction &gt; 50 lignes avec 3+ responsabilités | Extraire, nommer, tester |
+| Primitive obsession | `userId: string` partout sans type dédié | Value object ou branded type |
+| Couplage fort | `new ServiceX()` dans la logique métier | Injection de dépendance |
+| Boolean trap | `doThing(true, false, true)` | Named params ou options object |
+| Mutation de tableau en place | `array.sort()` modifie l'original | `[...array].sort()` |
+| Await dans une boucle | `for...of` avec `await` séquentiel inutile | `Promise.all(items.map(async...))` |
+
+---
+
+## Checklist rapide par langage
+
+**TypeScript/JavaScript**
+- [ ] `any` absent ou justifié
+- [ ] Pas de `==` (utiliser `===`)
+- [ ] Promesses gérées (`await` ou `.catch`)
+- [ ] `const` par défaut, `let` si mutation nécessaire
+
+**Python**
+- [ ] Type hints présents sur les fonctions publiques
+- [ ] Context managers (`with`) pour les ressources
+- [ ] f-strings ou `.format()`, pas de `%s` mélangé
+- [ ] Pas d'argument mutable par défaut (`def f(x=[])`)
+
+**C# / .NET**
+- [ ] `IDisposable` implémenté et appelé (`using`)
+- [ ] `async/await` sur toute la chaîne (pas de `.Result` bloquant)
+- [ ] Nullability annotations activées
+- [ ] EF Core : pas de `ToList()` prématuré avant filtrage
+
+**SQL (embedded)**
+- [ ] Requêtes paramétrées uniquement
+- [ ] Index sur les colonnes filtrées/jointures fréquentes
+- [ ] Pas de `SELECT *` en production
+
+---
+
+## Règles opérationnelles
+
+- Si le code est bon → le dire clairement, citer 2-3 points forts.
+- Ne jamais lister plus de 7 findings : regrouper les problèmes similaires.
+- Toujours proposer le code corrigé, pas seulement la critique.
+- Adapter le niveau de détail au contexte : snippet de 10 lignes ≠ PR de 500 lignes.
+- Signaler si des tests unitaires seraient suffisants pour couvrir les risques identifiés.
+</code></pre>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

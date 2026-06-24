@@ -1,144 +1,301 @@
 ---
 name: devops-prometheus-grafana-setup
-description: Configuration de Prometheus et Grafana pour le monitoring d'applications et d'infrastructure — métriques, alertes, dashboards. À utiliser quand l'utilisateur met en place du monitoring, configure des alertes ou crée des dashboards Grafana. Se déclenche aussi avec "Prometheus", "Grafana", "monitoring", "métriques", "alerting", "dashboard Grafana", "PromQL", "scraping".
+description: Configuration de Prometheus et Grafana pour le monitoring d'applications et d'infrastructure — métriques, alertes, dashboards, scraping, PromQL, Alertmanager. À utiliser quand l'utilisateur met en place du monitoring, configure des alertes ou crée des dashboards Grafana. Se déclenche aussi avec "Prometheus", "Grafana", "monitoring", "métriques", "alerting", "dashboard Grafana", "PromQL", "scraping".
 ---
 
 # Setup Prometheus & Grafana
 
-## Workflow
+## Workflow en 5 étapes
 
-1. **Instrumenter** : ajouter des métriques dans l'application.
-2. **Collecter** : configurer Prometheus pour scraper les métriques.
-3. **Visualiser** : créer des dashboards Grafana.
-4. **Alerter** : définir des règles d'alerte et des notifications.
+### 1. Choisir la stratégie de déploiement
 
-## Types de métriques Prometheus
+| Contexte | Option recommandée |
+|---|---|
+| Kubernetes | `kube-prometheus-stack` (Helm) |
+| Docker Compose (dev/staging) | Compose multi-service |
+| Bare metal / VM | Binaires + systemd |
+| Grafana Cloud | Agent Alloy → cloud managed |
 
-| Type | Usage | Exemple |
-|------|-------|---------|
-| **Counter** | Valeur qui ne fait qu'augmenter | Nombre de requêtes, erreurs |
-| **Gauge** | Valeur qui monte et descend | Température, connexions actives |
-| **Histogram** | Distribution de valeurs | Latence des requêtes |
-| **Summary** | Percentiles calculés côté client | Latence (p50, p90, p99) |
+```bash
+# Option Kubernetes (tout-en-un : Prometheus + Grafana + AlertManager + exporters)
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+helm install kube-prometheus prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace \
+  --set grafana.adminPassword=changeme \
+  --set prometheus.prometheusSpec.retention=15d
+```
 
-## Instrumentation .NET
+```yaml
+# docker-compose.yml (dev)
+services:
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alerts:/etc/prometheus/alerts
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    ports: ["9090:9090"]
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: changeme
+      GF_FEATURE_TOGGLES_ENABLE: publicDashboards
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    ports: ["3000:3000"]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    ports: ["9093:9093"]
+
+volumes:
+  grafana-data:
+```
+
+### 2. Instrumenter l'application
+
+**Types de métriques — quand utiliser quoi :**
+
+| Type | Caractéristique | Exemple concret |
+|---|---|---|
+| Counter | Monotone croissant | Requêtes totales, erreurs |
+| Gauge | Libre variation | Connexions actives, RAM utilisée |
+| Histogram | Buckets + count + sum | Latence (p50/p95/p99) |
+| Summary | Quantiles côté client | Latence si pas besoin d'agrégation |
+
+> Préférer Histogram à Summary quand les métriques seront agrégées entre plusieurs instances.
 
 ```csharp
 // dotnet add package prometheus-net.AspNetCore
-
 // Program.cs
-app.UseHttpMetrics(); // Métriques HTTP automatiques
-app.MapMetrics();      // Endpoint /metrics
+app.UseHttpMetrics();
+app.MapMetrics(); // expose /metrics
 
 // Métriques custom
-public class PaymentMetrics
-{
-    private static readonly Counter PaymentsProcessed = Metrics
-        .CreateCounter("payments_processed_total",
-            "Nombre total de paiements traités",
-            new CounterConfiguration
-            {
-                LabelNames = new[] { "status", "currency" }
-            });
+private static readonly Counter PaymentsTotal = Metrics
+    .CreateCounter("payments_total", "Total paiements",
+        new CounterConfiguration { LabelNames = ["status", "currency"] });
 
-    private static readonly Histogram PaymentDuration = Metrics
-        .CreateHistogram("payment_duration_seconds",
-            "Durée de traitement d'un paiement",
-            new HistogramConfiguration
-            {
-                Buckets = Histogram.ExponentialBuckets(0.01, 2, 10)
-            });
+private static readonly Histogram PaymentDuration = Metrics
+    .CreateHistogram("payment_duration_seconds", "Durée paiement",
+        new HistogramConfiguration
+        {
+            // Buckets exponentiels : 10ms → ~10s
+            Buckets = Histogram.ExponentialBuckets(0.01, 2, 10)
+        });
 
-    private static readonly Gauge ActiveTransactions = Metrics
-        .CreateGauge("active_transactions",
-            "Nombre de transactions en cours");
-
-    public void RecordPayment(string status, string currency, double duration)
-    {
-        PaymentsProcessed.WithLabels(status, currency).Inc();
-        PaymentDuration.Observe(duration);
-    }
-}
+// Utilisation
+PaymentsTotal.WithLabels("success", "TND").Inc();
+using (PaymentDuration.NewTimer()) { /* appel métier */ }
 ```
 
-## Configuration Prometheus
+```go
+// Go — github.com/prometheus/client_golang
+var requestDuration = promauto.NewHistogramVec(
+    prometheus.HistogramOpts{
+        Name:    "http_request_duration_seconds",
+        Help:    "Durée des requêtes HTTP",
+        Buckets: prometheus.DefBuckets,
+    },
+    []string{"method", "path", "status"},
+)
+```
+
+### 3. Configurer le scraping Prometheus
 
 ```yaml
 # prometheus.yml
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 15s       # intervalle de collecte
+  evaluation_interval: 15s   # évaluation des règles d'alerte
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
 
 rule_files:
   - "alerts/*.yml"
 
 scrape_configs:
-  - job_name: 'payment-api'
+  # Application custom
+  - job_name: payment-api
     metrics_path: /metrics
     static_configs:
-      - targets: ['payment-api:8080']
-        labels:
-          environment: 'production'
+      - targets: ["payment-api:8080"]
+    relabel_configs:
+      - target_label: env
+        replacement: production
 
-  - job_name: 'kubernetes-pods'
+  # Auto-découverte Kubernetes
+  - job_name: kubernetes-pods
     kubernetes_sd_configs:
       - role: pod
     relabel_configs:
       - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
         action: keep
-        regex: true
+        regex: "true"
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: (.+)
+        replacement: $1
+
+  # Exporter node (infra)
+  - job_name: node-exporter
+    static_configs:
+      - targets: ["node-exporter:9100"]
 ```
 
-## Requêtes PromQL utiles
+### 4. Requêtes PromQL opérationnelles
 
 ```promql
-# Taux de requêtes par seconde (dernières 5 minutes)
-rate(http_requests_total[5m])
+# --- Taux d'erreur 5xx (%) sur 5 min ---
+100 * sum(rate(http_requests_total{status=~"5.."}[5m]))
+  / sum(rate(http_requests_total[5m]))
 
-# Latence p99
-histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
+# --- Latence p99 par service ---
+histogram_quantile(0.99,
+  sum by (job, le) (rate(http_request_duration_seconds_bucket[5m]))
+)
 
-# Taux d'erreur (%)
-sum(rate(http_requests_total{status=~"5.."}[5m]))
-/ sum(rate(http_requests_total[5m])) * 100
+# --- Requêtes/s par endpoint ---
+topk(10, sum by (path) (rate(http_requests_total[5m])))
 
-# Utilisation mémoire
-process_resident_memory_bytes / 1024 / 1024
+# --- CPU (node-exporter) ---
+100 - avg by (instance) (
+  irate(node_cpu_seconds_total{mode="idle"}[5m])
+) * 100
+
+# --- RAM disponible (%) ---
+100 * node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes
+
+# --- Pods en état non-Ready (Kubernetes) ---
+kube_pod_status_ready{condition="false"} == 1
 ```
 
-## Règles d'alertes
+### 5. Alertes et Alertmanager
 
 ```yaml
-# alerts/payment-alerts.yml
+# alerts/slo-alerts.yml
 groups:
-  - name: payment-alerts
+  - name: slo
     rules:
-      - alert: HighErrorRate
+      - alert: ErrorRateTooHigh
         expr: |
-          sum(rate(http_requests_total{status=~"5..", job="payment-api"}[5m]))
-          / sum(rate(http_requests_total{job="payment-api"}[5m])) > 0.05
+          (
+            sum(rate(http_requests_total{status=~"5..",job="payment-api"}[5m]))
+            / sum(rate(http_requests_total{job="payment-api"}[5m]))
+          ) > 0.01
         for: 5m
         labels:
           severity: critical
+          team: backend
         annotations:
-          summary: "Taux d'erreur élevé sur Payment API"
-          description: "Le taux d'erreur 5xx est supérieur à 5% depuis 5 minutes."
+          summary: "Taux d'erreur > 1% sur payment-api"
+          description: "Erreur actuelle : {{ $value | humanizePercentage }}"
+          runbook: "https://wiki.internal/runbooks/payment-api"
 
-      - alert: HighLatency
+      - alert: LatencyP99High
         expr: |
-          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="payment-api"}[5m])) > 2
-        for: 5m
+          histogram_quantile(0.99,
+            sum by (le) (rate(http_request_duration_seconds_bucket{job="payment-api"}[5m]))
+          ) > 1.0
+        for: 3m
         labels:
           severity: warning
         annotations:
-          summary: "Latence élevée sur Payment API"
+          summary: "p99 latence > 1s"
 ```
 
-## Règles
-- Chaque service doit exposer un endpoint `/metrics`.
-- Les alertes critiques doivent avoir un `for` d'au moins 5 minutes pour éviter les faux positifs.
-- Les dashboards Grafana doivent inclure les 4 golden signals (latence, trafic, erreurs, saturation).
-- Les labels Prometheus doivent avoir une cardinalité maîtrisée (pas d'IDs uniques).
+```yaml
+# alertmanager.yml
+route:
+  group_by: [alertname, team]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: slack-critical
+  routes:
+    - match:
+        severity: warning
+      receiver: slack-warning
+
+receivers:
+  - name: slack-critical
+    slack_configs:
+      - api_url: "https://hooks.slack.com/services/XXX"
+        channel: "#alerts-critical"
+        title: "{{ .GroupLabels.alertname }}"
+        text: "{{ range .Alerts }}{{ .Annotations.description }}{{ end }}"
+  - name: slack-warning
+    slack_configs:
+      - api_url: "https://hooks.slack.com/services/XXX"
+        channel: "#alerts-warning"
+```
+
+## Dashboards Grafana — bonnes pratiques
+
+**4 Golden Signals (Google SRE) à couvrir systématiquement :**
+- **Latence** : p50 / p95 / p99 via `histogram_quantile`
+- **Trafic** : req/s via `rate(…[5m])`
+- **Erreurs** : taux 5xx / exceptions
+- **Saturation** : CPU, RAM, connexions pool
+
+**Provisioning as-code (recommandé en prod) :**
+```yaml
+# grafana/provisioning/dashboards/default.yaml
+apiVersion: 1
+providers:
+  - name: default
+    type: file
+    options:
+      path: /etc/grafana/dashboards
+```
+Placer les fichiers JSON exportés dans `/etc/grafana/dashboards/` — rechargés sans restart.
+
+**Dashboards communautaires à importer (ID Grafana) :**
+- `1860` — Node Exporter Full
+- `315` — Kubernetes cluster
+- `13659` — ASP.NET Core
+- `11159` — RabbitMQ
+
+## Garde-fous et anti-patterns
+
+| Anti-pattern | Conséquence | Correction |
+|---|---|---|
+| Label à haute cardinalité (ex: `user_id`) | TSDB explose, OOM Prometheus | N'utiliser que des labels stables (env, service, status) |
+| `scrape_interval` < 10s sur beaucoup de cibles | Surcharge réseau + stockage | 15s par défaut, 30s pour infra stable |
+| Alertes sans `for` | Faux positifs sur spike court | Toujours `for: 2m` minimum |
+| Histograms avec buckets par défaut | Buckets inadaptés à la latence réelle | Dimensionner les buckets autour du SLO cible |
+| Pas de `runbook` dans les annotations | Oncall sans contexte | Ajouter systématiquement un lien de procédure |
+| Grafana sans provisioning as-code | Dashboards perdus au redémarrage | Versionner les JSON dans le repo |
+| Rétention infinie | Disque plein | `--storage.tsdb.retention.time=30d` ou `--storage.tsdb.retention.size=50GB` |
+
+## Validation rapide
+
+```bash
+# Vérifier la config Prometheus
+docker run --rm -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml \
+  prom/prometheus:v2.52.0 promtool check config /etc/prometheus/prometheus.yml
+
+# Vérifier les règles d'alerte
+promtool check rules alerts/*.yml
+
+# Tester une règle PromQL
+curl -s 'http://localhost:9090/api/v1/query' \
+  --data-urlencode 'query=rate(http_requests_total[5m])' | jq .
+
+# Voir les alertes actives
+curl -s http://localhost:9093/api/v2/alerts | jq '[.[] | {name:.labels.alertname, state:.status.state}]'
+```
 
 
 ## Communication Rules — MANDATORY

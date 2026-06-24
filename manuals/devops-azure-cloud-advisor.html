@@ -98,65 +98,140 @@ cp -r claude-skills-collection/skills/devops-azure-cloud-advisor ~/.claude/skill
 <h1>Conseiller Azure Cloud</h1>
 <h2>Workflow</h2>
 <ol>
-<li><strong>Qualifier le besoin</strong> : type de workload, contraintes de performance, budget.</li>
-<li><strong>Recommander</strong> : services Azure adaptés avec justification.</li>
-<li><strong>Architecturer</strong> : topologie réseau, sécurité, résilience.</li>
-<li><strong>Optimiser</strong> : coûts, performance, scalabilité.</li>
+<li><strong>Qualifier le besoin</strong> : type de workload (web, event-driven, batch, temps réel), contraintes (SLA, latence, data residency), budget mensuel cible.</li>
+<li><strong>Choisir le service de compute</strong> : utiliser la matrice ci-dessous ; si ambiguïté, demander si l'équipe maîtrise déjà K8s.</li>
+<li><strong>Architecturer</strong> : topologie réseau (VNet, Private Endpoints), sécurité (Managed Identity, Key Vault), résilience (zones, geo-replication).</li>
+<li><strong>Provisionner</strong> : commandes <code>az</code> copiables ou Bicep/Terraform.</li>
+<li><strong>Optimiser</strong> : coûts (Reserved, Spot, scale-to-zero), performance (profiling via App Insights), scalabilité.</li>
 </ol>
+<hr>
 <h2>Choix du service de compute</h2>
-<table><thead><tr><th>Service</th><th>Usage</th><th>Scaling</th><th>Coût</th></tr></thead><tbody><tr><td><strong>App Service</strong></td><td>APIs, apps web</td><td>Auto-scale par plan</td><td>Moyen</td></tr><tr><td><strong>Container Apps</strong></td><td>Microservices conteneurisés</td><td>KEDA-based, scale to zero</td><td>Faible à moyen</td></tr><tr><td><strong>Azure Functions</strong></td><td>Event-driven, serverless</td><td>Automatique, par exécution</td><td>Très faible (consumption)</td></tr><tr><td><strong>AKS</strong></td><td>Orchestration complexe K8s</td><td>Node auto-scaler</td><td>Variable</td></tr><tr><td><strong>VM</strong></td><td>Legacy, contrôle total</td><td>Manual/VMSS</td><td>Variable</td></tr></tbody></table>
-<h3>Matrice de décision</h3>
-<pre><code>Nouveau projet cloud-native ?
-├── Événementiel / petits traitements → Azure Functions
-├── Microservices conteneurisés → Container Apps
-├── App web/API simple → App Service
-└── Orchestration K8s complexe → AKS
+<table><thead><tr><th>Service</th><th>Usage idéal</th><th>Scale</th><th>Coût typique</th></tr></thead><tbody><tr><td><strong>App Service</strong></td><td>API/app web .NET, Node, Python</td><td>Auto-scale par plan</td><td>~40 €/mois (B2)</td></tr><tr><td><strong>Container Apps</strong></td><td>Microservices conteneurisés, Dapr</td><td>KEDA, scale-to-zero</td><td>~0–80 €/mois</td></tr><tr><td><strong>Azure Functions</strong></td><td>Événementiel, triggers (HTTP, Queue, Timer)</td><td>Consumption auto</td><td>~0 (&lt; 1 M req/mois gratis)</td></tr><tr><td><strong>AKS</strong></td><td>Orchestration K8s complexe, multi-tenant</td><td>Node autoscaler + KEDA</td><td>&gt; 100 €/mois</td></tr><tr><td><strong>VM / VMSS</strong></td><td>Legacy, contrôle réseau total</td><td>Manual ou VMSS</td><td>Variable</td></tr></tbody></table>
+<h3>Arbre de décision</h3>
+<pre><code>Nouveau projet ?
+├── Traitements événementiels courts (&lt; 10 min) → Azure Functions (Consumption)
+├── Microservices conteneurisés, trafic variable → Container Apps
+├── App web / API REST, équipe sans ops K8s    → App Service
+├── Besoin Kubernetes avancé (CRD, helm, réseau custom) → AKS
+└── Migration lift-and-shift ou workload GPU   → VM / VMSS
 
 Migration d'un existant ?
-├── App .NET monolithique → App Service
-├── Conteneurs Docker existants → Container Apps
-└── Besoin de contrôle réseau fort → AKS ou VMs</code></pre>
-<h2>Patterns d'architecture Azure</h2>
-<h3>Microservices avec Container Apps</h3>
-<pre><code>Internet → Front Door (CDN + WAF)
-    → Container Apps Environment
-        → API Gateway (YARP)
-            → Payment Service (Container App)
-            → Order Service (Container App)
-            → User Service (Container App)
-        → Worker Service (Container App, scale to zero)
-    → Azure SQL (bases par service)
-    → Azure Cache for Redis
-    → Azure Service Bus (messaging)
-    → Azure Key Vault (secrets)
-    → Application Insights (monitoring)</code></pre>
-<h3>Bonnes pratiques par service</h3>
-<h4>Azure SQL</h4>
+├── App .NET monolithique IIS → App Service (Windows plan)
+├── Docker Compose existant  → Container Apps
+└── Contrôle réseau très fin (BGP, ASN)        → AKS ou VMs</code></pre>
+<hr>
+<h2>Provisionner — commandes copiables</h2>
+<h3>Créer un Container Apps Environment + app</h3>
+<pre><code class="lang-bash"># Variables
+RG=rg-myapp-prod
+LOCATION=westeurope
+ENV=cae-myapp-prod
+APP=api-backend
+
+az group create -n $RG -l $LOCATION
+
+az containerapp env create \
+  --name $ENV --resource-group $RG --location $LOCATION
+
+az containerapp create \
+  --name $APP --resource-group $RG \
+  --environment $ENV \
+  --image myregistry.azurecr.io/api:latest \
+  --target-port 8080 --ingress external \
+  --min-replicas 0 --max-replicas 10 \
+  --cpu 0.5 --memory 1Gi \
+  --registry-server myregistry.azurecr.io \
+  --system-assigned                         # Managed Identity</code></pre>
+<h3>Créer une Azure Function (Consumption)</h3>
+<pre><code class="lang-bash">az storage account create -n stfnmyapp -g $RG -l $LOCATION --sku Standard_LRS
+az functionapp create \
+  --name fn-myapp-prod --resource-group $RG \
+  --storage-account stfnmyapp \
+  --consumption-plan-location $LOCATION \
+  --runtime dotnet-isolated --runtime-version 8 \
+  --functions-version 4 \
+  --assign-identity '[system]'</code></pre>
+<h3>App Service + slot de staging</h3>
+<pre><code class="lang-bash">az appservice plan create -n plan-myapp -g $RG --sku P2V3 --is-linux
+az webapp create -n web-myapp -g $RG --plan plan-myapp --runtime &quot;DOTNETCORE:8.0&quot;
+az webapp deployment slot create --name web-myapp -g $RG --slot staging
+# Swap zero-downtime :
+az webapp deployment slot swap --name web-myapp -g $RG --slot staging</code></pre>
+<hr>
+<h2>Architecture de référence — Container Apps (microservices)</h2>
+<pre><code>Internet
+  → Azure Front Door (CDN + WAF)
+      → Container Apps Environment (VNet intégré)
+            API Gateway (YARP / NGINX)
+            ├── Service A  (scale-to-zero, KEDA Queue)
+            ├── Service B  (min 1 replica)
+            └── Worker     (trigger Azure Service Bus)
+      → Azure SQL (Private Endpoint)
+      → Azure Cache for Redis (Premium, clustering)
+      → Azure Service Bus (Topics + DLQ)
+      → Azure Key Vault   (Managed Identity, no secrets in env vars)
+      → Application Insights + Log Analytics Workspace</code></pre>
+<hr>
+<h2>Bonnes pratiques par service</h2>
+<h3>Azure SQL</h3>
 <ul>
-<li>Utiliser les <strong>Elastic Pools</strong> pour mutualiser les ressources entre bases</li>
-<li>Activer le <strong>Geo-Replication</strong> pour la haute disponibilité</li>
-<li>Configurer les <strong>alertes DTU/vCore</strong> avant saturation</li>
+<li><strong>Elastic Pools</strong> si &gt; 3 bases avec charge variable : économie 30–50 %.</li>
+<li><strong>Active Geo-Replication</strong> (lecture) ou <strong>Failover Groups</strong> (basculement auto) pour HA.</li>
+<li>Alertes sur <code>DTU percentage &gt; 80 %</code> ou <code>CPU percent &gt; 85 %</code>.</li>
+<li>Toujours se connecter via Managed Identity (pas de mot de passe SQL en config) :</li>
 </ul>
-<h4>Azure Cache for Redis</h4>
+<p>  ```csharp   // EF Core + Azure Identity   services.AddDbContext&lt;AppDbContext&gt;(o =&gt;       o.UseSqlServer(conn, sql =&gt; sql.UseAzureIdentityAuthentication()));   ```</p>
+<h3>Azure Key Vault</h3>
 <ul>
-<li>Utiliser le tier <strong>Premium</strong> pour la persistance et le clustering</li>
-<li>Configurer les <strong>eviction policies</strong> adaptées au use case</li>
-<li>Séparer les caches par domaine métier</li>
+<li><strong>Jamais</strong> de secrets dans App Settings — référencer Key Vault :</li>
 </ul>
-<h4>Azure Service Bus</h4>
+<p>  ```   @Microsoft.KeyVault(SecretUri=https://kv-myapp.vault.azure.net/secrets/DbPassword/)   ```</p>
 <ul>
-<li>Préférer les <strong>Topics</strong> aux Queues pour le pub/sub</li>
-<li>Configurer les <strong>Dead Letter Queues</strong> avec alertes</li>
-<li>Utiliser les <strong>Sessions</strong> pour le traitement ordonné</li>
+<li>Politique d'accès : RBAC (<code>Key Vault Secrets User</code>) plutôt qu'Access Policies (déprécié).</li>
+<li>Activer <strong>Soft-Delete</strong> (90 jours) et <strong>Purge Protection</strong> sur les KV de prod.</li>
 </ul>
+<h3>Managed Identities</h3>
+<ul>
+<li>System-assigned pour les ressources éphémères (Functions, Container Apps).</li>
+<li>User-assigned pour les identités partagées entre plusieurs services.</li>
+<li>Attribution de rôle :</li>
+</ul>
+<p>  ```bash   az role assignment create \     --assignee &lt;principal-id&gt; \     --role &quot;Key Vault Secrets User&quot; \     --scope /subscriptions/&lt;sub&gt;/resourceGroups/$RG/providers/Microsoft.KeyVault/vaults/kv-myapp   ```</p>
+<h3>Application Insights</h3>
+<ul>
+<li><strong>Toujours</strong> activer le Connection String (pas l'InstrumentationKey, déprécié).</li>
+<li>Activer le <strong>Sampling adaptatif</strong> en prod pour limiter les coûts de télémétrie.</li>
+<li>Custom metrics métier via <code>TelemetryClient.TrackMetric()</code> pour les SLA fonctionnels.</li>
+</ul>
+<hr>
 <h2>Optimisation des coûts</h2>
-<table><thead><tr><th>Levier</th><th>Économie</th><th>Effort</th></tr></thead><tbody><tr><td><strong>Reserved Instances</strong> (1-3 ans)</td><td>30-60%</td><td>Faible</td></tr><tr><td><strong>Spot VMs</strong> (workloads interruptibles)</td><td>60-90%</td><td>Moyen</td></tr><tr><td><strong>Auto-scaling</strong></td><td>Variable</td><td>Moyen</td></tr><tr><td><strong>Right-sizing</strong></td><td>20-40%</td><td>Moyen</td></tr><tr><td><strong>Azure Advisor</strong></td><td>Recommandations auto</td><td>Nul</td></tr><tr><td><strong>Scale to zero</strong> (Container Apps, Functions)</td><td>Très élevé</td><td>Faible</td></tr></tbody></table>
-<h2>Règles</h2>
+<table><thead><tr><th>Levier</th><th>Économie estimée</th><th>Effort</th></tr></thead><tbody><tr><td>Reserved Instances 1 an (App Service, AKS nodes)</td><td>30–45 %</td><td>Faible</td></tr><tr><td>Reserved Instances 3 ans</td><td>50–65 %</td><td>Faible</td></tr><tr><td>Spot VMs (batch, CI workers)</td><td>60–90 %</td><td>Moyen</td></tr><tr><td>Scale-to-zero (Container Apps, Functions)</td><td>Très élevé (idle = 0)</td><td>Nul</td></tr><tr><td>Right-sizing (Azure Advisor)</td><td>20–40 %</td><td>Moyen</td></tr><tr><td>Azure Dev/Test subscription</td><td>50–55 % sur VMs</td><td>Faible</td></tr></tbody></table>
+<pre><code class="lang-bash"># Voir les recommandations Azure Advisor (coût)
+az advisor recommendation list --category Cost -o table</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
 <ul>
-<li>Toujours activer <strong>Application Insights</strong> pour la télémétrie.</li>
-<li>Les secrets doivent être dans <strong>Azure Key Vault</strong>, jamais dans les app settings.</li>
-<li>Utiliser les <strong>Managed Identities</strong> au lieu des connection strings quand possible.</li>
-<li>Évaluer les <strong>Reserved Instances</strong> pour les workloads prévisibles (&gt; 30% d'économie).</li>
+<li><strong>Ne jamais stocker des secrets dans les variables d'environnement</strong> d'App Service ou Container Apps : utiliser Key Vault Reference.</li>
+<li><strong>Ne pas utiliser le tier Consumption pour des Functions à latence &lt; 200 ms</strong> : cold start 1–3 s sur Consumption ; préférer Premium ou Flex Consumption (2024+).</li>
+<li><strong>Éviter les connexions SQL avec SQL auth</strong> en production : rotation de mots de passe coûteuse, Managed Identity est gratuit et plus sûr.</li>
+<li><strong>Ne pas ouvrir les Container Apps sur <code>--ingress external</code> si l'API est interne</strong> : utiliser <code>internal</code> + communication VNet.</li>
+<li><strong>Pas de plan Shared/Free en prod</strong> : absence de SLA, throttling CPU agressif.</li>
+<li><strong>Ne pas négliger les Private Endpoints</strong> : sans eux, le trafic Azure SQL/Storage transite sur l'internet public même dans un VNet.</li>
+<li><strong>Log Analytics Workspace séparé par environnement</strong> (pas prod + dev dans le même) : isolation des données et contrôle des coûts ingestion.</li>
+<li><strong>AKS sans Cluster Autoscaler = surprovisionnement systématique</strong> : toujours activer <code>--enable-cluster-autoscaler</code>.</li>
+</ul>
+<hr>
+<h2>Checklist déploiement production</h2>
+<ul>
+<li>[ ] Managed Identity activée, aucun secret en clair</li>
+<li>[ ] Key Vault avec Soft-Delete + Purge Protection</li>
+<li>[ ] Private Endpoints sur SQL, Redis, Storage</li>
+<li>[ ] Application Insights connecté (Connection String)</li>
+<li>[ ] Alertes coût + métriques techniques configurées</li>
+<li>[ ] Auto-scaling (min/max replicas ou App Service scale rules)</li>
+<li>[ ] Slot de staging pour déploiement zero-downtime (App Service)</li>
+<li>[ ] Azure Defender / Defender for Cloud activé sur les ressources critiques</li>
+<li>[ ] Geo-Replication ou Failover Group sur Azure SQL si SLA &gt; 99,9 %</li>
 </ul>
 </article>
 </main>

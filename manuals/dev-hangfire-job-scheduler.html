@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-hangfire-job-scheduler — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Planification et gestion de background jobs avec Hangfire en .NET. Patterns de retry, scheduling récurrent, monitoring et bonnes pratiques.">
+<meta name="description" content="Planification et gestion de background jobs avec Hangfire en .NET. Patterns de retry, scheduling récurrent, queues, monitoring, idempotence et bonnes pratiques 2026.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-hangfire-job-scheduler</h1>
-<p class="lead">Planification et gestion de background jobs avec Hangfire en .NET. Patterns de retry, scheduling récurrent, monitoring et bonnes pratiques.</p>
+<p class="lead">Planification et gestion de background jobs avec Hangfire en .NET. Patterns de retry, scheduling récurrent, queues, monitoring, idempotence et bonnes pratiques 2026.</p>
 
 
 
@@ -96,47 +96,56 @@ cp -r claude-skills-collection/skills/dev-hangfire-job-scheduler ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Hangfire Job Scheduler</h1>
-<h2>Workflow</h2>
+<h2>Workflow en étapes</h2>
 <ol>
-<li><strong>Identifier le type de job</strong> : fire-and-forget, delayed, récurrent ou continuation.</li>
-<li><strong>Concevoir le job</strong> : définir la classe, les paramètres et la logique de retry.</li>
-<li><strong>Configurer</strong> : storage, dashboard, queues et options de sérialisation.</li>
-<li><strong>Monitorer</strong> : dashboard Hangfire, alertes sur les échecs.</li>
+<li><strong>Choisir le type de job</strong> — voir tableau ci-dessous ; le type détermine l'API.</li>
+<li><strong>Concevoir le job</strong> — interface DI, paramètres simples, idempotence, attribut <code>[AutomaticRetry]</code>.</li>
+<li><strong>Configurer le storage</strong> — SQL Server (standard), Redis (haute fréquence), PostgreSQL (Hangfire.PostgreSql).</li>
+<li><strong>Configurer le serveur</strong> — queues priorisées, <code>WorkerCount</code>, <code>ServerTimeout</code>.</li>
+<li><strong>Enregistrer les jobs</strong> — au démarrage via <code>IRecurringJobManager</code> ou <code>RecurringJob.AddOrUpdate</code>.</li>
+<li><strong>Protéger et déployer le dashboard</strong> — filtre d'auth, HTTPS uniquement en production.</li>
+<li><strong>Monitorer</strong> — dashboard, logs structurés, alertes sur jobs Failed/Expired.</li>
 </ol>
-<h2>Types de jobs</h2>
-<table><thead><tr><th>Type</th><th>Usage</th><th>API</th></tr></thead><tbody><tr><td><strong>Fire-and-forget</strong></td><td>Exécution immédiate en arrière-plan</td><td><code>BackgroundJob.Enqueue</code></td></tr><tr><td><strong>Delayed</strong></td><td>Exécution différée</td><td><code>BackgroundJob.Schedule</code></td></tr><tr><td><strong>Recurring</strong></td><td>Planifié (CRON)</td><td><code>RecurringJob.AddOrUpdate</code></td></tr><tr><td><strong>Continuation</strong></td><td>Chaînage après un autre job</td><td><code>BackgroundJob.ContinueJobWith</code></td></tr><tr><td><strong>Batch</strong></td><td>Groupe de jobs (Hangfire Pro)</td><td><code>BatchJob.StartNew</code></td></tr></tbody></table>
-<h2>Configuration de base</h2>
-<pre><code class="lang-csharp">// Program.cs
+<hr>
+<h2>Critères de décision : quel type de job ?</h2>
+<table><thead><tr><th>Type</th><th>Quand l'utiliser</th><th>API</th></tr></thead><tbody><tr><td><strong>Fire-and-forget</strong></td><td>Traitement hors request pipeline, sans résultat attendu</td><td><code>BackgroundJob.Enqueue</code></td></tr><tr><td><strong>Delayed</strong></td><td>Action différée (ex: relance J+1)</td><td><code>BackgroundJob.Schedule</code></td></tr><tr><td><strong>Recurring</strong></td><td>Batch quotidien, rapport, purge CRON</td><td><code>RecurringJob.AddOrUpdate</code></td></tr><tr><td><strong>Continuation</strong></td><td>Chaînage (import → notification)</td><td><code>BackgroundJob.ContinueJobWith</code></td></tr><tr><td><strong>Batch (Pro)</strong></td><td>Fan-out + agrégation (Hangfire Pro requis)</td><td><code>BatchJob.StartNew</code></td></tr></tbody></table>
+<blockquote><strong>Règle</strong> : si le job peut dépasser 30 s ou doit survivre au redémarrage du process → Hangfire plutôt que <code>Task.Run</code>.</blockquote>
+<hr>
+<h2>Configuration complète (Program.cs)</h2>
+<pre><code class="lang-csharp">// NuGet : Hangfire, Hangfire.SqlServer, Hangfire.AspNetCore
 builder.Services.AddHangfire(config =&gt; config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
-    .UseRecommendedSerializerSettings()
+    .UseRecommendedSerializerSettings()          // Newtonsoft.Json avec camelCase
     .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
     {
-        CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-        SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-        QueuePollInterval = TimeSpan.FromSeconds(15),
+        CommandBatchMaxTimeout       = TimeSpan.FromMinutes(5),
+        SlidingInvisibilityTimeout   = TimeSpan.FromMinutes(5),
+        QueuePollInterval            = TimeSpan.FromSeconds(15),
         UseRecommendedIsolationLevel = true,
-        SchemaName = &quot;hangfire&quot;
+        DisableGlobalLocks           = true,     // recommandé Hangfire 1.8+
+        SchemaName                   = &quot;hangfire&quot;
     }));
 
 builder.Services.AddHangfireServer(options =&gt;
 {
-    options.Queues = new[] { &quot;critical&quot;, &quot;default&quot;, &quot;low&quot; };
-    options.WorkerCount = Environment.ProcessorCount * 2;
+    options.Queues      = [&quot;critical&quot;, &quot;default&quot;, &quot;low&quot;];
+    options.WorkerCount = Environment.ProcessorCount * 2;   // ajuster selon le workload
+    options.ServerTimeout = TimeSpan.FromMinutes(5);
 });
 
-// Dashboard (protéger en production !)
+// Dashboard — TOUJOURS derrière un filtre en production
 app.UseHangfireDashboard(&quot;/hangfire&quot;, new DashboardOptions
 {
-    Authorization = new[] { new HangfireAuthorizationFilter() }
+    Authorization   = [new HangfireRoleAuthFilter(&quot;Admin&quot;)],
+    IsReadOnlyFunc  = ctx =&gt; !ctx.GetHttpContext().User.IsInRole(&quot;Admin&quot;)
 });</code></pre>
-<h2>Conception de jobs</h2>
-<h3>Structure recommandée</h3>
+<hr>
+<h2>Conception d'un job robuste</h2>
 <pre><code class="lang-csharp">public interface IEmailJobService
 {
-    Task SendWelcomeEmail(string userId);
-    Task SendMonthlyReport(string userId, int month, int year);
+    Task SendWelcomeEmailAsync(string userId, CancellationToken ct = default);
+    Task SendMonthlyReportAsync(int month, int year, CancellationToken ct = default);
 }
 
 public class EmailJobService : IEmailJobService
@@ -145,99 +154,141 @@ public class EmailJobService : IEmailJobService
     private readonly IUserRepository _users;
 
     public EmailJobService(IEmailSender sender, IUserRepository users)
-    {
-        _sender = sender;
-        _users = users;
-    }
+        =&gt; (_sender, _users) = (sender, users);
 
-    [AutomaticRetry(Attempts = 3, DelaysInSeconds = new[] { 60, 300, 900 })]
+    // Retry exponentiel, échoue proprement sur erreur métier
+    [AutomaticRetry(Attempts = 3, DelaysInSeconds = [60, 300, 900],
+                    OnAttemptsExceeded = AttemptsExceededAction.Fail)]
     [Queue(&quot;default&quot;)]
-    public async Task SendWelcomeEmail(string userId)
+    public async Task SendWelcomeEmailAsync(string userId, CancellationToken ct = default)
     {
-        var user = await _users.GetByIdAsync(userId)
+        var user = await _users.GetByIdAsync(userId, ct)
             ?? throw new InvalidOperationException($&quot;User {userId} not found&quot;);
-
-        await _sender.SendAsync(user.Email, &quot;Bienvenue&quot;, &quot;welcome-template&quot;);
+        await _sender.SendAsync(user.Email, &quot;Bienvenue&quot;, &quot;welcome-template&quot;, ct);
     }
 
-    [AutomaticRetry(Attempts = 5)]
+    [AutomaticRetry(Attempts = 2)]
     [Queue(&quot;low&quot;)]
-    public async Task SendMonthlyReport(string userId, int month, int year)
+    public async Task SendMonthlyReportAsync(int month, int year, CancellationToken ct = default)
     {
-        // Job longue durée — vérifier l'annulation
-        var user = await _users.GetByIdAsync(userId);
-        var report = await GenerateReport(user, month, year);
-        await _sender.SendAsync(user.Email, $&quot;Rapport {month}/{year}&quot;, report);
-    }
-}</code></pre>
-<h3>Enregistrement des jobs</h3>
-<pre><code class="lang-csharp">// Fire-and-forget
-BackgroundJob.Enqueue&lt;IEmailJobService&gt;(x =&gt; x.SendWelcomeEmail(userId));
-
-// Delayed (dans 24h)
-BackgroundJob.Schedule&lt;IEmailJobService&gt;(
-    x =&gt; x.SendWelcomeEmail(userId),
-    TimeSpan.FromHours(24));
-
-// Récurrent (tous les jours à 8h)
-RecurringJob.AddOrUpdate&lt;IEmailJobService&gt;(
-    &quot;daily-report&quot;,
-    x =&gt; x.SendMonthlyReport(userId, DateTime.Now.Month, DateTime.Now.Year),
-    &quot;0 8 * * *&quot;,
-    new RecurringJobOptions { TimeZone = TimeZoneInfo.FindSystemTimeZoneById(&quot;Europe/Paris&quot;) });
-
-// Continuation
-var parentId = BackgroundJob.Enqueue&lt;IDataService&gt;(x =&gt; x.ImportData());
-BackgroundJob.ContinueJobWith&lt;INotificationService&gt;(
-    parentId,
-    x =&gt; x.NotifyImportComplete());</code></pre>
-<h2>Patterns de retry</h2>
-<h3>Stratégie exponentielle</h3>
-<pre><code class="lang-csharp">[AutomaticRetry(
-    Attempts = 5,
-    DelaysInSeconds = new[] { 30, 120, 600, 3600, 14400 },
-    OnAttemptsExceeded = AttemptsExceededAction.Delete)]
-public async Task ProcessPayment(string paymentId) { /* ... */ }</code></pre>
-<h3>Gestion des erreurs</h3>
-<pre><code class="lang-csharp">// Filtrer les erreurs non-retryable
-public class SmartRetryAttribute : JobFilterAttribute, IElectStateFilter
-{
-    public void OnStateElection(ElectStateContext context)
-    {
-        if (context.CandidateState is FailedState failedState)
+        // Job long → vérifier l'annulation entre les étapes
+        var users = await _users.GetAllActiveAsync(ct);
+        foreach (var u in users)
         {
-            // Ne pas retry les erreurs métier
-            if (failedState.Exception is BusinessException)
-            {
-                context.CandidateState = new DeletedState();
-            }
+            ct.ThrowIfCancellationRequested();
+            var report = await BuildReportAsync(u, month, year, ct);
+            await _sender.SendAsync(u.Email, $&quot;Rapport {month}/{year}&quot;, report, ct);
         }
     }
 }</code></pre>
-<h2>Bonnes pratiques</h2>
-<h3>À faire</h3>
+<hr>
+<h2>Enregistrement des jobs</h2>
+<pre><code class="lang-csharp">// Fire-and-forget
+BackgroundJob.Enqueue&lt;IEmailJobService&gt;(x =&gt; x.SendWelcomeEmailAsync(userId, CancellationToken.None));
+
+// Delayed (dans 24 h)
+BackgroundJob.Schedule&lt;IEmailJobService&gt;(
+    x =&gt; x.SendWelcomeEmailAsync(userId, CancellationToken.None),
+    TimeSpan.FromHours(24));
+
+// Recurring — via IRecurringJobManager (testable)
+services.AddScoped&lt;IJobBootstrapper, JobBootstrapper&gt;();
+
+public class JobBootstrapper : IJobBootstrapper
+{
+    private readonly IRecurringJobManager _jobs;
+    public JobBootstrapper(IRecurringJobManager jobs) =&gt; _jobs = jobs;
+
+    public void Register()
+    {
+        _jobs.AddOrUpdate&lt;IEmailJobService&gt;(
+            &quot;monthly-report&quot;,
+            x =&gt; x.SendMonthlyReportAsync(0, 0, CancellationToken.None),
+            &quot;0 8 1 * *&quot;,                        // 1er du mois à 8 h
+            new RecurringJobOptions
+            {
+                TimeZone = TimeZoneInfo.FindSystemTimeZoneById(&quot;Africa/Tunis&quot;)
+            });
+    }
+}
+
+// Continuation (chaînage)
+var importId = BackgroundJob.Enqueue&lt;IDataService&gt;(x =&gt; x.ImportDataAsync(CancellationToken.None));
+BackgroundJob.ContinueJobWith&lt;INotificationService&gt;(
+    importId,
+    x =&gt; x.NotifyImportCompleteAsync(CancellationToken.None));</code></pre>
+<hr>
+<h2>Gestion avancée des erreurs</h2>
+<h3>Filtre : ne pas retenter les erreurs métier</h3>
+<pre><code class="lang-csharp">public class SmartRetryFilter : JobFilterAttribute, IElectStateFilter
+{
+    public void OnStateElection(ElectStateContext context)
+    {
+        if (context.CandidateState is FailedState { Exception: BusinessException })
+            context.CandidateState = new DeletedState { Reason = &quot;Erreur métier — pas de retry&quot; };
+    }
+}
+
+// Enregistrement global
+GlobalJobFilters.Filters.Add(new SmartRetryFilter());</code></pre>
+<h3>Retry exponentiel avec délais personnalisés</h3>
+<pre><code class="lang-csharp">[AutomaticRetry(
+    Attempts          = 5,
+    DelaysInSeconds   = [30, 120, 600, 3600, 14400],   // 30 s → 4 h
+    OnAttemptsExceeded = AttemptsExceededAction.Fail)]
+public async Task ProcessPaymentAsync(string paymentId, CancellationToken ct = default) { ... }</code></pre>
+<hr>
+<h2>Queues et priorités</h2>
+<pre><code class="lang-csharp">// Serveur avec ordre de consommation strict
+options.Queues = [&quot;critical&quot;, &quot;default&quot;, &quot;low&quot;];
+// Le serveur vide &quot;critical&quot; avant de traiter &quot;default&quot;, etc.
+
+// Déploiement multi-serveurs : dédier des serveurs par queue
+// Serveur 1 : critical + default
+// Serveur 2 : low (batch nocturne)</code></pre>
+<hr>
+<h2>Idempotence — pattern clé</h2>
+<pre><code class="lang-csharp">public async Task ImportInvoiceAsync(string invoiceId, CancellationToken ct = default)
+{
+    // Vérifier si déjà traité avant tout side-effect
+    if (await _db.Invoices.AnyAsync(i =&gt; i.ExternalId == invoiceId &amp;&amp; i.Imported, ct))
+        return; // idempotent : deuxième exécution sans effet
+
+    var invoice = await _externalApi.GetInvoiceAsync(invoiceId, ct);
+    await _db.Invoices.AddAsync(new Invoice { ExternalId = invoiceId, Data = invoice, Imported = true }, ct);
+    await _db.SaveChangesAsync(ct);
+}</code></pre>
+<hr>
+<h2>Surveillance &amp; monitoring</h2>
+<pre><code class="lang-bash"># Vérifier les jobs Failed depuis le dashboard
+# URL : https://myapp/hangfire → onglet &quot;Failed&quot;
+
+# Requête SQL de diagnostic (SQL Server)
+SELECT State, COUNT(*) AS Count
+FROM hangfire.Job
+GROUP BY State;
+
+# Jobs bloqués depuis &gt; 1 h
+SELECT Id, StateName, CreatedAt, DATEDIFF(MINUTE, CreatedAt, GETUTCDATE()) AS AgeMinutes
+FROM hangfire.Job
+WHERE StateName IN ('Processing', 'Enqueued')
+  AND DATEDIFF(MINUTE, CreatedAt, GETUTCDATE()) &gt; 60;</code></pre>
+<p>Intégrer avec OpenTelemetry / Serilog :</p>
+<pre><code class="lang-csharp">// Serilog sink — chaque job loggue son JobId automatiquement
+Log.ForContext(&quot;HangfireJobId&quot;, PerformContext?.BackgroundJob.Id)
+   .Information(&quot;Traitement démarré pour {UserId}&quot;, userId);</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td>Passer un <code>DbContext</code> ou <code>HttpContext</code> en paramètre</td><td>Sérialisation échoue / contexte périmé</td><td>Passer un <code>id</code> simple, résoudre via DI dans le job</td></tr><tr><td>Capturer <code>DateTime.Now</code> dans un job récurrent</td><td>Valeur figée à l'enregistrement, pas à l'exécution</td><td>Calculer la date à l'intérieur du job</td></tr><tr><td><code>Thread.Sleep</code> dans un job</td><td>Bloque un worker thread</td><td><code>await Task.Delay(...)</code></td></tr><tr><td><code>WorkerCount</code> trop élevé sur SQL Server</td><td>Contention sur les tables Hangfire</td><td>Limiter à 2–4× CPU ; monitorer les deadlocks</td></tr><tr><td>Dashboard sans auth en production</td><td>Exposition des données sensibles et contrôle des jobs</td><td>Toujours un <code>IDashboardAuthorizationFilter</code></td></tr><tr><td>Jobs non idempotents</td><td>Données dupliquées si retry ou déploiement blue/green</td><td>Vérifier l'état avant chaque side-effect</td></tr><tr><td>Expressions CRON sans timezone</td><td>Décalage heure d'été / UTC</td><td>Toujours <code>RecurringJobOptions { TimeZone = ... }</code></td></tr><tr><td>Stocker de gros payloads dans les paramètres</td><td>Table <code>hangfire.Job</code> enflée</td><td>Stocker en DB/blob, passer seulement un identifiant</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Rendre les jobs <strong>idempotents</strong> (exécution multiple = même résultat)</li>
-<li>Utiliser des <strong>interfaces</strong> pour les services de jobs (testabilité)</li>
-<li>Séparer les queues par priorité (<code>critical</code>, <code>default</code>, <code>low</code>)</li>
-<li>Monitorer le dashboard et configurer des alertes sur les échecs</li>
-<li>Utiliser des paramètres <strong>simples et sérialisables</strong> (pas d'objets complexes)</li>
-<li>Protéger le dashboard avec de l'authentification en production</li>
-</ul>
-<h3>À éviter</h3>
-<ul>
-<li>Passer des objets complexes ou des DbContext en paramètre</li>
-<li>Faire des jobs trop longs sans vérifier l'annulation</li>
-<li>Ignorer les jobs en échec dans le dashboard</li>
-<li>Utiliser <code>Thread.Sleep</code> au lieu de <code>Task.Delay</code></li>
-<li>Oublier de configurer la timezone pour les jobs récurrents</li>
-</ul>
-<h2>Règles</h2>
-<ul>
-<li>Chaque job doit être idempotent.</li>
-<li>Toujours protéger le dashboard Hangfire en production.</li>
-<li>Les paramètres de jobs doivent être des types simples sérialisables.</li>
-<li>Configurer la timezone explicitement pour les jobs récurrents.</li>
+<li>Utiliser <strong><code>IRecurringJobManager</code></strong> injecté plutôt que la méthode statique <code>RecurringJob</code> (testabilité).</li>
+<li>Avec .NET 8+ et <code>IHostedService</code>, démarrer <code>JobBootstrapper.Register()</code> dans <code>IHostApplicationLifetime.ApplicationStarted</code>.</li>
+<li>Pour la haute disponibilité : plusieurs instances du serveur Hangfire pointant le même storage ; Hangfire gère les verrous.</li>
+<li>Activer <code>DisableGlobalLocks = true</code> (SQL Server 1.8+) pour réduire la contention.</li>
+<li>En production, activer la rétention : <code>GlobalJobFilters.Filters.Add(new ProlongExpirationTimeAttribute(TimeSpan.FromDays(7)))</code>.</li>
+<li>Tester les jobs avec <code>BackgroundJobClientFake</code> (Hangfire.InMemory) ou un mock de l'interface de service.</li>
 </ul>
 </article>
 </main>

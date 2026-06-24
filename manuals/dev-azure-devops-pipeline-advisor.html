@@ -96,109 +96,126 @@ cp -r claude-skills-collection/skills/dev-azure-devops-pipeline-advisor ~/.claud
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Conseiller Azure DevOps Pipelines</h1>
-<h2>Workflow</h2>
+<h2>Workflow en étapes</h2>
 <ol>
-<li><strong>Comprendre le besoin</strong> : CI seul, CD, ou CI/CD complet. Mono-repo ou multi-repo.</li>
-<li><strong>Concevoir le pipeline</strong> : stages, jobs, steps et conditions.</li>
-<li><strong>Implémenter</strong> : YAML pipeline avec templates réutilisables.</li>
-<li><strong>Sécuriser</strong> : variables secrètes, approvals, gates.</li>
+<li><strong>Qualifier le besoin</strong> — CI seul, CD seul, CI/CD complet ? Mono-repo ou multi-repo ? Type d'artefact (binaire, image Docker, package NuGet/npm) ? Environnements cibles (dev / staging / prod) ?</li>
+<li><strong>Choisir la stratégie de déclenchement</strong> — <code>trigger</code> pour push/merge, <code>pr</code> pour pull request, <code>schedules</code> pour planifié, <code>resources.pipelines</code> pour pipeline-en-aval.</li>
+<li><strong>Concevoir le graphe stages → jobs → steps</strong> — Identifier les parallélisations possibles, les dépendances (<code>dependsOn</code>), les conditions de déploiement.</li>
+<li><strong>Extraire les templates</strong> — Tout bloc dupliqué entre stages/pipelines devient un template YAML paramétré.</li>
+<li><strong>Sécuriser</strong> — Variable Groups liés à Key Vault, Service Connections à droits minimaux, Approvals sur les environments prod.</li>
+<li><strong>Valider et optimiser</strong> — Activer le cache, mesurer la durée de chaque job, ajouter un health check post-déploiement.</li>
 </ol>
-<h2>Structure d'un pipeline YAML</h2>
-<pre><code class="lang-yaml">trigger:
+<hr>
+<h2>Critères de décision clés</h2>
+<table><thead><tr><th>Situation</th><th>Recommandation</th></tr></thead><tbody><tr><td>Déploiement prod nécessite une validation humaine</td><td><code>environment</code> avec <strong>Approvals</strong> dans Azure DevOps UI</td></tr><tr><td>Build identique sur plusieurs environnements</td><td>Template de job paramétré (<code>templates/build.yml</code>)</td></tr><tr><td>Secrets (connexion DB, API key)</td><td>Variable Group lié à <strong>Azure Key Vault</strong></td></tr><tr><td>Temps de build &gt; 5 min à cause des dépendances</td><td><code>Cache@2</code> sur dossier NuGet/npm</td></tr><tr><td>Multi-repo (code + infra séparés)</td><td><code>resources.repositories</code> + checkout multiple</td></tr><tr><td>Déploiement par rolling / blue-green</td><td>Strategy <code>rolling</code> ou <code>canary</code> dans le job deployment</td></tr></tbody></table>
+<hr>
+<h2>Structure de référence CI/CD complète</h2>
+<pre><code class="lang-yaml"># azure-pipelines.yml
+trigger:
   branches:
-    include:
-      - main
-      - release/*
+    include: [main, release/*]
   paths:
-    exclude:
-      - docs/*
-      - '*.md'
+    exclude: [docs/*, '*.md']
 
 pr:
   branches:
-    include:
-      - main
+    include: [main]
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: ubuntu-latest
 
 variables:
-  - group: 'common-variables'
+  - group: common-vars          # Variable Group partagé
   - name: buildConfiguration
-    value: 'Release'
+    value: Release
   - name: dotnetVersion
     value: '8.0.x'
 
 stages:
   - stage: Build
-    displayName: 'Build &amp; Test'
+    displayName: Build &amp; Test
     jobs:
       - job: BuildJob
         steps:
+          - task: Cache@2
+            inputs:
+              key: 'nuget | &quot;$(Agent.OS)&quot; | **/packages.lock.json'
+              restoreKeys: 'nuget | &quot;$(Agent.OS)&quot;'
+              path: $(NUGET_PACKAGES)
+            displayName: Cache NuGet
+
           - task: UseDotNet@2
             inputs:
               version: $(dotnetVersion)
 
-          - script: dotnet restore
-            displayName: 'Restore packages'
+          - script: dotnet restore --locked-mode
+            displayName: Restore (locked)
 
-          - script: dotnet build --configuration $(buildConfiguration) --no-restore
-            displayName: 'Build solution'
+          - script: dotnet build -c $(buildConfiguration) --no-restore
+            displayName: Build
 
-          - script: dotnet test --configuration $(buildConfiguration) --no-build --collect:&quot;XPlat Code Coverage&quot;
-            displayName: 'Run tests'
+          - script: |
+              dotnet test -c $(buildConfiguration) --no-build \
+                --collect:&quot;XPlat Code Coverage&quot; \
+                --results-directory $(Agent.TempDirectory)/TestResults
+            displayName: Tests
 
           - task: PublishCodeCoverageResults@2
             inputs:
-              summaryFileLocation: '**/coverage.cobertura.xml'
+              summaryFileLocation: '$(Agent.TempDirectory)/TestResults/**/coverage.cobertura.xml'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: drop
 
   - stage: DeployDev
-    displayName: 'Deploy to Dev'
+    displayName: Deploy → Dev
     dependsOn: Build
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     jobs:
       - deployment: DeployDev
-        environment: 'dev'
+        environment: dev
         strategy:
           runOnce:
             deploy:
               steps:
                 - template: templates/deploy-steps.yml
                   parameters:
-                    environment: 'dev'
+                    environment: dev
 
   - stage: DeployStaging
-    displayName: 'Deploy to Staging'
+    displayName: Deploy → Staging
     dependsOn: DeployDev
     jobs:
       - deployment: DeployStaging
-        environment: 'staging'
+        environment: staging          # Approval configuré dans l'UI
         strategy:
           runOnce:
             deploy:
               steps:
                 - template: templates/deploy-steps.yml
                   parameters:
-                    environment: 'staging'
+                    environment: staging
 
   - stage: DeployProd
-    displayName: 'Deploy to Production'
+    displayName: Deploy → Production
     dependsOn: DeployStaging
     condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'))
     jobs:
       - deployment: DeployProd
-        environment: 'production'
+        environment: production       # Approval obligatoire
         strategy:
           runOnce:
             deploy:
               steps:
                 - template: templates/deploy-steps.yml
                   parameters:
-                    environment: 'production'</code></pre>
+                    environment: production</code></pre>
+<hr>
 <h2>Templates réutilisables</h2>
-<h3>Template de déploiement</h3>
-<pre><code class="lang-yaml"># templates/deploy-steps.yml
-parameters:
+<h3><code>templates/deploy-steps.yml</code></h3>
+<pre><code class="lang-yaml">parameters:
   - name: environment
     type: string
 
@@ -208,57 +225,92 @@ steps:
 
   - task: AzureWebApp@1
     inputs:
-      azureSubscription: 'azure-service-connection-${{ parameters.environment }}'
+      azureSubscription: 'sc-myapp-${{ parameters.environment }}'
       appName: 'myapp-${{ parameters.environment }}'
       package: '$(Pipeline.Workspace)/drop/**/*.zip'
+      deploymentMethod: zipDeploy
 
   - script: |
-      curl -f https://myapp-${{ parameters.environment }}.azurewebsites.net/health
-    displayName: 'Health check post-deploy'</code></pre>
-<h3>Template de job .NET</h3>
-<pre><code class="lang-yaml"># templates/dotnet-build.yml
-parameters:
+      for i in 1 2 3; do
+        curl -sf https://myapp-${{ parameters.environment }}.azurewebsites.net/health &amp;&amp; break
+        echo &quot;Retry $i...&quot; &amp;&amp; sleep 10
+      done
+    displayName: Health check (${{ parameters.environment }})</code></pre>
+<h3><code>templates/dotnet-build-job.yml</code></h3>
+<pre><code class="lang-yaml">parameters:
   - name: projects
     type: string
     default: '**/*.csproj'
   - name: testProjects
     type: string
     default: '**/*Tests.csproj'
+  - name: dotnetVersion
+    type: string
+    default: '8.0.x'
 
 jobs:
   - job: Build
     steps:
-      - script: dotnet restore ${{ parameters.projects }}
+      - task: UseDotNet@2
+        inputs:
+          version: ${{ parameters.dotnetVersion }}
+      - script: dotnet restore ${{ parameters.projects }} --locked-mode
       - script: dotnet build ${{ parameters.projects }} -c Release --no-restore
       - script: dotnet test ${{ parameters.testProjects }} -c Release --no-build</code></pre>
-<h2>Bonnes pratiques</h2>
-<h3>Sécurité</h3>
+<hr>
+<h2>Cache des dépendances (gains typiques : 40–70 %)</h2>
+<pre><code class="lang-yaml"># NuGet
+- task: Cache@2
+  inputs:
+    key: 'nuget | &quot;$(Agent.OS)&quot; | **/packages.lock.json'
+    restoreKeys: 'nuget | &quot;$(Agent.OS)&quot;'
+    path: $(NUGET_PACKAGES)
+
+# npm
+- task: Cache@2
+  inputs:
+    key: 'npm | &quot;$(Agent.OS)&quot; | package-lock.json'
+    restoreKeys: 'npm | &quot;$(Agent.OS)&quot;'
+    path: $(npm_config_cache)</code></pre>
+<hr>
+<h2>Sécurité</h2>
 <ul>
-<li>Stocker les secrets dans des <strong>Variable Groups</strong> liés à Azure Key Vault</li>
-<li>Utiliser des <strong>Service Connections</strong> avec des principaux à droits minimaux</li>
-<li>Configurer des <strong>Approvals</strong> sur les environnements de production</li>
-<li>Ne jamais logger de secrets dans les steps</li>
+<li><strong>Secrets → Variable Group + Key Vault</strong> : dans l'UI ADO, lier le Variable Group à un Azure Key Vault ; les secrets apparaissent comme variables masquées.</li>
+<li><strong>Service Connections</strong> : créer un principal de service dédié par environnement avec uniquement le rôle <code>Contributor</code> sur le Resource Group cible.</li>
+<li><strong>Approvals</strong> : configurer dans <em>Environments → [env] → Approvals and checks</em> ; ajouter un délai minimal et une liste d'approbateurs.</li>
+<li><strong>Branch policies</strong> : bloquer les merges vers <code>main</code> si le pipeline PR échoue (Policy &quot;Build validation&quot;).</li>
+<li><strong>Audit log</strong> : activer l'audit ADO pour tracer les modifications de pipelines et de Variable Groups.</li>
 </ul>
-<h3>Performance</h3>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td>Secrets en clair dans le YAML</td><td>Exposé dans l'historique Git</td><td>Variable Group lié à Key Vault</td></tr><tr><td>Un seul stage &quot;Build+Deploy&quot;</td><td>Pas de séparation CI/CD, rollback impossible</td><td>Stages distincts avec artifacts</td></tr><tr><td><code>condition: always()</code> sur le deploy</td><td>Déploie même si le build échoue</td><td>Utiliser <code>succeeded()</code> explicitement</td></tr><tr><td><code>pool: vmImage: windows-latest</code> pour tout</td><td>Lent et coûteux pour du Linux</td><td>Choisir l'OS en fonction de la cible</td></tr><tr><td>Pas de <code>--locked-mode</code> sur <code>dotnet restore</code></td><td>Versions de packages non reproductibles</td><td>Committer <code>packages.lock.json</code> et ajouter le flag</td></tr><tr><td>Jobs séquentiels par défaut</td><td>Durée inutilement longue</td><td>Identifier les jobs parallélisables via <code>dependsOn: []</code></td></tr><tr><td>Template avec logique métier hardcodée</td><td>Non réutilisable</td><td>Paramétrer systématiquement (<code>parameters</code>)</td></tr><tr><td>Déployer sur prod sans health check</td><td>Régression silencieuse</td><td>Health check avec retry dans le template de déploiement</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Utiliser le <strong>cache</strong> pour les dépendances (NuGet, npm)</li>
-<li>Paralléliser les jobs indépendants</li>
-<li>Utiliser des agents self-hosted pour les builds fréquents</li>
-<li>Conditionner les stages pour éviter les exécutions inutiles</li>
+<li><strong>Environments</strong> plutôt que classic Release Pipelines — meilleure traçabilité, approvals natifs, historique de déploiement.</li>
+<li><strong><code>--locked-mode</code></strong> sur <code>dotnet restore</code> et <code>npm ci</code> à la place de <code>npm install</code> — builds reproductibles.</li>
+<li><strong>Scheduled trigger</strong> pour les scans de sécurité (Dependabot, OWASP) séparément du pipeline principal.</li>
+<li><strong>Matrix builds</strong> pour tester sur plusieurs versions de runtime :</li>
 </ul>
-<h3>Organisation</h3>
+<p>  ```yaml   strategy:     matrix:       dotnet8:         dotnetVersion: '8.0.x'       dotnet9:         dotnetVersion: '9.0.x'   ```</p>
 <ul>
-<li>Un fichier <code>azure-pipelines.yml</code> à la racine du repo</li>
-<li>Templates dans un dossier <code>templates/</code></li>
-<li>Variable Groups par environnement</li>
-<li>Nommer les stages et jobs de manière descriptive</li>
+<li><strong>Conditional variable groups</strong> par environnement pour isoler les configurations :</li>
 </ul>
-<h2>Règles</h2>
+<p>  ```yaml   variables:</p>
 <ul>
-<li>Toujours utiliser des templates pour le code dupliqué entre stages.</li>
-<li>Les secrets doivent être dans des Variable Groups, jamais en clair dans le YAML.</li>
-<li>Chaque déploiement en production doit avoir un approval gate.</li>
-<li>Inclure un health check post-déploiement dans chaque stage de déploiement.</li>
+<li>${{ if eq(variables['Build.SourceBranch'], 'refs/heads/main') }}:</li>
+<ul>
+<li>group: prod-vars</li>
+</ul>
+<li>${{ else }}:</li>
+<ul>
+<li>group: dev-vars</li>
+</ul>
+</ul>
+<p>  ```</p>
+<ul>
+<li><strong>Self-hosted agents</strong> pour les builds fréquents (&gt; 20/jour) — réduit les coûts et améliore la latence.</li>
+<li><strong>Azure Artifacts</strong> pour les packages internes : configurer le feed en upstream source et utiliser <code>dotnet nuget push</code> dans le pipeline.</li>
 </ul>
 </article>
 </main>

@@ -96,32 +96,91 @@ cp -r claude-skills-collection/skills/travel-visa-checker ~/.claude/skills/</div
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Visa Checker</h1>
-<h2>Étape 1 — Situation</h2>
-<p>Nationalité, destination, durée du séjour, motif (tourisme, affaires, études, transit).</p>
-<h2>Étape 2 — Recherche</h2>
-<p>Recherche les conditions de visa actuelles pour la combinaison nationalité/destination.</p>
-<h2>Étape 3 — Résultat structuré</h2>
+<h2>Étape 1 — Collecter les paramètres obligatoires</h2>
+<p>Avant toute recherche, obtenir :</p>
+<table><thead><tr><th>Paramètre</th><th>Valeurs possibles</th><th>Impact</th></tr></thead><tbody><tr><td>Nationalité</td><td>passeport français, marocain, tunisien…</td><td>détermine l'exemption</td></tr><tr><td>Destination</td><td>pays + région si pertinent (ex : Schengen vs UK)</td><td>règles différentes</td></tr><tr><td>Durée</td><td>nuitées prévues</td><td>visa court/long séjour</td></tr><tr><td>Motif</td><td>tourisme, affaires, transit, études, travail</td><td>type de visa</td></tr><tr><td>Entrées</td><td>simple, double, multiple</td><td>extension possible ?</td></tr></tbody></table>
+<p>Si l'utilisateur donne seulement &quot;je vais en Thaïlande&quot;, demander nationalité + durée + motif avant de répondre.</p>
+<h2>Étape 2 — Classifier le régime de visa</h2>
+<p>Déterminer d'abord la catégorie :</p>
+<pre><code>Exemption totale    → séjour possible sans visa (ex : France→UE, Maroc→Turquie)
+Visa à l'arrivée    → VOA, obtenu au poste-frontière, souvent payant
+eVisa               → demande 100 % en ligne avant départ, délai variable
+Visa ambassade      → dépôt physique du dossier, délai souvent &gt;10 jours
+Visa non requis     → nationalité couvre le pays cible dans la durée demandée</code></pre>
+<p><strong>Critères de décision rapide :</strong></p>
 <ul>
-<li>Visa requis ou non</li>
-<li>Type de visa recommandé</li>
-<li>Documents nécessaires</li>
-<li>Délai de traitement</li>
-<li>Coût estimé</li>
-<li>Où faire la demande (ambassade, en ligne, à l'arrivée)</li>
+<li>Moins de 90 jours tourisme + passeport UE → vérifier liste Schengen/bilatéral</li>
+<li>Transit &lt;24 h sans sortie d'aéroport → souvent pas de visa mais vérifier &quot;TWOV&quot;</li>
+<li>Travail/études = visa long séjour systématique, délai 4-12 semaines minimum</li>
 </ul>
-<h2>Étape 4 — Checklist documents</h2>
+<h2>Étape 3 — Résultat structuré à fournir</h2>
+<pre><code>VISA REQUIS : Oui / Non / Visa à l'arrivée / eVisa
+Type recommandé : Tourist Visa / Business Visa / eVisa / VOA
+Durée maximale autorisée : X jours
+Extensions possibles : Oui/Non (conditions)
+
+DOCUMENTS REQUIS
+- Passeport : valide encore au moins [X mois] après retour
+- Photos : [format précis, ex : 3,5×4,5 cm, fond blanc]
+- Formulaire : [lien officiel ou nom exact]
+- Justificatif hébergement : réservation hôtel ou invitation
+- Preuve financière : relevé bancaire des 3 derniers mois ou ~X €/jour
+- Billet retour confirmé : Oui/Non
+
+DÉLAI DE TRAITEMENT : X jours ouvrés (prévoir tampon)
+COÛT : ~X € / X USD (+ frais de service si tiers)
+OÙ FAIRE LA DEMANDE : [URL officielle ou nom ambassade]
+VALIDITÉ : X mois à partir de la date d'émission ou d'entrée
+DATE DE RECHERCHE : 2026-06-24</code></pre>
+<h2>Étape 4 — Checklist pré-dépôt</h2>
+<pre><code>[ ] Passeport valide (vérifier règle des 6 mois : expiration &gt; retour + 6 mois)
+[ ] Pages vierges suffisantes (min 2, souvent 4 pour pays exigeants)
+[ ] Photos conformes au format exact exigé (ne pas réutiliser d'anciennes)
+[ ] Formulaire rempli sans rature, signature en original si requis
+[ ] Justificatif hébergement (réservation annulable acceptable ou ferme ?)
+[ ] Preuve de fonds (seuil par jour souvent indiqué : ex. 50 USD/jour Thaïlande)
+[ ] Billet retour ou circuitaire (pas aller simple)
+[ ] Assurance voyage avec montant min (Schengen : 30 000 €, certains pays : 50 000 $)
+[ ] Lettre d'invitation employeur si voyage affaires
+[ ] Copies de tous les documents (recto/verso)
+[ ] Frais exacts en espèces si paiement au poste-frontière (pas de change garanti)</code></pre>
+<h2>Étape 5 — Sources officielles à citer systématiquement</h2>
+<p>Toujours orienter vers les sources primaires, pas des agrégateurs tiers :</p>
 <ul>
-<li>[ ] Passeport (validité suffisante ?)</li>
-<li>[ ] Photos d'identité</li>
-<li>[ ] Justificatifs (hébergement, billet retour, finances)</li>
-<li>[ ] Formulaire de demande</li>
+<li><strong>France.diplomatie.gouv.fr</strong> — conseils par pays pour citoyens français</li>
+<li><strong>Consulat/Ambassade du pays de destination</strong> — seul document faisant foi</li>
+<li><strong>IATA Travel Centre</strong> — référence compagnies aériennes, fiable pour transit</li>
+<li><strong>eVisa officiel</strong> : exemples — <code>evisa.mofa.go.th</code> (Thaïlande), <code>evisa.gov.in</code> (Inde), <code>esta.cbp.dhs.gov</code> (USA ESTA)</li>
+<li><strong>Timatic</strong> (accès via compagnies) — base de données utilisée aux check-in</li>
 </ul>
-<h2>Règles</h2>
+<h2>Garde-fous / Anti-patterns / Pièges courants</h2>
+<p><strong>Ne jamais :</strong></p>
 <ul>
-<li>Toujours recommander de vérifier sur le site officiel de l'ambassade.</li>
-<li>Les conditions changent — préciser la date de la recherche.</li>
+<li>Donner une réponse sans préciser la date de consultation (les règles changent en 48 h)</li>
+<li>Confondre visa de transit et visa de séjour (règles distinctes)</li>
+<li>Ignorer la règle des 6 mois de validité passeport (compagnies refusent l'embarquement)</li>
+<li>Supposer que le visa est valide à partir de la date d'émission (souvent : à partir de la première entrée)</li>
+<li>Oublier que certains pays ont des conditions différentes selon l'aéroport ou la frontière terrestre</li>
+<li>Citer des sites non officiels (visahq, iVisa) comme source — pratiques mais pas officiels</li>
 </ul>
-<blockquote>⚠️ Ces informations sont indicatives. Vérifiez toujours les conditions actuelles sur le site officiel de l'ambassade ou du consulat.</blockquote>
+<p><strong>Pièges fréquents par région :</strong></p>
+<ul>
+<li><strong>USA ESTA</strong> : refus si antécédent de refus visa US ou visite Iran/Irak/Syrie/Cuba — même transit</li>
+<li><strong>Royaume-Uni post-Brexit</strong> : ETA obligatoire depuis 2024 pour ressortissants UE, y compris transit</li>
+<li><strong>Schengen 90/180</strong> : le compteur est glissant (90 jours sur n'importe quelle période de 180 jours, pas par semestre calendaire)</li>
+<li><strong>Chine</strong> : exemption transit TWOV (72/144 h) limitée à certaines villes — vérifier la liste exacte</li>
+<li><strong>Inde eVisa</strong> : les catégories &quot;Tourist&quot;, &quot;Business&quot;, &quot;Medical&quot; ne sont pas interchangeables</li>
+<li><strong>Canada eTA</strong> : obligatoire même pour séjours de quelques heures en transit</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Déposer toute demande ambassade <strong>au moins 6 semaines</strong> avant le départ (délais post-Covid allongés)</li>
+<li>Préférer l'<strong>eVisa officiel</strong> au tiers payant quand disponible (tarif identique, donnée directe)</li>
+<li>Conserver la <strong>confirmation électronique</strong> sur le téléphone ET en version papier</li>
+<li>Vérifier si le pays exige un <strong>visa de retour</strong> depuis la destination (ex : certains cas de double nationalité)</li>
+<li>En cas de doute sur l'éligibilité ESTA, opter pour le visa B1/B2 en amont (pas de recours possible après refus ESTA)</li>
+</ul>
+<blockquote><strong>Avertissement légal</strong> — Ces informations sont indicatives et datées du moment de la consultation. Les conditions de visa peuvent changer sans préavis. Seule l'ambassade ou le consulat compétent fait foi. Vérifiez systématiquement sur le site officiel avant tout dépôt de dossier ou achat de billet.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>productivity-habit-tracker — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Aide à mettre en place et suivre des habitudes avec un système structuré.">
+<meta name="description" content="Aide à mettre en place et suivre des habitudes avec un système structuré, des outils de suivi copiables et des critères d'ajustement.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">⏱️ Productivité</span>
 <h1 class="skill-title">productivity-habit-tracker</h1>
-<p class="lead">Aide à mettre en place et suivre des habitudes avec un système structuré.</p>
+<p class="lead">Aide à mettre en place et suivre des habitudes avec un système structuré, des outils de suivi copiables et des critères d'ajustement.</p>
 
 
 
@@ -96,23 +96,88 @@ cp -r claude-skills-collection/skills/productivity-habit-tracker ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Habit Tracker</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définir l'habitude</strong> : quoi, quand, combien, pourquoi.</li>
-<li><strong>Rendre concret</strong> : transformer en action spécifique (pas &quot;faire du sport&quot; → &quot;30 min de marche à 7h&quot;).</li>
-<li><strong>Ancrage</strong> : lier à un déclencheur existant (après le café, avant le dîner…).</li>
-<li><strong>Progression</strong> : commencer petit et augmenter graduellement.</li>
-<li><strong>Tableau de suivi</strong> :</li>
-</ol>
-<table><thead><tr><th>Semaine</th><th>Lun</th><th>Mar</th><th>Mer</th><th>Jeu</th><th>Ven</th><th>Sam</th><th>Dim</th><th>Score</th></tr></thead><tbody></tbody></table>
-<ol>
-<li><strong>Bilan hebdo</strong> : qu'est-ce qui a marché ? Qu'est-ce qui a bloqué ? Ajustement.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 6 étapes</h2>
+<h3>1. Cadrage de l'habitude</h3>
+<p>Obtenir 4 paramètres avant toute chose :</p>
+<table><thead><tr><th>Paramètre</th><th>Question à poser</th><th>Exemple</th></tr></thead><tbody><tr><td><strong>Quoi</strong></td><td>Action concrète et mesurable ?</td><td>&quot;faire du sport&quot; → trop vague</td></tr><tr><td><strong>Quand</strong></td><td>Horaire précis ou déclencheur ?</td><td>7h00 / après le café du matin</td></tr><tr><td><strong>Combien</strong></td><td>Durée, répétitions, quantité ?</td><td>20 min, 10 répétitions, 2 pages</td></tr><tr><td><strong>Pourquoi</strong></td><td>Motivation profonde (non négociable)</td><td>&quot;énergie pour mes enfants&quot;</td></tr></tbody></table>
+<p><strong>Critère de validation</strong> : l'habitude doit passer le test &quot;pourrais-je la cocher oui/non ce soir ?&quot;. Si non, elle est trop vague — reformuler.</p>
+<h3>2. Formulation atomique</h3>
+<p>Transformer en phrase d'action au format <strong>&quot;Je [verbe] [quantité] [moment] [lieu]&quot;</strong> :</p>
+<pre><code>&quot;Je marche 20 minutes à 7h dans le parc (avant la douche).&quot;
+&quot;Je lis 10 pages à 22h dans mon lit.&quot;
+&quot;Je bois 500 ml d'eau en me levant, verre posé sur la table de nuit.&quot;</code></pre>
+<p>Règle : si l'habitude dure plus de 30 min ou implique plusieurs sous-actions, la découper en sous-habitudes distinctes.</p>
+<h3>3. Ancrage (habit stacking)</h3>
+<p>Lier la nouvelle habitude à un comportement déjà automatique :</p>
+<pre><code>&quot;Après [habitude existante] → je [nouvelle habitude].&quot;</code></pre>
+<p>Exemples :</p>
 <ul>
-<li>Maximum 3 nouvelles habitudes à la fois.</li>
-<li>Célèbre la constance, pas la perfection.</li>
-<li>Propose des ajustements si l'habitude ne tient pas, sans culpabiliser.</li>
+<li>Après avoir allumé l'ordinateur → 1 min de respiration profonde</li>
+<li>Après avoir préparé le café → 5 min de journal</li>
+<li>Avant d'éteindre les lumières → vérifier le tableau de suivi</li>
+</ul>
+<h3>4. Calibrage de la difficulté</h3>
+<p>Utiliser la règle des <strong>2 minutes</strong> pour démarrer :</p>
+<ul>
+<li>Première semaine : version minimaliste (2-5 min max)</li>
+<li>Semaine 2–3 : version cible réduite de 50 %</li>
+<li>Semaine 4+ : cible réelle</li>
+</ul>
+<p>Grille de décision pour ajuster la difficulté :</p>
+<table><thead><tr><th>Taux de réussite (semaine)</th><th>Action</th></tr></thead><tbody><tr><td>≥ 80 %</td><td>Maintenir ou augmenter légèrement</td></tr><tr><td>50–79 %</td><td>Réduire la durée ou simplifier</td></tr><tr><td>&lt; 50 %</td><td>Revoir le déclencheur ou l'ancrage</td></tr></tbody></table>
+<h3>5. Tableau de suivi (Markdown copiable)</h3>
+<p><strong>Tracker hebdomadaire simple :</strong></p>
+<pre><code class="lang-markdown">## Habitude : [Nom]
+Objectif : [description atomique]
+
+| Semaine | Lun | Mar | Mer | Jeu | Ven | Sam | Dim | Score |
+|---------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:-----:|
+| S1      |  ✅  |  ✅  |  ❌  |  ✅  |  ✅  |  ✅  |  ❌  | 5/7   |
+| S2      |     |     |     |     |     |     |     | /7    |
+| S3      |     |     |     |     |     |     |     | /7    |
+| S4      |     |     |     |     |     |     |     | /7    |
+
+Score cible : ≥ 5/7 (71 %)</code></pre>
+<p><strong>Tracker multi-habitudes (max 3) :</strong></p>
+<pre><code class="lang-markdown">| Date       | Habitude 1 | Habitude 2 | Habitude 3 |
+|------------|:----------:|:----------:|:----------:|
+| 2026-06-24 |     ✅      |     ✅      |     ❌      |
+| 2026-06-25 |            |            |            |</code></pre>
+<p><strong>Tracker en texte brut (terminal/notes) :</strong></p>
+<pre><code>JUIN 2026 — Lecture 10 pages
+L  M  M  J  V  S  D
+✓  ✓  -  ✓  ✓  ✓  -   S1: 5/7</code></pre>
+<h3>6. Bilan hebdomadaire</h3>
+<p>Poser 3 questions fixes chaque dimanche soir (5 min max) :</p>
+<ol>
+<li><strong>Score</strong> : combien de jours réussis sur 7 ?</li>
+<li><strong>Bloqueur principal</strong> : quel obstacle s'est répété ?</li>
+<li><strong>Ajustement</strong> : une seule modification à tester la semaine suivante.</li>
+</ol>
+<p>Template de bilan :</p>
+<pre><code>Semaine du [date]
+Score : /7
+Bloqueur : 
+Ajustement :
+Prochaine cible :</code></pre>
+<hr>
+<h2>Règles de base</h2>
+<ul>
+<li><strong>Maximum 3 nouvelles habitudes en parallèle.</strong> Au-delà, la charge cognitive sabote tout.</li>
+<li><strong>Constance &gt; perfection.</strong> 5/7 pendant 8 semaines vaut mieux que 7/7 pendant 2 semaines.</li>
+<li><strong>Règle de la non-rupture de chaîne</strong> (don't break the chain) : visualiser la série de jours réussis motive à continuer. En cas de raté, règle du &quot;jamais deux fois de suite&quot;.</li>
+<li><strong>Revue mensuelle</strong> : après 4 semaines, décider de consolider, ajuster ou abandonner une habitude avant d'en ajouter une nouvelle.</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Habitude trop vague</td><td>&quot;être plus productif&quot;</td><td>Reformuler avec quantité + moment</td></tr><tr><td>Trop de nouvelles habitudes</td><td>&gt; 3 en parallèle</td><td>Prioriser, retarder les autres</td></tr><tr><td>Cible trop haute dès le départ</td><td>0/7 la première semaine</td><td>Appliquer la règle des 2 minutes</td></tr><tr><td>Déclencheur instable</td><td>L'ancrage varie chaque jour</td><td>Choisir un ancrage plus fixe</td></tr><tr><td>Suivi abandonné</td><td>Pas de trace après semaine 1</td><td>Simplifier (1 colonne suffit)</td></tr><tr><td>Culpabilisation après échec</td><td>&quot;j'ai tout raté&quot;</td><td>Rappeler la règle jamais-deux-fois</td></tr><tr><td>Objectif motivation extrinsèque</td><td>&quot;parce que je devrais&quot;</td><td>Reformuler avec bénéfice concret</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Lier physiquement le suivi</strong> à l'objet déclencheur (post-it sur la machine à café, fichier ouvert au démarrage du PC, widget téléphone).</li>
+<li><strong>Compresser les habitudes de morning routine</strong> : les empiler dans un bloc de 15–20 min plutôt que les disperser dans la journée.</li>
+<li><strong>Utiliser les données pour décider</strong> : si le score reste &lt; 50 % deux semaines consécutives malgré ajustement, l'habitude n'est pas prioritaire — la retirer sans culpabilité.</li>
+<li><strong>Revue trimestrielle</strong> : inventorier les habitudes actives, consolider les automatiques (&gt; 90 % pendant 8 sem.), libérer de la capacité pour de nouvelles.</li>
 </ul>
 </article>
 </main>

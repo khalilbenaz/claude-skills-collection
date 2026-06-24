@@ -97,23 +97,172 @@ cp -r claude-skills-collection/skills/dev-ios-swift-advisor ~/.claude/skills/</d
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>iOS Swift Advisor</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Architecture</strong> — Définir l'architecture adaptée à la taille du projet : MVVM + Coordinator (séparation navigation/présentation, testable), TCA — The Composable Architecture (état immuable, effets explicites, idéal pour SwiftUI), VIPER (découpage extrême, grands projets en équipe), Clean Swift/VIP (UIKit, flux unidirectionnel). Documenter les responsabilités de chaque couche et les conventions de nommage.</li>
-<li><strong>UI avec SwiftUI et UIKit</strong> — Construire les interfaces SwiftUI avec des views composables, des modifiers chainés, les property wrappers adaptés (@State, @Binding, @ObservableObject), et les nouveaux macros Swift (@Observable, Swift 5.9+). Gérer l'interopérabilité UIKit via UIViewRepresentable et UIHostingController pour la migration progressive ou les composants UIKit sans équivalent SwiftUI.</li>
-<li><strong>State et data flow</strong> — Choisir le bon wrapper selon le contexte : @State (état local simple), @Binding (état partagé parent-enfant), @ObservedObject/@ObservableObject (objets de référence observables), @EnvironmentObject (injection dans l'arbre de vues), @Environment (valeurs système), Combine Publishers (flux de données asynchrones, pipelines réactifs), et le nouveau @Observable macro (Swift 5.9, simplifie ObservableObject).</li>
-<li><strong>Persistence</strong> — Implémenter le stockage selon les besoins : Core Data (ORM mature, relations, migrations, iCloud sync via NSPersistentCloudKitContainer), SwiftData (Swift 5.9+, API moderne basée sur les macros @Model, remplacement progressif de Core Data), UserDefaults (préférences légères, @AppStorage en SwiftUI), Keychain Services (données sensibles : tokens, mots de passe, certificats), CloudKit (synchronisation iCloud, CKContainer, public/private databases).</li>
-<li><strong>Networking</strong> — Implémenter les appels réseau avec URLSession et async/await (concurrence structurée Swift), Combine publishers pour les flux réactifs, le protocole Codable pour la sérialisation/désérialisation JSON automatique, et les acteurs Swift (Actor) pour la sécurité thread. Gérer les erreurs réseau, le retry exponentiel, et le cache HTTP avec URLCache.</li>
-<li><strong>Testing</strong> — Écrire des tests complets avec XCTest (unit tests, tests asynchrones avec async/await et XCTestExpectation), XCUITest (tests d'interface utilisateur, accessibilité), snapshot testing (swift-snapshot-testing par Point-Free), et le mocking via les protocoles Swift (protocol-oriented testing, injection de dépendances). Configurer la couverture de code dans Xcode.</li>
-<li><strong>Sécurité iOS</strong> — Implémenter les bonnes pratiques : Keychain pour les données sensibles (SecItemAdd, SecItemCopyMatching), App Transport Security (ATS, HTTPS obligatoire, exceptions documentées), authentification biométrique (LocalAuthentication framework, Face ID/Touch ID avec fallback), certificate pinning (URLAuthenticationChallenge, TrustKit), et validation des entrées utilisateur contre les injections.</li>
-<li><strong>App Store</strong> — Préparer la soumission : gestion des certificates et provisioning profiles (Xcode automatic signing ou manuel), configuration des capabilities (Push Notifications, In-App Purchase, Sign in with Apple), distribution TestFlight (groupes internes/externes, feedback), conformité aux App Review Guidelines (privacy labels, permissions justifiées), soumission via Xcode ou Transporter, et gestion des rejets courants.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Choix d'architecture</h3>
+<table><thead><tr><th>Contexte</th><th>Architecture recommandée</th></tr></thead><tbody><tr><td>Petit projet / MVP SwiftUI</td><td>MVVM + <code>@Observable</code></td></tr><tr><td>SwiftUI complexe, testabilité maximale</td><td>TCA (The Composable Architecture)</td></tr><tr><td>Grande équipe, UIKit dominant</td><td>VIPER ou Clean Swift (VIP)</td></tr><tr><td>Migration progressive UIKit→SwiftUI</td><td>MVVM + Coordinator</td></tr></tbody></table>
+<pre><code class="lang-swift">// MVVM avec @Observable (Swift 5.9+, iOS 17)
+@Observable
+final class ProfileViewModel {
+    var username: String = &quot;&quot;
+    var isLoading: Bool = false
+    private let repository: ProfileRepository
+
+    init(repository: ProfileRepository) {
+        self.repository = repository
+    }
+
+    func fetchProfile(id: String) async {
+        isLoading = true
+        defer { isLoading = false }
+        username = await repository.fetch(id: id).name
+    }
+}
+
+// Dans la View — pas besoin de @ObservedObject avec @Observable
+struct ProfileView: View {
+    @State private var vm = ProfileViewModel(repository: .live)
+    var body: some View {
+        Group {
+            if vm.isLoading { ProgressView() }
+            else { Text(vm.username) }
+        }
+        .task { await vm.fetchProfile(id: &quot;42&quot;) }
+    }
+}</code></pre>
+<h3>2. UI : SwiftUI vs UIKit</h3>
+<p><strong>Critères de décision :</strong></p>
 <ul>
-<li>Fournis du code Swift complet et compilable, avec les imports nécessaires et les annotations de disponibilité (@available) pour les APIs iOS 16+/17+.</li>
-<li>Adapte les exemples aux dernières versions stables : Swift 5.9+, iOS 17, Xcode 15, SwiftData et le macro @Observable pour les nouveaux projets.</li>
-<li>Priorise la performance et l'UX : signale les usages incorrects du main thread, les fuites mémoire potentielles (cycles de rétention avec [weak self]), et les anti-patterns SwiftUI.</li>
-<li>Mentionne les alternatives UIKit/SwiftUI et leur pertinence selon la cible iOS minimale du projet et les besoins de personnalisation.</li>
-<li>En cas de question liée au déploiement Apple, précise toujours les prérequis (compte développeur Apple, enrolled programs) et les délais de review habituels.</li>
+<li><code>iOS 16+</code> cible minimale → SwiftUI first.</li>
+<li>Composant sans équivalent SwiftUI (ex. <code>WKWebView</code>, <code>MKMapView</code> avancé) → <code>UIViewRepresentable</code>.</li>
+<li>Migration progressive : wrapper les écrans SwiftUI dans <code>UIHostingController</code>.</li>
+</ul>
+<pre><code class="lang-swift">// Interop UIKit → SwiftUI
+struct WebViewRepresentable: UIViewRepresentable {
+    let url: URL
+    func makeUIView(context: Context) -&gt; WKWebView { WKWebView() }
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        uiView.load(URLRequest(url: url))
+    }
+}</code></pre>
+<p><strong>Property wrappers — règle rapide :</strong></p>
+<ul>
+<li><code>@State</code> : valeur locale, non partagée.</li>
+<li><code>@Binding</code> : valeur owned par le parent, mutation bidirectionnelle.</li>
+<li><code>@Environment</code> : valeurs système (<code>\.colorScheme</code>, <code>\.dismiss</code>).</li>
+<li><code>@EnvironmentObject</code> : objet partagé injecté haut dans l'arbre.</li>
+<li><code>@Observable</code> (iOS 17) : remplace <code>ObservableObject</code> + <code>@Published</code>.</li>
+</ul>
+<h3>3. Concurrence et networking (Swift Concurrency)</h3>
+<pre><code class="lang-swift">// URLSession + async/await + Codable
+struct APIClient {
+    func fetch&lt;T: Decodable&gt;(_ endpoint: URL) async throws -&gt; T {
+        let (data, response) = try await URLSession.shared.data(from: endpoint)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            throw APIError.badStatus
+        }
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+}
+
+// Annulation propre avec Task
+func loadData() {
+    Task {
+        do {
+            let user: User = try await APIClient().fetch(endpoint)
+            await MainActor.run { self.user = user } // màj UI sur le main actor
+        } catch is CancellationError { /* ignoré */ }
+          catch { handle(error) }
+    }
+}</code></pre>
+<p><strong>Isoler le main actor :</strong> annoter les ViewModels avec <code>@MainActor</code> pour éviter les data races sur les propriétés UI.</p>
+<pre><code class="lang-swift">@MainActor
+@Observable
+final class FeedViewModel { ... }</code></pre>
+<h3>4. Persistence — arbre de décision</h3>
+<pre><code>Données sensibles (tokens, mdp) → Keychain
+Préférences légères             → UserDefaults / @AppStorage
+Modèle relationnel, migrations  → Core Data (NSPersistentCloudKitContainer pour iCloud)
+Nouveau projet iOS 17+          → SwiftData (@Model, .modelContainer)
+Sync multi-appareils            → CloudKit ou Firebase Firestore</code></pre>
+<pre><code class="lang-swift">// SwiftData (iOS 17+)
+@Model
+final class TodoItem {
+    var title: String
+    var isDone: Bool
+    init(title: String) { self.title = title; self.isDone = false }
+}
+
+// Dans App
+@main
+struct MyApp: App {
+    var body: some Scene {
+        WindowGroup { ContentView() }
+            .modelContainer(for: TodoItem.self)
+    }
+}</code></pre>
+<h3>5. Tests</h3>
+<pre><code class="lang-swift">// XCTest async
+func testFetchProfile() async throws {
+    let sut = ProfileViewModel(repository: MockRepository())
+    await sut.fetchProfile(id: &quot;1&quot;)
+    XCTAssertEqual(sut.username, &quot;Alice&quot;)
+}
+
+// Protocol pour le mock
+protocol ProfileRepository {
+    func fetch(_ id: String) async -&gt; Profile
+}
+struct MockRepository: ProfileRepository {
+    func fetch(_ id: String) async -&gt; Profile { Profile(name: &quot;Alice&quot;) }
+}</code></pre>
+<ul>
+<li><strong>Couverture</strong> : activer dans Scheme → Test → Code Coverage.</li>
+<li><strong>Snapshot testing</strong> : <code>swift-snapshot-testing</code> (Point-Free) pour régressions visuelles.</li>
+<li><strong>UI tests</strong> : <code>XCUIApplication</code>, utiliser les <code>accessibilityIdentifier</code> comme sélecteurs stables.</li>
+</ul>
+<h3>6. Sécurité iOS</h3>
+<pre><code class="lang-swift">// Keychain (wrapper simplifié)
+func saveToken(_ token: String) {
+    let data = Data(token.utf8)
+    let query: [CFString: Any] = [
+        kSecClass: kSecClassGenericPassword,
+        kSecAttrAccount: &quot;authToken&quot;,
+        kSecValueData: data,
+        kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+    ]
+    SecItemDelete(query as CFDictionary)
+    SecItemAdd(query as CFDictionary, nil)
+}
+
+// Biométrie (Face ID / Touch ID)
+let context = LAContext()
+context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics,
+                        localizedReason: &quot;Confirmer votre identité&quot;) { ok, _ in
+    DispatchQueue.main.async { if ok { openSecureContent() } }
+}</code></pre>
+<ul>
+<li><strong>ATS</strong> : toutes les requêtes doivent être HTTPS. Toute exception (<code>NSAllowsArbitraryLoads</code>) exige une justification App Review.</li>
+<li><strong>Certificate pinning</strong> : via <code>URLAuthenticationChallenge</code> ou la lib TrustKit.</li>
+</ul>
+<h3>7. App Store — checklist soumission</h3>
+<ol>
+<li>Activer Automatic Signing dans Xcode (ou configurer les profiles manuels).</li>
+<li>Renseigner <strong>Privacy Nutrition Labels</strong> dans App Store Connect (données collectées, utilisation).</li>
+<li>Justifier chaque <code>NSUsageDescription</code> dans <code>Info.plist</code> (caméra, micro, localisation…).</li>
+<li>Build via <strong>Product → Archive</strong> → Distribute App → App Store Connect.</li>
+<li>TestFlight : group interne (jusqu'à 100 personnes, immédiat), groupe externe (review Beta ~24 h).</li>
+<li>Délai de review App Review : ~24–48 h en 2026 (accéléré possible via API).</li>
+</ol>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Remède</th></tr></thead><tbody><tr><td><code>URLSession</code> sur le main thread</td><td>UI gelée</td><td><code>async/await</code> ou <code>.background</code> queue</td></tr><tr><td>Capture <code>self</code> forte dans closure <code>@escaping</code></td><td>Fuite mémoire</td><td><code>[weak self]</code> systématique</td></tr><tr><td><code>@ObservedObject</code> sur un objet créé dans la View</td><td>Re-init à chaque rebuild</td><td>Passer via <code>@StateObject</code> ou <code>@Observable @State</code></td></tr><tr><td><code>Core Data</code> sans <code>NSManagedObjectContext</code> per-thread</td><td>Crash aléatoire</td><td><code>performAndWait</code> ou <code>@ModelActor</code> (SwiftData)</td></tr><tr><td><code>UserDefaults</code> pour tokens/mdp</td><td>Faille sécurité (lisible)</td><td>Keychain uniquement</td></tr><tr><td>Lancer <code>Task { }</code> sans annulation</td><td>Tasks zombies</td><td>Stocker dans <code>@State var task: Task&lt;…&gt;?</code> et <code>.cancel()</code> dans <code>onDisappear</code></td></tr><tr><td><code>GeometryReader</code> enveloppant tout</td><td>Layout cassé, rebuild excessif</td><td>Limiter au besoin précis, préférer <code>containerRelativeFrame</code> (iOS 17)</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Swift 6 mode strict</strong> (<code>SWIFT_STRICT_CONCURRENCY = complete</code>) : activer tôt, corriger les data races à la compilation.</li>
+<li><strong>Previews Xcode 15+</strong> : utiliser <code>#Preview { ... }</code> (nouveau DSL) plutôt que <code>PreviewProvider</code>.</li>
+<li><strong>Swift Testing</strong> (Xcode 16 / iOS 17+) : framework officiel avec <code>@Test</code>, <code>#expect</code>, remplace XCTest pour les nouveaux tests.</li>
+<li><strong>Localization</strong> : utiliser <code>String(localized:)</code> et le catalogue <code>.xcstrings</code> (Xcode 15) plutôt que <code>NSLocalizedString</code>.</li>
+<li><strong>Accessibility</strong> : <code>.accessibilityLabel</code>, <code>.accessibilityHint</code>, tester avec VoiceOver simulator dès le début.</li>
+<li><strong>Memory</strong> : profiler avec Instruments (Leaks + Allocations) avant chaque release ; surveiller les <code>deinit</code> des ViewModels.</li>
 </ul>
 </article>
 </main>

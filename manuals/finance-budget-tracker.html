@@ -96,25 +96,89 @@ cp -r claude-skills-collection/skills/finance-budget-tracker ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Budget Tracker</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Revenus</strong> : liste toutes les sources de revenus mensuels.</li>
-<li><strong>Dépenses fixes</strong> : loyer, abonnements, assurances, crédits…</li>
-<li><strong>Dépenses variables</strong> : alimentation, transport, loisirs, santé…</li>
-<li><strong>Tableau mensuel</strong> :</li>
-</ol>
-<table><thead><tr><th>Catégorie</th><th>Budget prévu</th><th>Dépensé</th><th>Reste</th><th>% utilisé</th></tr></thead><tbody></tbody></table>
-<ol>
-<li><strong>Analyse</strong> : où vont les dépenses ? Quels postes sont sous/sur le budget ?</li>
-<li><strong>Recommandations</strong> : pistes d'ajustement réalistes et concrètes.</li>
-<li><strong>Épargne</strong> : objectif d'épargne et montant possible.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow — étapes numérotées</h2>
+<h3>1. Collecter les revenus nets mensuels</h3>
+<p>Demande toutes les sources <strong>nettes d'impôts</strong> :</p>
 <ul>
-<li>Ne juge pas les dépenses de l'utilisateur.</li>
-<li>Adapte au contexte local (DH, €, FCFA…).</li>
-<li>Reste réaliste — un budget trop serré ne tient pas.</li>
-<li>Ne donne pas de conseil d'investissement.</li>
+<li>Salaire principal (après cotisations/impôts)</li>
+<li>Revenus secondaires : freelance, loyers perçus, dividendes, allocations</li>
+<li>Revenus irréguliers : moyenne sur 3 mois si variable</li>
+</ul>
+<blockquote>Si l'utilisateur ignore son net exact, propose d'estimer à partir du brut :<br><strong>Net ≈ Brut × 0,78</strong> (France) | <strong>Net ≈ Brut × 0,85</strong> (Maroc, charges sociales ~15 %)</blockquote>
+<hr>
+<h3>2. Répertorier les dépenses fixes (non-négociables)</h3>
+<p>Exemples : loyer/hypothèque, crédits, assurances, abonnements internet/mobile, mutuelles, pensions.</p>
+<pre><code>Dépenses fixes totales = _____ DH/€/FCFA</code></pre>
+<p>Critère : si tu peux l'annuler en moins de 30 jours → dépense variable, pas fixe.</p>
+<hr>
+<h3>3. Catégoriser les dépenses variables</h3>
+<p>Regroupe par poste, propose des valeurs par défaut si l'utilisateur n'a pas de chiffres :</p>
+<table><thead><tr><th>Poste</th><th>Fourchette usuelle</th><th>Valeur utilisateur</th></tr></thead><tbody><tr><td>Alimentation (courses)</td><td>15–25 % du revenu</td><td></td></tr><tr><td>Transport</td><td>5–15 %</td><td></td></tr><tr><td>Loisirs / sorties</td><td>5–10 %</td><td></td></tr><tr><td>Habillement</td><td>2–5 %</td><td></td></tr><tr><td>Santé / pharmacie</td><td>2–5 %</td><td></td></tr><tr><td>Divers / imprévus</td><td>3–5 %</td><td></td></tr></tbody></table>
+<hr>
+<h3>4. Construire le tableau de bord mensuel</h3>
+<p>Génère ce tableau complet, adapte la devise :</p>
+<table><thead><tr><th>Catégorie</th><th>Prévu</th><th>Réel</th><th>Écart</th><th>% utilisé</th><th>Statut</th></tr></thead><tbody><tr><td><strong>Revenus nets</strong></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Salaire</td><td>X</td><td></td><td></td><td></td><td></td></tr><tr><td>Autres</td><td>X</td><td></td><td></td><td></td><td></td></tr><tr><td><strong>TOTAL REVENUS</strong></td><td><strong>X</strong></td><td></td><td></td><td></td><td></td></tr><tr><td><strong>Dépenses fixes</strong></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Loyer</td><td>X</td><td></td><td></td><td></td><td></td></tr><tr><td>Crédits</td><td>X</td><td></td><td></td><td></td><td></td></tr><tr><td>Abonnements</td><td>X</td><td></td><td></td><td></td><td></td></tr><tr><td><strong>Dépenses variables</strong></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td>Alimentation</td><td>X</td><td></td><td></td><td></td><td></td></tr><tr><td>Transport</td><td>X</td><td></td><td></td><td></td><td></td></tr><tr><td>Loisirs</td><td>X</td><td></td><td></td><td></td><td></td></tr><tr><td>Imprévus</td><td>X</td><td></td><td></td><td></td><td></td></tr><tr><td><strong>TOTAL DÉPENSES</strong></td><td><strong>X</strong></td><td></td><td></td><td></td><td></td></tr><tr><td><strong>SOLDE MENSUEL</strong></td><td><strong>X</strong></td><td></td><td></td><td></td><td></td></tr><tr><td><strong>Épargne cible</strong></td><td>X</td><td></td><td></td><td></td><td></td></tr></tbody></table>
+<p>Formule clé : <code>SOLDE = REVENUS - DÉPENSES TOTALES - ÉPARGNE</code></p>
+<hr>
+<h3>5. Appliquer une règle de répartition (choix selon profil)</h3>
+<p><strong>Règle 50/30/20</strong> (profil standard) :</p>
+<ul>
+<li>50 % → besoins essentiels (fixes + alimentation + transport)</li>
+<li>30 % → envies / loisirs</li>
+<li>20 % → épargne + remboursement de dettes</li>
+</ul>
+<p><strong>Règle 60/20/20</strong> (profil serré / revenu modeste) :</p>
+<ul>
+<li>60 % → dépenses vitales</li>
+<li>20 % → loisirs</li>
+<li>20 % → épargne</li>
+</ul>
+<p><strong>Règle personnalisée</strong> : si l'utilisateur a un objectif précis (achat immobilier, remboursement crédit), adapte les pourcentages en conséquence.</p>
+<hr>
+<h3>6. Analyser les écarts et signaler les alertes</h3>
+<p>Seuils d'alerte à afficher :</p>
+<table><thead><tr><th>Condition</th><th>Signal</th></tr></thead><tbody><tr><td>% utilisé &gt; 100 % sur un poste</td><td>DÉPASSEMENT</td></tr><tr><td>Solde mensuel &lt; 0</td><td>DEFICIT — action requise</td></tr><tr><td>Épargne &lt; 5 % des revenus</td><td>RISQUE — fonds d'urgence insuffisant</td></tr><tr><td>Dépenses fixes &gt; 60 % du revenu</td><td>RIGIDITÉ BUDGÉTAIRE élevée</td></tr></tbody></table>
+<hr>
+<h3>7. Formuler des recommandations actionnables</h3>
+<p>Structure chaque recommandation ainsi :</p>
+<pre><code>Poste concerné : [Abonnements]
+Constat : 4 abonnements streaming = 55 €/mois
+Action : Garder 1 plateforme principale → économie potentielle : 35 €/mois
+Impact annuel : +420 €</code></pre>
+<p>Priorise par <strong>impact annuel décroissant</strong>. Maximum 5 recommandations pour rester actionnable.</p>
+<hr>
+<h3>8. Définir un objectif d'épargne SMART</h3>
+<pre><code>Objectif : [ex. fonds d'urgence = 3 mois de dépenses]
+Montant cible : _____ DH/€
+Épargne mensuelle : _____ DH/€
+Délai estimé : _____ mois</code></pre>
+<p>Fonds d'urgence minimum recommandé : <strong>3 à 6 mois de dépenses fixes</strong>.</p>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne pas faire :</strong></p>
+<ul>
+<li>Proposer un budget avec 0 % de loisirs → non-tenable, abandon garanti</li>
+<li>Ignorer les dépenses annuelles (assurance auto, vacances) → les ramener en mensuel : <code>annuel ÷ 12</code></li>
+<li>Confondre revenu brut et net dans les calculs</li>
+<li>Donner des conseils d'investissement ou de placement (hors scope)</li>
+<li>Juger ou commenter les choix de dépenses de l'utilisateur</li>
+</ul>
+<p><strong>Pièges courants :</strong></p>
+<ul>
+<li>Les abonnements oubliés (Netflix, Spotify, SaaS divers) : demander de vérifier les relevés des 3 derniers mois</li>
+<li>Les dépenses groupées (cigarettes, café quotidien) : <code>2,5 €/jour × 30 = 75 €/mois</code></li>
+<li>Les crédits à la consommation cachés dans &quot;divers&quot;</li>
+<li>Les virements intra-comptes comptés deux fois comme dépenses</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Revue mensuelle le 1er du mois</strong> : comparer prévu vs réel, ajuster le mois suivant</li>
+<li><strong>Catégories stables</strong> : ne pas changer les catégories en cours d'année pour pouvoir comparer</li>
+<li><strong>Automatiser le suivi</strong> : virement automatique vers l'épargne dès réception du salaire (&quot;pay yourself first&quot;)</li>
+<li><strong>Fonds imprévus</strong> : toujours budgétiser 3–5 % pour les imprévus — sinon le premier incident casse le budget</li>
+<li><strong>Révision annuelle</strong> : recalibrer au changement de situation (augmentation, enfant, déménagement)</li>
+<li><strong>Outils compatibles</strong> : Google Sheets, Notion, YNAB, Bankin', Linxo — le meilleur outil est celui que l'utilisateur utilise réellement</li>
 </ul>
 </article>
 </main>

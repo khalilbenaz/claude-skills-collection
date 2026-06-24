@@ -96,57 +96,238 @@ cp -r claude-skills-collection/skills/dev-llm-integration-guide ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>LLM Integration Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Choix du modèle</strong> — Évaluer selon 4 critères : <strong>Qualité</strong> (GPT-4o, Claude 3.5 Sonnet, Gemini 1.5 Pro pour les tâches complexes ; GPT-4o-mini, Claude 3 Haiku pour les tâches simples), <strong>Coût</strong> (de ~$0.10/1M tokens pour les petits modèles à ~$15/1M pour les premium), <strong>Latence</strong> (Groq &lt; 100ms, Mistral ~300ms, GPT-4 ~1-3s), <strong>Contexte</strong> (Gemini 1M tokens, Claude 200K, GPT-4 128K). Pour du cloud vs local : Ollama/vLLM si données sensibles ou budget contraint, API cloud si pas d'infra et besoin de qualité maximale.</li>
-</ol>
-<ol>
-<li><strong>Setup de l'API</strong> — Configurer les clients officiels avec des bonnes pratiques de sécurité : clés dans variables d'environnement, timeout, retry automatique.</li>
-</ol>
-<p>   ```python    # OpenAI    from openai import OpenAI    client = OpenAI(api_key=os.environ[&quot;OPENAI_API_KEY&quot;], timeout=30, max_retries=3)</p>
-<p>   # Anthropic    from anthropic import Anthropic    client = Anthropic(api_key=os.environ[&quot;ANTHROPIC_API_KEY&quot;])</p>
-<p>   # Ollama (local)    from ollama import Client    client = Client(host=&quot;http://localhost:11434&quot;)</p>
-<p>   # Azure OpenAI    from openai import AzureOpenAI    client = AzureOpenAI(azure_endpoint=os.environ[&quot;AZURE_ENDPOINT&quot;],                         api_key=os.environ[&quot;AZURE_API_KEY&quot;], api_version=&quot;2024-02-01&quot;)    ```</p>
-<ol>
-<li><strong>Gestion des tokens et coûts</strong> — Estimer les coûts avant déploiement avec <code>tiktoken</code> (OpenAI) ou <code>anthropic.count_tokens()</code>. Implémenter une <strong>truncation strategy</strong> pour les longs contextes : résumer les messages anciens, utiliser une sliding window, ou extraire les passages pertinents via RAG. Tracker les coûts par session/utilisateur pour éviter les surprises.</li>
-</ol>
-<p>   ```python    import tiktoken    enc = tiktoken.encoding_for_model(&quot;gpt-4o&quot;)</p>
-<p>   def count_tokens(messages: list) -&gt; int:        return sum(len(enc.encode(m[&quot;content&quot;])) for m in messages)</p>
-<p>   def trim_context(messages: list, max_tokens: int = 100_000) -&gt; list:        while count_tokens(messages) &gt; max_tokens and len(messages) &gt; 2:            messages.pop(1)  # Garder le system prompt        return messages</p>
-<p>   # Coût estimé    cost = count_tokens(messages) * 0.0000025  # GPT-4o: $2.50/1M    ```</p>
-<ol>
-<li><strong>Streaming responses</strong> — Implémenter le streaming pour améliorer l'UX perçue (premier token en ~300ms au lieu d'attendre 5-10s). Côté backend : SSE (Server-Sent Events) ou WebSocket. Côté frontend : afficher les chunks progressivement. Gérer la reconnexion automatique et l'annulation du stream.</li>
-</ol>
-<p>   ```python    # Backend FastAPI + streaming    from fastapi.responses import StreamingResponse</p>
-<p>   async def stream_llm(prompt: str):        async with client.messages.stream(            model=&quot;claude-3-5-sonnet-20241022&quot;, max_tokens=1024,            messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt}]        ) as stream:            async for text in stream.text_stream:                yield f&quot;data: {json.dumps({'text': text})}\n\n&quot;</p>
-<p>   @app.get(&quot;/stream&quot;)    async def endpoint(prompt: str):        return StreamingResponse(stream_llm(prompt), media_type=&quot;text/event-stream&quot;)    ```</p>
-<ol>
-<li><strong>Error handling et résilience</strong> — Gérer les erreurs spécifiques : <code>RateLimitError</code> (attendre et retry avec exponential backoff), <code>ContextLengthExceededError</code> (tronquer), <code>APITimeoutError</code> (retry + fallback), <code>InsufficientQuotaError</code> (alerter). Implémenter un <strong>circuit breaker</strong> et un modèle de <strong>fallback</strong> (GPT-4 → GPT-4o-mini si erreur).</li>
-</ol>
-<p>   ```python    import tenacity</p>
-<p>   @tenacity.retry(        wait=tenacity.wait_exponential(multiplier=1, min=4, max=60),        stop=tenacity.stop_after_attempt(3),        retry=tenacity.retry_if_exception_type(openai.RateLimitError)    )    async def call_with_retry(messages: list, model: str = &quot;gpt-4o&quot;):        try:            return await client.chat.completions.create(model=model, messages=messages)        except openai.ContextLengthExceededError:            return await client.chat.completions.create(                model=&quot;gpt-4o-mini&quot;, messages=trim_context(messages, 50_000)            )    ```</p>
-<ol>
-<li><strong>Caching et optimisation</strong> — <strong>Prompt caching</strong> : Anthropic et OpenAI permettent de cacher le prefixe du prompt (réduction de 90% des coûts sur le contenu caché). <strong>Semantic caching</strong> : GPTCache ou Redis + embeddings pour retourner des réponses cached pour des questions sémantiquement similaires. <strong>Batch API</strong> : OpenAI Batch API permet de traiter des milliers de requêtes async à -50% du coût. <strong>Response caching</strong> : pour les réponses déterministes (temperature=0), cacher en Redis avec TTL.</li>
-</ol>
-<p>   ```python    from gptcache import cache    from gptcache.adapter import openai    cache.init()  # Cache sémantique automatique</p>
-<p>   # Anthropic prompt caching    messages = [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: [        {&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: long_document,         &quot;cache_control&quot;: {&quot;type&quot;: &quot;ephemeral&quot;}},  # Cache ce bloc        {&quot;type&quot;: &quot;text&quot;, &quot;text&quot;: question}    ]}]    ```</p>
-<ol>
-<li><strong>Embeddings et similarity search</strong> — Générer des embeddings avec <code>text-embedding-3-small</code> (OpenAI, 1536 dims, $0.02/1M tokens) ou <code>sentence-transformers/all-MiniLM-L6-v2</code> (local, gratuit). Calculer la similarité cosinus pour le retrieval. Indexer avec FAISS (local) ou pgvector (PostgreSQL) pour la recherche à grande échelle.</li>
-</ol>
-<p>   ```python    from openai import OpenAI    import numpy as np</p>
-<p>   def get_embedding(text: str) -&gt; list[float]:        response = client.embeddings.create(            input=text, model=&quot;text-embedding-3-small&quot;        )        return response.data[0].embedding</p>
-<p>   def cosine_similarity(a: list, b: list) -&gt; float:        a, b = np.array(a), np.array(b)        return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))    ```</p>
-<ol>
-<li><strong>Fine-tuning et adaptation</strong> — Choisir entre <strong>Prompt engineering</strong> (gratuit, rapide, essayer en premier), <strong>RAG</strong> (données dynamiques, knowledge base &gt; 100 docs), <strong>Fine-tuning</strong> (style spécifique, données propriétaires, tâches très répétitives). Pour fine-tuner : préparer 50-500 exemples JSONL (input/output), lancer via <code>openai api fine_tuning.jobs.create</code>, évaluer sur un test set holdout. Coût fine-tuning GPT-4o-mini : ~$0.003/1K tokens de training, puis ~2x le coût d'inférence du modèle de base.</li>
-</ol>
-<p>   ```python    # Préparer les données fine-tuning (JSONL)    training_data = [        {&quot;messages&quot;: [            {&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;Tu es un expert en support client.&quot;},            {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Mon abonnement ne fonctionne pas&quot;},            {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;Je comprends votre frustration...&quot;}        ]}    ]    # Uploader et lancer    file = client.files.create(file=open(&quot;train.jsonl&quot;, &quot;rb&quot;), purpose=&quot;fine-tune&quot;)    job = client.fine_tuning.jobs.create(training_file=file.id, model=&quot;gpt-4o-mini&quot;)    ```</p>
-<h2>Règles</h2>
+<h2>1. Choisir le bon modèle</h2>
+<p><strong>Critères de décision 2026 :</strong></p>
+<table><thead><tr><th>Besoin</th><th>Modèle recommandé</th><th>Prix indicatif</th></tr></thead><tbody><tr><td>Tâches complexes (analyse, code)</td><td>claude-sonnet-4, gpt-4o</td><td>$3–15/1M tokens</td></tr><tr><td>Tâches simples (classification, résumé)</td><td>claude-haiku-3-5, gpt-4o-mini</td><td>$0.10–0.30/1M tokens</td></tr><tr><td>Latence critique &lt; 200 ms</td><td>groq/llama-3.3-70b, mistral-large</td><td>API Groq ~gratuit tier</td></tr><tr><td>Données sensibles / offline</td><td>Ollama + llama-3.3, mistral-nemo</td><td>Gratuit (infra propre)</td></tr><tr><td>Long contexte (&gt; 200K tokens)</td><td>claude-opus-4 (1M), gemini-2.0-flash (1M)</td><td>Variable</td></tr></tbody></table>
+<p><strong>Règle d'or :</strong> essayer d'abord le modèle le moins cher qui atteint la qualité cible. Benchmarker sur 50 exemples réels avant de choisir.</p>
+<hr>
+<h2>2. Setup de l'API</h2>
+<p>Clés dans <code>.env</code> ou secret manager — jamais dans le code.</p>
+<pre><code class="lang-python"># python-dotenv
+from dotenv import load_dotenv; load_dotenv()
+
+# OpenAI
+from openai import OpenAI
+client = OpenAI(
+    api_key=os.environ[&quot;OPENAI_API_KEY&quot;],
+    timeout=30.0,
+    max_retries=3
+)
+
+# Anthropic
+from anthropic import Anthropic
+client = Anthropic(api_key=os.environ[&quot;ANTHROPIC_API_KEY&quot;])
+
+# Ollama (local)
+from ollama import Client
+client = Client(host=&quot;http://localhost:11434&quot;)
+
+# Azure OpenAI
+from openai import AzureOpenAI
+client = AzureOpenAI(
+    azure_endpoint=os.environ[&quot;AZURE_ENDPOINT&quot;],
+    api_key=os.environ[&quot;AZURE_API_KEY&quot;],
+    api_version=&quot;2024-12-01-preview&quot;
+)</code></pre>
+<p><strong>LiteLLM</strong> — une seule interface pour tous les providers :</p>
+<pre><code class="lang-python">from litellm import completion
+response = completion(model=&quot;anthropic/claude-sonnet-4&quot;, messages=messages)
+response = completion(model=&quot;ollama/llama3.3&quot;,           messages=messages)</code></pre>
+<hr>
+<h2>3. Gestion des tokens et des coûts</h2>
+<p>Estimer avant de déployer, mesurer en production.</p>
+<pre><code class="lang-python">import tiktoken
+
+enc = tiktoken.encoding_for_model(&quot;gpt-4o&quot;)
+
+def count_tokens(messages: list[dict]) -&gt; int:
+    return sum(len(enc.encode(m[&quot;content&quot;])) for m in messages)
+
+def trim_context(messages: list[dict], max_tokens: int = 90_000) -&gt; list[dict]:
+    &quot;&quot;&quot;Sliding window : supprime les messages anciens, préserve le system prompt.&quot;&quot;&quot;
+    while count_tokens(messages) &gt; max_tokens and len(messages) &gt; 2:
+        messages.pop(1)
+    return messages
+
+# Budget guard
+def check_budget(tokens_in: int, tokens_out: int, model=&quot;gpt-4o&quot;) -&gt; float:
+    rates = {&quot;gpt-4o&quot;: (2.50, 10.0), &quot;gpt-4o-mini&quot;: (0.15, 0.60)}
+    r_in, r_out = rates.get(model, (3.0, 12.0))
+    return (tokens_in * r_in + tokens_out * r_out) / 1_000_000</code></pre>
+<p><strong>Stratégies de réduction de coûts :</strong></p>
 <ul>
-<li><strong>Ne jamais hardcoder une clé API</strong> : utiliser des variables d'environnement (<code>.env</code> + <code>python-dotenv</code>) ou un secret manager (AWS Secrets Manager, HashiCorp Vault) — une clé exposée peut générer des milliers d'euros de coûts en quelques heures.</li>
-<li><strong>Implémenter le streaming par défaut</strong> : l'UX perçue avec streaming est bien meilleure qu'une attente silencieuse — le premier token en 300ms vaut mieux qu'une réponse complète en 8s.</li>
-<li><strong>Toujours avoir un fallback</strong> : si le modèle premium échoue, fallback sur un modèle moins cher/plus disponible — la résilience est non-négociable en production.</li>
-<li><strong>Tracker les coûts dès le début</strong> : implémenter un compteur de tokens par session/utilisateur avant le lancement — les coûts LLM peuvent exploser sans monitoring.</li>
-<li><strong>Tester avec <code>temperature=0</code></strong> pour les tâches déterministes (extraction, classification) et <code>temperature=0.7-1.0</code> pour la génération créative — ne pas utiliser les defaults sans réflexion.</li>
+<li>Anthropic prompt caching : <code>&quot;cache_control&quot;: {&quot;type&quot;: &quot;ephemeral&quot;}</code> sur les blocs longs (réduction jusqu'à 90 %).</li>
+<li>OpenAI Batch API : <code>-50 %</code> sur les requêtes async non-urgentes.</li>
+<li>Semantic caching (GPTCache / Redis + embeddings) pour les questions répétitives.</li>
+</ul>
+<hr>
+<h2>4. Streaming responses</h2>
+<p>Toujours streamer en production — l'UX perçue est radicalement meilleure.</p>
+<pre><code class="lang-python"># FastAPI + SSE (Server-Sent Events)
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+import anthropic, json
+
+app = FastAPI()
+client = anthropic.Anthropic()
+
+async def stream_claude(prompt: str):
+    with client.messages.stream(
+        model=&quot;claude-sonnet-4&quot;,
+        max_tokens=1024,
+        messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt}]
+    ) as stream:
+        for text in stream.text_stream:
+            yield f&quot;data: {json.dumps({'text': text})}\n\n&quot;
+    yield &quot;data: [DONE]\n\n&quot;
+
+@app.get(&quot;/chat/stream&quot;)
+async def chat_stream(prompt: str):
+    return StreamingResponse(stream_claude(prompt), media_type=&quot;text/event-stream&quot;)</code></pre>
+<pre><code class="lang-typescript">// Frontend TypeScript — consommer le SSE
+const es = new EventSource(`/chat/stream?prompt=${encodeURIComponent(text)}`);
+es.onmessage = (e) =&gt; {
+  if (e.data === &quot;[DONE]&quot;) { es.close(); return; }
+  const { text } = JSON.parse(e.data);
+  output.textContent += text;
+};</code></pre>
+<hr>
+<h2>5. Résilience et error handling</h2>
+<pre><code class="lang-python">from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+import openai
+
+@retry(
+    wait=wait_exponential(multiplier=1, min=4, max=60),
+    stop=stop_after_attempt(4),
+    retry=retry_if_exception_type(openai.RateLimitError)
+)
+async def safe_completion(messages: list, model: str = &quot;gpt-4o&quot;) -&gt; str:
+    try:
+        resp = await client.chat.completions.create(model=model, messages=messages)
+        return resp.choices[0].message.content
+    except openai.ContextLengthExceededError:
+        # Fallback : tronquer + modèle moins cher
+        return await safe_completion(trim_context(messages, 50_000), &quot;gpt-4o-mini&quot;)
+    except openai.APITimeoutError:
+        raise  # tenacity retentera
+
+# Circuit breaker simple avec pybreaker
+from pybreaker import CircuitBreaker
+breaker = CircuitBreaker(fail_max=5, reset_timeout=60)
+
+@breaker
+def call_llm(messages): ...</code></pre>
+<p><strong>Erreurs à gérer obligatoirement :</strong></p>
+<table><thead><tr><th>Erreur</th><th>Action</th></tr></thead><tbody><tr><td><code>RateLimitError</code></td><td>Exponential backoff (4 s → 60 s)</td></tr><tr><td><code>ContextLengthExceededError</code></td><td>Tronquer + fallback modèle light</td></tr><tr><td><code>APITimeoutError</code></td><td>Retry × 3, puis fallback</td></tr><tr><td><code>InsufficientQuotaError</code></td><td>Alerte immédiate, coupe le feature</td></tr><tr><td><code>AuthenticationError</code></td><td>Ne pas retenter — logguer et alerter</td></tr></tbody></table>
+<hr>
+<h2>6. Embeddings et RAG</h2>
+<pre><code class="lang-python">import numpy as np
+from openai import OpenAI
+
+client = OpenAI()
+
+def embed(text: str, model=&quot;text-embedding-3-small&quot;) -&gt; list[float]:
+    return client.embeddings.create(input=text, model=model).data[0].embedding
+
+def cosine_sim(a: list, b: list) -&gt; float:
+    a, b = np.array(a), np.array(b)
+    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+# Bulk embed + index FAISS
+import faiss, pickle
+
+def build_index(docs: list[str]) -&gt; tuple:
+    vectors = np.array([embed(d) for d in docs], dtype=&quot;float32&quot;)
+    index = faiss.IndexFlatIP(vectors.shape[1])  # Inner product = cosine si normalisé
+    faiss.normalize_L2(vectors)
+    index.add(vectors)
+    return index, docs
+
+def retrieve(query: str, index, docs, k=5) -&gt; list[str]:
+    q = np.array([embed(query)], dtype=&quot;float32&quot;)
+    faiss.normalize_L2(q)
+    _, ids = index.search(q, k)
+    return [docs[i] for i in ids[0]]</code></pre>
+<p><strong>Choix du vector store :</strong></p>
+<ul>
+<li><code>FAISS</code> — local, performant, pas de serveur.</li>
+<li><code>pgvector</code> — si vous êtes déjà sur PostgreSQL (extension <code>vector</code>).</li>
+<li><code>Qdrant</code> / <code>Weaviate</code> — service dédié pour &gt; 1M documents.</li>
+</ul>
+<hr>
+<h2>7. Fine-tuning — quand et comment</h2>
+<p><strong>Décision rapide :</strong></p>
+<ul>
+<li>Prompt engineering → essayez toujours en premier (gratuit, rapide).</li>
+<li>RAG → si la knowledge base dépasse 100 documents ou est dynamique.</li>
+<li>Fine-tuning → style très spécifique, tâche ultra-répétitive, ou qualité insuffisante après RAG.</li>
+</ul>
+<p><strong>Préparer le dataset JSONL (min 50 exemples, idéal 200+) :</strong></p>
+<pre><code class="lang-python">import json
+
+examples = [
+    {&quot;messages&quot;: [
+        {&quot;role&quot;: &quot;system&quot;,  &quot;content&quot;: &quot;Tu es un expert support client francophone.&quot;},
+        {&quot;role&quot;: &quot;user&quot;,    &quot;content&quot;: &quot;Mon abonnement ne fonctionne plus.&quot;},
+        {&quot;role&quot;: &quot;assistant&quot;,&quot;content&quot;: &quot;Bonjour, je suis désolé de cet inconvénient. Pouvez-vous me communiquer votre numéro de commande ?&quot;}
+    ]}
+]
+
+with open(&quot;train.jsonl&quot;, &quot;w&quot;) as f:
+    for ex in examples:
+        f.write(json.dumps(ex, ensure_ascii=False) + &quot;\n&quot;)</code></pre>
+<p><strong>Lancer le fine-tuning OpenAI :</strong></p>
+<pre><code class="lang-bash">openai api fine_tuning.jobs.create \
+  -t train.jsonl \
+  --validation-file val.jsonl \
+  --model gpt-4o-mini \
+  --suffix &quot;support-fr&quot;
+
+openai api fine_tuning.jobs.follow -i &lt;job_id&gt;</code></pre>
+<p><strong>Coûts OpenAI 2026 :</strong> ~$0.003/1K tokens training, inférence ×2 le modèle de base.</p>
+<hr>
+<h2>8. Structured outputs</h2>
+<p>Forcer un JSON schéma-valide — évite les parsers fragiles.</p>
+<pre><code class="lang-python">from pydantic import BaseModel
+from openai import OpenAI
+
+class Ticket(BaseModel):
+    priorite: str       # &quot;haute&quot; | &quot;normale&quot; | &quot;basse&quot;
+    categorie: str
+    resume: str
+
+client = OpenAI()
+resp = client.beta.chat.completions.parse(
+    model=&quot;gpt-4o-mini&quot;,
+    messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Mon serveur est en feu depuis 2h !&quot;}],
+    response_format=Ticket
+)
+ticket: Ticket = resp.choices[0].message.parsed
+# ticket.priorite == &quot;haute&quot;</code></pre>
+<p>Anthropic : utiliser <code>tool_use</code> avec un schéma JSON pour le même résultat.</p>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<ul>
+<li><strong>Clé API hardcodée</strong> — une clé exposée sur GitHub peut coûter des milliers d'euros en quelques heures (bots de scan actifs en permanence).</li>
+<li><strong>Pas de timeout</strong> — un appel bloqué indéfiniment plante le thread worker entier. Toujours <code>timeout=30</code>.</li>
+<li><strong>Concaténer le contexte sans limite</strong> — le contexte grossit à chaque tour ; sans <code>trim_context</code>, on dépasse le max et les coûts explosent.</li>
+<li><strong>Pas de fallback</strong> — un seul provider sans fallback = indisponibilité totale si rate limit ou outage.</li>
+<li><strong><code>temperature=1</code> sur des tâches d'extraction</strong> — génère des hallucinations évitables ; utiliser <code>temperature=0</code> pour extraction/classification.</li>
+<li><strong>Fine-tuner avant de tester le prompt engineering</strong> — le fine-tuning est coûteux et long ; un bon prompt résout 80 % des cas.</li>
+<li><strong>Ignorer les coûts en dev</strong> — les tokens de dev s'accumulent ; configurer un budget alert sur la console provider dès le premier jour.</li>
+<li><strong>Stocker les embeddings en mémoire seule</strong> — redémarrage = recalcul de tout. Persister dans pgvector ou FAISS sur disque.</li>
+</ul>
+<hr>
+<h2>Checklist déploiement production</h2>
+<ul>
+<li>[ ] Clés API via secret manager (pas <code>.env</code> en container)</li>
+<li>[ ] Timeout + retry + exponential backoff configurés</li>
+<li>[ ] Fallback modèle défini et testé</li>
+<li>[ ] Budget alert activé sur la console provider</li>
+<li>[ ] Logging des tokens in/out par requête (coût traçable)</li>
+<li>[ ] Streaming activé pour toute interface conversationnelle</li>
+<li>[ ] <code>temperature=0</code> pour les tâches déterministes</li>
+<li>[ ] Tests d'intégration avec mock du provider (éviter les coûts CI)</li>
 </ul>
 </article>
 </main>

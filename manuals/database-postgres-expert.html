@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>database-postgres-expert — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Administration et optimisation PostgreSQL.">
+<meta name="description" content="Administration et optimisation PostgreSQL — diagnostic de performance, indexation, partitioning, tuning mémoire, VACUUM, backup/restore, JSONB, réplication.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🗄️ Bases de données</span>
 <h1 class="skill-title">database-postgres-expert</h1>
-<p class="lead">Administration et optimisation PostgreSQL.</p>
+<p class="lead">Administration et optimisation PostgreSQL — diagnostic de performance, indexation, partitioning, tuning mémoire, VACUUM, backup/restore, JSONB, réplication.</p>
 
 
 
@@ -97,24 +97,136 @@ cp -r claude-skills-collection/skills/database-postgres-expert ~/.claude/skills/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>PostgreSQL Expert</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le contexte</strong> — Identifier la version de PostgreSQL, la configuration actuelle (postgresql.conf), la taille de la base et les workloads (OLTP, OLAP, mixte).</li>
-<li><strong>Diagnostiquer les performances</strong> — Utiliser pg_stat_statements, pg_stat_user_tables, pg_stat_bgwriter et EXPLAIN ANALYZE pour identifier les goulots d'étranglement.</li>
-<li><strong>Optimiser les index</strong> — Recommander les types d'index appropriés (B-tree, GIN, GiST, BRIN) selon les patterns de requêtes et les types de données (JSONB, arrays, full-text).</li>
-<li><strong>Configurer le partitioning</strong> — Proposer une stratégie de partitionnement (range, list, hash) adaptée au volume de données et aux requêtes fréquentes.</li>
-<li><strong>Tuner la configuration</strong> — Ajuster shared_buffers, work_mem, effective_cache_size, maintenance_work_mem et les paramètres WAL selon les ressources disponibles.</li>
-<li><strong>Planifier la maintenance</strong> — Configurer VACUUM, ANALYZE et les routines de maintenance automatique (autovacuum) pour maintenir les performances.</li>
-<li><strong>Gérer les sauvegardes</strong> — Mettre en place une stratégie de backup avec pg_dump, pg_basebackup ou des outils comme pgBackRest, incluant les tests de restauration.</li>
-<li><strong>Documenter les recommandations</strong> — Fournir un plan d'action priorisé avec les gains de performance attendus et les risques associés.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Recueillir le contexte obligatoire</h3>
+<p>Avant toute recommandation, collecter :</p>
+<pre><code class="lang-sql">SELECT version();                         -- version exacte (ex: 16.3)
+SHOW shared_buffers;                      -- mémoire allouée
+SHOW work_mem;
+SELECT pg_size_pretty(pg_database_size(current_database()));</code></pre>
 <ul>
-<li>Toujours vérifier la version de PostgreSQL avant de recommander des fonctionnalités (ex: partitioning déclaratif &gt;= 10, JSONB path queries &gt;= 12).</li>
-<li>Ne jamais recommander de désactiver autovacuum globalement ; ajuster les paramètres par table si nécessaire.</li>
-<li>Toujours inclure EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) pour diagnostiquer les requêtes lentes, jamais EXPLAIN seul.</li>
-<li>Privilégier les index partiels et les index couvrants pour réduire la taille et améliorer les performances.</li>
-<li>Tester toute modification de configuration sur un environnement non-production avant déploiement.</li>
+<li>Workload : OLTP (latence &lt; 5 ms), OLAP (scan massif), mixte ?</li>
+<li>RAM totale du serveur, SSD ou HDD, réplication active ?</li>
 </ul>
+<h3>2. Diagnostiquer les performances</h3>
+<pre><code class="lang-sql">-- Top requêtes lentes (nécessite pg_stat_statements activé)
+SELECT query, calls, mean_exec_time, total_exec_time
+FROM pg_stat_statements
+ORDER BY mean_exec_time DESC LIMIT 20;
+
+-- Tables avec beaucoup de dead tuples (candidat VACUUM)
+SELECT relname, n_dead_tup, n_live_tup,
+       round(n_dead_tup::numeric / nullif(n_live_tup,0)*100,1) AS bloat_pct
+FROM pg_stat_user_tables
+WHERE n_dead_tup &gt; 1000
+ORDER BY n_dead_tup DESC;
+
+-- Requête lente : toujours EXPLAIN complet
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) &lt;votre requête&gt;;</code></pre>
+<p>Critères d'action :</p>
+<table><thead><tr><th>Signal</th><th>Seuil</th><th>Action</th></tr></thead><tbody><tr><td><code>mean_exec_time</code></td><td>&gt; 100 ms</td><td>Analyser plan + index</td></tr><tr><td><code>bloat_pct</code></td><td>&gt; 20 %</td><td>VACUUM FULL ou pg_repack</td></tr><tr><td><code>cache_hit_ratio</code></td><td>&lt; 99 %</td><td>Augmenter <code>shared_buffers</code></td></tr><tr><td><code>seq_scan</code> élevé</td><td>&gt; 1 k/min sur grande table</td><td>Créer un index</td></tr></tbody></table>
+<pre><code class="lang-sql">-- Ratio de cache hits (doit être &gt; 99 %)
+SELECT sum(heap_blks_hit) / nullif(sum(heap_blks_hit + heap_blks_read),0) AS cache_hit_ratio
+FROM pg_statio_user_tables;</code></pre>
+<h3>3. Indexation — choisir le bon type</h3>
+<table><thead><tr><th>Type</th><th>Cas d'usage</th></tr></thead><tbody><tr><td>B-tree (défaut)</td><td><code>=</code>, <code>&lt;</code>, <code>&gt;</code>, <code>BETWEEN</code>, <code>LIKE 'abc%'</code></td></tr><tr><td>GIN</td><td>JSONB, tableaux, full-text (<code>tsvector</code>)</td></tr><tr><td>GiST</td><td>Géométrie, plages (<code>tsrange</code>)</td></tr><tr><td>BRIN</td><td>Colonnes ordonnées naturellement (logs, séries temporelles) — très compact</td></tr><tr><td>Hash</td><td><code>=</code> uniquement, rarement utile vs B-tree</td></tr></tbody></table>
+<pre><code class="lang-sql">-- Index couvrant (évite un heap fetch)
+CREATE INDEX CONCURRENTLY idx_orders_status ON orders(status) INCLUDE (created_at, total);
+
+-- Index partiel (réduit taille, cible les lignes actives)
+CREATE INDEX CONCURRENTLY idx_orders_pending ON orders(created_at)
+WHERE status = 'pending';
+
+-- Index GIN sur JSONB
+CREATE INDEX CONCURRENTLY idx_events_payload ON events USING GIN (payload jsonb_path_ops);</code></pre>
+<p>Toujours utiliser <code>CONCURRENTLY</code> en production (pas de verrou table).</p>
+<h3>4. Partitioning</h3>
+<p>Disponible nativement depuis PG 10 (partitioning déclaratif).</p>
+<pre><code class="lang-sql">-- Partition par range sur une date (OLAP, logs, IoT)
+CREATE TABLE events (
+    id BIGSERIAL,
+    occurred_at TIMESTAMPTZ NOT NULL,
+    payload JSONB
+) PARTITION BY RANGE (occurred_at);
+
+CREATE TABLE events_2025 PARTITION OF events
+    FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
+
+-- Activer partition pruning (défaut ON depuis PG 11)
+SET enable_partition_pruning = on;</code></pre>
+<p>Critères de choix :</p>
+<ul>
+<li><strong>RANGE</strong> : dates, IDs croissants → purge par <code>DROP TABLE partition</code> O(1)</li>
+<li><strong>LIST</strong> : régions, statuts finis (&lt; 50 valeurs)</li>
+<li><strong>HASH</strong> : distribution uniforme sans sémantique de plage</li>
+</ul>
+<h3>5. Tuning mémoire (postgresql.conf)</h3>
+<p>Formules de référence pour un serveur dédié PostgreSQL :</p>
+<pre><code class="lang-ini">shared_buffers = 25% RAM          # ex: 8 GB sur 32 GB
+effective_cache_size = 75% RAM    # indice pour le planner
+work_mem = RAM / (max_connections * 4)  # max 256 MB ; attention aux sorts parallèles
+maintenance_work_mem = 1–4 GB     # VACUUM, CREATE INDEX
+wal_buffers = 64 MB               # ou -1 (auto)
+max_wal_size = 2 GB               # réduit fréquence checkpoints
+checkpoint_completion_target = 0.9
+
+# Parallélisme (PG 9.6+)
+max_parallel_workers_per_gather = 4
+max_parallel_workers = 8</code></pre>
+<blockquote>Appliquer via <code>ALTER SYSTEM SET param = val;</code> + <code>SELECT pg_reload_conf();</code> (sans redémarrage pour la plupart).</blockquote>
+<h3>6. VACUUM et autovacuum</h3>
+<pre><code class="lang-sql">-- Forcer un VACUUM ANALYZE sur une table critique
+VACUUM (ANALYZE, VERBOSE) ma_table;
+
+-- VACUUM FULL (bloquant ! utiliser pg_repack en production)
+-- pg_repack -t ma_table -d mabase
+
+-- Ajuster autovacuum par table (évite de le désactiver globalement)
+ALTER TABLE ma_table SET (
+    autovacuum_vacuum_scale_factor = 0.01,   -- déclencher à 1 % de dead tuples
+    autovacuum_analyze_scale_factor = 0.005,
+    autovacuum_vacuum_cost_delay = 2         -- ms, réduire l'impact I/O
+);</code></pre>
+<h3>7. Backup et restore</h3>
+<pre><code class="lang-bash"># Dump logique (texte / format custom)
+pg_dump -Fc -Z 5 -d mabase -f mabase_$(date +%Y%m%d).dump
+
+# Restore
+pg_restore -d mabase_restore --no-owner --no-acl mabase_20260624.dump
+
+# Backup physique (streaming, recommandé production)
+pg_basebackup -h localhost -U replicator -D /mnt/backup/base -Ft -z -Xs -P
+
+# Point-in-time recovery : activer WAL archivage
+archive_mode = on
+archive_command = 'cp %p /mnt/wal_archive/%f'</code></pre>
+<p>Stratégie recommandée : <code>pgBackRest</code> pour la gestion des WAL, rétention et restore PITR automatisés.</p>
+<h3>8. JSONB — bonnes pratiques 2026</h3>
+<pre><code class="lang-sql">-- Extraire une valeur
+SELECT payload-&gt;&gt;'user_id', payload#&gt;&gt;'{address,city}' FROM events;
+
+-- Filtrer avec index GIN (jsonb_path_ops plus compact)
+SELECT * FROM events WHERE payload @&gt; '{&quot;status&quot;: &quot;active&quot;}';
+
+-- JSON Path (PG 12+)
+SELECT * FROM events WHERE payload @? '$.items[*] ? (@.price &gt; 100)';
+
+-- Agréger du JSONB
+SELECT jsonb_agg(payload) FROM events WHERE occurred_at &gt; now() - interval '1 day';</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Alternative</th></tr></thead><tbody><tr><td><code>SELECT *</code> sur grande table</td><td>Scan complet + overhead réseau</td><td>Sélectionner les colonnes nécessaires</td></tr><tr><td>Index sur colonne de faible cardinalité (<code>boolean</code>)</td><td>Index inutilisé, overhead write</td><td>Index partiel ou pas d'index</td></tr><tr><td><code>VACUUM FULL</code> en production sans pg_repack</td><td>Lock exclusif, downtime</td><td><code>pg_repack</code> (online)</td></tr><tr><td>Désactiver <code>autovacuum</code> globalement</td><td>Transaction ID wraparound (DB forcée read-only)</td><td>Ajuster <code>autovacuum_*</code> par table</td></tr><tr><td><code>work_mem</code> trop élevé × max_connections</td><td>OOM</td><td>Calculer par opération, pas par connexion</td></tr><tr><td><code>EXPLAIN</code> sans <code>ANALYZE</code></td><td>Plan estimé, pas réel</td><td><code>EXPLAIN (ANALYZE, BUFFERS)</code> toujours</td></tr><tr><td>Connexions persistantes non poolées</td><td>Overhead process, verrous</td><td>PgBouncer en mode transaction pooling</td></tr><tr><td>Index sans <code>CONCURRENTLY</code> en production</td><td>Lock table bloquant les écritures</td><td>Toujours <code>CREATE INDEX CONCURRENTLY</code></td></tr><tr><td>Ignorer <code>pg_stat_replication</code> en réplication</td><td>Lag non détecté</td><td>Monitorer <code>write_lag</code>, <code>flush_lag</code>, <code>replay_lag</code></td></tr></tbody></table>
+<h2>Checklist opérationnelle rapide</h2>
+<pre><code class="lang-sql">-- Taille des tables et indexes
+SELECT relname, pg_size_pretty(pg_total_relation_size(relid)) AS total,
+       pg_size_pretty(pg_relation_size(relid)) AS table_only
+FROM pg_stat_user_tables ORDER BY pg_total_relation_size(relid) DESC LIMIT 20;
+
+-- Locks actifs suspects
+SELECT pid, wait_event_type, wait_event, state, left(query,80)
+FROM pg_stat_activity WHERE wait_event IS NOT NULL AND state != 'idle';
+
+-- Vérifier le lag de réplication
+SELECT client_addr, write_lag, flush_lag, replay_lag FROM pg_stat_replication;</code></pre>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

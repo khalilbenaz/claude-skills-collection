@@ -96,38 +96,191 @@ cp -r claude-skills-collection/skills/dev-vue-guide ~/.claude/skills/</div><butt
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide Vue.js 3</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le besoin</strong> — Identifier le type d'application (SPA, SSR avec Nuxt, bibliothèque de composants) et déterminer l'architecture adaptée : Composition API avec <code>&lt;script setup&gt;</code>, gestion d'état avec Pinia, et stratégie de routing.</li>
-</ol>
-<ol>
-<li><strong>Structurer le projet</strong> — Organiser l'arborescence avec les conventions Vue : <code>src/components/</code> pour les composants réutilisables, <code>src/views/</code> pour les pages, <code>src/composables/</code> pour la logique partagée, <code>src/stores/</code> pour Pinia, et <code>src/router/</code> pour la configuration des routes.</li>
-</ol>
-<ol>
-<li><strong>Créer les composants réactifs</strong> — Développer les composants avec <code>&lt;script setup lang=&quot;ts&quot;&gt;</code>, utiliser <code>defineProps</code> et <code>defineEmits</code> pour l'API publique, <code>ref()</code> et <code>reactive()</code> pour l'état local, et <code>computed()</code> pour les valeurs dérivées.</li>
-</ol>
-<ol>
-<li><strong>Implémenter la gestion d'état avec Pinia</strong> — Créer les stores Pinia avec <code>defineStore()</code>, structurer les states, getters et actions. Utiliser <code>storeToRefs()</code> pour la déstructuration réactive et les plugins Pinia pour la persistance ou le logging.</li>
-</ol>
-<ol>
-<li><strong>Configurer Vue Router</strong> — Définir les routes avec lazy loading via <code>() =&gt; import()</code>, implémenter les navigation guards (<code>beforeEach</code>, <code>beforeRouteEnter</code>), gérer les routes imbriquées, les paramètres dynamiques et les meta fields pour l'authentification.</li>
-</ol>
-<ol>
-<li><strong>Gérer la réactivité avancée</strong> — Utiliser <code>watch()</code> et <code>watchEffect()</code> pour les effets de bord, <code>provide/inject</code> pour l'injection de dépendances, <code>toRef()</code> et <code>toRefs()</code> pour la conversion, et <code>shallowRef()</code> pour l'optimisation des gros objets.</li>
-</ol>
-<ol>
-<li><strong>Intégrer les composables</strong> — Extraire la logique réutilisable dans des composables (<code>useAuth</code>, <code>useFetch</code>, <code>useForm</code>), respecter la convention de nommage <code>use*</code>, et gérer correctement le cycle de vie avec <code>onMounted</code>, <code>onUnmounted</code>.</li>
-</ol>
-<ol>
-<li><strong>Tester et optimiser</strong> — Écrire des tests avec Vitest et Vue Test Utils, utiliser <code>defineAsyncComponent()</code> pour le code splitting, activer le tree-shaking, et profiler les performances avec Vue DevTools.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Scaffolding du projet</h2>
+<pre><code class="lang-bash"># Nouveau projet Vite + Vue 3 + TS
+npm create vite@latest mon-app -- --template vue-ts
+cd mon-app &amp;&amp; npm install
+
+# Ajout immédiat des dépendances core
+npm install pinia vue-router@4
+npm install -D vitest @vue/test-utils jsdom</code></pre>
+<p><strong>Arborescence cible :</strong></p>
+<pre><code>src/
+  components/   # composants réutilisables (atomiques)
+  views/        # pages associées à une route
+  composables/  # logique partagée (use*)
+  stores/       # stores Pinia
+  router/       # index.ts + guards
+  types/        # interfaces TS globales</code></pre>
+<hr>
+<h2>2. Composants — Script Setup + TypeScript</h2>
+<p>Toujours <code>&lt;script setup lang=&quot;ts&quot;&gt;</code>. Ne jamais utiliser l'Options API dans du code nouveau.</p>
+<pre><code class="lang-vue">&lt;script setup lang=&quot;ts&quot;&gt;
+import { ref, computed } from 'vue'
+
+interface Props {
+  title: string
+  count?: number
+}
+
+const props = withDefaults(defineProps&lt;Props&gt;(), { count: 0 })
+const emit = defineEmits&lt;{ increment: [value: number] }&gt;()
+
+const doubled = computed(() =&gt; props.count * 2)
+
+function handleClick() {
+  emit('increment', props.count + 1)
+}
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;button @click=&quot;handleClick&quot;&gt;{{ title }} — {{ doubled }}&lt;/button&gt;
+&lt;/template&gt;</code></pre>
+<p><strong>Critères <code>ref</code> vs <code>reactive</code> :</strong></p>
+<table><thead><tr><th>Cas</th><th>Outil</th></tr></thead><tbody><tr><td>Valeur primitive ou objet unique interchangeable</td><td><code>ref()</code></td></tr><tr><td>Objet complexe multi-propriétés</td><td><code>reactive()</code></td></tr><tr><td>Gros objet immuable côté UI</td><td><code>shallowRef()</code></td></tr><tr><td>Prop réactive transmise à un composable</td><td><code>toRef(props, 'key')</code></td></tr></tbody></table>
+<hr>
+<h2>3. Pinia — Gestion d'état</h2>
+<pre><code class="lang-ts">// src/stores/user.ts
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+
+export const useUserStore = defineStore('user', () =&gt; {
+  const name = ref('')
+  const isAdmin = computed(() =&gt; name.value.startsWith('admin_'))
+
+  async function fetchUser(id: string) {
+    const data = await api.get(`/users/${id}`)
+    name.value = data.name
+  }
+
+  return { name, isAdmin, fetchUser }
+})</code></pre>
+<pre><code class="lang-vue">&lt;script setup lang=&quot;ts&quot;&gt;
+import { storeToRefs } from 'pinia'
+import { useUserStore } from '@/stores/user'
+
+const store = useUserStore()
+const { name, isAdmin } = storeToRefs(store)  // réactivité conservée
+// store.fetchUser — actions appelées directement, sans storeToRefs
+&lt;/script&gt;</code></pre>
+<p><strong>Persistance (pinia-plugin-persistedstate) :</strong></p>
+<pre><code class="lang-ts">// main.ts
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
+pinia.use(piniaPluginPersistedstate)
+
+// dans le store : ajouter { persist: true } comme 3e argument de defineStore</code></pre>
+<hr>
+<h2>4. Vue Router — Configuration et Guards</h2>
+<pre><code class="lang-ts">// src/router/index.ts
+import { createRouter, createWebHistory } from 'vue-router'
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/dashboard',
+      component: () =&gt; import('@/views/Dashboard.vue'), // lazy load obligatoire
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/user/:id',
+      component: () =&gt; import('@/views/UserProfile.vue'),
+      props: true,  // injecte :id comme prop
+    },
+  ],
+})
+
+router.beforeEach((to) =&gt; {
+  const auth = useAuthStore()
+  if (to.meta.requiresAuth &amp;&amp; !auth.isLoggedIn) {
+    return { name: 'Login', query: { redirect: to.fullPath } }
+  }
+})</code></pre>
+<hr>
+<h2>5. Composables — Extraction de logique</h2>
+<p>Convention : fichier <code>src/composables/useXxx.ts</code>, retour d'un objet de refs.</p>
+<pre><code class="lang-ts">// src/composables/useFetch.ts
+import { ref } from 'vue'
+
+export function useFetch&lt;T&gt;(url: string) {
+  const data = ref&lt;T | null&gt;(null)
+  const error = ref&lt;Error | null&gt;(null)
+  const loading = ref(false)
+
+  async function execute() {
+    loading.value = true
+    try {
+      const res = await fetch(url)
+      data.value = await res.json()
+    } catch (e) {
+      error.value = e as Error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return { data, error, loading, execute }
+}</code></pre>
+<hr>
+<h2>6. Réactivité avancée</h2>
+<pre><code class="lang-ts">// watch avec cleanup
+watch(userId, async (newId, _, onCleanup) =&gt; {
+  const controller = new AbortController()
+  onCleanup(() =&gt; controller.abort())
+  data.value = await fetchUser(newId, controller.signal)
+})
+
+// watchEffect — recalcul automatique sur toute dépendance lue
+watchEffect(() =&gt; {
+  document.title = `${route.name} | ${appName.value}`
+})
+
+// provide / inject (typage fort)
+const ThemeKey: InjectionKey&lt;Ref&lt;string&gt;&gt; = Symbol('theme')
+provide(ThemeKey, ref('dark'))
+const theme = inject(ThemeKey)  // Ref&lt;string&gt; | undefined</code></pre>
+<hr>
+<h2>7. Performance et code splitting</h2>
+<pre><code class="lang-ts">// Composant asynchrone avec loader/erreur
+const HeavyChart = defineAsyncComponent({
+  loader: () =&gt; import('@/components/HeavyChart.vue'),
+  loadingComponent: Spinner,
+  errorComponent: ErrorMsg,
+  delay: 200,
+  timeout: 5000,
+})</code></pre>
 <ul>
-<li>Utilise systématiquement <code>&lt;script setup&gt;</code> avec TypeScript et la Composition API plutôt que l'Options API.</li>
-<li>Déstructure toujours les stores Pinia avec <code>storeToRefs()</code> pour conserver la réactivité.</li>
-<li>Évite les mutations directes du state en dehors des actions Pinia — garde la logique métier dans les stores.</li>
-<li>Privilégie les composables pour la logique partagée plutôt que les mixins, qui sont dépréciés en Vue 3.</li>
-<li>Définis toujours les props avec des types TypeScript explicites via <code>defineProps&lt;T&gt;()</code> pour garantir la sécurité de type.</li>
+<li><code>v-once</code> sur contenus statiques coûteux.</li>
+<li><code>v-memo=&quot;[dep1, dep2]&quot;</code> pour listes avec rendu conditionnel lourd.</li>
+<li>Éviter les watchers larges sur <code>reactive()</code> — préférer des <code>watch</code> ciblés.</li>
+</ul>
+<hr>
+<h2>8. Tests avec Vitest + Vue Test Utils</h2>
+<pre><code class="lang-ts">// src/components/__tests__/Counter.spec.ts
+import { mount } from '@vue/test-utils'
+import Counter from '../Counter.vue'
+
+test('émet increment au clic', async () =&gt; {
+  const wrapper = mount(Counter, { props: { count: 3 } })
+  await wrapper.find('button').trigger('click')
+  expect(wrapper.emitted('increment')?.[0]).toEqual([4])
+})</code></pre>
+<pre><code class="lang-bash">npx vitest run          # one-shot CI
+npx vitest --ui         # interface graphique</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Problème</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Déstructuration directe d'un store</td><td>perte de réactivité</td><td><code>storeToRefs()</code></td></tr><tr><td>Mutation directe du state Pinia hors action</td><td>incohérence</td><td>passer par une action</td></tr><tr><td>Utilisation des mixins</td><td>conflits, opacité</td><td>composables <code>use*</code></td></tr><tr><td><code>reactive()</code> sur une ref</td><td>double-wrapping</td><td>utiliser <code>ref()</code> seul</td></tr><tr><td>Props muables localement</td><td>violation one-way</td><td>emit + event handler côté parent</td></tr><tr><td>Import de composants lourds sans lazy</td><td>bundle trop gros</td><td><code>defineAsyncComponent</code> ou <code>() =&gt; import()</code></td></tr><tr><td><code>watch</code> sans nettoyage sur fetch</td><td>race condition</td><td><code>onCleanup</code> + AbortController</td></tr><tr><td><code>v-for</code> sans <code>:key</code> stable</td><td>rerenders erratiques</td><td>toujours <code>:key</code> sur id métier</td></tr></tbody></table>
+<hr>
+<h2>Checklist qualité (2026)</h2>
+<ul>
+<li>[ ] <code>&lt;script setup lang=&quot;ts&quot;&gt;</code> sur tous les composants</li>
+<li>[ ] Props typées via <code>defineProps&lt;Interface&gt;()</code></li>
+<li>[ ] Emits déclarés avec <code>defineEmits&lt;{ event: [type] }&gt;()</code></li>
+<li>[ ] Lazy loading sur toutes les routes</li>
+<li>[ ] Stores Pinia en setup stores (pas la syntaxe objet)</li>
+<li>[ ] Composables couverts par des tests unitaires</li>
+<li>[ ] <code>defineAsyncComponent</code> pour les composants &gt; 20 KB</li>
+<li>[ ] Vue DevTools activé en dev pour profiler les rerenders</li>
 </ul>
 </article>
 </main>

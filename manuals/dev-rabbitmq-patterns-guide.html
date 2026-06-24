@@ -96,43 +96,58 @@ cp -r claude-skills-collection/skills/dev-rabbitmq-patterns-guide ~/.claude/skil
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide des Patterns RabbitMQ</h1>
-<h2>Workflow</h2>
+<h2>Workflow en 4 étapes</h2>
 <ol>
-<li><strong>Identifier le pattern</strong> : point-à-point, pub/sub, routing, topics ou RPC.</li>
-<li><strong>Concevoir la topologie</strong> : exchanges, queues, bindings et routing keys.</li>
-<li><strong>Implémenter</strong> : producteur, consommateur et gestion des erreurs.</li>
-<li><strong>Fiabiliser</strong> : dead letter, retry, idempotence et monitoring.</li>
+<li><strong>Identifier le pattern</strong> : point-à-point (work queue), pub/sub (fanout), routing ciblé (direct/topic), RPC ou Saga.</li>
+<li><strong>Concevoir la topologie</strong> : choisir le type d'exchange, nommer les queues et les routing keys, prévoir les DLX dès le départ.</li>
+<li><strong>Implémenter</strong> : producteur avec confirm mode, consumer avec ACK manuel et idempotence.</li>
+<li><strong>Fiabiliser</strong> : configurer retry + dead letter, activer la persistence, mettre en place le monitoring.</li>
 </ol>
-<h2>Types d'exchanges</h2>
-<table><thead><tr><th>Exchange</th><th>Routing</th><th>Usage</th></tr></thead><tbody><tr><td><strong>Direct</strong></td><td>Routing key exacte</td><td>Commandes ciblées, work queues</td></tr><tr><td><strong>Fanout</strong></td><td>Broadcast à toutes les queues</td><td>Notifications, événements globaux</td></tr><tr><td><strong>Topic</strong></td><td>Pattern matching (<code>*.order.#</code>)</td><td>Routing flexible par catégorie</td></tr><tr><td><strong>Headers</strong></td><td>Attributs des headers</td><td>Routing complexe multi-critères</td></tr></tbody></table>
+<hr>
+<h2>Critères de choix d'exchange</h2>
+<table><thead><tr><th>Exchange</th><th>Routing</th><th>Choisir quand…</th></tr></thead><tbody><tr><td><strong>Direct</strong></td><td>Routing key exacte</td><td>File de commandes ciblées, work queues</td></tr><tr><td><strong>Fanout</strong></td><td>Broadcast toutes queues</td><td>Notification multi-services, cache invalidation</td></tr><tr><td><strong>Topic</strong></td><td>Pattern <code>*.order.#</code></td><td>Routing par catégorie/domaine flexible</td></tr><tr><td><strong>Headers</strong></td><td>Attributs headers</td><td>Critères multiples sans modifier la routing key</td></tr></tbody></table>
+<p>Règle : si tu te retrouves à créer plusieurs Direct exchanges pour le même producteur, passe en Topic.</p>
+<hr>
 <h2>Patterns fondamentaux</h2>
-<h3>Work Queue (répartition de charge)</h3>
-<pre><code>Producer → [Queue] → Consumer 1
-                   → Consumer 2
-                   → Consumer 3</code></pre>
+<h3>1. Work Queue (répartition de charge)</h3>
+<pre><code>Producer → [exchange direct] → [queue:jobs] → Consumer 1
+                                             → Consumer 2</code></pre>
+<pre><code class="lang-bash"># CLI — déclarer la queue durable
+rabbitmqadmin declare queue name=jobs durable=true arguments='{&quot;x-dead-letter-exchange&quot;:&quot;dlx.jobs&quot;}'</code></pre>
+<pre><code class="lang-csharp">// Producteur : confirm mode obligatoire pour ne pas perdre de messages
+var factory = new ConnectionFactory { HostName = &quot;localhost&quot; };
+using var connection = await factory.CreateConnectionAsync();
+using var channel = await connection.CreateChannelAsync();
+
+await channel.QueueDeclareAsync(&quot;jobs&quot;, durable: true, exclusive: false, autoDelete: false);
+await channel.ConfirmSelectAsync();
+
+var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload));
+var props = new BasicProperties { Persistent = true };
+await channel.BasicPublishAsync(&quot;&quot;, &quot;jobs&quot;, props, body);
+await channel.WaitForConfirmsOrDieAsync(); // lève une exception si NACK</code></pre>
 <ul>
-<li>Round-robin par défaut entre les consumers</li>
-<li>Utiliser <code>prefetchCount = 1</code> pour une répartition équitable</li>
-<li>ACK manuel après traitement réussi</li>
+<li><code>prefetchCount = 1</code> : chaque consumer reçoit un message à la fois → répartition équitable.</li>
+<li>ACK manuel après traitement réussi ; NACK + requeue=false si l'erreur est définitive.</li>
 </ul>
-<h3>Pub/Sub (diffusion d'événements)</h3>
-<pre><code>Producer → [Fanout Exchange] → Queue A → Consumer A
-                             → Queue B → Consumer B
-                             → Queue C → Consumer C</code></pre>
+<h3>2. Pub/Sub (fanout, diffusion d'événements)</h3>
+<pre><code>Producer → [exchange:events.fanout] → [queue:svc-A] → Consumer A
+                                    → [queue:svc-B] → Consumer B</code></pre>
+<p>Chaque service crée sa propre queue et la bind à l'exchange. L'exchange copie le message vers toutes les queues liées.</p>
+<h3>3. Topic Routing</h3>
+<pre><code>Producer → [exchange:domain.topic]
+    routing key &quot;order.created.fr&quot;  → queue:orders-fr
+    routing key &quot;payment.failed.*&quot;  → queue:alerts
+    routing key &quot;#.audit&quot;           → queue:audit-all</code></pre>
 <ul>
-<li>Chaque consumer a sa propre queue</li>
-<li>L'exchange copie le message vers toutes les queues liées</li>
+<li><code>*</code> = exactement un mot.</li>
+<li><code>#</code> = zéro ou plusieurs mots.</li>
 </ul>
-<h3>Topic Routing</h3>
-<pre><code>Producer → [Topic Exchange] → order.created.* → Queue Orders
-                            → payment.*.failed → Queue Alerts
-                            → #.audit → Queue Audit</code></pre>
-<ul>
-<li><code>*</code> = exactement un mot</li>
-<li><code>#</code> = zéro ou plusieurs mots</li>
-</ul>
-<h2>Implémentation avec MassTransit (.NET)</h2>
-<h3>Configuration</h3>
+<h3>4. RPC (requête / réponse synchrone via RabbitMQ)</h3>
+<p>À éviter si possible (couplage temporel). Préférer un pattern saga asynchrone. Si nécessaire : le producteur envoie dans une queue avec <code>reply_to</code> = queue de réponse temporaire et <code>correlation_id</code> = UUID. Le consumer publie la réponse dans <code>reply_to</code>.</p>
+<hr>
+<h2>Intégration MassTransit (.NET)</h2>
+<h3>Configuration complète</h3>
 <pre><code class="lang-csharp">builder.Services.AddMassTransit(x =&gt;
 {
     x.AddConsumer&lt;OrderCreatedConsumer&gt;();
@@ -144,15 +159,25 @@ cp -r claude-skills-collection/skills/dev-rabbitmq-patterns-guide ~/.claude/skil
         {
             h.Username(&quot;guest&quot;);
             h.Password(&quot;guest&quot;);
+            // Heartbeat pour détecter les connexions mortes
+            h.RequestedHeartbeat = TimeSpan.FromSeconds(30);
         });
 
         cfg.ReceiveEndpoint(&quot;order-service&quot;, e =&gt;
         {
             e.PrefetchCount = 16;
+
+            // Retry immédiat (erreurs réseau, DB transitoire)
             e.UseMessageRetry(r =&gt; r.Intervals(
                 TimeSpan.FromSeconds(1),
                 TimeSpan.FromSeconds(5),
                 TimeSpan.FromSeconds(30)));
+
+            // Relivraison différée (dépendance externe lente)
+            e.UseDelayedRedelivery(r =&gt; r.Intervals(
+                TimeSpan.FromMinutes(1),
+                TimeSpan.FromMinutes(5),
+                TimeSpan.FromMinutes(30)));
 
             e.ConfigureConsumer&lt;OrderCreatedConsumer&gt;(context);
         });
@@ -160,7 +185,7 @@ cp -r claude-skills-collection/skills/dev-rabbitmq-patterns-guide ~/.claude/skil
         cfg.ConfigureEndpoints(context);
     });
 });</code></pre>
-<h3>Consumer</h3>
+<h3>Consumer idempotent</h3>
 <pre><code class="lang-csharp">public class OrderCreatedConsumer : IConsumer&lt;OrderCreated&gt;
 {
     private readonly IOrderRepository _repo;
@@ -169,75 +194,81 @@ cp -r claude-skills-collection/skills/dev-rabbitmq-patterns-guide ~/.claude/skil
 
     public async Task Consume(ConsumeContext&lt;OrderCreated&gt; context)
     {
-        var message = context.Message;
-
-        // Idempotence : vérifier si déjà traité
-        if (await _repo.ExistsAsync(message.OrderId))
+        // Idempotence : court-circuit si déjà traité
+        if (await _repo.ExistsAsync(context.Message.OrderId))
             return;
 
-        await _repo.ProcessOrder(message);
+        await _repo.ProcessOrderAsync(context.Message);
 
-        // Publier un événement de suite
+        // Publier l'événement suivant dans la même transaction logique
         await context.Publish(new OrderProcessed
         {
-            OrderId = message.OrderId,
+            OrderId = context.Message.OrderId,
             ProcessedAt = DateTime.UtcNow
         });
     }
 }</code></pre>
-<h3>Messages</h3>
-<pre><code class="lang-csharp">// Événement (passé, notification)
+<h3>Contrats de messages</h3>
+<pre><code class="lang-csharp">// Événement : passé accompli, immutable, versioable
 public record OrderCreated
 {
     public Guid OrderId { get; init; }
-    public string CustomerId { get; init; }
+    public string CustomerId { get; init; } = default!;
     public decimal Amount { get; init; }
     public DateTime CreatedAt { get; init; }
+    public int SchemaVersion { get; init; } = 1; // versionning explicite
 }
 
-// Commande (impératif, action)
+// Commande : impératif, un seul consommateur cible
 public record ProcessPayment
 {
     public Guid PaymentId { get; init; }
     public Guid OrderId { get; init; }
     public decimal Amount { get; init; }
 }</code></pre>
+<hr>
 <h2>Dead Letter &amp; Retry</h2>
-<h3>Stratégie de retry progressive</h3>
+<h3>Flux de retry recommandé</h3>
 <pre><code>Message → Queue principale → Consumer
-              ↓ (échec)
-         Queue retry (delay 5s) → retry
-              ↓ (échec x3)
-         Queue retry (delay 30s) → retry
-              ↓ (échec x3)
-         Dead Letter Queue → alerte + investigation manuelle</code></pre>
-<h3>Configuration Dead Letter</h3>
-<pre><code class="lang-csharp">cfg.ReceiveEndpoint(&quot;order-processing&quot;, e =&gt;
-{
-    // Retry immédiat (erreurs transitoires)
-    e.UseMessageRetry(r =&gt; r.Intervals(
-        TimeSpan.FromSeconds(1),
-        TimeSpan.FromSeconds(5),
-        TimeSpan.FromSeconds(30)));
+              ↓ NACK (erreur transitoire)
+         Retry immédiat x3 (1s / 5s / 30s)
+              ↓ encore en échec
+         Delayed redelivery x3 (1min / 5min / 30min)
+              ↓ encore en échec
+         Dead Letter Queue (DLQ) → alerte Slack/PagerDuty</code></pre>
+<h3>Déclarer la DLX manuellement</h3>
+<pre><code class="lang-bash"># Exchange DLX + queue DLQ
+rabbitmqadmin declare exchange name=dlx.orders type=direct durable=true
+rabbitmqadmin declare queue name=dlq.orders durable=true
+rabbitmqadmin declare binding source=dlx.orders destination=dlq.orders routing_key=orders
 
-    // Redelivery (erreurs plus longues)
-    e.UseDelayedRedelivery(r =&gt; r.Intervals(
-        TimeSpan.FromMinutes(1),
-        TimeSpan.FromMinutes(5),
-        TimeSpan.FromMinutes(30)));
-
-    // Après tous les retries → dead letter
-    e.ConfigureConsumer&lt;OrderConsumer&gt;(context);
-});</code></pre>
-<h2>Monitoring</h2>
-<table><thead><tr><th>Métrique</th><th>Seuil d'alerte</th><th>Action</th></tr></thead><tbody><tr><td>Queue depth</td><td>&gt; 10 000 messages</td><td>Ajouter des consumers</td></tr><tr><td>Consumer lag</td><td>&gt; 5 minutes</td><td>Vérifier la performance</td></tr><tr><td>Dead letter count</td><td>&gt; 0</td><td>Investiguer les échecs</td></tr><tr><td>Connection drops</td><td>&gt; 1/heure</td><td>Vérifier le réseau</td></tr><tr><td>Memory usage</td><td>&gt; 80%</td><td>Purger ou ajouter des nœuds</td></tr></tbody></table>
-<h2>Règles</h2>
+# Queue principale avec DLX attaché
+rabbitmqadmin declare queue name=orders durable=true \
+  arguments='{&quot;x-dead-letter-exchange&quot;:&quot;dlx.orders&quot;,&quot;x-message-ttl&quot;:86400000}'</code></pre>
+<hr>
+<h2>Monitoring &amp; opérations</h2>
+<table><thead><tr><th>Métrique</th><th>Seuil d'alerte</th><th>Action corrective</th></tr></thead><tbody><tr><td>Queue depth</td><td>&gt; 10 000</td><td>Ajouter des consumers / investiguer lenteur</td></tr><tr><td>Consumer lag</td><td>&gt; 5 min</td><td>Profiler le consumer, check DB</td></tr><tr><td>DLQ count</td><td>&gt; 0</td><td>Analyser le message en erreur, rejouer si corrigé</td></tr><tr><td>Connection drops</td><td>&gt; 1/h</td><td>Vérifier heartbeat, pare-feu, timeouts load balancer</td></tr><tr><td>Memory usage broker</td><td>&gt; 80 %</td><td>Activer flow control, purger ou scaler</td></tr><tr><td>Unacked messages</td><td>Stables &gt; 5 min</td><td>Consumer bloqué ou crash → redémarrer</td></tr></tbody></table>
+<pre><code class="lang-bash"># Rejouer les messages de la DLQ vers la queue principale (shovel one-shot)
+rabbitmqctl set_parameter shovel replay \
+  '{&quot;src-protocol&quot;:&quot;amqp091&quot;,&quot;src-uri&quot;:&quot;amqp://&quot;,&quot;src-queue&quot;:&quot;dlq.orders&quot;,
+    &quot;dest-protocol&quot;:&quot;amqp091&quot;,&quot;dest-uri&quot;:&quot;amqp://&quot;,&quot;dest-queue&quot;:&quot;orders&quot;,
+    &quot;src-delete-after&quot;:&quot;queue-length&quot;}'</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>ACK avant traitement</td><td>Perte de messages en cas de crash</td><td>ACK uniquement après persistance réussie</td></tr><tr><td>Queue non durable</td><td>Messages perdus au redémarrage broker</td><td><code>durable=true</code> + messages persistent</td></tr><tr><td>Pas de DLX</td><td>Messages disparus silencieusement</td><td>Toujours lier une DLX à chaque queue</td></tr><tr><td>Consumer non idempotent</td><td>Traitements en double après retry</td><td>Clé d'idempotence en base ou cache distribué</td></tr><tr><td>Trop de prefetchCount</td><td>Consumer submergé, mémoire OOM</td><td>Commencer à 1, augmenter prudemment</td></tr><tr><td>Exchange fanout pour commandes</td><td>Plusieurs services traitent la même commande</td><td>Fanout = événements uniquement ; commande → direct</td></tr><tr><td>Stocker l'état dans le message</td><td>Messages géants, versioning cauchemar</td><td>Ne passer que des IDs, requêter la source</td></tr><tr><td>RPC via RabbitMQ à grande échelle</td><td>Couplage temporel, timeouts en cascade</td><td>Remplacer par saga / choreography asynchrone</td></tr><tr><td>Pas de heartbeat configuré</td><td>Connexions zombies non détectées</td><td><code>RequestedHeartbeat = 30s</code> côté client</td></tr><tr><td>Connexion partagée entre threads</td><td>Race conditions, channel errors</td><td>Une connexion par process, un channel par thread</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Chaque consumer doit être <strong>idempotent</strong>.</li>
-<li>Toujours configurer une dead letter queue.</li>
-<li>ACK manuel uniquement après traitement réussi.</li>
-<li>Les événements sont au passé (<code>OrderCreated</code>), les commandes à l'impératif (<code>ProcessPayment</code>).</li>
-<li>Ne jamais stocker d'état dans les messages — utiliser des IDs et requêter la base.</li>
+<li><strong>Quorum queues</strong> en production : remplacent les mirrored queues (dépréciées) pour la haute disponibilité.</li>
+</ul>
+<p>  ```bash   rabbitmqadmin declare queue name=orders durable=true \     arguments='{&quot;x-queue-type&quot;:&quot;quorum&quot;,&quot;x-dead-letter-exchange&quot;:&quot;dlx.orders&quot;}'   ```</p>
+<ul>
+<li><strong>Lazy queues</strong> (<code>x-queue-mode: lazy</code>) pour les queues volumineuses à faible débit — stocke sur disque, préserve la RAM.</li>
+<li><strong>Vhost par domaine</strong> : isoler orders, payments, notifications dans des vhosts séparés.</li>
+<li><strong>Connection pooling</strong> côté client : une connexion TCP, plusieurs channels (légers).</li>
+<li><strong>Schema Registry</strong> ou versionning explicite des contrats (<code>SchemaVersion</code>) pour éviter les désynchronisations inter-services.</li>
+<li><strong>Outbox pattern</strong> côté producteur : persister l'événement dans la même transaction DB, puis le publier de manière asynchrone — garantit l'exactly-once emission sans XA.</li>
+<li><strong>Consumer scaling horizontal</strong> : stateless + idempotent = ajout de replicas sans interruption.</li>
 </ul>
 </article>
 </main>

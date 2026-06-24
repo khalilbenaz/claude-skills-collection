@@ -96,26 +96,97 @@ cp -r claude-skills-collection/skills/education-exam-prep ~/.claude/skills/</div
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Exam Prep</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Sujet</strong> : quel examen, quelle matière, quel chapitre ?</li>
-<li><strong>Points clés</strong> : résumé des concepts essentiels à maîtriser.</li>
-<li><strong>Quiz</strong> : 10-20 questions variées :</li>
+<h2>Workflow en 6 étapes</h2>
+<h3>1. Collecte du contexte (obligatoire avant tout)</h3>
+<p>Demander :</p>
 <ul>
-<li>QCM (4 options)</li>
-<li>Questions ouvertes courtes</li>
-<li>Vrai/Faux avec justification</li>
-<li>Exercices d'application</li>
+<li>Matière / sujet précis (ex : &quot;algorithmique — tris et arbres&quot;, &quot;SQL avancé&quot;, &quot;réseau TCP/IP&quot;)</li>
+<li>Date de l'examen et temps disponible</li>
+<li>Format connu : QCM seul, questions ouvertes, exercices pratiques, oral ?</li>
+<li>Niveau : licence L2, prépa, certification pro (AWS, Azure, LFCS…) ?</li>
+<li>Ressources disponibles : cours, TP déjà faits ?</li>
 </ul>
-<li><strong>Correction détaillée</strong> : réponse + explication pour chaque question.</li>
-<li><strong>Score et analyse</strong> : points forts, points faibles, quoi retravailler.</li>
-<li><strong>Plan de rattrapage</strong> : cibler les lacunes identifiées.</li>
-</ol>
-<h2>Règles</h2>
+<blockquote>Si l'utilisateur fournit un cours ou du code : extraire soi-même les concepts clés sans redemander.</blockquote>
+<hr>
+<h3>2. Points clés — carte mentale textuelle</h3>
+<p>Produire un résumé structuré des concepts <strong>must-know</strong> avant de lancer le quiz :</p>
+<pre><code>SUJET : Complexité algorithmique
+├── Notation Big-O : O(1) O(log n) O(n) O(n log n) O(n²)
+├── Cas moyen vs pire cas (Quicksort : O(n log n) moy / O(n²) pire)
+├── Espace mémoire : in-place (tri à bulles) vs non in-place (mergesort)
+└── Comparatifs : tri rapide vs tri fusion — stabilité, pivot, diviser pour régner</code></pre>
+<p>Règle : <strong>max 15 points</strong> par sujet. Si plus → découper en sous-sessions.</p>
+<hr>
+<h3>3. Construction du quiz</h3>
+<h4>Calibrage de la difficulté</h4>
+<table><thead><tr><th>Niveau</th><th>Part du quiz</th><th>Critère</th></tr></thead><tbody><tr><td>Facile</td><td>30 %</td><td>Définition, rappel direct</td></tr><tr><td>Moyen</td><td>50 %</td><td>Application, distinction de cas</td></tr><tr><td>Difficile</td><td>20 %</td><td>Analyse, contre-exemple, piège</td></tr></tbody></table>
+<h4>Types de questions selon l'examen réel</h4>
+<p><strong>QCM (4 options)</strong> — pour toute certification ou concours :</p>
+<pre><code>Q3. Quelle complexité pour un tri fusion sur n éléments ?
+  A) O(n)
+  B) O(n log n)  ← correcte
+  C) O(n²)
+  D) O(log n)</code></pre>
+<p><strong>Vrai/Faux + justification</strong> — renforce la compréhension :</p>
+<pre><code>Q7. Le tri rapide est toujours plus efficace que le tri fusion. Vrai ou Faux ?
+→ FAUX. Dans le pire cas (tableau déjà trié, mauvais choix de pivot), Quicksort = O(n²).</code></pre>
+<p><strong>Question ouverte courte</strong> (2-3 lignes max) :</p>
+<pre><code>Q12. Expliquer pourquoi on préfère un arbre AVL à un BST non équilibré.</code></pre>
+<p><strong>Exercice d'application</strong> (code ou calcul) :</p>
+<pre><code>Q15. Calculer la complexité de cette fonction :
+def f(n):
+    for i in range(n):        # O(n)
+        for j in range(n):    # O(n)
+            print(i+j)        # O(1)
+→ O(n²)</code></pre>
+<p>Nombre de questions recommandé : <strong>10 questions</strong> pour une session &lt; 30 min, <strong>20</strong> pour simuler un examen complet.</p>
+<hr>
+<h3>4. Session de quiz interactive</h3>
 <ul>
-<li>Varie la difficulté (facile → moyen → difficile).</li>
-<li>Questions pièges uniquement si l'examen en contient.</li>
-<li>Adapte au format réel de l'examen si connu.</li>
+<li>Poser <strong>une question à la fois</strong> (sans afficher la réponse immédiatement).</li>
+<li>Attendre la réponse de l'utilisateur.</li>
+<li>Valider ou corriger avec explication détaillée.</li>
+<li>Consigner mentalement le score et les erreurs.</li>
+</ul>
+<p>Mode simulation : si l'utilisateur demande un &quot;vrai&quot; examen, poser toutes les questions d'un coup, puis corriger à la fin.</p>
+<hr>
+<h3>5. Correction et analyse</h3>
+<p>Après le quiz, produire :</p>
+<pre><code>SCORE : 14/20 (70 %)
+
+✓ Points forts  : Big-O notation, tri fusion, complexité spatiale
+✗ Points faibles : Quicksort pire cas, arbres AVL rotations, récursivité terminale
+
+ERREURS DÉTAILLÉES :
+Q5 — Tu as répondu O(n log n) mais c'est O(n²) car le tableau était déjà trié
+     → Piège classique du pivot &quot;premier élément&quot;</code></pre>
+<hr>
+<h3>6. Plan de rattrapage ciblé</h3>
+<p>Générer des micro-sessions sur les lacunes uniquement :</p>
+<pre><code>SESSION RATTRAPAGE — Quicksort (20 min)
+1. Relire : choix du pivot (médiane, aléatoire, premier élément)
+2. Exercice : dérouler Quicksort à la main sur [5,1,4,2,8]
+3. Re-quiz : 5 questions sur le pire cas et la stabilité</code></pre>
+<hr>
+<h2>Critères de décision — comment adapter le quiz</h2>
+<table><thead><tr><th>Situation</th><th>Action</th></tr></thead><tbody><tr><td>Certification avec banque de questions connue</td><td>Coller au format officiel, taux difficile → 30 %</td></tr><tr><td>Oral / soutenance</td><td>Ajouter des questions &quot;pourquoi&quot; et &quot;comparer X vs Y&quot;</td></tr><tr><td>TP noté / examen pratique (code, SQL)</td><td>Exercices sur machine, snippets à compléter</td></tr><tr><td>48 h avant l'examen</td><td>Révision flash : uniquement les points faibles identifiés</td></tr><tr><td>Matière très large</td><td>Découper par chapitre, une session par bloc</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous / anti-patterns</h2>
+<ul>
+<li><strong>Ne jamais</strong> afficher toutes les réponses avant que l'utilisateur ait répondu : ça annule l'effet de récupération active.</li>
+<li><strong>Ne pas</strong> surcharger : plus de 20 questions d'affilée = baisse d'attention, contre-productif.</li>
+<li><strong>Éviter</strong> les questions ambiguës sans contexte précis (&quot;expliquer X&quot; sans délimiter la profondeur attendue).</li>
+<li><strong>Ne pas</strong> inventer des faits si le domaine est inconnu : signaler explicitement les limites et demander le cours.</li>
+<li><strong>Ne pas</strong> ignorer le format réel : un étudiant qui prépare un QCM ne bénéficie pas de questions rédactionnelles longues.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Récupération espacée</strong> : proposer de revenir sur le même quiz dans 24 h puis 72 h (effet spacing).</li>
+<li><strong>Interleaving</strong> : mélanger les chapitres dans un même quiz plutôt que de les grouper — meilleure rétention à long terme.</li>
+<li><strong>Elaborative interrogation</strong> : systématiser les questions &quot;pourquoi ?&quot; après chaque concept validé.</li>
+<li><strong>Feedback immédiat</strong> : corriger chaque question au moment de la réponse (mode interactif), pas seulement à la fin.</li>
+<li>Pour les certifications techniques (AWS SAA, CKAD, DP-900…) : simuler la contrainte temps (ex : 1 min 30 par question).</li>
 </ul>
 </article>
 </main>

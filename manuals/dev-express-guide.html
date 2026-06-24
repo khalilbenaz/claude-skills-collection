@@ -97,37 +97,228 @@ cp -r claude-skills-collection/skills/dev-express-guide ~/.claude/skills/</div><
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide Express.js</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le besoin</strong> — Identifier le type d'API (REST, temps réel avec Socket.io, BFF) et définir l'architecture : structure modulaire par feature, couche de services pour la logique métier, et choix de l'ORM (Prisma, Sequelize, Mongoose).</li>
-</ol>
-<ol>
-<li><strong>Structurer le projet</strong> — Organiser en modules avec <code>src/routes/</code> pour les routers Express, <code>src/controllers/</code> pour la gestion des requêtes, <code>src/services/</code> pour la logique métier, <code>src/models/</code> pour les modèles de données, <code>src/middleware/</code> pour les middleware custom, et <code>src/utils/</code> pour les utilitaires.</li>
-</ol>
-<ol>
-<li><strong>Configurer les middleware globaux</strong> — Mettre en place les middleware essentiels : <code>express.json()</code> pour le parsing, <code>cors()</code> pour les requêtes cross-origin, <code>helmet()</code> pour les headers de sécurité, <code>morgan()</code> pour le logging, <code>compression()</code> pour la compression gzip, et <code>express-rate-limit</code> pour le rate limiting.</li>
-</ol>
-<ol>
-<li><strong>Implémenter le routing</strong> — Créer les routers modulaires avec <code>express.Router()</code>, organiser les routes par ressource, utiliser les paramètres de route typés, les query strings validées, et chaîner les middleware spécifiques par route pour la validation et l'authentification.</li>
-</ol>
-<ol>
-<li><strong>Développer les controllers et services</strong> — Séparer la logique de traitement HTTP (controllers) de la logique métier (services). Les controllers extraient et valident les données de la requête, appellent les services, et formatent la réponse. Les services encapsulent les règles métier et l'accès aux données.</li>
-</ol>
-<ol>
-<li><strong>Implémenter la gestion d'erreurs</strong> — Créer des classes d'erreur custom (<code>AppError</code>, <code>NotFoundError</code>, <code>ValidationError</code>) avec des codes HTTP associés. Configurer un error handler global en fin de chaîne middleware avec la signature <code>(err, req, res, next)</code> pour centraliser le format des réponses d'erreur.</li>
-</ol>
-<ol>
-<li><strong>Sécuriser l'API</strong> — Implémenter l'authentification JWT avec <code>jsonwebtoken</code> et Passport.js, la validation des entrées avec <code>joi</code> ou <code>zod</code>, la protection CSRF pour les formulaires, le sanitize des entrées contre les injections, et les headers de sécurité avec Helmet.</li>
-</ol>
-<ol>
-<li><strong>Tester et déployer</strong> — Écrire des tests avec Jest et Supertest pour les routes, mocker les services et la base de données, configurer le déploiement avec PM2 pour le clustering, Docker pour la conteneurisation, et les health checks pour le monitoring.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Initialiser le projet</h3>
+<pre><code class="lang-bash">mkdir my-api &amp;&amp; cd my-api
+npm init -y
+npm install express helmet cors morgan compression express-rate-limit
+npm install zod jsonwebtoken bcryptjs
+npm install -D typescript ts-node @types/express @types/node nodemon jest supertest</code></pre>
+<p>Structure recommandée (feature-based) :</p>
+<pre><code>src/
+  app.ts          ← config Express, middleware globaux
+  server.ts       ← écoute HTTP + graceful shutdown
+  routes/         ← index + un fichier par ressource
+  controllers/    ← extraction req/res, appel service
+  services/       ← logique métier (testable)
+  middleware/     ← auth, validate, errorHandler
+  models/         ← schémas DB (Prisma / Mongoose)
+  utils/          ← helpers, logger, asyncHandler
+  types/          ← interfaces TS globales</code></pre>
+<h3>2. Configurer <code>app.ts</code> avec les middleware globaux</h3>
+<pre><code class="lang-ts">import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import morgan from 'morgan';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
+import { errorHandler } from './middleware/errorHandler';
+import { router } from './routes';
+
+const app = express();
+
+app.use(helmet());
+app.use(cors({ origin: process.env.ALLOWED_ORIGINS?.split(',') }));
+app.use(express.json({ limit: '1mb' }));
+app.use(morgan('combined'));
+app.use(compression());
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+
+app.use('/api/v1', router);
+
+// Error handler TOUJOURS en dernier
+app.use(errorHandler);
+
+export { app };</code></pre>
+<h3>3. Router modulaire par ressource</h3>
+<pre><code class="lang-ts">// routes/users.ts
+import { Router } from 'express';
+import { authenticate } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { createUserSchema } from '../schemas/user.schema';
+import { createUser, getUserById } from '../controllers/user.controller';
+
+const router = Router();
+
+router.post('/', validate(createUserSchema), createUser);
+router.get('/:id', authenticate, getUserById);
+
+export { router as userRouter };</code></pre>
+<pre><code class="lang-ts">// routes/index.ts
+import { Router } from 'express';
+import { userRouter } from './users';
+
+const router = Router();
+router.use('/users', userRouter);
+// router.use('/products', productRouter);
+export { router };</code></pre>
+<h3>4. Pattern controller → service</h3>
+<pre><code class="lang-ts">// middleware/asyncHandler.ts
+import { RequestHandler } from 'express';
+export const asyncHandler =
+  (fn: RequestHandler): RequestHandler =&gt;
+  (req, res, next) =&gt;
+    Promise.resolve(fn(req, res, next)).catch(next);
+
+// controllers/user.controller.ts
+import { asyncHandler } from '../middleware/asyncHandler';
+import { UserService } from '../services/user.service';
+
+export const createUser = asyncHandler(async (req, res) =&gt; {
+  const user = await UserService.create(req.body);
+  res.status(201).json({ success: true, data: user });
+});</code></pre>
+<pre><code class="lang-ts">// services/user.service.ts — aucune dépendance Express ici
+import { prisma } from '../utils/db';
+import bcrypt from 'bcryptjs';
+
+export const UserService = {
+  async create(data: CreateUserDto) {
+    const hashed = await bcrypt.hash(data.password, 12);
+    return prisma.user.create({ data: { ...data, password: hashed } });
+  },
+};</code></pre>
+<h3>5. Validation avec Zod</h3>
+<pre><code class="lang-ts">// middleware/validate.ts
+import { AnyZodObject } from 'zod';
+import { RequestHandler } from 'express';
+
+export const validate =
+  (schema: AnyZodObject): RequestHandler =&gt;
+  (req, _res, next) =&gt; {
+    const result = schema.safeParse({
+      body: req.body,
+      params: req.params,
+      query: req.query,
+    });
+    if (!result.success) {
+      return next({ status: 422, errors: result.error.flatten() });
+    }
+    req.body = result.data.body;
+    next();
+  };
+
+// schemas/user.schema.ts
+import { z } from 'zod';
+export const createUserSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    password: z.string().min(8),
+    name: z.string().min(2).max(100),
+  }),
+});</code></pre>
+<h3>6. Gestion d'erreurs centralisée</h3>
+<pre><code class="lang-ts">// utils/AppError.ts
+export class AppError extends Error {
+  constructor(
+    public message: string,
+    public statusCode: number,
+    public errors?: unknown
+  ) {
+    super(message);
+  }
+}
+
+// middleware/errorHandler.ts
+import { ErrorRequestHandler } from 'express';
+import { AppError } from '../utils/AppError';
+
+export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) =&gt; {
+  const status = err instanceof AppError ? err.statusCode : err.status ?? 500;
+  res.status(status).json({
+    success: false,
+    message: err.message ?? 'Internal Server Error',
+    errors: err.errors ?? undefined,
+    ...(process.env.NODE_ENV === 'development' &amp;&amp; { stack: err.stack }),
+  });
+};</code></pre>
+<h3>7. Authentification JWT</h3>
+<pre><code class="lang-ts">// middleware/auth.ts
+import jwt from 'jsonwebtoken';
+import { RequestHandler } from 'express';
+import { AppError } from '../utils/AppError';
+
+export const authenticate: RequestHandler = (req, _res, next) =&gt; {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) throw new AppError('Unauthorized', 401);
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    next();
+  } catch {
+    next(new AppError('Token invalide ou expiré', 401));
+  }
+};</code></pre>
+<h3>8. Graceful shutdown dans <code>server.ts</code></h3>
+<pre><code class="lang-ts">import { app } from './app';
+import { prisma } from './utils/db';
+
+const server = app.listen(process.env.PORT ?? 3000, () =&gt;
+  console.log(`API up on :${process.env.PORT ?? 3000}`)
+);
+
+const shutdown = async (signal: string) =&gt; {
+  console.log(`${signal} received — shutting down`);
+  server.close(async () =&gt; {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+  setTimeout(() =&gt; process.exit(1), 10_000); // force kill si bloqué
+};
+
+process.on('SIGTERM', () =&gt; shutdown('SIGTERM'));
+process.on('SIGINT', () =&gt; shutdown('SIGINT'));</code></pre>
+<h3>9. Tests avec Jest + Supertest</h3>
+<pre><code class="lang-ts">// __tests__/users.test.ts
+import request from 'supertest';
+import { app } from '../src/app';
+
+describe('POST /api/v1/users', () =&gt; {
+  it('crée un utilisateur valide', async () =&gt; {
+    const res = await request(app)
+      .post('/api/v1/users')
+      .send({ email: 'test@test.com', password: 'secret123', name: 'Alice' });
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+  });
+
+  it('rejette un email invalide', async () =&gt; {
+    const res = await request(app)
+      .post('/api/v1/users')
+      .send({ email: 'pas-un-email', password: 'secret123', name: 'Alice' });
+    expect(res.status).toBe(422);
+  });
+});</code></pre>
+<h2>Critères de décision</h2>
+<table><thead><tr><th>Besoin</th><th>Choix</th></tr></thead><tbody><tr><td>API REST simple</td><td>Express + Zod + Prisma</td></tr><tr><td>Temps réel</td><td>Express + Socket.io ou passer à Fastify</td></tr><tr><td>Auth OAuth2/OIDC</td><td><code>passport.js</code> + stratégies</td></tr><tr><td>Validation complexe</td><td>Zod (TS-first) &gt; Joi</td></tr><tr><td>ORM</td><td>Prisma (TypeScript), Mongoose (MongoDB)</td></tr><tr><td>Logging structuré</td><td><code>pino</code> + <code>pino-http</code> (plus rapide que morgan)</td></tr><tr><td>Haute performance</td><td>Envisager Fastify (3× plus rapide)</td></tr></tbody></table>
+<h2>Anti-patterns / pièges</h2>
 <ul>
-<li>Utilise toujours un error handler global centralisé plutôt que des try-catch répétitifs dans chaque route — encapsule les controllers async avec un wrapper <code>asyncHandler</code>.</li>
-<li>Valide systématiquement toutes les entrées utilisateur (body, params, query) avec une librairie de validation (Zod, Joi) avant tout traitement.</li>
-<li>Ne place jamais de logique métier dans les routes ou les controllers — délègue aux services pour garantir la testabilité et la réutilisabilité.</li>
-<li>Retourne toujours des réponses HTTP cohérentes avec un format standardisé (<code>{ success, data, error, message }</code>) sur toutes les routes.</li>
-<li>Gère correctement les signaux d'arrêt (<code>SIGTERM</code>, <code>SIGINT</code>) pour un graceful shutdown qui ferme les connexions base de données et termine les requêtes en cours.</li>
+<li><strong>try-catch dans chaque route</strong> — utilise <code>asyncHandler</code>, sinon une exception non catchée crash le process.</li>
+<li><strong>Logique métier dans les routes</strong> — non testable, non réutilisable ; toujours isoler dans un service.</li>
+<li><strong><code>app.use(express.json())</code> après les routes</strong> — les routes ne verront pas le body parsé. L'ordre des middleware EST la logique.</li>
+<li><strong>Oublier <code>next(err)</code> dans les middleware async</strong> — une <code>Promise</code> rejetée sans <code>.catch(next)</code> ou <code>asyncHandler</code> ne déclenche pas l'error handler.</li>
+<li><strong><code>res.send()</code> après <code>res.json()</code></strong> — double send → crash. Toujours <code>return res.json(...)</code>.</li>
+<li><strong>Variables d'env en dur</strong> — utiliser <code>dotenv</code> + valider avec <code>envalid</code> ou Zod au démarrage.</li>
+<li><strong>Pas de rate limiting</strong> — brute force triviale sans <code>express-rate-limit</code> ou un WAF upstream.</li>
+<li><strong>Port binding dans <code>app.ts</code></strong> — rend les tests Supertest lents (port déjà occupé) ; séparer <code>app.ts</code> et <code>server.ts</code>.</li>
+<li><strong>Helmet désactivé en prod</strong> — headers par défaut exposent la stack tech.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>TypeScript strict</strong> (<code>&quot;strict&quot;: true</code>) — évite les bugs de runtime sur <code>req.params</code> / <code>req.query</code> (toujours <code>string</code>).</li>
+<li><strong>Versioning d'API</strong> — préfixer <code>/api/v1/</code> dès le début, impossible à ajouter proprement après coup.</li>
+<li><strong>Format de réponse uniforme</strong> — <code>{ success, data, error, message, meta }</code> sur toutes les routes, y compris erreurs.</li>
+<li><strong>Health check</strong> — <code>GET /health</code> renvoie <code>{ status: &quot;ok&quot;, uptime, db: &quot;connected&quot; }</code> pour les load balancers / k8s.</li>
+<li><strong>OpenAPI</strong> — générer la spec avec <code>zod-to-openapi</code> ou <code>tsoa</code> pour documenter et valider les contrats.</li>
+<li><strong><code>pino</code></strong> à la place de <code>console.log</code> — JSON structuré, niveaux, corrélation par <code>requestId</code>.</li>
 </ul>
 </article>
 </main>

@@ -5,138 +5,267 @@ description: Orchestration de workflows IA complexes avec chaînes et pipelines.
 
 # AI Workflow Orchestrator
 
-## Workflow
+## Critères de décision : quel framework choisir ?
 
-1. **Décomposition du workflow** — Analyser la tâche complexe et la décomposer en étapes atomiques avec des inputs/outputs clairement définis. Identifier les **dépendances** (quelles étapes dépendent d'autres ?), les **opportunités de parallélisme** (étapes indépendantes pouvant s'exécuter simultanément), et les **points de décision** (conditions qui déterminent le chemin d'exécution). Créer un DAG (Directed Acyclic Graph) visuel avant de coder — économise des heures de débogage.
+| Complexité | Pattern | Framework recommandé |
+|---|---|---|
+| 1–3 étapes linéaires | Séquentiel simple | Python natif ou LCEL |
+| Fan-out / fan-in sans état | Parallèle sans mémoire | LCEL `RunnableParallel` |
+| Boucles, conditions, état persistant | Agent / cycle | **LangGraph** |
+| RAG + retrieval hybride | Search pipeline | Haystack |
+| Stack Azure / .NET | Intégration Microsoft | Semantic Kernel |
+| Contrôle total, zéro dépendance | Custom | Script async pur |
 
-   ```
-   Exemple : pipeline d'analyse de document
-   [Chargement] → [Extraction info] ─┬─ [Résumé]      ─┐
-                                      ├─ [Entités NER]  ├─ [Rapport final]
-                                      └─ [Sentiment]   ─┘
-   ```
+> Règle d'or : n'ajouter un framework que quand la complexité le justifie. 50 lignes de Python natif > architecture LangGraph mal comprise.
 
-2. **Choix du framework** — Évaluer selon la complexité : **LangChain LCEL** (chaînes simples à modérées, bonne DX, vaste écosystème), **LangGraph** (workflows avec état, cycles, conditions, agents — idéal pour les cas complexes), **Haystack** (orienté search/RAG, pipelines déclaratifs), **Semantic Kernel** (Microsoft, bien intégré avec Azure, .NET/Python), **custom** (contrôle total, zéro dépendance, recommandé pour les équipes expérimentées). Éviter la sur-ingénierie : un script Python avec des appels LLM séquentiels suffit souvent.
+---
 
-3. **Design des chaînes** — Implémenter les patterns selon le besoin : **Sequential** (A → B → C, pipeline linéaire), **Parallel** (A → [B || C || D] → E, fan-out/fan-in), **Conditional** (router selon le contenu de l'output), **Map-Reduce** (traiter N documents indépendamment, puis aggréger). Utiliser LCEL (`|` operator) pour la composition déclarative — chaque étape est une `Runnable` testable individuellement.
+## Workflow en étapes
 
-   ```python
-   from langchain_core.runnables import RunnableParallel, RunnableLambda
-   from langchain_openai import ChatOpenAI
-   
-   llm = ChatOpenAI(model="gpt-4o-mini")
-   
-   # Parallel : résumé + extraction en simultané
-   parallel_chain = RunnableParallel({
-       "summary": summarize_prompt | llm,
-       "entities": extract_prompt | llm,
-       "sentiment": sentiment_prompt | llm
-   })
-   
-   # Sequential : analyse puis rapport
-   full_pipeline = parallel_chain | merge_results | report_prompt | llm
-   result = full_pipeline.invoke({"document": text})
-   ```
+### 1. Décomposer en DAG avant de coder
 
-4. **State management** — Définir un objet d'état global typé (TypedDict ou Pydantic) qui circule à travers le workflow. Chaque nœud lit l'état, effectue son traitement, et met à jour les champs pertinents. Avec **LangGraph**, l'état est automatiquement persisté à chaque nœud — permet le replay et la reprise après erreur.
+Identifier pour chaque étape : input attendu, output produit, dépendances. Dessiner un DAG — économise des heures de débogage.
 
-   ```python
-   from langgraph.graph import StateGraph, END
-   from typing import TypedDict, List
-   
-   class WorkflowState(TypedDict):
-       document: str
-       summary: str
-       entities: List[str]
-       final_report: str
-       error: str | None
-       step: str
-   
-   def summarize_node(state: WorkflowState) -> WorkflowState:
-       summary = summarize_chain.invoke({"text": state["document"]})
-       return {**state, "summary": summary, "step": "summarized"}
-   
-   graph = StateGraph(WorkflowState)
-   graph.add_node("summarize", summarize_node)
-   graph.add_node("extract_entities", entities_node)
-   graph.add_edge("summarize", "extract_entities")
-   ```
+```
+Pipeline d'analyse de document :
+[Chargement] → [Extraction] ─┬─ [Résumé]      ─┐
+                               ├─ [Entités NER]  ├─ [Rapport final]
+                               └─ [Sentiment]   ─┘
+```
 
-5. **Error handling et recovery** — Implémenter des **retry** par nœud (erreurs transitoires), des **fallback chains** (modèle de secours si le premier échoue), et des **checkpoints** pour reprendre depuis le dernier état valide. Les nœuds critiques (appels API externes, actions irréversibles) doivent avoir un **human-in-the-loop** — LangGraph supporte nativement les interruptions et reprises (`interrupt_before`, `interrupt_after`).
+Questions à poser : quelles étapes sont **indépendantes** (candidats au parallélisme) ? Quelles étapes nécessitent un **état partagé** ? Y a-t-il des **points de décision** conditionnels ?
 
-   ```python
-   from langgraph.checkpoint.sqlite import SqliteSaver
-   
-   # Persistance de l'état pour recovery
-   checkpointer = SqliteSaver.from_conn_string(":memory:")
-   app = graph.compile(checkpointer=checkpointer,
-                       interrupt_before=["send_email"])  # Pause avant action critique
-   
-   # Reprendre après approbation humaine
-   config = {"configurable": {"thread_id": "run-001"}}
-   app.invoke(initial_state, config)
-   # ... attendre approbation ...
-   app.invoke(None, config)  # Reprendre
-   ```
+---
 
-6. **Observabilité** — Tracer chaque nœud du workflow avec : durée d'exécution, tokens consommés, coût, input/output. Utiliser **LangSmith** (natif LangChain/LangGraph), **Phoenix (Arize)** (open-source, excellente UI), ou **OpenTelemetry** pour une approche agnostique. Configurer des alertes sur les métriques clés (latence > 30s, coût > $0.10/run, taux d'erreur > 5%).
+### 2. Implémenter les patterns de chaînes
 
-   ```python
-   import os
-   os.environ["LANGCHAIN_TRACING_V2"] = "true"
-   os.environ["LANGCHAIN_API_KEY"] = "ls_..."
-   os.environ["LANGCHAIN_PROJECT"] = "my-workflow"
-   # Toutes les exécutions LangChain/LangGraph sont automatiquement tracées
-   
-   # Phoenix (alternative open-source)
-   import phoenix as px
-   from phoenix.otel import register
-   tracer_provider = register(project_name="my-workflow")
-   ```
+**Séquentiel (LCEL `|` operator)**
+```python
+from langchain_core.runnables import RunnableLambda
+from langchain_openai import ChatOpenAI
 
-7. **Optimisation** — **Prompt caching** : activer le caching Anthropic/OpenAI sur les préfixes longs (system prompts, documents). **Batch processing** : regrouper les requêtes indépendantes (map-reduce) en batch OpenAI API (-50% coût). **Async execution** : utiliser `ainvoke()` et `asyncio.gather()` pour les étapes parallèles — divise la latence par le nombre de branches. **Streaming** : propager le streaming jusqu'au client pour l'UX.
+llm = ChatOpenAI(model="gpt-4o-mini")
+pipeline = extract_prompt | llm | parse_output | report_prompt | llm
+result = pipeline.invoke({"document": text})
+```
 
-   ```python
-   import asyncio
-   
-   async def run_parallel_nodes(state: WorkflowState):
-       # Exécuter en parallèle au lieu de séquentiel
-       summary_task = summarize_chain.ainvoke({"text": state["document"]})
-       entities_task = extract_chain.ainvoke({"text": state["document"]})
-       summary, entities = await asyncio.gather(summary_task, entities_task)
-       return {**state, "summary": summary, "entities": entities}
-   ```
+**Parallèle (fan-out / fan-in)**
+```python
+from langchain_core.runnables import RunnableParallel
 
-8. **Déploiement** — Exposer le workflow comme **API REST** (FastAPI + endpoint async), **webhook** (déclenché par des événements externes), ou **tâche planifiée** (Celery, APScheduler, Cloud Scheduler). Pour la scalabilité : containeriser avec Docker, orchestrer avec Kubernetes, utiliser des queues de messages (Redis, RabbitMQ) pour les workloads batch. **LangServe** (déprécié) ou **LangGraph Cloud** pour un déploiement managé.
+parallel = RunnableParallel({
+    "summary":   summarize_prompt | llm,
+    "entities":  extract_prompt   | llm,
+    "sentiment": sentiment_prompt | llm,
+})
+full = parallel | merge_results | report_prompt | llm
+result = full.invoke({"document": text})
+```
 
-   ```python
-   from fastapi import FastAPI, BackgroundTasks
-   from pydantic import BaseModel
-   
-   app = FastAPI()
-   
-   class WorkflowRequest(BaseModel):
-       document: str
-       webhook_url: str | None = None
-   
-   @app.post("/workflows/analyze")
-   async def trigger_workflow(req: WorkflowRequest, bg: BackgroundTasks):
-       run_id = str(uuid.uuid4())
-       bg.add_task(run_workflow_async, run_id, req.document, req.webhook_url)
-       return {"run_id": run_id, "status": "started"}
-   
-   @app.get("/workflows/{run_id}")
-   async def get_status(run_id: str):
-       return await get_run_status(run_id)
-   ```
+**Map-Reduce (N documents)**
+```python
+from langchain_core.runnables import RunnableLambda
+import asyncio
 
-## Règles
+async def map_reduce(docs: list[str]) -> str:
+    summaries = await asyncio.gather(*[
+        summarize_chain.ainvoke({"text": d}) for d in docs
+    ])
+    return await aggregate_chain.ainvoke({"summaries": summaries})
+```
 
-- **Commencer simple, complexifier si nécessaire** : un pipeline séquentiel en 50 lignes de Python natif est souvent plus maintenable qu'une architecture LangGraph complexe — n'ajouter un framework que quand la complexité le justifie vraiment.
-- **Chaque nœud doit être testable isolément** : définir des interfaces d'input/output claires, créer des tests unitaires pour chaque nœud avant d'assembler le workflow — déboguer un workflow monolithique est un cauchemar.
-- **Toujours implémenter les checkpoints** : un workflow de 10 minutes qui échoue à l'étape 9 doit pouvoir reprendre depuis l'étape 9, pas depuis le début — économise du temps et de l'argent.
-- **Loguer l'état complet à chaque transition** : en cas d'erreur en production, l'état au moment de la défaillance est la seule information de débogage disponible — ne pas lésiner sur les logs structurés.
-- **Définir des SLAs clairs** : timeout par nœud, coût maximum par run, temps de réponse cible — sans ces limites, un workflow peut consommer des ressources indéfiniment en cas de dysfonctionnement.
+---
+
+### 3. Gérer l'état avec LangGraph
+
+Définir un `TypedDict` typé qui circule à travers tous les nœuds. Chaque nœud retourne uniquement les champs qu'il modifie (merge partiel).
+
+```python
+from langgraph.graph import StateGraph, END
+from typing import TypedDict, Annotated
+import operator
+
+class WorkflowState(TypedDict):
+    document: str
+    summary: str
+    entities: list[str]
+    report: str
+    error: str | None
+    step: str
+
+def summarize_node(state: WorkflowState) -> dict:
+    summary = summarize_chain.invoke({"text": state["document"]})
+    return {"summary": summary, "step": "summarized"}
+
+def route_after_summary(state: WorkflowState) -> str:
+    if state.get("error"):
+        return "handle_error"
+    return "extract_entities"
+
+graph = StateGraph(WorkflowState)
+graph.add_node("summarize", summarize_node)
+graph.add_node("extract_entities", entities_node)
+graph.add_node("handle_error", error_node)
+graph.set_entry_point("summarize")
+graph.add_conditional_edges("summarize", route_after_summary)
+graph.add_edge("extract_entities", END)
+app = graph.compile()
+```
+
+---
+
+### 4. Error handling, retry et checkpoints
+
+**Retry par nœud (erreurs transitoires)**
+```python
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+def call_llm_with_retry(prompt: str) -> str:
+    return llm.invoke(prompt)
+```
+
+**Fallback chain (modèle de secours)**
+```python
+primary   = ChatOpenAI(model="gpt-4o")
+fallback  = ChatOpenAI(model="gpt-4o-mini")
+safe_llm  = primary.with_fallbacks([fallback])
+```
+
+**Checkpoints LangGraph (reprise après crash)**
+```python
+from langgraph.checkpoint.sqlite import SqliteSaver
+
+checkpointer = SqliteSaver.from_conn_string("checkpoints.db")
+app = graph.compile(
+    checkpointer=checkpointer,
+    interrupt_before=["send_email"],   # pause avant action irréversible
+)
+
+config = {"configurable": {"thread_id": "run-001"}}
+app.invoke(initial_state, config)     # déclenche, s'arrête avant send_email
+# ... approbation humaine ...
+app.invoke(None, config)              # reprend depuis le checkpoint
+```
+
+---
+
+### 5. Observabilité : tracer chaque nœud
+
+**LangSmith (natif, 0 code supplémentaire)**
+```bash
+export LANGCHAIN_TRACING_V2=true
+export LANGCHAIN_API_KEY="ls_..."
+export LANGCHAIN_PROJECT="my-workflow"
+# Toutes les exécutions sont automatiquement tracées
+```
+
+**Phoenix / Arize (open-source)**
+```python
+import phoenix as px
+from phoenix.otel import register
+tracer_provider = register(project_name="my-workflow", endpoint="http://localhost:6006/v1/traces")
+```
+
+**Métriques à surveiller**
+- Latence par nœud > 30 s → alerte
+- Coût par run > $0.10 → alerte
+- Taux d'erreur par nœud > 5 % → alerte
+- Tokens totaux / run → suivi budget
+
+---
+
+### 6. Optimiser latence et coût
+
+**Async pour les branches parallèles**
+```python
+import asyncio
+
+async def parallel_analysis(doc: str) -> dict:
+    summary, entities = await asyncio.gather(
+        summarize_chain.ainvoke({"text": doc}),
+        extract_chain.ainvoke({"text": doc}),
+    )
+    return {"summary": summary, "entities": entities}
+```
+
+**Prompt caching Anthropic (économie ~90 % sur les tokens en cache)**
+```python
+from anthropic import Anthropic
+
+client = Anthropic()
+response = client.messages.create(
+    model="claude-opus-4-5",
+    system=[{"type": "text", "text": long_system_prompt,
+             "cache_control": {"type": "ephemeral"}}],
+    messages=[{"role": "user", "content": user_query}],
+    max_tokens=1024,
+)
+```
+
+**Batch API OpenAI (-50 % coût, latence différée acceptable)**
+```python
+# Soumettre un batch de requêtes indépendantes
+client.batches.create(
+    input_file_id=file_id,
+    endpoint="/v1/chat/completions",
+    completion_window="24h",
+)
+```
+
+---
+
+### 7. Exposer le workflow comme service
+
+```python
+from fastapi import FastAPI, BackgroundTasks
+from pydantic import BaseModel
+import uuid
+
+app = FastAPI()
+
+class WorkflowRequest(BaseModel):
+    document: str
+    webhook_url: str | None = None
+
+@app.post("/workflows/analyze")
+async def trigger(req: WorkflowRequest, bg: BackgroundTasks):
+    run_id = str(uuid.uuid4())
+    bg.add_task(run_workflow_async, run_id, req.document, req.webhook_url)
+    return {"run_id": run_id, "status": "queued"}
+
+@app.get("/workflows/{run_id}")
+async def status(run_id: str):
+    return await get_run_status(run_id)
+```
+
+Pour la scalabilité : Celery + Redis pour les workloads batch, Docker + Kubernetes pour le déploiement, LangGraph Platform pour un déploiement managé avec UI.
+
+---
+
+## Anti-patterns et garde-fous
+
+| Anti-pattern | Symptôme | Correction |
+|---|---|---|
+| Sur-ingénierie dès le départ | LangGraph pour 2 appels LLM | Commencer avec LCEL ou Python natif |
+| Nœuds non testables isolément | Impossible à déboguer | Interface input/output claire + test unitaire par nœud |
+| Pas de checkpoints | Crash à l'étape 9 = tout recommencer | `SqliteSaver` ou `PostgresSaver` dès la phase dev |
+| État mutable partagé sans verrou | Race condition en async | TypedDict immutable, retourner un dict partiel |
+| Pas de timeout par nœud | Un nœud bloqué immobilise tout le workflow | `asyncio.wait_for(node(), timeout=30)` |
+| Loguer uniquement les erreurs | Debug impossible en prod | Logger l'état complet à chaque transition (JSON structuré) |
+| Pas de limite de coût | Un bug boucle indéfiniment | Compteur de tokens cumulés + guard dans la condition de sortie |
+| Human-in-the-loop absent sur actions irréversibles | Email envoyé, paiement débité par erreur | `interrupt_before` sur tout nœud à effet de bord externe |
+
+---
+
+## Bonnes pratiques 2026
+
+- **Contract-first** : définir le `TypedDict` d'état avant d'écrire les nœuds ; le schéma est la documentation vivante du workflow.
+- **Idempotence** : chaque nœud doit pouvoir être rejoué sans effet de bord (clé de déduplication, upsert plutôt qu'insert).
+- **SLA par nœud** : timeout, budget tokens, nombre max de retries — explicites dans le code, pas implicites.
+- **Feature flags** : activer/désactiver des branches du workflow en production sans redéploiement.
+- **Versioning d'état** : quand le schéma `TypedDict` change, migrer les checkpoints existants (`state_schema_version` dans l'état).
+- **Tests de régression** : capturer des traces LangSmith réelles, les rejouer en CI pour détecter les dérives de comportement LLM.
 
 
 ## Communication Rules — MANDATORY

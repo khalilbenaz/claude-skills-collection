@@ -96,38 +96,156 @@ cp -r claude-skills-collection/skills/dev-css-layout-solver ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>CSS Layout Solver</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Comprendre le layout souhaité</strong> : recueillir la description précise du résultat attendu — maquette, screenshot du problème actuel, ou description textuelle. Identifier le contexte (page entière, widget, carte, navigation).</li>
-</ol>
-<ol>
-<li><strong>Choisir la technique adaptée</strong> : sélectionner Flexbox pour les layouts unidimensionnels (lignes ou colonnes), CSS Grid pour les layouts bidimensionnels (grilles complexes), ou container queries pour des composants auto-adaptatifs indépendants du viewport.</li>
-</ol>
-<ol>
-<li><strong>Implémenter avec code CSS complet et commenté</strong> : fournir un code directement fonctionnel avec les propriétés clés commentées pour expliquer les choix (ex. <code>flex: 1 1 auto</code> vs <code>flex: 0 0 auto</code>).</li>
-</ol>
-<ol>
-<li><strong>Gérer le responsive</strong> : ajouter media queries basées sur le contenu, utiliser <code>clamp()</code> pour des valeurs fluides, <code>min()</code> et <code>max()</code> pour les contraintes, et container queries pour les composants réutilisables.</li>
-</ol>
-<ol>
-<li><strong>Déboguer les problèmes courants</strong> : diagnostiquer overflow caché, conflits de z-index et stacking contexts, margin collapse entre blocs, shrink non désiré sur les enfants flex, et height:100% sans contexte parent.</li>
-</ol>
-<ol>
-<li><strong>Animations et transitions CSS</strong> : proposer des animations performantes basées sur <code>transform</code> et <code>opacity</code> (GPU-accelerated), des keyframes pour les séquences complexes, et <code>will-change</code> uniquement quand nécessaire.</li>
-</ol>
-<ol>
-<li><strong>Variables CSS et théming</strong> : structurer le design avec custom properties (<code>--color-primary</code>), implémenter le dark mode via <code>prefers-color-scheme</code> et variables, et organiser les design tokens en couches logiques.</li>
-</ol>
-<ol>
-<li><strong>Optimiser la maintenabilité</strong> : réduire la spécificité (préférer les classes aux IDs), utiliser <code>@layer</code> pour contrôler la cascade, éviter <code>!important</code>, et mesurer l'impact sur le rendering performance (Composite, Paint, Layout).</li>
-</ol>
-<h2>Règles</h2>
+<h2>Étape 1 — Diagnostiquer avant de coder</h2>
+<p>Avant toute solution, collecter :</p>
 <ul>
-<li>Toujours livrer du code CSS complet, commenté, et prêt à coller sans modification.</li>
-<li>Préférer les solutions modernes (Grid, Flexbox, clamp) aux hacks historiques (clearfix, table-cell).</li>
-<li>Vérifier la compatibilité cross-browser et indiquer les fallbacks si nécessaire (Can I Use).</li>
-<li>Expliquer le pourquoi des propriétés clés, pas seulement le quoi.</li>
-<li>Prioriser les solutions qui restent maintenables : éviter les valeurs magiques hardcodées.</li>
+<li><strong>Ce que l'utilisateur voit</strong> : screenshot ou description du bug (débordement, mauvais alignement, collapse, etc.)</li>
+<li><strong>Ce qu'il attend</strong> : maquette ou description du résultat cible</li>
+<li><strong>Contexte DOM</strong> : nesting, nombre d'enfants, largeur/hauteur connue ou dynamique</li>
+</ul>
+<p>Questions de triage rapide :</p>
+<ol>
+<li>Le problème est-il unidimensionnel (ligne OU colonne) → Flexbox</li>
+<li>Le problème est-il bidimensionnel (lignes ET colonnes) → Grid</li>
+<li>Le composant doit-il réagir à sa propre taille (pas au viewport) → Container Queries</li>
+<li>Y a-t-il un overflow ou un z-index suspect → Diagnostic stacking context</li>
+</ol>
+<hr>
+<h2>Étape 2 — Critères de choix de technique</h2>
+<table><thead><tr><th>Besoin</th><th>Technique</th><th>Éviter</th></tr></thead><tbody><tr><td>Centrer un élément (1D)</td><td><code>display:flex; align-items:center; justify-content:center</code></td><td><code>margin:auto</code> seul sans contexte flex/grid</td></tr><tr><td>Grille fixe (colonnes répétées)</td><td><code>grid-template-columns: repeat(3, 1fr)</code></td><td><code>float</code> + clearfix</td></tr><tr><td>Colonnes de taille variable</td><td><code>grid-template-columns: auto 1fr auto</code></td><td><code>display:table-cell</code></td></tr><tr><td>Layout responsive sans media query</td><td><code>grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))</code></td><td>media queries manuelles</td></tr><tr><td>Taille fluide entre deux bornes</td><td><code>clamp(1rem, 2.5vw, 2rem)</code></td><td>valeurs px fixes</td></tr><tr><td>Composant réutilisable responsive</td><td><code>@container</code></td><td>media query sur viewport</td></tr><tr><td>Sticky header/footer</td><td><code>position:sticky; top:0</code></td><td><code>position:fixed</code> (sort du flux)</td></tr></tbody></table>
+<hr>
+<h2>Étape 3 — Snippets copiables par cas fréquent</h2>
+<h3>Centrage universel (Flex)</h3>
+<pre><code class="lang-css">.wrapper {
+  display: flex;
+  align-items: center;     /* axe transversal */
+  justify-content: center; /* axe principal */
+  min-height: 100dvh;      /* dvh : tient compte des barres mobiles */
+}</code></pre>
+<h3>Grille responsive sans media query</h3>
+<pre><code class="lang-css">.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1.5rem;
+}
+/* min(100%, 280px) évite l'overflow sur petits écrans */</code></pre>
+<h3>Holy Grail layout (header / sidebar / main / footer)</h3>
+<pre><code class="lang-css">.page {
+  display: grid;
+  grid-template:
+    &quot;header header&quot;  auto
+    &quot;nav    main  &quot;  1fr
+    &quot;footer footer&quot;  auto
+    / 220px 1fr;
+  min-height: 100dvh;
+}
+header  { grid-area: header; }
+nav     { grid-area: nav;    }
+main    { grid-area: main;   }
+footer  { grid-area: footer; }</code></pre>
+<h3>Sidebar fixe + contenu fluide (Flex)</h3>
+<pre><code class="lang-css">.layout {
+  display: flex;
+  gap: 1rem;
+}
+.sidebar { flex: 0 0 260px; }   /* ne grandit pas, ne rétrécit pas */
+.content { flex: 1 1 0;    }    /* prend tout l'espace restant */</code></pre>
+<h3>Fluid typography</h3>
+<pre><code class="lang-css">:root {
+  --text-base: clamp(1rem, 0.5rem + 1.5vw, 1.25rem);
+  --text-xl:   clamp(1.5rem, 1rem + 2.5vw, 2.5rem);
+}</code></pre>
+<h3>Dark mode via custom properties</h3>
+<pre><code class="lang-css">:root {
+  --bg: #ffffff;
+  --fg: #111111;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111111;
+    --fg: #f0f0f0;
+  }
+}
+body { background: var(--bg); color: var(--fg); }</code></pre>
+<h3>Container Query (composant card auto-adaptatif)</h3>
+<pre><code class="lang-css">.card-wrapper {
+  container-type: inline-size;
+}
+@container (min-width: 400px) {
+  .card { flex-direction: row; }
+}</code></pre>
+<hr>
+<h2>Étape 4 — Déboguer les problèmes classiques</h2>
+<h3>Overflow mystérieux</h3>
+<ol>
+<li>Ajouter temporairement <code>* { outline: 1px solid red; }</code> pour visualiser les boîtes.</li>
+<li>Chercher un enfant avec <code>width: 100vw</code>, <code>min-width</code> non contraint, ou texte sans <code>overflow-wrap: break-word</code>.</li>
+<li>Sur mobile : <code>html, body { overflow-x: hidden; }</code> masque le symptôme mais ne corrige pas la cause — trouver l'élément coupable.</li>
+</ol>
+<h3>z-index qui ne fonctionne pas</h3>
+<ul>
+<li>Un <code>z-index</code> n'a d'effet que si <code>position</code> ≠ <code>static</code>.</li>
+<li>Tout élément avec <code>transform</code>, <code>opacity &lt; 1</code>, <code>filter</code>, <code>will-change</code> ou <code>isolation:isolate</code> <strong>crée un stacking context</strong> : les z-index enfants sont confinés à ce contexte.</li>
+<li>Diagnostic : inspecter l'arbre dans DevTools → onglet &quot;Layers&quot;.</li>
+</ul>
+<h3>Margin collapse</h3>
+<ul>
+<li>Se produit uniquement entre blocs dans le flux normal (pas en flex/grid).</li>
+<li>Solution : passer le parent en <code>display:flex</code> ou ajouter <code>padding: 1px</code> / <code>overflow:hidden</code> sur le parent.</li>
+</ul>
+<h3>Flex enfant qui rétrécit indésirable</h3>
+<pre><code class="lang-css">.enfant {
+  flex-shrink: 0; /* interdit le rétrécissement */
+  /* ou : flex: 0 0 auto; */
+}</code></pre>
+<h3>height:100% sans effet</h3>
+<pre><code class="lang-css">/* Le parent doit avoir une hauteur explicite ou être en grid/flex avec align-stretch */
+.parent { height: 400px; /* ou min-height */ }
+.enfant { height: 100%; }</code></pre>
+<hr>
+<h2>Étape 5 — Responsive : media queries bien ciblées</h2>
+<pre><code class="lang-css">/* Mobile-first : base = petit écran */
+.grid { grid-template-columns: 1fr; }
+
+@media (min-width: 640px)  { .grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .grid { grid-template-columns: repeat(3, 1fr); } }</code></pre>
+<p>Préférer les <strong>breakpoints basés sur le contenu</strong> (quand le layout casse) aux breakpoints device (320, 768, 1024 sont des conventions, pas des règles).</p>
+<hr>
+<h2>Étape 6 — Performance rendering</h2>
+<table><thead><tr><th>Propriété à animer</th><th>Coût</th><th>Recommandation</th></tr></thead><tbody><tr><td><code>transform</code>, <code>opacity</code></td><td>Composite (GPU)</td><td>Toujours préférer</td></tr><tr><td><code>background-color</code>, <code>color</code>, <code>border</code></td><td>Paint</td><td>Acceptable ponctuellement</td></tr><tr><td><code>width</code>, <code>height</code>, <code>margin</code>, <code>top</code></td><td>Layout (reflow)</td><td>Éviter en animation</td></tr></tbody></table>
+<pre><code class="lang-css">/* Animation performante */
+.card:hover {
+  transform: translateY(-4px);
+  transition: transform 200ms ease-out;
+}
+/* will-change : seulement si l'animation est fréquente et mesurée */
+.animated { will-change: transform; }</code></pre>
+<hr>
+<h2>Anti-patterns et pièges (2026)</h2>
+<ul>
+<li><strong><code>!important</code> en cascade</strong> : symptôme d'un problème de spécificité. Utiliser <code>@layer</code> pour contrôler la priorité proprement.</li>
+<li><strong><code>position:fixed</code> pour un sticky</strong> : sort du flux, pose des problèmes dans les conteneurs <code>transform</code>. Utiliser <code>position:sticky</code>.</li>
+<li><strong><code>vh</code> sur mobile</strong> : les barres de navigation du navigateur font varier <code>100vh</code>. Utiliser <code>100dvh</code> (dynamic viewport height, supporté depuis 2023).</li>
+<li><strong><code>float</code> pour le layout</strong> : obsolète. Réservé aux textes qui enveloppent une image (<code>float:left</code> sur l'image).</li>
+<li><strong>Trop de media queries manuelles</strong> : <code>auto-fit</code> + <code>minmax</code> + <code>clamp</code> couvrent 80% des besoins sans breakpoints.</li>
+<li><strong>Nesting Flexbox sans raison</strong> : un <code>display:grid</code> à la racine suffit souvent pour éviter plusieurs couches Flexbox.</li>
+<li><strong><code>@layer</code> oublié</strong> : en 2026, tout projet sérieux utilise <code>@layer</code> (reset, base, components, utilities) pour éviter les guerres de spécificité.</li>
+</ul>
+<pre><code class="lang-css">@layer reset, base, components, utilities;
+@layer components {
+  .btn { padding: 0.5rem 1rem; }
+}
+@layer utilities {
+  .mt-4 { margin-top: 1rem; }
+}</code></pre>
+<hr>
+<h2>Checklist de livraison</h2>
+<ul>
+<li>[ ] Code testé dans Chrome DevTools (responsive mode)</li>
+<li>[ ] Compatibilité vérifiée sur Can I Use si propriété récente</li>
+<li>[ ] Aucune valeur magique px sans commentaire justificatif</li>
+<li>[ ] Variables CSS pour les valeurs répétées (couleurs, espacements)</li>
+<li>[ ] Fallback indiqué si la propriété n'est pas universelle (ex. <code>dvh</code> → fallback <code>vh</code>)</li>
 </ul>
 </article>
 </main>

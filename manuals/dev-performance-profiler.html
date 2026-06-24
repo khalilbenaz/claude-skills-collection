@@ -97,23 +97,148 @@ cp -r claude-skills-collection/skills/dev-performance-profiler ~/.claude/skills/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Performance Profiler</h1>
 <h2>Workflow</h2>
-<ol>
-<li>Identifier le symptôme (lenteur, haute CPU, memory leak, timeouts) — recueillir les métriques observées, les conditions de reproduction et l'environnement affecté (prod, staging, local).</li>
-<li>Choisir l'outil de profiling adapté à la stack : dotTrace ou PerfView pour .NET, Chrome DevTools ou Clinic.js pour Node.js/JS, cProfile ou Py-Spy pour Python, async-profiler pour Java/JVM, perf ou pprof pour Go.</li>
-<li>Profiling CPU : capturer les hot paths, identifier les algorithmes coûteux (O(n²), boucles imbriquées), repérer les appels redondants et les calculs inutiles dans les chemins critiques.</li>
-<li>Profiling mémoire : analyser les allocations par type, mesurer la GC pressure (fréquence et durée des collections), détecter les memory leaks et l'object retention (références circulaires, event handlers non désabonnés).</li>
-<li>Profiling I/O : diagnostiquer les requêtes DB (N+1 queries, full scans, missing indexes), les appels réseau synchrones bloquants, les accès fichiers non buffurisés et les mauvais usages async/await (deadlocks, sync-over-async).</li>
-<li>Analyser les résultats : interpréter les flame graphs (largeur = temps CPU), les call trees (top-down vs bottom-up), les allocation reports et les timeline snapshots pour hiérarchiser les optimisations.</li>
-<li>Appliquer les optimisations ciblées : caching (mémoire, distribué), batching des requêtes DB, lazy loading, connection pooling, remplacement d'algorithmes, index DB, parallelisation appropriée.</li>
-<li>Benchmarker avant/après : mesurer l'impact précis avec BenchmarkDotNet (.NET), hyperfine (CLI), pytest-benchmark (Python), wrk/k6 (HTTP) ; documenter les gains et les régressions éventuelles.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Triage du symptôme</h3>
+<p>Recueillir <strong>avant</strong> de profiler :</p>
+<table><thead><tr><th>Symptôme</th><th>Métrique clé à mesurer</th><th>Outil de première ligne</th></tr></thead><tbody><tr><td>Lenteur progressive</td><td>Mémoire RSS + GC pause</td><td>heap dump, dotMemory</td></tr><tr><td>Haute CPU constante</td><td>Flame graph CPU</td><td>perf, async-profiler</td></tr><tr><td>Timeouts / p99 élevé</td><td>Latence par percentile</td><td>APM (Datadog, Jaeger)</td></tr><tr><td>Throughput dégradé</td><td>RPS + error rate</td><td>wrk2, k6</td></tr><tr><td>Memory leak</td><td>Heap usage over time</td><td>heapdump, PerfView</td></tr></tbody></table>
+<p>Reproduire en local ou staging d'abord ; profiler prod seulement si le bug est non-reproductible.</p>
+<hr>
+<h3>2. Choisir l'outil adapté à la stack</h3>
+<pre><code>.NET      → dotTrace (sampling/tracing), PerfView (ETW), BenchmarkDotNet, dotMemory
+Node.js   → clinic.js (doctor/flame/bubbleprof), --inspect + Chrome DevTools, 0x
+Python    → py-spy (sampling, zero overhead), cProfile + snakeviz, memray
+Java/JVM  → async-profiler, JFR + JMC, VisualVM
+Go        → pprof (net/http/pprof), trace, benchstat
+Rust      → cargo flamegraph, criterion
+HTTP/API  → wrk2, k6, hey, autocannon
+DB (SQL)  → EXPLAIN ANALYZE, sys.dm_exec_query_stats, slow query log</code></pre>
+<p>Critère de choix : préférer le <strong>sampling</strong> (&lt; 1 % overhead) en prod ; réserver <strong>tracing</strong> (instrumentation complète) à staging pour les bottlenecks fins.</p>
+<hr>
+<h3>3. Profiling CPU</h3>
+<pre><code class="lang-bash"># py-spy — snapshot sans redémarrer le process
+py-spy record -o profile.svg --pid &lt;PID&gt; --duration 30
+
+# async-profiler (JVM)
+./profiler.sh -d 30 -f flamegraph.html &lt;PID&gt;
+
+# Go — endpoint HTTP exposé
+go tool pprof -http=:8080 http://localhost:6060/debug/pprof/profile?seconds=30
+
+# .NET — CLI
+dotnet-trace collect --process-id &lt;PID&gt; --duration 00:00:30
+dotnet-trace convert trace.nettrace --format Speedscope</code></pre>
+<p>Lire un flame graph : la <strong>largeur</strong> d'un bloc = % CPU total ; chercher les plateaux larges inattendus. Ignorer les frames system en bas, se concentrer sur le code applicatif.</p>
+<p>Signaux d'alerte CPU :</p>
 <ul>
-<li>Toujours mesurer avant d'optimiser : ne pas supposer, profiler d'abord pour trouver le vrai bottleneck.</li>
-<li>Adapter les outils à la stack de l'utilisateur (language, runtime, cloud vs on-prem).</li>
-<li>Proposer des solutions progressives : quick wins en premier, refactorings lourds ensuite.</li>
-<li>Fournir des commandes et configs prêtes à l'emploi, pas seulement des conseils généraux.</li>
-<li>Valider chaque optimisation par un benchmark avant/après pour éviter les régressions.</li>
+<li>Fonction &gt; 5 % du total sans raison métier évidente</li>
+<li>Boucle tight loop sur du parsing (JSON, XML) répété</li>
+<li>Regex compilée à chaque appel (recréer le pattern en boucle)</li>
+<li>Serialisation/désérialisation dans des hot paths</li>
+</ul>
+<hr>
+<h3>4. Profiling mémoire</h3>
+<pre><code class="lang-bash"># Python — memray
+memray run --output out.bin mon_script.py
+memray flamegraph out.bin
+
+# Node.js — heap snapshot
+node --inspect app.js
+# puis Chrome DevTools &gt; Memory &gt; Take snapshot
+
+# .NET — dotMemory CLI
+dotmemory attach &lt;PID&gt; --save-to-dir snapshots/ --trigger-timer:interval=60s
+
+# Go
+curl http://localhost:6060/debug/pprof/heap &gt; heap.prof
+go tool pprof -http=:8080 heap.prof</code></pre>
+<p>Checklist memory leak :</p>
+<ul>
+<li>[ ] Event listeners non détachés (<code>removeEventListener</code>, <code>-=</code> en C#)</li>
+<li>[ ] Caches statiques sans TTL ni éviction (LRU)</li>
+<li>[ ] Closures capturant des gros objets</li>
+<li>[ ] <code>IDisposable</code> / <code>using</code> manquant (.NET)</li>
+<li>[ ] Connexions DB ou fichiers non fermés</li>
+<li>[ ] Références circulaires sans WeakReference</li>
+</ul>
+<p>GC pressure : si GC pause &gt; 50 ms ou fréquence &gt; 1 collection/s en Gen2 (.NET) → réduire les allocations dans les hot paths (pooling, stackalloc, Span&lt;T&gt;).</p>
+<hr>
+<h3>5. Profiling I/O / Base de données</h3>
+<p><strong>Détection N+1 queries</strong> (ORM) :</p>
+<pre><code class="lang-csharp">// EF Core — activer logging des requêtes
+options.LogTo(Console.WriteLine, LogLevel.Information)
+       .EnableSensitiveDataLogging();
+// Chercher des SELECT répétés dans une boucle
+// Fix : .Include() ou projection explicite</code></pre>
+<pre><code class="lang-python"># Django — django-debug-toolbar ou:
+from django.db import connection
+print(len(connection.queries))  # doit être constant</code></pre>
+<p>Commandes SQL diagnostics :</p>
+<pre><code class="lang-sql">-- SQL Server : top queries par CPU
+SELECT TOP 10 total_worker_time/execution_count AS avg_cpu,
+       total_logical_reads/execution_count AS avg_reads,
+       execution_count, text
+FROM sys.dm_exec_query_stats
+CROSS APPLY sys.dm_exec_sql_text(sql_handle)
+ORDER BY avg_cpu DESC;
+
+-- PostgreSQL : slow queries (pg_stat_statements)
+SELECT query, calls, mean_exec_time, total_exec_time
+FROM pg_stat_statements
+ORDER BY mean_exec_time DESC LIMIT 10;</code></pre>
+<p>Index manquant : vérifier <code>EXPLAIN (ANALYZE, BUFFERS)</code> — un <code>Seq Scan</code> sur une grande table = candidat index.</p>
+<hr>
+<h3>6. Benchmarking avant/après</h3>
+<pre><code class="lang-bash"># HTTP — k6
+k6 run --vus 50 --duration 30s script.js
+
+# CLI binaries — hyperfine
+hyperfine --warmup 5 'avant' 'apres'
+
+# Python — pytest-benchmark
+pytest tests/bench_*.py --benchmark-compare
+
+# .NET — BenchmarkDotNet (dans un projet dédié)
+# [Benchmark] sur la méthode, dotnet run -c Release</code></pre>
+<p>Règle : minimum <strong>3 runs</strong>, écarter les outliers, reporter <strong>p50 / p95 / p99</strong>, pas seulement la moyenne.</p>
+<hr>
+<h3>7. Optimisations classiques par catégorie</h3>
+<p><strong>CPU</strong></p>
+<ul>
+<li>Remplacer O(n²) par O(n log n) : trier + binary search, hashmap lookup</li>
+<li>Memoïsation/cache des calculs déterministes coûteux</li>
+<li>SIMD / intrinsics pour traitements vectorisables (Rust, C#, C++)</li>
+</ul>
+<p><strong>Mémoire</strong></p>
+<ul>
+<li>Object pooling (<code>ArrayPool&lt;T&gt;</code>, <code>ObjectPool&lt;T&gt;</code> .NET, <code>sync.Pool</code> Go)</li>
+<li>Éviter les allocations dans les hot paths : <code>Span&lt;T&gt;</code>, value types, stackalloc</li>
+<li>Streaming au lieu de chargement en mémoire entière (fichiers, HTTP responses)</li>
+</ul>
+<p><strong>I/O</strong></p>
+<ul>
+<li>Batching : regrouper 100 inserts en 1 bulk insert</li>
+<li>Connection pooling : ne jamais ouvrir une connexion par requête HTTP</li>
+<li>Async I/O partout : <code>await</code>, goroutines, asyncio — pas de sync-over-async</li>
+<li>CDN + cache HTTP (<code>Cache-Control</code>, ETags) pour les assets statiques</li>
+</ul>
+<p><strong>Base de données</strong></p>
+<ul>
+<li>Index composites sur les colonnes filtrées ensemble fréquemment</li>
+<li><code>SELECT</code> uniquement les colonnes nécessaires, jamais <code>SELECT *</code> dans les hot paths</li>
+<li>Read replicas pour les lectures intensives</li>
+<li>Connection pool sizing : <code>max_connections</code> = (CPU cores × 2) + disks (formule HikariCP)</li>
+</ul>
+<hr>
+<h2>Garde-fous &amp; anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Fix</th></tr></thead><tbody><tr><td>Optimiser sans mesurer</td><td>Perdre du temps sur un non-bottleneck</td><td>Toujours profiler d'abord</td></tr><tr><td>Micro-benchmark isolé ≠ prod</td><td>Résultats trompeurs (JIT warmup, data size)</td><td>Benchmark sur données réalistes</td></tr><tr><td>Caching partout d'emblée</td><td>Staleness, invalidation complexe, mémoire</td><td>Cacher seulement ce qui est mesuré comme lent</td></tr><tr><td>Parallélisme naïf</td><td>Race conditions, contention, overhead &gt; gain</td><td>Mesurer le speedup réel, Amdahl's Law</td></tr><tr><td>Ignorer le GC / allocations</td><td>Pauses imprévisibles en prod</td><td>Profiler les allocations, pas que le CPU</td></tr><tr><td>Index sur toutes les colonnes</td><td>Writes dégradés, taille disque</td><td>Indexer seulement les requêtes fréquentes et lentes</td></tr><tr><td>sync-over-async (.NET)</td><td>Deadlocks en prod</td><td>Async all the way, jamais <code>.Result</code> / <code>.Wait()</code></td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Continuous profiling</strong> en prod : Datadog Continuous Profiler, Pyroscope, Parca — capturer les profils en continu sans overhead significatif.</li>
+<li><strong>eBPF</strong> pour le profiling kernel-level sans instrumentation (Pixie, Parca sur Linux).</li>
+<li><strong>DORA metrics</strong> : corréler les dégradations de perf avec les déploiements (change failure rate).</li>
+<li><strong>SLO-driven</strong> : définir un SLO (ex : p99 &lt; 200 ms) avant d'optimiser, arrêter dès que l'objectif est atteint.</li>
+<li><strong>Flamescope</strong> pour analyser les profils dans le temps (détecter les pics périodiques).</li>
+<li><strong>OpenTelemetry</strong> comme standard de tracing distribué — éviter les APM propriétaires lock-in.</li>
 </ul>
 </article>
 </main>

@@ -96,24 +96,126 @@ cp -r claude-skills-collection/skills/dev-system-design-helper ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>System Design Helper</h1>
-<h2>Workflow</h2>
-<ol>
-<li>Clarification des requirements (fonctionnels, non-fonctionnels, contraintes) — définir le périmètre exact avant tout design : quelles fonctionnalités, quels SLAs, quelles contraintes réglementaires</li>
-<li>Estimations de charge (QPS, storage, bandwidth, DAU/MAU) — calculer les ordres de grandeur pour guider les choix techniques (read-heavy vs write-heavy, stockage chaud/froid)</li>
-<li>Design de haut niveau (composants principaux, flux de données) — produire un schéma avec les blocs fonctionnels, les bases de données, les caches et les points d'entrée</li>
-<li>Deep dive sur les composants critiques (DB choice, cache strategy, CDN) — justifier le choix de chaque technologie clé selon les requirements (SQL vs NoSQL, Redis vs Memcached)</li>
-<li>Conception de la scalabilité (horizontal/vertical, sharding, partitioning, replication) — détailler la stratégie de montée en charge pour chaque composant critique</li>
-<li>Haute disponibilité et tolérance aux pannes (failover, redundancy, DR) — définir les RPO/RTO, les stratégies multi-région et les procédures de bascule</li>
-<li>Sécurité et monitoring (auth, rate limiting, alerting, dashboards) — intégrer la sécurité dès la conception (zero trust, encryption at rest/in transit, WAF)</li>
-<li>Trade-offs documentés et décisions justifiées — lister explicitement ce qui a été sacrifié (coût, cohérence, latence) pour atteindre les objectifs prioritaires</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Clarification des requirements</h3>
+<p>Avant tout design, fixer le périmètre exact.</p>
+<p><strong>Questions à poser :</strong></p>
 <ul>
-<li>Adapte les recommandations au stack existant de l'utilisateur (.NET, Node, Python, Java...) et à son contexte cloud (AWS, Azure, GCP, on-premise)</li>
-<li>Privilégie la simplicité : ne sur-architecturer que si les estimations de charge ou les SLAs l'imposent réellement</li>
-<li>Fournis toujours des exemples de code ou de configuration concrets pour les composants critiques</li>
-<li>Justifie chaque choix technique avec ses trade-offs (CAP theorem, coût, complexité opérationnelle)</li>
-<li>Documente toutes les décisions sous forme d'ADR et mets en évidence les hypothèses prises</li>
+<li>Fonctionnels : quelles features, quels acteurs, quels flux critiques ?</li>
+<li>Non-fonctionnels : SLA de disponibilité (99.9 % = 8h downtime/an, 99.99 % = 52 min), latence cible (p99), cohérence des données (strong vs eventual)</li>
+<li>Contraintes : budget infra, stack imposé, réglementations (PCI-DSS, GDPR, DORA)</li>
+</ul>
+<p><strong>Critère de sortie :</strong> une phrase résumant le contrat : _&quot;Lecture-heavy (95 %), 10 k RPS peak, latence p99 &lt; 200 ms, 99.9 % dispo, données EU uniquement.&quot;_</p>
+<hr>
+<h3>2. Estimations de charge (back-of-the-envelope)</h3>
+<pre><code>DAU = 1 M utilisateurs
+Lectures/utilisateur/jour = 20 → RPS lectures = (1M × 20) / 86400 ≈ 230 RPS
+Écritures : 5 % → 12 RPS
+Storage : 1 KB/entrée × 12 RPS × 86400 × 365 ≈ 380 GB/an
+Bandwidth sortante : 1 KB × 230 RPS × 8 bits ≈ 1.8 Mbps</code></pre>
+<p><strong>Règle :</strong> si RPS &lt; 1 k → un seul serveur suffit probablement. &gt; 10 k → scaling horizontal obligatoire. &gt; 100 k → sharding + CDN + cache agressif.</p>
+<hr>
+<h3>3. Architecture haut niveau</h3>
+<p>Partir toujours du schéma minimal : <strong>Client → LB → App Servers → DB</strong>.   Ajouter des couches uniquement si les estimations l'imposent.</p>
+<pre><code>[Client]
+   │ HTTPS
+[CDN / WAF]          ← assets statiques, protection DDoS
+   │
+[Load Balancer]      ← L7 (Nginx, ALB, Traefik)
+   │
+[API Gateway]        ← auth, rate-limit, routing
+   │
+[Services]           ← monolithe ou microservices selon taille
+   ├── [Cache Redis]  ← read-through, TTL 60 s
+   ├── [DB primaire]  ← writes
+   └── [DB réplica(s)] ← reads</code></pre>
+<hr>
+<h3>4. Choix de base de données</h3>
+<table><thead><tr><th>Besoin</th><th>Technologie</th><th>Pourquoi</th></tr></thead><tbody><tr><td>Relations, transactions ACID</td><td>PostgreSQL / SQL Server</td><td>Joins, intégrité référentielle</td></tr><tr><td>Lecture massive, schema flexible</td><td>MongoDB / DynamoDB</td><td>Scale horizontal, JSON natif</td></tr><tr><td>Time-series (métriques, IoT)</td><td>InfluxDB / TimescaleDB</td><td>Compression, requêtes temporelles</td></tr><tr><td>Recherche full-text</td><td>Elasticsearch</td><td>Inverted index, agrégations</td></tr><tr><td>Cache / sessions</td><td>Redis</td><td>Sub-ms, structures natives (sorted set, pub/sub)</td></tr><tr><td>Graph</td><td>Neo4j</td><td>Traversal O(1) vs JOIN O(n)</td></tr></tbody></table>
+<p><strong>Règle CAP :</strong> distributed systems ne peuvent garantir que 2 sur 3 (Consistency, Availability, Partition tolerance). Pour la finance : CP. Pour le feed social : AP.</p>
+<hr>
+<h3>5. Stratégies de scalabilité</h3>
+<p><strong>Horizontal scaling (stateless services) :</strong></p>
+<pre><code class="lang-yaml"># docker-compose / K8s HPA
+replicas: 3
+resources:
+  requests: { cpu: &quot;250m&quot;, memory: &quot;512Mi&quot; }
+  limits:    { cpu: &quot;1&quot;,    memory: &quot;1Gi&quot;  }</code></pre>
+<p><strong>Sharding DB (hash-based) :</strong></p>
+<pre><code>shard_id = hash(user_id) % N_SHARDS
+# Attention : resharding coûteux → prévoir N_SHARDS × 4 dès le départ</code></pre>
+<p><strong>Read replicas :</strong></p>
+<ul>
+<li>1 primary (writes) + 2–3 replicas (reads)</li>
+<li>Lag typique : &lt; 100 ms en même région</li>
+</ul>
+<p><strong>Cache-aside pattern (Redis) :</strong></p>
+<pre><code class="lang-python">def get_user(user_id):
+    data = redis.get(f&quot;user:{user_id}&quot;)
+    if data:
+        return json.loads(data)
+    data = db.query(&quot;SELECT * FROM users WHERE id = ?&quot;, user_id)
+    redis.setex(f&quot;user:{user_id}&quot;, 300, json.dumps(data))  # TTL 5 min
+    return data</code></pre>
+<hr>
+<h3>6. Haute disponibilité et résilience</h3>
+<p><strong>Objectifs à fixer d'abord :</strong></p>
+<ul>
+<li><strong>RPO</strong> (Recovery Point Objective) : perte de données max acceptable → dicte la fréquence des backups/réplication</li>
+<li><strong>RTO</strong> (Recovery Time Objective) : temps de remise en service max → dicte le failover automatique ou manuel</li>
+</ul>
+<p><strong>Patterns :</strong></p>
+<ul>
+<li><strong>Active-Passive</strong> : basculement manuel ou semi-auto (DNS TTL court), RPO = lag réplication</li>
+<li><strong>Active-Active</strong> multi-région : latence cross-région, conflict resolution requise (CRDT ou last-write-wins)</li>
+<li><strong>Circuit breaker</strong> (Hystrix / Polly / Resilience4j) : évite la cascade de pannes</li>
+<li><strong>Bulkhead</strong> : isoler les pools de threads par downstream pour ne pas saturer globalement</li>
+</ul>
+<p><strong>Checklist résilience :</strong></p>
+<ul>
+<li>[ ] Health checks <code>/health</code> + <code>/ready</code> exposés</li>
+<li>[ ] Retries avec backoff exponentiel + jitter</li>
+<li>[ ] Timeouts explicites sur tous les appels externes</li>
+<li>[ ] Dead Letter Queue pour les messages non traités</li>
+<li>[ ] Chaos testing planifié (kill aléatoire de pods/instances)</li>
+</ul>
+<hr>
+<h3>7. Sécurité (intégrée dès la conception)</h3>
+<pre><code>Authentication  → JWT (RS256) ou OAuth2/OIDC ; refresh token rotation
+Authorization   → RBAC ou ABAC selon la granularité
+Transport       → TLS 1.3 minimum, HSTS
+Data at rest    → AES-256, clés en KMS (AWS KMS, Azure Key Vault)
+Rate limiting   → par IP + par user : token bucket ou sliding window
+WAF             → règles OWASP Top 10, géo-blocking si EU-only
+Secrets         → jamais en clair dans le code ; Vault ou env variables injectées</code></pre>
+<hr>
+<h3>8. Observabilité et monitoring</h3>
+<p><strong>Les 4 golden signals (Google SRE) :</strong></p>
+<ol>
+<li><strong>Latency</strong> : p50, p95, p99 par endpoint</li>
+<li><strong>Traffic</strong> : RPS, messages/s</li>
+<li><strong>Errors</strong> : taux d'erreurs 4xx/5xx, exceptions</li>
+<li><strong>Saturation</strong> : CPU, mémoire, connexions DB pool</li>
+</ol>
+<p><strong>Stack recommandée 2026 :</strong></p>
+<pre><code>Métriques  → Prometheus + Grafana (ou Datadog)
+Logs       → ELK / OpenSearch ou Loki
+Traces     → OpenTelemetry → Tempo / Jaeger
+Alerting   → PagerDuty / OpsGenie, SLO-based alerts</code></pre>
+<hr>
+<h2>Critères de décision rapides</h2>
+<table><thead><tr><th>Question</th><th>&lt; 1k RPS</th><th>1k–50k RPS</th><th>&gt; 50k RPS</th></tr></thead><tbody><tr><td>Architecture</td><td>Monolithe + une DB</td><td>Services + cache</td><td>Microservices + sharding + CDN</td></tr><tr><td>DB</td><td>PostgreSQL seul</td><td>Postgres + Redis</td><td>Multi-DB polyglot</td></tr><tr><td>Déploiement</td><td>Un VPS</td><td>Docker + K8s</td><td>K8s multi-région</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns / pièges</h2>
+<ul>
+<li><strong>Over-engineering précoce</strong> : ne pas sharding dès le jour 1 si le traffic ne le justifie pas ; prématuré = dette opérationnelle certaine</li>
+<li><strong>Single point of failure</strong> : toute dépendance sans failover est un risque, y compris le load balancer lui-même (prévoir un second LB ou DNS failover)</li>
+<li><strong>N+1 queries</strong> : charger 1 objet puis N sous-objets en boucle → DataLoader, eager loading ou batch query</li>
+<li><strong>Cache stampede</strong> : expiration simultanée de milliers de clés → probabilistic early expiration ou lock-based refresh</li>
+<li><strong>Long transactions DB</strong> : bloquent les locks → découper en micro-transactions, utiliser des sagas pour les workflows distribués</li>
+<li><strong>Ignorer le réseau</strong> : appels synchrones en chaîne entre microservices = latence cumulée + couplage fort → préférer async (message queue) quand la cohérence immédiate n'est pas requise</li>
+<li><strong>Pas de rate limiting</strong> : une API publique sans rate limit est un vecteur de DoS et de coût excessif</li>
+<li><strong>TTL trop long sur le cache</strong> : données périmées visibles longtemps ; TTL trop court : cache miss storm → tester avec des TTLs graduels</li>
 </ul>
 </article>
 </main>

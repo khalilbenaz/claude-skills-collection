@@ -96,25 +96,127 @@ cp -r claude-skills-collection/skills/dev-git-workflow-helper ~/.claude/skills/<
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Git Workflow Helper</h1>
-<h2>Workflow</h2>
+<h2>1. Diagnostic initial</h2>
+<p>Avant toute action, évaluer la situation :</p>
+<pre><code class="lang-bash">git status                        # état de l'index et du working tree
+git log --oneline --graph -15     # historique visuel récent
+git stash list                    # stashs en attente
+git remote -v                     # remotes configurées</code></pre>
+<p>Identifier : branche courante, commits non-pushés, fichiers modifiés/stagés, conflits actifs.</p>
+<hr>
+<h2>2. Résolution de conflits de merge</h2>
+<p><strong>Étapes :</strong></p>
 <ol>
-<li><strong>Diagnostic</strong> : comprendre la situation actuelle (branche, état du repo, ce qui a été fait).</li>
-<li><strong>Solution pas à pas</strong> : commandes exactes à exécuter, dans l'ordre, avec explication de chaque étape.</li>
-<li><strong>Prévention</strong> : comment éviter le problème à l'avenir.</li>
-<li><strong>Si workflow demandé</strong> : propose un modèle adapté (Git Flow, GitHub Flow, Trunk-based) avec :</li>
-<ul>
-<li>Schéma des branches</li>
-<li>Convention de nommage</li>
-<li>Règles de merge/rebase</li>
-<li>Template de commit message</li>
-</ul>
+<li>Lancer le merge ou rebase, observer les conflits :</li>
 </ol>
-<h2>Règles</h2>
+<p>   ```bash    git merge feature/ma-branche    # ou    git rebase main    ```</p>
+<ol>
+<li>Lister les fichiers en conflit :</li>
+</ol>
+<p>   ```bash    git diff --name-only --diff-filter=U    ```</p>
+<ol>
+<li>Éditer chaque fichier : supprimer les marqueurs <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>, garder le bon code.</li>
+<li>Marquer comme résolu et continuer :</li>
+</ol>
+<p>   ```bash    git add &lt;fichier-résolu&gt;    git merge --continue     # ou git rebase --continue    ```</p>
+<ol>
+<li>En cas d'impasse, annuler proprement :</li>
+</ol>
+<p>   ```bash    git merge --abort        # ou git rebase --abort    ```</p>
+<p><strong>Outil visuel (recommandé) :</strong></p>
+<pre><code class="lang-bash">git mergetool               # ouvre vimdiff, VS Code, IntelliJ selon config</code></pre>
+<hr>
+<h2>3. Annuler / corriger des commits</h2>
+<table><thead><tr><th>Situation</th><th>Commande</th><th>Risque</th></tr></thead><tbody><tr><td>Défaire le dernier commit (garder les modifs)</td><td><code>git reset --soft HEAD~1</code></td><td>Faible</td></tr><tr><td>Défaire le dernier commit (perdre les modifs)</td><td><code>git reset --hard HEAD~1</code></td><td><strong>Destructif</strong></td></tr><tr><td>Corriger le message du dernier commit</td><td><code>git commit --amend --no-edit</code></td><td>Faible si pas pushé</td></tr><tr><td>Annuler un commit déjà pushé (safe)</td><td><code>git revert &lt;sha&gt;</code></td><td>Nul — crée un commit inverse</td></tr><tr><td>Supprimer un commit du milieu de l'historique</td><td><code>git rebase -i HEAD~N</code></td><td>Modéré</td></tr></tbody></table>
+<p><strong>Règle d'or :</strong> ne jamais <code>--force-push</code> sur <code>main</code>/<code>master</code>. Sur une branche feature partagée, prévenir l'équipe.</p>
+<hr>
+<h2>4. Rebase interactif — recette type</h2>
+<pre><code class="lang-bash">git fetch origin
+git rebase -i origin/main</code></pre>
+<p>Dans l'éditeur, remplacer <code>pick</code> par :</p>
 <ul>
-<li>Toujours prévenir avant une commande destructive (force push, reset --hard).</li>
-<li>Proposer un backup avant toute opération risquée.</li>
-<li>Adapter la complexité au niveau de l'utilisateur.</li>
+<li><code>squash</code> (s) — fusionner dans le commit précédent</li>
+<li><code>reword</code> (r) — changer le message</li>
+<li><code>drop</code> (d) — supprimer le commit</li>
+<li><code>fixup</code> (f) — squash sans garder le message</li>
 </ul>
+<p>Après résolution des conflits éventuels :</p>
+<pre><code class="lang-bash">git rebase --continue
+git push --force-with-lease   # plus sûr que --force : échoue si la remote a bougé</code></pre>
+<hr>
+<h2>5. Stratégies de branches — critères de décision</h2>
+<table><thead><tr><th>Stratégie</th><th>Quand l'adopter</th><th>Branches clés</th></tr></thead><tbody><tr><td><strong>Trunk-based</strong></td><td>CI/CD mature, feature flags, équipe senior</td><td><code>main</code> + branches courtes (&lt;1 jour)</td></tr><tr><td><strong>GitHub Flow</strong></td><td>SaaS, déploiement continu, équipe ≤15</td><td><code>main</code> + <code>feature/*</code> + PR</td></tr><tr><td><strong>Git Flow</strong></td><td>Releases versionnées, mobile/desktop, hotfixes fréquents</td><td><code>main</code>, <code>develop</code>, <code>release/*</code>, <code>hotfix/*</code>, <code>feature/*</code></td></tr></tbody></table>
+<p><strong>Convention de nommage recommandée :</strong></p>
+<pre><code>feature/&lt;ticket-id&gt;-description-courte
+fix/&lt;ticket-id&gt;-description
+chore/update-dependencies
+hotfix/v2.3.1-crash-login</code></pre>
+<hr>
+<h2>6. Convention de commit (Conventional Commits)</h2>
+<pre><code>&lt;type&gt;(&lt;scope&gt;): &lt;description courte&gt;
+
+[corps optionnel]
+
+[footer: BREAKING CHANGE: ... ou Closes #123]</code></pre>
+<p>Types courants : <code>feat</code>, <code>fix</code>, <code>chore</code>, <code>docs</code>, <code>refactor</code>, <code>test</code>, <code>perf</code>, <code>ci</code></p>
+<p>Exemple :</p>
+<pre><code>feat(auth): ajouter le login biométrique iOS
+
+Implémente Face ID et Touch ID via LocalAuthentication.
+Désactive le fallback PIN si biométrie disponible.
+
+Closes #489</code></pre>
+<hr>
+<h2>7. Sauvegarder avant une opération risquée</h2>
+<pre><code class="lang-bash"># Créer une branche de sauvegarde avant toute manipulation dangereuse
+git branch backup/$(git rev-parse --abbrev-ref HEAD)-$(date +%Y%m%d)
+
+# Stasher les modifs non-commitées
+git stash push -m &quot;backup avant rebase 2026-06-24&quot;</code></pre>
+<hr>
+<h2>8. Garde-fous et anti-patterns</h2>
+<p><strong>Ne jamais faire :</strong></p>
+<ul>
+<li><code>git push --force</code> sur une branche partagée sans <code>--force-with-lease</code></li>
+<li><code>git reset --hard</code> sans avoir vérifié <code>git stash</code> ou créé une branche backup</li>
+<li>Commiter des secrets (<code>.env</code>, clés API) — utiliser <code>git-secret</code> ou <code>.gitignore</code> strict</li>
+<li>Laisser des merge commits de merge de merge (rebase avant de merger)</li>
+<li>Branches vivant &gt; 2 semaines sans merge : risque de divergence majeure</li>
+</ul>
+<p><strong>Pièges fréquents :</strong></p>
+<ul>
+<li><code>git pull</code> sans <code>--rebase</code> crée des merge commits parasites → configurer globalement :</li>
+</ul>
+<p>  ```bash   git config --global pull.rebase true   ```</p>
+<ul>
+<li>Oublier <code>git fetch</code> avant un rebase : on rebase sur une base obsolète</li>
+<li><code>git stash pop</code> sur le mauvais contexte : toujours vérifier <code>git stash list</code> avant</li>
+<li>Fichiers binaires en conflit : privilégier <code>git checkout --ours &lt;fichier&gt;</code> ou <code>--theirs</code></li>
+</ul>
+<hr>
+<h2>9. Configuration globale utile (2026)</h2>
+<pre><code class="lang-bash"># Affichage lisible
+git config --global log.date relative
+git config --global alias.lg &quot;log --oneline --graph --decorate --all&quot;
+
+# Sécurité
+git config --global push.default current
+git config --global pull.rebase true
+git config --global rerere.enabled true   # mémorise les résolutions de conflits
+
+# Signer les commits (recommandé en équipe)
+git config --global commit.gpgsign true</code></pre>
+<hr>
+<h2>10. Récupérer après une catastrophe</h2>
+<pre><code class="lang-bash"># Retrouver un commit &quot;perdu&quot; après reset --hard
+git reflog
+git checkout &lt;sha-perdu&gt;     # inspecter
+git branch recovery/ma-branche &lt;sha-perdu&gt;   # restaurer
+
+# Retrouver un fichier supprimé
+git log --all --full-history -- chemin/fichier.txt
+git checkout &lt;sha&gt;^ -- chemin/fichier.txt</code></pre>
+<p><code>git reflog</code> conserve l'historique local des mouvements HEAD pendant ~90 jours.</p>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

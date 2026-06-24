@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>parenting-child-milestone-tracker — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Suit le développement d'un enfant (moteur, langage, social) et repère les étapes clés.">
+<meta name="description" content="Suit le développement d'un enfant (moteur, langage, social, cognitif) et repère les étapes clés avec un tableau de suivi personnalisé, des activités adaptées et des signaux d'alerte clairs.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">👨‍👩‍👧 Parentalité</span>
 <h1 class="skill-title">parenting-child-milestone-tracker</h1>
-<p class="lead">Suit le développement d'un enfant (moteur, langage, social) et repère les étapes clés.</p>
+<p class="lead">Suit le développement d'un enfant (moteur, langage, social, cognitif) et repère les étapes clés avec un tableau de suivi personnalisé, des activités adaptées et des signaux d'alerte clairs.</p>
 
 
 
@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/parenting-child-milestone-tracker</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">développement de mon enfant</span><span class="trigger">mon bébé de X mois</span><span class="trigger">étapes bébé</span><span class="trigger">quand est-ce qu'il va marcher/parler</span></div></div>
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">développement de mon enfant</span><span class="trigger">mon bébé de X mois</span><span class="trigger">étapes bébé</span><span class="trigger">quand est-ce qu'il va marcher/parler</span><span class="trigger">mon enfant ne parle pas encore</span><span class="trigger">retard de développement</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>
@@ -96,25 +96,90 @@ cp -r claude-skills-collection/skills/parenting-child-milestone-tracker ~/.claud
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Child Milestone Tracker</h1>
-<h2>Étape 1 — Profil</h2>
-<p>Âge de l'enfant, ce qui préoccupe ou intéresse le parent.</p>
-<h2>Étape 2 — Étapes typiques pour cet âge</h2>
-<h3>Motricité (globale et fine)</h3>
-<h3>Langage et communication</h3>
-<h3>Social et émotionnel</h3>
-<h3>Cognitif</h3>
-<h2>Étape 3 — Suivi</h2>
-<table><thead><tr><th>Domaine</th><th>Étape attendue</th><th>Observé ?</th><th>Date</th><th>Notes</th></tr></thead><tbody></tbody></table>
-<h2>Étape 4 — Activités stimulantes</h2>
-<p>3-5 activités simples adaptées à l'âge pour encourager le développement.</p>
-<h2>Étape 5 — Quand consulter</h2>
-<p>Signaux qui justifient d'en parler au pédiatre — sans alarmer.</p>
-<h2>Règles</h2>
+<blockquote>Ce suivi est informatif et ne remplace pas un avis médical. Seul un pédiatre ou un professionnel de santé peut évaluer le développement de votre enfant. En cas de doute, consultez toujours un professionnel qualifié.</blockquote>
+<hr>
+<h2>Étape 1 — Recueillir le profil de l'enfant</h2>
+<p>Avant tout, poser ces trois questions :</p>
+<ol>
+<li><strong>Âge exact</strong> — en mois de préférence (ex : « 18 mois », « 2 ans et demi »).</li>
+<li><strong>Motif</strong> — curiosité générale, inquiétude précise, préparation d'un bilan pédiatrique ?</li>
+<li><strong>Contexte</strong> — prématurité, bilinguisme, fratrie, mode de garde, changements récents (déménagement, naissance, maladie).</li>
+</ol>
+<h3>Calcul de l'âge corrigé (prématurité)</h3>
+<p>Si l'enfant est né avant 37 SA, <strong>toujours utiliser l'âge corrigé</strong> jusqu'à 2 ans :</p>
+<pre><code>âge corrigé = âge chronologique (mois) − (40 − terme en SA) / 4,33</code></pre>
+<p>Exemple : bébé de 10 mois né à 32 SA → correction = (40−32)/4,33 ≈ 1,85 mois → âge corrigé ≈ <strong>8 mois</strong>.</p>
+<p>Utiliser systématiquement l'âge corrigé dans toutes les étapes suivantes.</p>
+<hr>
+<h2>Étape 2 — Domaines de développement à explorer</h2>
+<p>Couvrir les six domaines à chaque évaluation :</p>
+<table><thead><tr><th>Domaine</th><th>Ce que l'on observe concrètement</th></tr></thead><tbody><tr><td><strong>Motricité globale</strong></td><td>Contrôle de tête, retournements, position assise, 4 pattes, marche, escaliers, saut</td></tr><tr><td><strong>Motricité fine</strong></td><td>Préhension palmaire → pince pouce-index, gribouillage, empilement de cubes, usage de la cuillère</td></tr><tr><td><strong>Langage réceptif</strong></td><td>Répond au prénom, comprend « non », suit des consignes simples puis complexes, pointe l'image nommée</td></tr><tr><td><strong>Langage expressif</strong></td><td>Gazouillis, babillage, premiers mots signifiants, associations, phrases, questions</td></tr><tr><td><strong>Social / émotionnel</strong></td><td>Sourire social, attachement sécure, imitation, jeu parallèle → coopératif, régulation émotionnelle</td></tr><tr><td><strong>Cognitif</strong></td><td>Permanence de l'objet, résolution de problèmes, imitation différée, catégorisation, jeu symbolique</td></tr></tbody></table>
+<hr>
+<h2>Étape 3 — Repères par tranche d'âge</h2>
+<p>Ces fourchettes sont issues des référentiels OMS 2006, CDC 2022 et HAS. Ce sont des <strong>intervalles normaux</strong>, pas des seuils absolus.</p>
+<table><thead><tr><th>Âge</th><th>Motricité globale</th><th>Motricité fine</th><th>Langage réceptif</th><th>Langage expressif</th><th>Social / cognitif</th></tr></thead><tbody><tr><td><strong>2 mois</strong></td><td>Soulève la tête en ventre</td><td>Réflexe de préhension</td><td>Sursaute aux bruits</td><td>Pleure, gazouillis</td><td>Suit du regard, sourire social</td></tr><tr><td><strong>4 mois</strong></td><td>Tient la tête, s'appuie sur les avant-bras</td><td>Attrape un hochet tendu</td><td>Tourne la tête vers la voix</td><td>Rit, vocalise</td><td>Reconnaît les visages familiers</td></tr><tr><td><strong>6 mois</strong></td><td>Tient assis avec appui, se retourne dos/ventre</td><td>Passe un objet d'une main à l'autre</td><td>Répond à son prénom</td><td>Babillage (ba-ba, ma-ma)</td><td>Angoisse de l'étranger naissante</td></tr><tr><td><strong>9 mois</strong></td><td>Rampe, se met debout avec appui</td><td>Pince grossière (pouce + 4 doigts)</td><td>Comprend « non », pointe</td><td>« Dada/mama » sans sens</td><td>Jeux de coucou-caché, imite</td></tr><tr><td><strong>12 mois</strong></td><td>Marche avec appui ou seul</td><td>Pince fine (pouce + index)</td><td>Suit une consigne simple avec geste</td><td>1-3 mots avec sens</td><td>Fait au revoir, jeu de bol</td></tr><tr><td><strong>18 mois</strong></td><td>Marche seul, monte les escaliers avec aide</td><td>Empile 2-3 cubes, tourne les pages</td><td>Désigne 3+ parties du corps</td><td>10-20 mots, pointe + regarde</td><td>Jeu de faire-semblant, câlins spontanés</td></tr><tr><td><strong>24 mois</strong></td><td>Monte/descend les escaliers, court</td><td>Empile 4-6 cubes, gribouille</td><td>Comprend 2 consignes enchaînées</td><td>50+ mots, associations de 2 mots</td><td>Joue à côté des autres (jeu parallèle)</td></tr><tr><td><strong>36 mois</strong></td><td>Pédale, saute à pieds joints</td><td>Tient un crayon, dessine un cercle</td><td>Comprend « pourquoi » et « comment »</td><td>Phrases 3-4 mots, raconte un événement</td><td>Jeu coopératif naissant, partage</td></tr></tbody></table>
+<hr>
+<h2>Étape 4 — Générer le tableau de suivi personnalisé</h2>
+<p>Remplir pour l'âge de l'enfant en s'appuyant sur l'étape 3. Proposer ce tableau au parent pour noter ses observations sur plusieurs jours :</p>
+<pre><code>| Domaine           | Étape attendue à cet âge         | Observé ? (oui / partiel / non) | Depuis quand | Notes |
+|-------------------|----------------------------------|---------------------------------|--------------|-------|
+| Motricité globale |                                  |                                 |              |       |
+| Motricité fine    |                                  |                                 |              |       |
+| Langage réceptif  |                                  |                                 |              |       |
+| Langage expressif |                                  |                                 |              |       |
+| Social/émotionnel |                                  |                                 |              |       |
+| Cognitif          |                                  |                                 |              |       |</code></pre>
+<p>Conseil au parent : observer sur <strong>3 à 5 jours différents</strong> (l'enfant peut être moins performant quand il est fatigué ou dans un nouvel environnement) avant de conclure qu'une compétence est absente.</p>
+<hr>
+<h2>Étape 5 — Activités stimulantes adaptées à l'âge</h2>
+<p>Proposer 4 à 6 activités concrètes, réalisables à la maison sans matériel coûteux. Adapter selon le contexte familial mentionné à l'étape 1.</p>
+<p><strong>Exemples par domaine :</strong></p>
 <ul>
-<li>Chaque enfant a son rythme — pas de comparaison.</li>
-<li>Les fourchettes sont larges et normales.</li>
+<li><strong>Motricité globale</strong> : parcours de coussins au sol, escalade supervisée d'une marche, balle à rouler/attraper, danse sur de la musique.</li>
+<li><strong>Motricité fine</strong> : jeux de transvasement (eau, sable, légumineuses), pâte à modeler, déchirer du papier journal, empiler des boîtes de yaourt.</li>
+<li><strong>Langage</strong> : nommer les objets du quotidien lors des repas/du bain ; chansons avec gestes (<em>Promenons-nous</em>, <em>Bateau sur l'eau</em>) ; répéter et élargir ce que dit l'enfant (il dit « chien » → vous dites « oui, un grand chien qui court ! ») ; livres imagés pointés ensemble.</li>
+<li><strong>Social</strong> : jeux de miroir, coucou-caché, tours de rôle avec une balle, dînette ou garage avec les poupées/voitures.</li>
+<li><strong>Cognitif</strong> : boîtes à formes, cacher un jouet sous un tissu et demander « il est où ? », tri de couleurs avec des chaussettes, puzzles 2 à 4 pièces.</li>
 </ul>
-<blockquote>⚠️ Ce suivi est informatif. Seul un pédiatre peut évaluer le développement de votre enfant. Les variations de rythme sont normales.</blockquote>
+<blockquote>Pour les familles bilingues : alterner les langues dans les mêmes activités est bénéfique. Compter le vocabulaire total toutes langues confondues.</blockquote>
+<hr>
+<h2>Étape 6 — Signaux qui méritent un avis pédiatrique</h2>
+<p>Formuler avec bienveillance, sans catastrophisme. Ces signaux ne signifient pas qu'il y a forcément un problème, mais justifient d'en parler rapidement au médecin ou de demander un bilan.</p>
+<p><strong>À tout âge — signaux prioritaires :</strong></p>
+<ul>
+<li>Perte nette et durable de compétences déjà acquises (régression)</li>
+<li>Absence de contact visuel ou de réponse à la voix</li>
+</ul>
+<p><strong>Signaux spécifiques par âge :</strong></p>
+<table><thead><tr><th>Âge</th><th>Signal à signaler</th></tr></thead><tbody><tr><td>2 mois</td><td>Pas de sourire social, pas de suivi du regard</td></tr><tr><td>4 mois</td><td>Pas de vocalisation, pas de réaction aux bruits</td></tr><tr><td>6 mois</td><td>Pas de babillage, pas de réponse au prénom</td></tr><tr><td>9 mois</td><td>Pas de pointage, pas d'imitation de gestes</td></tr><tr><td>12 mois</td><td>Pas de geste de bye-bye, aucun mot, pas de pointage intentionnel</td></tr><tr><td>18 mois</td><td>Moins de 10 mots, pas de marche autonome, pas de jeu de faire-semblant</td></tr><tr><td>24 mois</td><td>Moins de 50 mots, pas d'associations de 2 mots, pas de jeu symbolique</td></tr><tr><td>36 mois</td><td>Discours incompréhensible par les inconnus, pas de phrases de 3 mots</td></tr></tbody></table>
+<blockquote>Signaler tôt ne nuit jamais : si un bilan conclut que tout va bien, c'est une bonne nouvelle. S'il détecte quelque chose, une prise en charge précoce est toujours plus efficace.</blockquote>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne jamais faire :</strong></p>
+<ul>
+<li>Comparer à un cousin, un voisin ou des publications de réseaux sociaux — les fourchettes normales sont très larges.</li>
+<li>Présenter un seuil comme une deadline absolue (ex : « il doit absolument marcher à 12 mois »).</li>
+<li>Suggérer ou exclure un diagnostic (autisme, dyspraxie, TDAH…) — cela appartient aux professionnels après évaluation formelle.</li>
+<li>Minimiser une inquiétude réelle du parent (« ne vous inquiétez pas, c'est normal ») sans reconnaître d'abord son ressenti.</li>
+<li>Ignorer la prématurité et utiliser l'âge chronologique sans correction.</li>
+</ul>
+<p><strong>Pièges courants :</strong></p>
+<ul>
+<li>Confondre langage réceptif et expressif : un enfant peut très bien comprendre sans encore beaucoup parler.</li>
+<li>Sur-interpréter une régression passagère liée à un changement de contexte (sibling, déménagement, maladie, rentrée) — observer la durée avant d'alerter.</li>
+<li>Ignorer les différences culturelles dans le portage, la co-activité ou l'exposition au langage (certains enfants parlent peu mais comprennent beaucoup).</li>
+<li>Appliquer les normes francophones à des enfants élevés dans un autre système culturel sans nuancer.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Carnet de santé numérique</strong> : encourager l'utilisation du DMP ou de Mon Carnet de Santé (France) pour noter les observations entre deux visites et les partager facilement avec les professionnels.</li>
+<li><strong>Bilans obligatoires en France</strong> : rappeler les visites obligatoires à 9 mois, 24 mois et 36 mois (certificats de santé) — elles incluent un dépistage développemental structuré.</li>
+<li><strong>Orthophonie préventive</strong> : une consultation orthophonique est possible dès 18 mois sans attendre un retard confirmé, sur simple demande du médecin traitant.</li>
+<li><strong>Psychomotricité</strong> : pour les inquiétudes motrices ou de coordination, un bilan psychomoteur peut être demandé dès 2 ans.</li>
+<li><strong>Évaluation pluridisciplinaire</strong> : en cas d'inquiétude persistante sur plusieurs domaines, une équipe coordonnée (pédiatre + orthophoniste + psychomotricien ± neuropédiatre) est plus complète qu'une consultation isolée.</li>
+<li><strong>Ressources fiables</strong> : orienter vers Ameli.fr, HAS, Naître et Grandir (Québec) ou WHO Child Growth Standards — éviter les sources non expertisées sur les réseaux sociaux.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

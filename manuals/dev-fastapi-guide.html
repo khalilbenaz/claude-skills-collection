@@ -97,37 +97,210 @@ cp -r claude-skills-collection/skills/dev-fastapi-guide ~/.claude/skills/</div><
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide FastAPI</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le besoin</strong> — Identifier le type d'API (REST, WebSocket, microservice) et définir l'architecture : structure modulaire avec routers, couche de services, repositories pour l'accès aux données, et stratégie d'authentification.</li>
-</ol>
-<ol>
-<li><strong>Structurer le projet</strong> — Organiser en modules avec <code>app/</code> contenant <code>main.py</code>, <code>routers/</code> pour les endpoints groupés par domaine, <code>schemas/</code> pour les modèles Pydantic, <code>models/</code> pour les modèles ORM, <code>services/</code> pour la logique métier, et <code>dependencies/</code> pour les injections.</li>
-</ol>
-<ol>
-<li><strong>Définir les schémas Pydantic</strong> — Créer les modèles de validation avec Pydantic v2 (<code>BaseModel</code>, <code>Field</code>, <code>validator</code>), séparer les schémas en <code>Create</code>, <code>Update</code>, <code>Response</code> et <code>InDB</code>. Utiliser les types stricts, les exemples OpenAPI, et les validateurs custom.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les routes</strong> — Développer les endpoints avec les décorateurs <code>@router.get/post/put/delete</code>, typer les paramètres de path, query et body, configurer les status codes, les response models, et les tags pour la documentation OpenAPI automatique.</li>
-</ol>
-<ol>
-<li><strong>Configurer le système de dépendances</strong> — Utiliser <code>Depends()</code> pour l'injection de dépendances : connexion base de données, session utilisateur, permissions, pagination. Créer des dépendances chaînées et des dépendances avec <code>yield</code> pour la gestion des ressources.</li>
-</ol>
-<ol>
-<li><strong>Implémenter l'async et les performances</strong> — Utiliser <code>async def</code> pour les opérations I/O (base de données, HTTP externe), configurer SQLAlchemy async avec <code>AsyncSession</code>, implémenter le background tasks avec <code>BackgroundTasks</code>, et gérer le connection pooling.</li>
-</ol>
-<ol>
-<li><strong>Sécuriser l'API</strong> — Implémenter OAuth2 avec <code>OAuth2PasswordBearer</code>, JWT pour l'authentification, les scopes pour les permissions granulaires, le rate limiting avec <code>slowapi</code>, et la validation CORS. Documenter la sécurité dans OpenAPI.</li>
-</ol>
-<ol>
-<li><strong>Tester et déployer</strong> — Écrire des tests avec <code>pytest</code> et <code>httpx.AsyncClient</code>, utiliser les fixtures pour la base de données de test, configurer le déploiement avec Uvicorn + Gunicorn, Docker multi-stage, et les health checks.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Bootstrapper le projet</h3>
+<pre><code class="lang-bash">pip install &quot;fastapi[standard]&quot; sqlalchemy[asyncio] alembic pydantic-settings httpx pytest pytest-asyncio</code></pre>
+<p>Structure recommandée :</p>
+<pre><code>app/
+  main.py          # lifespan, include_router, middleware
+  config.py        # Settings via pydantic-settings
+  dependencies.py  # Depends() partagés (db, auth, pagination)
+  routers/
+    users.py
+    items.py
+  schemas/
+    user.py        # UserCreate, UserUpdate, UserResponse
+  models/
+    user.py        # SQLAlchemy ORM
+  services/
+    user_service.py
+  repositories/
+    user_repo.py
+tests/
+  conftest.py      # fixtures DB, client async
+  test_users.py</code></pre>
+<h3>2. Config typée avec pydantic-settings</h3>
+<pre><code class="lang-python"># app/config.py
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    database_url: str
+    secret_key: str
+    debug: bool = False
+    cors_origins: list[str] = []
+
+    model_config = {&quot;env_file&quot;: &quot;.env&quot;}
+
+settings = Settings()</code></pre>
+<h3>3. Schémas Pydantic v2 — séparer Create / Update / Response</h3>
+<pre><code class="lang-python"># app/schemas/user.py
+from pydantic import BaseModel, EmailStr, Field
+from datetime import datetime
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8)
+    username: str = Field(max_length=50)
+
+class UserUpdate(BaseModel):
+    username: str | None = Field(None, max_length=50)
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    username: str
+    created_at: datetime
+
+    model_config = {&quot;from_attributes&quot;: True}</code></pre>
+<p><strong>Règle</strong> : jamais réutiliser <code>UserCreate</code> comme <code>response_model</code> — le schéma de réponse ne doit pas contenir le mot de passe.</p>
+<h3>4. Lifespan + application factory</h3>
+<pre><code class="lang-python"># app/main.py
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from app.routers import users, items
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
+    yield
+    # shutdown
+
+def create_app() -&gt; FastAPI:
+    app = FastAPI(
+        title=&quot;Mon API&quot;,
+        lifespan=lifespan,
+        docs_url=&quot;/docs&quot; if settings.debug else None,
+    )
+    app.include_router(users.router, prefix=&quot;/users&quot;, tags=[&quot;users&quot;])
+    app.include_router(items.router, prefix=&quot;/items&quot;, tags=[&quot;items&quot;])
+    return app
+
+app = create_app()</code></pre>
+<h3>5. Dépendances réutilisables</h3>
+<pre><code class="lang-python"># app/dependencies.py
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db import get_session
+from app.services.auth import decode_token
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=&quot;/auth/token&quot;)
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_session),
+):
+    payload = decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    return await user_repo.get_by_id(db, payload[&quot;sub&quot;])
+
+# Pagination simple
+def pagination(skip: int = 0, limit: int = Query(20, le=100)):
+    return {&quot;skip&quot;: skip, &quot;limit&quot;: limit}</code></pre>
+<h3>6. Router et endpoints</h3>
+<pre><code class="lang-python"># app/routers/users.py
+from fastapi import APIRouter, Depends, status
+from app.schemas.user import UserCreate, UserResponse
+from app.services.user_service import UserService
+from app.dependencies import get_current_user, pagination
+
+router = APIRouter()
+
+@router.get(&quot;/&quot;, response_model=list[UserResponse])
+async def list_users(
+    page: dict = Depends(pagination),
+    service: UserService = Depends(),
+):
+    return await service.list(**page)
+
+@router.post(&quot;/&quot;, response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(payload: UserCreate, service: UserService = Depends()):
+    return await service.create(payload)
+
+@router.get(&quot;/me&quot;, response_model=UserResponse)
+async def get_me(current_user=Depends(get_current_user)):
+    return current_user</code></pre>
+<h3>7. Async — quand l'utiliser</h3>
+<table><thead><tr><th>Cas</th><th>Décorateur</th></tr></thead><tbody><tr><td>Requête BDD async (asyncpg, asyncmy)</td><td><code>async def</code></td></tr><tr><td>Appel HTTP externe (httpx)</td><td><code>async def</code></td></tr><tr><td>Calcul CPU pur, bibliothèque sync</td><td><code>def</code> (thread pool auto)</td></tr><tr><td>Lecture fichier blocking</td><td><code>def</code> ou <code>run_in_executor</code></td></tr></tbody></table>
+<p><strong>Règle critique</strong> : ne jamais appeler une librairie synchrone (ex: <code>requests</code>, <code>psycopg2</code> standard) dans un <code>async def</code> — ça bloque le event loop pour tous les workers.</p>
+<h3>8. SQLAlchemy async</h3>
+<pre><code class="lang-python"># app/db.py
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+
+engine = create_async_engine(settings.database_url, pool_size=10, max_overflow=20)
+AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
+
+async def get_session():
+    async with AsyncSessionLocal() as session:
+        yield session</code></pre>
+<h3>9. Gestion des erreurs</h3>
+<pre><code class="lang-python">from fastapi import Request
+from fastapi.responses import JSONResponse
+
+class AppError(Exception):
+    def __init__(self, code: str, status: int = 400):
+        self.code = code
+        self.status = status
+
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError):
+    return JSONResponse(status_code=exc.status, content={&quot;error&quot;: exc.code})</code></pre>
+<p>Utiliser <code>HTTPException</code> pour les erreurs HTTP standard, <code>AppError</code> pour les erreurs métier avec codes lisibles.</p>
+<h3>10. Tests avec httpx + pytest-asyncio</h3>
+<pre><code class="lang-python"># tests/conftest.py
+import pytest_asyncio
+from httpx import AsyncClient, ASGITransport
+from app.main import app
+
+@pytest_asyncio.fixture
+async def client():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=&quot;http://test&quot;) as ac:
+        yield ac</code></pre>
+<pre><code class="lang-python"># tests/test_users.py
+import pytest
+
+@pytest.mark.asyncio
+async def test_create_user(client):
+    r = await client.post(&quot;/users/&quot;, json={&quot;email&quot;: &quot;a@b.com&quot;, &quot;password&quot;: &quot;secret123&quot;, &quot;username&quot;: &quot;alice&quot;})
+    assert r.status_code == 201
+    assert r.json()[&quot;email&quot;] == &quot;a@b.com&quot;</code></pre>
+<h3>11. Déploiement</h3>
+<pre><code class="lang-bash"># Développement
+fastapi dev app/main.py
+
+# Production (Gunicorn + Uvicorn workers)
+gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000</code></pre>
+<pre><code class="lang-dockerfile"># Dockerfile multi-stage
+FROM python:3.12-slim AS builder
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+FROM python:3.12-slim
+WORKDIR /app
+COPY --from=builder /usr/local/lib/python3.12 /usr/local/lib/python3.12
+COPY . .
+CMD [&quot;gunicorn&quot;, &quot;app.main:app&quot;, &quot;-w&quot;, &quot;4&quot;, &quot;-k&quot;, &quot;uvicorn.workers.UvicornWorker&quot;, &quot;--bind&quot;, &quot;0.0.0.0:8000&quot;]</code></pre>
+<h2>Garde-fous / Anti-patterns</h2>
 <ul>
-<li>Utilise toujours Pydantic v2 avec des schémas séparés pour la création, la mise à jour et la réponse — ne réutilise jamais le même modèle partout.</li>
-<li>Déclare les endpoints <code>async def</code> uniquement pour les vraies opérations asynchrones — utilise <code>def</code> pour les opérations synchrones afin d'éviter de bloquer la boucle événementielle.</li>
-<li>Injecte toujours les dépendances (DB, auth, config) via <code>Depends()</code> plutôt que des imports directs pour faciliter les tests.</li>
-<li>Ne place jamais de logique métier dans les routes — délègue aux services pour garder les endpoints fins et testables.</li>
-<li>Valide systématiquement toutes les entrées avec Pydantic et gère les erreurs avec des <code>HTTPException</code> explicites et des codes de statut appropriés.</li>
+<li><strong><code>async def</code> avec bibliothèques sync</strong> — <code>requests</code>, <code>psycopg2</code>, <code>time.sleep()</code> dans un <code>async def</code> bloquent l'event loop. Remplacer par <code>httpx</code>, <code>asyncpg</code>, <code>asyncio.sleep</code>.</li>
+<li><strong>Même modèle Pydantic partout</strong> — réutiliser <code>UserCreate</code> en réponse expose le mot de passe haché. Toujours séparer Create / Response.</li>
+<li><strong>Logique métier dans les routes</strong> — les routes doivent rester &lt; 10 lignes. La logique va dans les services.</li>
+<li><strong><code>expire_on_commit=True</code> (défaut SQLAlchemy)</strong> — provoque des <code>DetachedInstanceError</code> en async. Toujours <code>expire_on_commit=False</code> avec <code>async_sessionmaker</code>.</li>
+<li><strong><code>@app.on_event(&quot;startup&quot;)</code> deprecated</strong> — utiliser <code>lifespan</code> depuis FastAPI 0.93+.</li>
+<li><strong>Ignorer <code>response_model</code></strong> — sans <code>response_model</code>, FastAPI sérialise tout l'objet ORM (champs internes, relations lazy = erreur ou fuite de données).</li>
+<li><strong><code>model.dict()</code> (Pydantic v1)</strong> — en v2, utiliser <code>model.model_dump()</code>. <code>dict()</code> est déprécié.</li>
+<li><strong>Tests sans override de dépendances</strong> — utiliser <code>app.dependency_overrides[get_session] = override_session</code> pour injecter une BDD de test.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Pydantic v2</strong> obligatoire (v1 EOL). Annotations natives Python 3.10+ (<code>str | None</code> au lieu de <code>Optional[str]</code>).</li>
+<li><strong><code>fastapi[standard]</code></strong> remplace <code>fastapi + uvicorn[standard]</code> depuis FastAPI 0.111+.</li>
+<li><strong>Rate limiting</strong> : <code>slowapi</code> (basé sur <code>limits</code>) ou middleware custom — intégrer dès le début.</li>
+<li><strong>OpenTelemetry</strong> : instrumenter avec <code>opentelemetry-instrumentation-fastapi</code> pour le tracing distribué.</li>
+<li><strong>Versioning d'API</strong> : prefixer les routers (<code>/v1/users</code>) ou utiliser <code>APIVersion</code> middleware plutôt que dupliquer les fichiers.</li>
+<li><strong>Background jobs lourds</strong> : <code>BackgroundTasks</code> pour les tâches légères (&lt;1s) ; déléguer à Celery/ARQ pour les tâches longues.</li>
+<li><strong>Health checks</strong> : exposer <code>/health</code> et <code>/ready</code> pour Kubernetes liveness/readiness probes.</li>
 </ul>
 </article>
 </main>

@@ -96,24 +96,103 @@ cp -r claude-skills-collection/skills/dev-user-flow-designer ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>User Flow Designer</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identifier les objectifs utilisateur et business</strong> : clarifier les jobs-to-be-done (ce que l'utilisateur cherche à accomplir), les métriques de succès business (activation, conversion, rétention), et les tensions potentielles entre ces deux types d'objectifs.</li>
-<li><strong>Mapper le flow actuel</strong> : si un flow existant est en place, le documenter étape par étape, identifier les friction points (drops, erreurs fréquentes, hésitations mesurées par analytics ou tests), et quantifier l'impact de chaque point de friction.</li>
-<li><strong>Designer le happy path</strong> : concevoir le chemin idéal — le minimum d'étapes nécessaires pour atteindre l'objectif, la progressive disclosure (ne montrer que ce dont l'utilisateur a besoin à chaque étape), et l'élimination de toute décision non essentielle.</li>
-<li><strong>Gérer les edge cases</strong> : cartographier tous les chemins alternatifs — erreurs de validation, perte de connexion, retours arrière et annulations, états vides (premier usage), permissions refusées (caméra, localisation), timeouts, et conflits de données.</li>
-<li><strong>Optimiser la conversion</strong> : réduire la charge cognitive (chunking des étapes), utiliser l'auto-fill et la persistance des données, intégrer la social proof et les éléments de réassurance au bon moment, créer un sentiment de progression (progress indicator, steps restants).</li>
-<li><strong>Concevoir l'onboarding</strong> : définir le moment d'activation (aha moment), structurer la first-time experience (guided vs. exploratoire), placer les tooltips et coachmarks de manière non intrusive, et concevoir un wizard progressif qui démontre la valeur avant de demander un effort.</li>
-<li><strong>Représentation visuelle</strong> : créer un flowchart clair (rectangles = étapes, losanges = décisions, cylindres = data), une user story map (activités → tâches → stories), ou un service blueprint si des acteurs backend sont impliqués.</li>
-<li><strong>Mesure et itération</strong> : définir les événements analytics à tracker sur chaque étape du flow, analyser le funnel de conversion, utiliser les heatmaps et les session recordings pour identifier les frictions non anticipées, et mettre en place des A/B tests sur les étapes critiques.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Cadrer objectifs et périmètre</h3>
 <ul>
-<li>Base-toi sur des principes de design éprouvés (loi de Hick, loi de Miller, paradoxe du choix, principes de Fogg).</li>
-<li>Sois constructif : chaque friction identifiée doit être accompagnée d'une solution concrète de simplification.</li>
-<li>Fournis des exemples visuels de référence (flows notables comme Duolingo onboarding, Stripe checkout) quand possible.</li>
-<li>Adapte le flow au contexte et à la plateforme cible (un checkout mobile doit être pensé différemment d'un checkout desktop).</li>
-<li>Prioritise le happy path : les edge cases sont importants, mais ne doivent pas complexifier le parcours principal.</li>
+<li><strong>Jobs-to-be-done</strong> : énoncez le job en format <code>Quand [situation], je veux [motivation] pour [outcome attendu]</code>.</li>
+<li><strong>Métriques de succès</strong> : taux d'activation, time-to-value, drop rate par étape, taux de complétion.</li>
+<li><strong>Tensions business/UX</strong> : identifiez explicitement les conflits (ex. : collecte de données vs. friction à l'inscription) et choisissez un compromis documenté.</li>
+<li><strong>Persona et contexte</strong> : device dominant (mobile first ?), niveau technique, langue, connectivité (3G toléré ?).</li>
+</ul>
+<h3>2. Auditer le flow existant</h3>
+<p>Si un flow existe déjà :</p>
+<pre><code>[Page/Écran A] → [Action] → [Page/Écran B] → [Action] → ...
+                                 ↓ 30% drop
+                           [Erreur / Hésitation]</code></pre>
+<ul>
+<li>Listez chaque étape avec le drop rate mesurable (Mixpanel, GA4, Amplitude).</li>
+<li>Catégorisez chaque friction : <strong>confusion</strong> (UX), <strong>technique</strong> (bug), <strong>motivationnelle</strong> (valeur pas claire), <strong>sécurité</strong> (méfiance).</li>
+<li>Priorisez les frictions par impact = <code>volume × taux de drop × valeur unitaire</code>.</li>
+</ul>
+<h3>3. Designer le happy path</h3>
+<p>Règles strictes :</p>
+<ul>
+<li><strong>Minimum viable steps</strong> : supprimez toute étape qui ne génère pas de valeur perceptible ou de donnée critique.</li>
+<li><strong>Progressive disclosure</strong> : montrez uniquement ce dont l'utilisateur a besoin à cette étape. Exemple : ne demandez pas la date de naissance avant que l'utilisateur soit prêt à finaliser le profil.</li>
+<li><strong>One primary action per screen</strong> : un seul CTA visible par vue ; les actions secondaires en link discret.</li>
+<li><strong>Décision à 7 options max</strong> (loi de Miller) : si un choix dépasse 7 items, ajoutez un filtre ou segmentez.</li>
+</ul>
+<p>Exemple de notation concise d'un happy path :</p>
+<pre><code>START
+ └─ [Écran 1 : Email + MDP]  →  [Vérification email]
+     └─ [Écran 2 : Profil minimal (prénom, photo optionnelle)]
+         └─ [Aha moment : dashboard peuplé avec données exemple]
+             └─ END / activation</code></pre>
+<h3>4. Cartographier les edge cases</h3>
+<p>Matrice à remplir pour chaque étape critique :</p>
+<table><thead><tr><th>Edge case</th><th>Probabilité</th><th>Impact</th><th>Traitement</th></tr></thead><tbody><tr><td>Validation email échouée</td><td>Élevée</td><td>Bloquant</td><td>Inline error + suggestion typo (Mailcheck.js)</td></tr><tr><td>Timeout réseau</td><td>Moyenne</td><td>Bloquant</td><td>Retry auto + toast &quot;Nouvelle tentative…&quot;</td></tr><tr><td>Permissions refusées (caméra)</td><td>Moyenne</td><td>Partiel</td><td>Flow alternatif sans photo, prompt educatif</td></tr><tr><td>État vide (0 donnée)</td><td>Élevée</td><td>Motivationnel</td><td>Empty state illustré + action suggérée</td></tr><tr><td>Retour arrière mid-flow</td><td>Haute</td><td>Perte données</td><td>Persistance locale (localStorage / sessionStorage)</td></tr></tbody></table>
+<h3>5. Optimiser la conversion</h3>
+<p>Techniques actionnables :</p>
+<ul>
+<li><strong>Chunking</strong> : découpez les formulaires longs en 3-5 étapes avec progress bar (<code>Étape 2 sur 4</code>).</li>
+<li><strong>Autofill &amp; pré-remplissage</strong> : utilisez les hints HTML5 (<code>autocomplete=&quot;email&quot;</code>) et les données disponibles (OAuth → prénom pré-rempli).</li>
+<li><strong>Social proof contextuel</strong> : placez les éléments de réassurance juste avant la décision critique (ex. : <code>&quot;⭐ 4.8 — 12 000 avis&quot;</code> avant le bouton de paiement).</li>
+<li><strong>Momentum</strong> : commencez par des étapes simples (email) avant les étapes sensibles (CB). L'utilisateur investit progressivement.</li>
+<li><strong>Sauvegarder la progression</strong> : si le flow dure &gt; 2 min, proposez &quot;Continuer plus tard&quot; avec lien email.</li>
+</ul>
+<h3>6. Concevoir l'onboarding</h3>
+<pre><code>Inscription → [Aha moment le plus court possible] → Valeur prouvée → Demande d'effort</code></pre>
+<p>Critères de placement de l'aha moment :</p>
+<ul>
+<li>Duolingo : première leçon complétée avant création de compte.</li>
+<li>Figma : fichier exemple ouvert immédiatement après signup.</li>
+<li>Stripe : première transaction test réussie sans carte réelle.</li>
+</ul>
+<p>Règles tooltips / coachmarks :</p>
+<ul>
+<li>Max 3 étapes dans un wizard guidé.</li>
+<li>Toujours offrir &quot;Passer&quot; visible.</li>
+<li>Déclenchez les tooltips sur l'action (hover / focus), jamais au chargement de page.</li>
+</ul>
+<h3>7. Représentation visuelle</h3>
+<p>Choisissez le bon format selon le besoin :</p>
+<table><thead><tr><th>Format</th><th>Quand l'utiliser</th><th>Outil</th></tr></thead><tbody><tr><td><strong>Flowchart</strong></td><td>Flow simple, équipe dev</td><td>draw.io, Mermaid</td></tr><tr><td><strong>User Story Map</strong></td><td>Planification produit / backlog</td><td>Miro, Notion</td></tr><tr><td><strong>Service Blueprint</strong></td><td>Flows multi-acteurs (ops, backend)</td><td>FigJam, Miro</td></tr><tr><td><strong>Storyboard</strong></td><td>Communication design émotionnel</td><td>Figma, Balsamiq</td></tr></tbody></table>
+<p>Notation Mermaid copiable :</p>
+<pre><code class="lang-mermaid">flowchart TD
+    A([Début]) --&gt; B[Saisie email]
+    B --&gt; C{Email valide ?}
+    C -- Non --&gt; D[Erreur inline] --&gt; B
+    C -- Oui --&gt; E[Saisie mot de passe]
+    E --&gt; F[Dashboard]
+    F --&gt; G([Aha moment])</code></pre>
+<h3>8. Mesure et itération</h3>
+<p>Définissez les events analytics <strong>avant</strong> le développement :</p>
+<pre><code class="lang-js">// Exemple Segment / Amplitude
+analytics.track('Flow Step Completed', {
+  flow: 'onboarding',
+  step: 2,
+  step_name: 'profile_setup',
+  time_spent_ms: 4200,
+  skipped: false,
+});</code></pre>
+<p>KPIs par phase :</p>
+<ul>
+<li><strong>Acquisition → Activation</strong> : % users atteignant l'aha moment sous 5 min.</li>
+<li><strong>Activation → Rétention</strong> : retour J+7.</li>
+<li><strong>Funnel par étape</strong> : drop rate cible &lt; 20 % par étape (sauf étapes intentionnellement filtrantes).</li>
+</ul>
+<p>A/B test en priorité sur : CTA label, order des champs, étapes requises vs. optionnelles.</p>
+<hr>
+<h2>Anti-patterns / Pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td><strong>Registration wall</strong></td><td>Demander compte avant valeur</td><td>Montrer la valeur d'abord (guest mode, démo)</td></tr><tr><td><strong>Form wall</strong></td><td>&gt; 5 champs page 1</td><td>Progressive disclosure, champs optionnels masqués</td></tr><tr><td><strong>Faux progress bar</strong></td><td>Barre qui bloque à 90 %</td><td>Progress basé sur étapes réelles</td></tr><tr><td><strong>Dark patterns</strong></td><td>Opt-out caché, case pré-cochée</td><td>Illégal RGPD + perte de confiance irréversible</td></tr><tr><td><strong>Edge case first</strong></td><td>Flow complexifié par cas rares</td><td>Happy path d'abord, edge cases en overlay/aside</td></tr><tr><td><strong>Pas de fallback offline</strong></td><td>App bloque sans réseau</td><td>Cache local, message d'état clair</td></tr><tr><td><strong>Notifications prématurées</strong></td><td>Permission push demandée à l'arrivée</td><td>Demandez après la première valeur prouvée</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Passwordless en priorité</strong> : proposez magic link / passkey (WebAuthn) avant MDP classique — réduit le drop d'inscription de 30-40 % en moyenne.</li>
+<li><strong>Accessibility first</strong> : le flow doit passer WCAG 2.2 AA ; focus order, aria-live pour les erreurs inline, skip links.</li>
+<li><strong>AI-assisted onboarding</strong> : personnalisez le flow selon le profil détecté (secteur, taille d'équipe) pour afficher uniquement les étapes pertinentes.</li>
+<li><strong>Consent-first RGPD</strong> : bannière de consentement avant tout tracking analytics, cookies classifiés explicitement.</li>
+<li><strong>Mobile gestures</strong> : sur mobile, préférez les bottom sheets et les swipe gestures aux modales plein écran.</li>
+<li><strong>Skeleton screens</strong> : remplacez les spinners par des squelettes de contenu pour réduire l'anxiété de chargement perçu.</li>
 </ul>
 </article>
 </main>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-flutter-helper — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Aide au développement Flutter/Dart avec bonnes pratiques et patterns.">
+<meta name="description" content="Aide au développement Flutter/Dart avec bonnes pratiques, patterns, snippets copiables et diagnostics d'erreurs.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-flutter-helper</h1>
-<p class="lead">Aide au développement Flutter/Dart avec bonnes pratiques et patterns.</p>
+<p class="lead">Aide au développement Flutter/Dart avec bonnes pratiques, patterns, snippets copiables et diagnostics d'erreurs.</p>
 
 
 
@@ -96,25 +96,203 @@ cp -r claude-skills-collection/skills/dev-flutter-helper ~/.claude/skills/</div>
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Flutter Helper</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Structure du projet</strong> — Organiser le projet selon une approche feature-first (dossiers par fonctionnalité : auth/, profile/, home/) ou layer-first (lib/data/, lib/domain/, lib/presentation/). Configurer la modularisation via des packages Dart internes, le pubspec.yaml et les imports relatifs vs absolus (package imports).</li>
-<li><strong>Widgets optimisés</strong> — Concevoir les widgets avec les bonnes pratiques : préférer StatelessWidget quand l'état est externe, utiliser const constructors pour éviter les rebuilds inutiles, favoriser la composition de petits widgets plutôt que l'héritage, et employer InheritedWidget ou des hooks pour le contexte partagé.</li>
-<li><strong>State management</strong> — Choisir et implémenter la solution adaptée à la complexité : Provider (simple, recommandé pour petits projets), Riverpod (Provider 2.0, type-safe, testable, recommandé pour projets moyens à grands), BLoC/Cubit (flux unidirectionnel explicite, idéal pour logique métier complexe), GetX (tout-en-un, simple mais moins maintenable à grande échelle).</li>
-<li><strong>Navigation</strong> — Implémenter la navigation moderne : GoRouter (routing déclaratif, deep linking, nested routes, guards d'authentification), auto_route (génération de code, routes typées), ou Navigator 2.0 natif pour les cas complexes. Configurer les deep links (scheme URI, Universal Links) et la gestion du back stack.</li>
-<li><strong>Networking et data</strong> — Configurer la couche réseau avec Dio (interceptors, retry, logging) ou http basique, générer les modèles avec freezed (immutabilité, copyWith, pattern matching) et json_serializable (sérialisation automatique), et Retrofit pour les clients REST typés.</li>
-<li><strong>Testing Flutter</strong> — Écrire des tests à tous les niveaux : unit tests (logique pure, BLoC/Cubit, use cases), widget tests (rendu des composants, interactions utilisateur, pump/pumpAndSettle), golden tests (comparaison visuelle pixel-perfect), integration tests (Patrol ou flutter_test sur device), et mocking avec mockito ou mocktail.</li>
-<li><strong>Performance</strong> — Optimiser les performances : utiliser const où possible, éviter les rebuilds avec Consumer/Selector ciblés, implémenter le lazy loading (ListView.builder, SliverList), gérer le cache d'images (cached_network_image), déporter les traitements lourds dans des Isolates (compute()), et profiler avec Flutter DevTools (Widget Inspector, Performance overlay).</li>
-<li><strong>Déploiement</strong> — Configurer les flavors (dev/staging/prod) via dart-define ou flutter_config, gérer le code signing (Keychain iOS, keystores Android), automatiser avec Fastlane (gym pour iOS, supply pour Android), configurer les métadonnées et captures d'écran pour le Play Store et l'App Store, et mettre en place le versioning automatique du pubspec.yaml.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Diagnostic initial</h2>
+<p>Avant tout, collecter :</p>
 <ul>
-<li>Fournis du code Dart/Flutter complet et fonctionnel, avec les imports nécessaires et les dépendances pubspec correspondantes.</li>
-<li>Adapte les exemples aux dernières versions stables de Flutter (3.x) et des packages recommandés (Riverpod 2.x, GoRouter 12.x, freezed 2.x).</li>
-<li>Priorise la performance et l'UX : signale toujours les risques de rebuilds excessifs et propose des optimisations concrètes.</li>
-<li>Mentionne les alternatives de state management avec leurs cas d'usage pour guider le choix selon la taille et la complexité du projet.</li>
-<li>En cas d'erreur ou de bug Flutter signalé, demande le message d'erreur complet et la version Flutter avant de proposer une solution.</li>
+<li><code>flutter --version</code> → version SDK (cible : Flutter 3.22+, Dart 3.4+)</li>
+<li><code>flutter doctor -v</code> → chaîne outils (Xcode, Android SDK, etc.)</li>
+<li>Message d'erreur complet (stack trace si disponible)</li>
+<li>Plateforme cible (Android / iOS / Web / Desktop)</li>
 </ul>
+<hr>
+<h2>2. Structure projet</h2>
+<p><strong>Feature-first</strong> (projets moyens/grands) :</p>
+<pre><code>lib/
+  features/
+    auth/
+      data/        # repositories, data sources, models
+      domain/      # entities, use cases
+      presentation/ # pages, widgets, controllers
+  core/            # DI, router, theme, utils
+  main.dart</code></pre>
+<p><strong>Layer-first</strong> (petits projets ou prototypes) :</p>
+<pre><code>lib/
+  data/ domain/ presentation/
+  main.dart</code></pre>
+<p>Critère de choix : si &gt; 3 features ou &gt; 2 devs → feature-first obligatoire.</p>
+<hr>
+<h2>3. State management — décision</h2>
+<table><thead><tr><th>Taille projet</th><th>Solution recommandée</th><th>Quand éviter</th></tr></thead><tbody><tr><td>Prototype / très petit</td><td><code>Provider</code></td><td>&gt; 3 features</td></tr><tr><td>Moyen</td><td><strong>Riverpod 2.x</strong></td><td>jamais — convient toujours</td></tr><tr><td>Grande logique métier</td><td><strong>BLoC/Cubit</strong></td><td>sur-architecture sur petits cas</td></tr><tr><td>Full-stack léger</td><td><code>GetX</code></td><td>maintainability sacrifiée</td></tr></tbody></table>
+<p><strong>Riverpod — pattern minimal fonctionnel :</strong></p>
+<pre><code class="lang-dart">// counter_provider.dart
+final counterProvider = StateNotifierProvider&lt;CounterNotifier, int&gt;(
+  (ref) =&gt; CounterNotifier(),
+);
+
+class CounterNotifier extends StateNotifier&lt;int&gt; {
+  CounterNotifier() : super(0);
+  void increment() =&gt; state++;
+}
+
+// widget
+class CounterPage extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref.watch(counterProvider);
+    return Text('$count');
+  }
+}</code></pre>
+<p><strong>Cubit — pattern minimal :</strong></p>
+<pre><code class="lang-dart">class AuthCubit extends Cubit&lt;AuthState&gt; {
+  AuthCubit(this._repo) : super(AuthInitial());
+  final AuthRepository _repo;
+
+  Future&lt;void&gt; login(String email, String password) async {
+    emit(AuthLoading());
+    try {
+      final user = await _repo.login(email, password);
+      emit(AuthSuccess(user));
+    } catch (e) {
+      emit(AuthError(e.toString()));
+    }
+  }
+}</code></pre>
+<hr>
+<h2>4. Widgets — règles de performance</h2>
+<pre><code class="lang-dart">// ✅ Bon : const constructor évite le rebuild
+const MyCard({super.key, required this.title});
+
+// ✅ Isoler le Consumer au plus proche de la donnée
+Consumer&lt;CartModel&gt;(
+  builder: (_, cart, __) =&gt; Text('${cart.itemCount}'),
+);
+
+// ❌ Mauvais : Consumer sur tout l'arbre
+Consumer&lt;CartModel&gt;(
+  builder: (_, cart, __) =&gt; Scaffold(...),  // rebuild = toute la page
+);
+
+// ✅ ListView.builder pour listes longues
+ListView.builder(
+  itemCount: items.length,
+  itemBuilder: (_, i) =&gt; ItemTile(item: items[i]),
+);</code></pre>
+<p>Règle : <strong>jamais de logique métier dans <code>build()</code></strong> — uniquement présentation.</p>
+<hr>
+<h2>5. Navigation — GoRouter (recommandé 2025+)</h2>
+<pre><code class="lang-yaml"># pubspec.yaml
+dependencies:
+  go_router: ^14.0.0</code></pre>
+<pre><code class="lang-dart">final router = GoRouter(
+  initialLocation: '/home',
+  redirect: (context, state) {
+    final loggedIn = ref.read(authProvider).isLoggedIn;
+    if (!loggedIn &amp;&amp; state.matchedLocation != '/login') return '/login';
+    return null;
+  },
+  routes: [
+    GoRoute(path: '/login', builder: (_, __) =&gt; const LoginPage()),
+    GoRoute(
+      path: '/home',
+      builder: (_, __) =&gt; const HomePage(),
+      routes: [
+        GoRoute(path: 'detail/:id', builder: (_, s) =&gt; DetailPage(id: s.pathParameters['id']!)),
+      ],
+    ),
+  ],
+);
+
+// Navigation
+context.go('/home/detail/42');
+context.push('/home/detail/42');  // ajoute au back stack</code></pre>
+<hr>
+<h2>6. Networking + modèles</h2>
+<pre><code class="lang-yaml">dependencies:
+  dio: ^5.4.0
+  retrofit: ^4.1.0
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.9.0
+dev_dependencies:
+  build_runner: ^2.4.9
+  freezed: ^2.4.7
+  json_serializable: ^6.7.1
+  retrofit_generator: ^8.1.0</code></pre>
+<pre><code class="lang-dart">// model généré via freezed
+@freezed
+class User with _$User {
+  const factory User({
+    required int id,
+    required String name,
+    String? avatar,
+  }) = _User;
+  factory User.fromJson(Map&lt;String, dynamic&gt; json) =&gt; _$UserFromJson(json);
+}
+
+// génération : flutter pub run build_runner build --delete-conflicting-outputs</code></pre>
+<p>Intercepteur Dio pour token :</p>
+<pre><code class="lang-dart">dio.interceptors.add(InterceptorsWrapper(
+  onRequest: (options, handler) {
+    options.headers['Authorization'] = 'Bearer $token';
+    handler.next(options);
+  },
+));</code></pre>
+<hr>
+<h2>7. Testing</h2>
+<pre><code class="lang-dart">// Widget test
+testWidgets('affiche le titre', (tester) async {
+  await tester.pumpWidget(const MaterialApp(home: MyWidget(title: 'Test')));
+  expect(find.text('Test'), findsOneWidget);
+});
+
+// BLoC/Cubit test
+blocTest&lt;AuthCubit, AuthState&gt;(
+  'émet AuthSuccess après login réussi',
+  build: () =&gt; AuthCubit(mockRepo),
+  act: (c) =&gt; c.login('u@test.com', 'pass'),
+  expect: () =&gt; [isA&lt;AuthLoading&gt;(), isA&lt;AuthSuccess&gt;()],
+);</code></pre>
+<p>Commandes utiles :</p>
+<pre><code class="lang-bash">flutter test                          # tous les tests
+flutter test --coverage               # avec couverture
+genhtml coverage/lcov.info -o cov_html # rapport HTML
+flutter test integration_test/        # tests d'intégration</code></pre>
+<hr>
+<h2>8. Performance — checklist</h2>
+<ul>
+<li>[ ] <code>const</code> sur tous les constructeurs éligibles</li>
+<li>[ ] <code>ListView.builder</code> / <code>SliverList</code> pour listes &gt; 20 items</li>
+<li>[ ] <code>RepaintBoundary</code> autour des animations complexes</li>
+<li>[ ] Traitements lourds dans <code>Isolate</code> ou <code>compute()</code></li>
+<li>[ ] <code>cached_network_image</code> pour images distantes</li>
+<li>[ ] Profiler avec <strong>Flutter DevTools</strong> → onglet Performance (frame budget 16ms)</li>
+</ul>
+<pre><code class="lang-dart">// compute() = Isolate simplifié
+final result = await compute(parseJsonHeavy, rawString);</code></pre>
+<hr>
+<h2>9. Build &amp; déploiement</h2>
+<pre><code class="lang-bash"># flavors via dart-define
+flutter run --dart-define=ENV=staging
+flutter build apk --dart-define=ENV=prod --release
+
+# APK split par ABI (taille réduite)
+flutter build apk --split-per-abi
+
+# iOS archive
+flutter build ipa --release
+
+# Versions automatiques
+flutter pub version          # avec package cider</code></pre>
+<p>Flavors dans le code :</p>
+<pre><code class="lang-dart">const env = String.fromEnvironment('ENV', defaultValue: 'dev');</code></pre>
+<hr>
+<h2>10. Anti-patterns / pièges à éviter</h2>
+<table><thead><tr><th>Piège</th><th>Solution</th></tr></thead><tbody><tr><td><code>setState</code> dans un <code>StatelessWidget</code></td><td>Passer à <code>StatefulWidget</code> ou state manager</td></tr><tr><td><code>BuildContext</code> utilisé après <code>await</code></td><td>Vérifier <code>mounted</code> avant toute opération post-await</td></tr><tr><td>Appels API dans <code>build()</code></td><td>Déplacer dans <code>initState</code> ou un provider</td></tr><tr><td><code>Image.network()</code> sans cache</td><td>Utiliser <code>CachedNetworkImage</code></td></tr><tr><td>Packages abandonnés (vérifier pub.dev)</td><td>Filtrer par &quot;Likes &gt; 100&quot; et &quot;Maintained&quot;</td></tr><tr><td><code>print()</code> en production</td><td>Remplacer par <code>debugPrint()</code> ou logger package</td></tr><tr><td>Nested <code>Scaffold</code></td><td>Un seul <code>Scaffold</code> par route</td></tr></tbody></table>
+<pre><code class="lang-dart">// ✅ Vérification mounted après async
+Future&lt;void&gt; fetchData() async {
+  final data = await api.get();
+  if (!mounted) return;          // évite memory leak / crash
+  setState(() =&gt; _data = data);
+}</code></pre>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

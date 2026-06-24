@@ -96,24 +96,193 @@ cp -r claude-skills-collection/skills/dev-docker-composer ~/.claude/skills/</div
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Docker Composer</h1>
-<h2>Workflow</h2>
-<ol>
-<li>Identification du stack technique et des services nécessaires (langage, runtime, dépendances, ports, données persistantes)</li>
-<li>Création du Dockerfile optimisé avec multi-stage build, layer caching efficace et fichier .dockerignore adapté</li>
-<li>Minimisation de l'image finale (base alpine/distroless, suppression des fichiers temporaires, exécution en user non-root)</li>
-<li>Configuration docker-compose avec services, networks, volumes, depends_on et healthchecks pour chaque service</li>
-<li>Gestion des secrets et variables d'environnement (fichiers .env, secrets Docker, exclusion du contrôle de version)</li>
-<li>Configuration des volumes pour le développement local (hot reload, bind mounts, synchronisation du code source)</li>
-<li>Optimisation du build cache (ordre des instructions, séparation des dépendances et du code, BuildKit activé)</li>
-<li>Application des best practices de sécurité (scan d'image avec Trivy/Snyk, filesystem read-only, capabilities limitées)</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en étapes</h2>
+<h3>1. Analyser le contexte</h3>
+<p>Identifier avant d'écrire une seule ligne :</p>
 <ul>
-<li>Adapte la configuration à la plateforme de l'utilisateur (Azure Container Registry, AWS ECR, GCP Artifact Registry)</li>
-<li>Fournis des fichiers de configuration complets et commentés, avec explications de chaque choix</li>
-<li>Priorise la sécurité : user non-root systématique, pas de secrets en dur dans les layers, scan d'image recommandé</li>
-<li>Propose des solutions progressives : d'abord une configuration simple fonctionnelle, puis les optimisations avancées</li>
-<li>Inclus toujours un .dockerignore et des healthchecks dans les services docker-compose</li>
+<li><strong>Runtime</strong> : Node 22 / Python 3.12 / Java 21 / Go 1.22 / .NET 9 ?</li>
+<li><strong>Services</strong> : DB (Postgres, Redis, MongoDB ?), broker (RabbitMQ, Kafka ?), reverse proxy ?</li>
+<li><strong>Usage cible</strong> : dev local avec hot-reload / CI / image de prod déployée ?</li>
+<li><strong>Contraintes</strong> : taille d'image, rootless obligatoire, registry cible ?</li>
+</ul>
+<h3>2. Choisir la base image</h3>
+<table><thead><tr><th>Besoin</th><th>Base recommandée</th><th>Remarque</th></tr></thead><tbody><tr><td>Prod légère</td><td><code>node:22-alpine</code> / <code>python:3.12-slim</code></td><td>~50–80 Mo</td></tr><tr><td>Prod ultra-sécurisée</td><td><code>gcr.io/distroless/nodejs22-debian12</code></td><td>Pas de shell</td></tr><tr><td>Build seulement</td><td><code>node:22-bookworm</code> / <code>maven:3.9-eclipse-temurin-21</code></td><td>Jamais en prod</td></tr><tr><td>Go / Rust</td><td><code>scratch</code> ou <code>distroless/static</code></td><td>Binaire statique</td></tr></tbody></table>
+<p><strong>Règle</strong> : jamais utiliser <code>latest</code> en prod. Épingler le digest ou le tag mineur.</p>
+<h3>3. Rédiger le Dockerfile (multi-stage)</h3>
+<p>Pattern canonique Node.js :</p>
+<pre><code class="lang-dockerfile"># ── Build stage ──────────────────────────────────────────
+FROM node:22-alpine AS builder
+WORKDIR /app
+# Copier UNIQUEMENT les manifestes avant le code → cache layer npm install
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+RUN npm run build
+
+# ── Runtime stage ─────────────────────────────────────────
+FROM node:22-alpine AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+# User non-root AVANT de copier les fichiers
+RUN addgroup -S appgroup &amp;&amp; adduser -S appuser -G appgroup
+COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
+COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
+USER appuser
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget -qO- http://localhost:3000/health || exit 1
+CMD [&quot;node&quot;, &quot;dist/index.js&quot;]</code></pre>
+<p>Pattern Java (Maven → JRE slim) :</p>
+<pre><code class="lang-dockerfile">FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /build
+COPY pom.xml .
+RUN mvn dependency:go-offline -q
+COPY src ./src
+RUN mvn package -DskipTests -q
+
+FROM eclipse-temurin:21-jre-alpine AS runtime
+RUN addgroup -S app &amp;&amp; adduser -S app -G app
+WORKDIR /app
+COPY --from=build --chown=app:app /build/target/*.jar app.jar
+USER app
+EXPOSE 8080
+HEALTHCHECK CMD wget -qO- http://localhost:8080/actuator/health || exit 1
+ENTRYPOINT [&quot;java&quot;, &quot;-XX:MaxRAMPercentage=75.0&quot;, &quot;-jar&quot;, &quot;app.jar&quot;]</code></pre>
+<h3>4. Créer le .dockerignore</h3>
+<pre><code>.git
+.gitignore
+node_modules
+dist
+*.log
+.env
+.env.*
+**/.DS_Store
+coverage
+.nyc_output
+Dockerfile*
+docker-compose*.yml
+README.md</code></pre>
+<h3>5. Configurer docker-compose (dev + prod)</h3>
+<p><code>docker-compose.yml</code> (dev, hot-reload) :</p>
+<pre><code class="lang-yaml">services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder          # Stage dev avec devDeps
+    volumes:
+      - .:/app                 # Bind mount pour hot-reload
+      - /app/node_modules      # Volume anonyme isole node_modules
+    ports:
+      - &quot;3000:3000&quot;
+    environment:
+      NODE_ENV: development
+    env_file: .env.local
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [&quot;CMD-SHELL&quot;, &quot;pg_isready -U ${DB_USER}&quot;]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cache:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: [&quot;CMD&quot;, &quot;redis-cli&quot;, &quot;ping&quot;]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  pg_data:</code></pre>
+<p><code>docker-compose.prod.yml</code> (override prod) :</p>
+<pre><code class="lang-yaml">services:
+  api:
+    build:
+      target: runtime          # Stage prod minimal
+    volumes: []                # Pas de bind mount
+    read_only: true            # FS en lecture seule
+    tmpfs:
+      - /tmp                   # Seul répertoire inscriptible
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          cpus: &quot;1.0&quot;
+          memory: 512M</code></pre>
+<p>Lancer en prod :</p>
+<pre><code class="lang-bash">docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d</code></pre>
+<h3>6. Gérer les secrets</h3>
+<pre><code class="lang-bash"># .env.local → jamais commité (dans .gitignore)
+DB_PASSWORD=supersecret
+
+# Docker Secrets (swarm / compose v3.9+)
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+
+# Dans le service
+services:
+  api:
+    secrets:
+      - db_password</code></pre>
+<p>Ne jamais passer de secret via <code>ARG</code> (il apparaît dans <code>docker history</code>).</p>
+<h3>7. Activer BuildKit et optimiser le cache</h3>
+<pre><code class="lang-bash"># Toujours activer BuildKit
+export DOCKER_BUILDKIT=1
+# Ou dans docker-compose
+export COMPOSE_DOCKER_CLI_BUILD=1
+
+# Cache registry (CI GitHub Actions / GitLab)
+docker build \
+  --cache-from type=registry,ref=ghcr.io/org/app:cache \
+  --cache-to   type=registry,ref=ghcr.io/org/app:cache,mode=max \
+  -t ghcr.io/org/app:latest .</code></pre>
+<h3>8. Scanner l'image avant déploiement</h3>
+<pre><code class="lang-bash"># Trivy (open-source, rapide)
+trivy image --exit-code 1 --severity HIGH,CRITICAL ghcr.io/org/app:latest
+
+# Docker Scout (intégré Docker Desktop)
+docker scout cves ghcr.io/org/app:latest</code></pre>
+<hr>
+<h2>Critères de décision</h2>
+<table><thead><tr><th>Question</th><th>Si oui →</th></tr></thead><tbody><tr><td>Image &lt; 100 Mo nécessaire ?</td><td>Alpine ou distroless</td></tr><tr><td>Debug en prod parfois requis ?</td><td>slim (a un shell), pas distroless</td></tr><tr><td>Plusieurs environnements (dev/staging/prod) ?</td><td>Compose override files</td></tr><tr><td>Secrets sensibles ?</td><td>Docker Secrets ou vault externe (HashiCorp, Azure KV)</td></tr><tr><td>Monorepo multi-services ?</td><td><code>build.context</code> + <code>build.dockerfile</code> distincts par service</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<ul>
+<li><strong><code>COPY . .</code> trop tôt</strong> : invalide le cache de <code>npm install</code> à chaque changement de code. Toujours copier les manifestes en premier.</li>
+<li><strong><code>RUN apt-get install ...</code> en plusieurs layers</strong> : combineer en une seule instruction <code>RUN &amp;&amp; &amp;&amp; &amp;&amp; rm -rf /var/lib/apt/lists/*</code>.</li>
+<li><strong><code>USER root</code> en prod</strong> : vecteur d'escalade de privilèges. Toujours créer et basculer sur un user dédié.</li>
+<li><strong>Secrets dans <code>ENV</code> ou <code>ARG</code></strong> : visibles dans les métadonnées de l'image (<code>docker inspect</code>). Utiliser des fichiers montés ou Docker Secrets.</li>
+<li><strong>Pas de healthcheck</strong> : <code>depends_on</code> sans <code>condition: service_healthy</code> démarre les services sans attendre qu'ils soient prêts.</li>
+<li><strong>Image <code>latest</code> en prod</strong> : non reproductible. Toujours épingler (<code>node:22.4.0-alpine</code> ou <code>sha256:...</code>).</li>
+<li><strong>Bind mount en prod</strong> : le code du conteneur devient modifiable depuis l'hôte. Supprimer les volumes de code dans l'override prod.</li>
+<li><strong><code>.env</code> dans l'image</strong> : même via <code>COPY</code>, les secrets restent dans les layers. Utiliser <code>--secret</code> de BuildKit à la place.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Compose Watch</strong> (<code>watch</code> dans <code>docker-compose.yml</code>) remplace les bind mounts ad hoc pour le hot-reload et la synchronisation sélective.</li>
+<li><strong><code>docker init</code></strong> génère un Dockerfile et un compose de base pour Node/Python/Go — bon point de départ à affiner.</li>
+<li><strong>OCI Artifacts</strong> : pousser les images vers un registry OCI-compliant (ghcr.io, ECR, ACR) avec notation/cosign pour la signature.</li>
+<li><strong>Rootless Docker</strong> (<code>dockerd-rootless-setuptool.sh</code>) ou Podman en mode rootless pour les environnements à sécurité renforcée.</li>
+<li><strong><code>--platform linux/amd64,linux/arm64</code></strong> : builder en multi-arch avec <code>docker buildx</code> pour couvrir Apple Silicon et les instances ARM cloud.</li>
 </ul>
 </article>
 </main>

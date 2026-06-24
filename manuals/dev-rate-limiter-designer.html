@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-rate-limiter-designer — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Conception de systèmes de rate limiting et throttling pour APIs.">
+<meta name="description" content="Conception de systèmes de rate limiting et throttling pour APIs — algorithmes, stockage distribué, headers standards, snippets copiables ASP.NET Core / Node / Redis.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-rate-limiter-designer</h1>
-<p class="lead">Conception de systèmes de rate limiting et throttling pour APIs.</p>
+<p class="lead">Conception de systèmes de rate limiting et throttling pour APIs — algorithmes, stockage distribué, headers standards, snippets copiables ASP.NET Core / Node / Redis.</p>
 
 
 
@@ -97,23 +97,151 @@ cp -r claude-skills-collection/skills/dev-rate-limiter-designer ~/.claude/skills
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Rate Limiter Designer</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Identifier les endpoints à protéger et les types de clients</strong> : Cartographier les endpoints sensibles (authentification, envoi d'email, paiement, recherche lourde) et les endpoints publics ; distinguer les clients anonymes (par IP), les clients authentifiés (par user ID ou API key), et les services internes (limites plus élevées ou absentes) ; évaluer le risque d'abus par type d'endpoint.</li>
-<li><strong>Choix de l'algorithme</strong> : Fixed window (simple, mais burst possible à la frontière) ; sliding window log (précis, mais mémoire O(n) par requête) ; sliding window counter (compromis mémoire/précision) ; token bucket (burst contrôlé, remplit à taux fixe, recommandé pour les APIs) ; leaky bucket (débit constant, lisse les pics, adapté aux systèmes aval fragiles).</li>
-<li><strong>Définition des limites par tier</strong> : Différencier les quotas selon le niveau de service (anonymous: 10 req/min, free: 100 req/min, pro: 1000 req/min, enterprise: custom) ; définir les limites par endpoint en plus des limites globales (ex. <code>/auth/login</code> : 5 req/min indépendamment du tier) ; prévoir des limites burst vs sustained.</li>
-<li><strong>Implémentation côté serveur</strong> : Middleware applicatif (ASP.NET Core RateLimiter, Express rate-limit, Bucket4j) pour la flexibilité et l'accès au contexte métier ; API gateway (Kong, AWS API Gateway, Azure APIM) pour la centralisation et la décharge applicative ; reverse proxy (Nginx, Traefik) pour la protection au niveau réseau avant d'atteindre l'application.</li>
-<li><strong>Stockage des compteurs</strong> : In-memory pour les instances uniques (simple, ultra-rapide, perdu au redémarrage) ; Redis pour le rate limiting distribué (commandes atomiques <code>INCR</code>/<code>EXPIRE</code>, Lua scripts pour les opérations atomiques complexes, RedisRateLimiter) ; choisir le stockage en fonction des exigences de précision et de scalabilité.</li>
-<li><strong>Headers de réponse</strong> : Toujours retourner les headers standards : <code>X-RateLimit-Limit</code> (quota total), <code>X-RateLimit-Remaining</code> (requêtes restantes), <code>X-RateLimit-Reset</code> (timestamp de réinitialisation, format Unix epoch ou ISO 8601), <code>Retry-After</code> (secondes à attendre, obligatoire sur 429) ; faciliter l'intégration côté client en étant transparents sur les limites.</li>
-<li><strong>Stratégie de réponse</strong> : Retourner HTTP 429 avec un body JSON informatif (<code>{&quot;error&quot;: &quot;rate_limit_exceeded&quot;, &quot;retry_after&quot;: 60, &quot;limit&quot;: 100, &quot;window&quot;: &quot;1m&quot;}</code>) ; envisager la dégradation gracieuse (réponse en cache périmée, version allégée de la réponse) avant le rejet total ; logger les événements de rate limiting pour analyser les patterns d'abus.</li>
-<li><strong>Rate limiting distribué</strong> : Synchroniser les compteurs via Redis avec des scripts Lua atomiques pour éviter les race conditions ; implémenter le sliding window avec des sorted sets Redis (score = timestamp) ; pour les déploiements multi-région, accepter un léger décalage (eventual consistency) ou utiliser des solutions dédiées (Envoy global rate limiting, Redis Cluster) ; tester la précision sous charge.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Cartographier les surfaces à protéger</h3>
+<p>Identifier chaque endpoint par <strong>profil de risque</strong> :</p>
+<table><thead><tr><th>Profil</th><th>Exemples</th><th>Limite indicative</th></tr></thead><tbody><tr><td>Authentification</td><td><code>/login</code>, <code>/token</code>, <code>/forgot-password</code></td><td>5 req/min/IP</td></tr><tr><td>Mutation sensible</td><td><code>/pay</code>, <code>/transfer</code>, <code>/sms-otp</code></td><td>10 req/min/user</td></tr><tr><td>Lecture lourde</td><td><code>/search</code>, <code>/export</code>, <code>/report</code></td><td>20 req/min/user</td></tr><tr><td>Read standard</td><td><code>/products</code>, <code>/users/me</code></td><td>300 req/min/user</td></tr><tr><td>Webhook entrant</td><td><code>/webhook/*</code></td><td>500 req/min/source IP</td></tr></tbody></table>
+<p>Distinguer les identités : <strong>IP</strong> (anonyme), <strong>API key</strong> (machine-to-machine), <strong>user ID</strong> (session).</p>
+<hr>
+<h3>2. Choisir l'algorithme selon le besoin</h3>
+<table><thead><tr><th>Algorithme</th><th>Avantage</th><th>Inconvénient</th><th>Quand l'utiliser</th></tr></thead><tbody><tr><td>Fixed window</td><td>Très simple</td><td>Burst doublé à la frontière de fenêtre</td><td>Prototypage, admin interne</td></tr><tr><td>Sliding window log</td><td>Précision parfaite</td><td>RAM O(n) par client</td><td>Haute précision, faible trafic</td></tr><tr><td>Sliding window counter</td><td>Bon compromis</td><td>Légère approximation (≤ fenêtre)</td><td>API publique standard</td></tr><tr><td><strong>Token bucket</strong></td><td>Burst contrôlé, filling régulier</td><td>Implémentation plus complexe</td><td><strong>APIs REST, cas général</strong></td></tr><tr><td>Leaky bucket</td><td>Débit constant, protection aval</td><td>Latence artificielle</td><td>Files d'attente, systèmes fragiles en aval</td></tr></tbody></table>
+<p><strong>Règle de décision rapide :</strong> si le client légitime a besoin de pics courts → token bucket ; si le système aval ne tolère pas les pics → leaky bucket ; si la simplicité prime → sliding window counter.</p>
+<hr>
+<h3>3. Définir les tiers et quotas</h3>
+<pre><code class="lang-yaml"># config/rate-limits.yaml
+tiers:
+  anonymous:  { rpm: 10,   burst: 15 }
+  free:       { rpm: 100,  burst: 150 }
+  pro:        { rpm: 1000, burst: 1500 }
+  enterprise: { rpm: 10000, burst: 15000 }
+
+endpoints:
+  /auth/login:         { rpm: 5,  scope: ip }
+  /auth/forgot:        { rpm: 3,  scope: ip }
+  /api/pay:            { rpm: 10, scope: user }
+  /api/export:         { rpm: 5,  scope: user, cost: 10 }  # coût variable</code></pre>
+<hr>
+<h3>4. Implémenter — snippets copiables</h3>
+<h4>ASP.NET Core 8+ (built-in <code>RateLimiter</code>)</h4>
+<pre><code class="lang-csharp">// Program.cs
+builder.Services.AddRateLimiter(opt =&gt;
+{
+    opt.GlobalLimiter = PartitionedRateLimiter.Create&lt;HttpContext, string&gt;(ctx =&gt;
+    {
+        var key = ctx.User.Identity?.Name ?? ctx.Connection.RemoteIpAddress?.ToString() ?? &quot;anon&quot;;
+        return RateLimitPartition.GetSlidingWindowLimiter(key, _ =&gt; new SlidingWindowRateLimiterOptions
+        {
+            PermitLimit        = 100,
+            Window             = TimeSpan.FromMinutes(1),
+            SegmentsPerWindow  = 6,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit         = 0
+        });
+    });
+    opt.OnRejected = async (ctx, ct) =&gt;
+    {
+        ctx.HttpContext.Response.StatusCode = 429;
+        ctx.HttpContext.Response.Headers.RetryAfter = &quot;60&quot;;
+        await ctx.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            error = &quot;rate_limit_exceeded&quot;,
+            retry_after = 60
+        }, ct);
+    };
+});
+// Appliquer : app.UseRateLimiter();</code></pre>
+<h4>Node.js / Express (<code>express-rate-limit</code> + Redis)</h4>
+<pre><code class="lang-typescript">import rateLimit from 'express-rate-limit';
+import RedisStore from 'rate-limit-redis';
+import { createClient } from 'redis';
+
+const redis = createClient({ url: process.env.REDIS_URL });
+await redis.connect();
+
+export const apiLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 100,
+  standardHeaders: 'draft-7',   // RateLimit-* headers RFC 6585
+  legacyHeaders: false,
+  store: new RedisStore({ sendCommand: (...args) =&gt; redis.sendCommand(args) }),
+  keyGenerator: (req) =&gt; req.user?.id ?? req.ip,
+  handler: (req, res) =&gt; res.status(429).json({
+    error: 'rate_limit_exceeded',
+    retry_after: Math.ceil(res.getHeader('RateLimit-Reset') as number - Date.now() / 1000)
+  })
+});</code></pre>
+<h4>Redis — Token Bucket en Lua (atomique)</h4>
+<pre><code class="lang-lua">-- token_bucket.lua  (KEYS[1]=bucket_key ARGV[1]=capacity ARGV[2]=refill_rate ARGV[3]=now_ms)
+local key      = KEYS[1]
+local capacity = tonumber(ARGV[1])
+local rate     = tonumber(ARGV[2])  -- tokens/seconde
+local now      = tonumber(ARGV[3])
+
+local bucket   = redis.call('HMGET', key, 'tokens', 'last_refill')
+local tokens   = tonumber(bucket[1]) or capacity
+local last     = tonumber(bucket[2]) or now
+
+local elapsed  = (now - last) / 1000
+tokens = math.min(capacity, tokens + elapsed * rate)
+
+if tokens &gt;= 1 then
+  tokens = tokens - 1
+  redis.call('HMSET', key, 'tokens', tokens, 'last_refill', now)
+  redis.call('EXPIRE', key, math.ceil(capacity / rate) + 10)
+  return 1   -- OK
+else
+  return 0   -- rejeté
+end</code></pre>
+<p>Appel Go/Node/C# : <code>EVALSHA &lt;sha&gt; 1 user:42 100 1.67 &lt;epoch_ms&gt;</code>.</p>
+<hr>
+<h3>5. Headers de réponse standards</h3>
+<pre><code class="lang-http">HTTP/1.1 200 OK
+RateLimit-Limit: 100
+RateLimit-Remaining: 43
+RateLimit-Reset: 1719230460
+RateLimit-Policy: 100;w=60
+
+# Sur 429 :
+HTTP/1.1 429 Too Many Requests
+Retry-After: 17
+Content-Type: application/json</code></pre>
+<p>Utiliser <strong>RFC 9110 <code>Retry-After</code></strong> (secondes) sur tous les 429. Éviter d'exposer les compteurs précis sur les endpoints d'auth (aide les attaquants à calibrer leurs bots).</p>
+<hr>
+<h3>6. Rate limiting distribué (multi-instance / multi-région)</h3>
 <ul>
-<li>Fournis des exemples de code concrets (middleware, configuration Redis, snippets d'implémentation) dans le langage/framework de l'utilisateur</li>
-<li>Adapte les recommandations à l'architecture (monolithe, microservices, serverless, edge)</li>
-<li>Toujours mentionner les trade-offs (ex. token bucket = burst autorisé mais implémentation plus complexe vs fixed window)</li>
-<li>Commence par la solution simple avant la complexe (middleware in-process avant Redis distribué)</li>
-<li>Rappelle que le rate limiting seul ne suffit pas : combiner avec l'authentification, le monitoring et les WAF pour une protection complète</li>
+<li><strong>Même région</strong> : Redis Cluster ou Redis Sentinel, scripts Lua atomiques — précision parfaite.</li>
+<li><strong>Multi-région active/active</strong> : accepter une légère tolérance (±5 %) avec eventual consistency Redis Geo ou utiliser <strong>Envoy Global Rate Limiting</strong> (sidecar gRPC).</li>
+<li><strong>Serverless / Edge</strong> : Cloudflare Rate Limiting (règles WAF), AWS API Gateway Usage Plans, ou Upstash Redis (HTTP-based, sans connexion persistante).</li>
+</ul>
+<pre><code class="lang-typescript">// Upstash Redis (Edge / Vercel / CF Workers)
+import { Ratelimit } from &quot;@upstash/ratelimit&quot;;
+import { Redis } from &quot;@upstash/redis&quot;;
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(100, &quot;1 m&quot;),
+  analytics: true,
+});
+
+const { success, remaining, reset } = await ratelimit.limit(userId);
+if (!success) return new Response(&quot;Too Many Requests&quot;, { status: 429 });</code></pre>
+<hr>
+<h3>7. Monitoring et observabilité</h3>
+<ul>
+<li>Émettre une métrique <code>rate_limit.rejected_total{endpoint, tier, reason}</code> sur chaque 429.</li>
+<li>Alerter si le taux de rejet dépasse 5 % sur 5 min (signal d'attaque ou de limite mal calibrée).</li>
+<li>Logger <code>{user_id, ip, endpoint, limit, window, timestamp}</code> dans un index dédié pour post-mortem.</li>
+<li>Dashboard minimal : taux de rejet/min par endpoint, top-10 IP rejetées, distribution des consommations par tier.</li>
+</ul>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Compter par IP derrière un load balancer sans <code>X-Forwarded-For</code></td><td>Tous les clients partagent la même IP (celle du LB)</td><td>Lire <code>X-Forwarded-For</code> ou <code>CF-Connecting-IP</code> ; configurer <code>trust proxy</code></td></tr><tr><td>Fixed window sans décalage aléatoire</td><td>Thundering herd à chaque reset</td><td>Sliding window ou jitter sur le reset</td></tr><tr><td>Pas de <code>Retry-After</code> sur 429</td><td>Les clients retentent immédiatement, amplifiant la charge</td><td>Toujours retourner <code>Retry-After</code></td></tr><tr><td>Même limite pour toutes les routes</td><td>Endpoint léger et endpoint coûteux identiques</td><td>Coût variable (cost-per-request) ou limites par endpoint</td></tr><tr><td>In-memory sur instances multiples</td><td>Chaque instance a son propre compteur → 10× la limite réelle</td><td>Redis partagé obligatoire dès la deuxième instance</td></tr><tr><td>Rate limiting sans auth</td><td>L'attaquant tourne les IPs librement</td><td>Coupler auth + rate limiting ; CAPTCHA sur les endpoints publics sensibles</td></tr><tr><td>Limites trop strictes sans whitelist</td><td>Blocage des crawlers légitimes, monitoring, CI/CD</td><td>API keys internes exemptées, whitelist CIDR</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Cost-based limiting</strong> : chaque requête consomme N tokens selon sa complexité (LLM = coût élevé, <code>/ping</code> = 0).</li>
+<li><strong>Adaptive rate limiting</strong> : augmenter temporairement les limites pour les clients à comportement normal, resserrer sous attaque (ML ou règles heuristiques).</li>
+<li><strong>DDoS Layer 7</strong> : le rate limiting applicatif ne remplace pas un WAF (Cloudflare, AWS WAF) pour les attaques volumétriques.</li>
+<li><strong>Tests de charge</strong> : valider les limites avec k6 ou Gatling avant la prod — les race conditions Redis se révèlent uniquement sous concurrence réelle.</li>
+<li><strong>Documentation contractuelle</strong> : publier les limites dans l'OpenAPI spec (<code>x-rate-limit</code>) et dans les headers dès la première requête (pas seulement sur 429).</li>
 </ul>
 </article>
 </main>

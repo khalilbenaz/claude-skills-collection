@@ -97,37 +97,182 @@ cp -r claude-skills-collection/skills/dev-java-spring-advisor ~/.claude/skills/<
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Java Spring Advisor</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Setup Spring Boot</strong> : Générer le projet via Spring Initializr (start.spring.io) avec les bonnes dépendances, structurer les profils (<code>application.yml</code>, <code>application-dev.yml</code>, <code>application-prod.yml</code>), utiliser <code>@ConfigurationProperties</code> pour typer la configuration, comprendre l'auto-configuration (<code>@EnableAutoConfiguration</code>), configurer les beans conditionnels (<code>@ConditionalOnProperty</code>, <code>@ConditionalOnMissingBean</code>).</li>
-</ol>
-<ol>
-<li><strong>Architecture</strong> : Structurer en couches classiques (Controller → Service → Repository), appliquer l'architecture hexagonale (ports/adapters) pour les domaines complexes, organiser par feature plutôt que par couche dans les gros projets, structurer les projets multi-modules Maven/Gradle (api, domain, infrastructure), appliquer les principes DDD (Aggregate, Value Object, Domain Event) avec Spring.</li>
-</ol>
-<ol>
-<li><strong>Data access</strong> : Utiliser Spring Data JPA avec des repositories (<code>JpaRepository&lt;T, ID&gt;</code>), optimiser les requêtes N+1 avec <code>@EntityGraph</code> et fetch joins, écrire des queries complexes avec <code>@Query</code> JPQL ou QueryDSL, gérer les transactions avec <code>@Transactional</code> (propagation, isolation), migrer le schéma avec Flyway ou Liquibase (versioning des migrations en SQL).</li>
-</ol>
-<ol>
-<li><strong>REST APIs</strong> : Créer des endpoints avec <code>@RestController</code> et <code>@RequestMapping</code>, valider les inputs avec Bean Validation (<code>@Valid</code>, <code>@NotNull</code>, <code>@Size</code>), centraliser la gestion d'erreurs avec <code>@ControllerAdvice</code> et <code>@ExceptionHandler</code>, implémenter HATEOAS avec Spring HATEOAS, documenter avec SpringDoc OpenAPI (génération auto du swagger.json).</li>
-</ol>
-<ol>
-<li><strong>Spring Security</strong> : Configurer la <code>SecurityFilterChain</code> (remplace <code>WebSecurityConfigurerAdapter</code>), implémenter l'authentification JWT (filtre custom + <code>UserDetailsService</code>), configurer OAuth2 Resource Server (<code>@EnableResourceServer</code>, <code>JwtDecoder</code>), sécuriser les méthodes avec <code>@PreAuthorize(&quot;hasRole('ADMIN')&quot;)</code>  et <code>@Secured</code>, configurer CORS et CSRF correctement selon le contexte.</li>
-</ol>
-<ol>
-<li><strong>Messaging</strong> : Intégrer RabbitMQ avec Spring AMQP (<code>@RabbitListener</code>, <code>RabbitTemplate</code>), produire/consommer Kafka avec Spring Kafka (<code>@KafkaListener</code>, <code>KafkaTemplate</code>), utiliser Spring Cloud Stream pour l'abstraction du broker (changeable sans modifier le code métier), gérer les dead-letter queues et retry policies, implémenter les Saga patterns pour la consistance distribuée.</li>
-</ol>
-<ol>
-<li><strong>Testing</strong> : Tester les unités avec JUnit 5 (<code>@Test</code>, <code>@BeforeEach</code>) et Mockito (<code>@Mock</code>, <code>@InjectMocks</code>), tester les endpoints avec MockMvc (<code>@WebMvcTest</code>, <code>perform().andExpect()</code>), faire des tests d'intégration avec <code>@SpringBootTest</code> + TestRestTemplate, utiliser Testcontainers pour les dépendances réelles (PostgreSQL, Redis, Kafka) en tests, simuler les APIs externes avec WireMock.</li>
-</ol>
-<ol>
-<li><strong>Observabilité</strong> : Exposer les métriques et health checks via Spring Boot Actuator (<code>/actuator/health</code>, <code>/actuator/metrics</code>), instrumenter avec Micrometer (compteurs, timers, gauges → Prometheus), implémenter le distributed tracing avec Micrometer Tracing + Zipkin/Jaeger (trace/span IDs), corréler les logs avec MDC (<code>MDC.put(&quot;traceId&quot;, ...)</code>) pour la recherche dans Kibana/Loki.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Initialisation du projet</h3>
+<pre><code class="lang-bash"># Spring Initializr CLI (Spring Boot 3.x, Java 21)
+curl https://start.spring.io/starter.zip \
+  -d type=maven-project \
+  -d language=java \
+  -d bootVersion=3.3.0 \
+  -d groupId=com.example \
+  -d artifactId=myapp \
+  -d javaVersion=21 \
+  -d dependencies=web,data-jpa,security,actuator,validation,flyway \
+  -o myapp.zip &amp;&amp; unzip myapp.zip</code></pre>
+<p>Structure des profils :</p>
+<pre><code>src/main/resources/
+  application.yml          # valeurs communes
+  application-dev.yml      # dev local (H2, logs DEBUG)
+  application-prod.yml     # prod (connexion pool, logs INFO)</code></pre>
+<p>Typer la configuration avec <code>@ConfigurationProperties</code> plutôt que <code>@Value</code> :</p>
+<pre><code class="lang-java">@ConfigurationProperties(prefix = &quot;app.payment&quot;)
+public record PaymentProperties(String apiUrl, Duration timeout, int maxRetries) {}</code></pre>
+<h3>2. Architecture — Critères de choix</h3>
+<table><thead><tr><th>Contexte</th><th>Approche recommandée</th></tr></thead><tbody><tr><td>API CRUD simple</td><td>Couches Controller → Service → Repository</td></tr><tr><td>Domaine métier riche</td><td>Hexagonale (ports/adapters) + DDD</td></tr><tr><td>Gros projet (&gt;5 équipes)</td><td>Multi-modules Maven par bounded context</td></tr><tr><td>Microservices</td><td>1 module = 1 deployable, API contract-first OpenAPI</td></tr></tbody></table>
+<p>Organisation par <strong>feature</strong> (pas par couche technique) dans les projets moyens/grands :</p>
+<pre><code>com.example.payment/
+  PaymentController.java
+  PaymentService.java
+  PaymentRepository.java
+  PaymentDto.java         # record Java 21
+  Payment.java            # entité JPA</code></pre>
+<h3>3. Data access — JPA &amp; transactions</h3>
+<p><strong>Problème N+1</strong> — détecter et corriger :</p>
+<pre><code class="lang-java">// Mauvais : génère N+1 requêtes
+List&lt;Order&gt; orders = orderRepo.findAll();
+orders.forEach(o -&gt; o.getItems().size()); // lazy load en boucle
+
+// Correct : fetch join explicite
+@Query(&quot;SELECT o FROM Order o JOIN FETCH o.items WHERE o.status = :status&quot;)
+List&lt;Order&gt; findWithItems(@Param(&quot;status&quot;) OrderStatus status);
+
+// Ou via @EntityGraph
+@EntityGraph(attributePaths = {&quot;items&quot;, &quot;customer&quot;})
+List&lt;Order&gt; findByStatus(OrderStatus status);</code></pre>
+<p>Règles <code>@Transactional</code> :</p>
 <ul>
-<li>Écrire du Java moderne (Java 21+) : utiliser les records pour les DTOs et Value Objects, le pattern matching (<code>instanceof Pattern</code>), les sealed classes pour les hiérarchies fermées, et les virtual threads (Project Loom) pour la haute concurrence.</li>
-<li>Utiliser l'injection par constructeur (jamais <code>@Autowired</code> sur le champ) ; cela facilite les tests unitaires sans contexte Spring et rend les dépendances explicites.</li>
-<li>Ne jamais laisser des <code>@Transactional</code> sur des méthodes privées ou des appels depuis la même classe ; comprendre les proxies CGLIB et leurs limitations.</li>
-<li>Préférer les DTOs (Data Transfer Objects) aux entités JPA dans les couches Controller/Service ; ne jamais exposer les entités directement dans les réponses REST.</li>
-<li>Expliquer les décisions d'architecture : pourquoi cette couche, pourquoi cette relation entre entités, pourquoi ce niveau de transaction — le code Spring peut devenir une boîte noire sans documentation des intentions.</li>
+<li>Toujours sur la méthode <code>public</code> du Service, jamais sur le Repository</li>
+<li><code>@Transactional(readOnly = true)</code> sur les lectures → flush mode OFF + optimisations Hibernate</li>
+<li>Propagation <code>REQUIRES_NEW</code> uniquement si isolation réelle nécessaire (audit, log d'erreur)</li>
+</ul>
+<p>Migration de schéma avec Flyway :</p>
+<pre><code>db/migration/
+  V1__create_orders.sql
+  V2__add_payment_status.sql</code></pre>
+<h3>4. REST API</h3>
+<p>Handler d'erreur global :</p>
+<pre><code class="lang-java">@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ProblemDetail handleNotFound(EntityNotFoundException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
+        var pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        pd.setProperty(&quot;errors&quot;, ex.getBindingResult().getFieldErrors()
+            .stream().map(e -&gt; e.getField() + &quot;: &quot; + e.getDefaultMessage()).toList());
+        return pd;
+    }
+}</code></pre>
+<p>DTO avec record Java 21 + validation :</p>
+<pre><code class="lang-java">public record CreateOrderRequest(
+    @NotBlank String customerId,
+    @NotEmpty List&lt;@Valid OrderItemRequest&gt; items,
+    @PositiveOrZero BigDecimal discount
+) {}</code></pre>
+<p>Documentation OpenAPI (SpringDoc) :</p>
+<pre><code class="lang-yaml"># application.yml
+springdoc:
+  api-docs.path: /api-docs
+  swagger-ui.path: /swagger-ui.html
+  show-actuator: false</code></pre>
+<h3>5. Spring Security (Spring Boot 3.x)</h3>
+<p>Configuration minimale JWT Resource Server :</p>
+<pre><code class="lang-java">@Configuration
+@EnableMethodSecurity
+public class SecurityConfig {
+
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(s -&gt; s.sessionCreationPolicy(STATELESS))
+            .authorizeHttpRequests(auth -&gt; auth
+                .requestMatchers(&quot;/actuator/health&quot;).permitAll()
+                .anyRequest().authenticated())
+            .oauth2ResourceServer(oauth2 -&gt; oauth2.jwt(Customizer.withDefaults()))
+            .build();
+    }
+}</code></pre>
+<p>Sécurisation par méthode :</p>
+<pre><code class="lang-java">@PreAuthorize(&quot;hasRole('ADMIN') or #userId == authentication.name&quot;)
+public UserDto getUser(String userId) { ... }</code></pre>
+<p><strong>CORS</strong> : configurer via <code>CorsConfigurationSource</code> bean, pas via <code>@CrossOrigin</code> sur chaque contrôleur.</p>
+<h3>6. Messaging</h3>
+<p>RabbitMQ — pattern listener avec retry :</p>
+<pre><code class="lang-java">@RabbitListener(queues = &quot;payment.queue&quot;,
+    containerFactory = &quot;retryContainerFactory&quot;)
+public void handlePayment(PaymentEvent event) {
+    paymentService.process(event);
+}</code></pre>
+<p>Kafka — configuration producer idempotent :</p>
+<pre><code class="lang-yaml">spring.kafka.producer:
+  enable-idempotence: true
+  acks: all
+  retries: 3</code></pre>
+<p>Dead-letter queue : configurer <code>x-dead-letter-exchange</code> sur la queue principale + consumer séparé sur la DLQ pour replay manuel.</p>
+<h3>7. Testing — Pyramide</h3>
+<pre><code>E2E (WireMock + Testcontainers)  ← peu nombreux, lents
+Integration (@SpringBootTest)     ← couverture des flux critiques
+Slice (@WebMvcTest, @DataJpaTest) ← rapides, ciblés
+Unit (JUnit 5 + Mockito)          ← majoritaires</code></pre>
+<p>Test slice REST :</p>
+<pre><code class="lang-java">@WebMvcTest(OrderController.class)
+class OrderControllerTest {
+
+    @Autowired MockMvc mvc;
+    @MockBean OrderService orderService;
+
+    @Test
+    void createOrder_returns201() throws Exception {
+        given(orderService.create(any())).willReturn(new OrderDto(&quot;123&quot;));
+        mvc.perform(post(&quot;/orders&quot;)
+                .contentType(APPLICATION_JSON)
+                .content(&quot;&quot;&quot;{&quot;customerId&quot;:&quot;C1&quot;,&quot;items&quot;:[]}&quot;&quot;&quot;))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath(&quot;$.id&quot;).value(&quot;123&quot;));
+    }
+}</code></pre>
+<p>Testcontainers (PostgreSQL) :</p>
+<pre><code class="lang-java">@Testcontainers
+@SpringBootTest
+class OrderRepositoryIT {
+
+    @Container
+    static PostgreSQLContainer&lt;?&gt; pg = new PostgreSQLContainer&lt;&gt;(&quot;postgres:16&quot;);
+
+    @DynamicPropertySource
+    static void props(DynamicPropertyRegistry r) {
+        r.add(&quot;spring.datasource.url&quot;, pg::getJdbcUrl);
+        r.add(&quot;spring.datasource.username&quot;, pg::getUsername);
+        r.add(&quot;spring.datasource.password&quot;, pg::getPassword);
+    }
+}</code></pre>
+<h3>8. Observabilité</h3>
+<pre><code class="lang-yaml">management:
+  endpoints.web.exposure.include: health,info,prometheus,metrics
+  endpoint.health.show-details: when-authorized
+  metrics.export.prometheus.enabled: true</code></pre>
+<p>Corréler logs + traces :</p>
+<pre><code class="lang-java">// Micrometer Tracing auto-injecte traceId/spanId dans MDC si Zipkin/OTLP est configuré
+// Ajouter dans logback-spring.xml :
+// %X{traceId} %X{spanId}</code></pre>
+<p>Virtual threads (Java 21 + Spring Boot 3.2+) pour améliorer le throughput I/O-bound :</p>
+<pre><code class="lang-yaml">spring.threads.virtual.enabled: true</code></pre>
+<hr>
+<h2>Anti-patterns &amp; pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td><code>@Autowired</code> sur champ</td><td>Tests unitaires impossibles sans contexte Spring</td><td>Injection par constructeur (<code>final</code> + <code>@RequiredArgsConstructor</code>)</td></tr><tr><td><code>@Transactional</code> sur méthode <code>private</code></td><td>Transaction silencieusement ignorée (proxy CGLIB)</td><td>Déplacer sur méthode <code>public</code> ou extraire dans un autre bean</td></tr><tr><td>Appel interne <code>this.method()</code> transactionnel</td><td>Bypass du proxy → pas de transaction</td><td>Injecter le bean lui-même ou restructurer</td></tr><tr><td>Entité JPA exposée dans le Controller</td><td>Couplage fort, risque de lazy init exception</td><td>Toujours mapper vers DTO avant de sérialiser</td></tr><tr><td><code>FetchType.EAGER</code> par défaut sur <code>@OneToMany</code></td><td>Full table join à chaque chargement</td><td>Garder <code>LAZY</code> + fetch join explicite quand nécessaire</td></tr><tr><td><code>@SpringBootTest</code> pour tout</td><td>Suite de tests lente (contexte complet)</td><td>Préférer <code>@WebMvcTest</code> / <code>@DataJpaTest</code> slices</td></tr><tr><td>Secrets dans <code>application.yml</code> commités</td><td>Fuite de credentials</td><td>Variables d'environnement ou Spring Cloud Config / Vault</td></tr><tr><td>Ignorer <code>readOnly = true</code></td><td>Flush inutile + dirty checking sur toutes les entités</td><td><code>@Transactional(readOnly = true)</code> sur toutes les méthodes de lecture</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Java 21 LTS</strong> : records pour DTOs/Value Objects, sealed classes pour hiérarchies fermées, pattern matching dans les <code>switch</code>, virtual threads activés par défaut en Spring Boot 3.2+.</li>
+<li><strong>Spring Boot 3.3.x</strong> : <code>ProblemDetail</code> (RFC 7807) pour les erreurs REST, <code>@HttpExchange</code> pour les clients HTTP déclaratifs (remplace Feign dans les nouveaux projets).</li>
+<li><strong>GraalVM Native Image</strong> : vérifier la compatibilité des librairies avec <code>spring-aot-maven-plugin</code>; tester en CI avec <code>./mvnw -Pnative test</code>.</li>
+<li><strong>Observabilité</strong> : préférer OpenTelemetry (OTLP) à Zipkin pour ne pas se lier à un backend; Micrometer 1.12+ supporte OTLP nativement.</li>
+<li><strong>Sécurité</strong> : scanner régulièrement les dépendances avec <code>./mvnw dependency-check:check</code> (OWASP) ou Dependabot; ne jamais logger les JWT ni les payloads contenant des PII.</li>
 </ul>
 </article>
 </main>

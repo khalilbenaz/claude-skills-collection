@@ -96,24 +96,188 @@ cp -r claude-skills-collection/skills/dev-feature-engineering-guide ~/.claude/sk
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Feature Engineering Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Exploration des données</strong> — Analyser les distributions (histogrammes, boxplots), calculer les corrélations (Pearson, Spearman), quantifier les valeurs manquantes par colonne, détecter les outliers (IQR, z-score) et comprendre la sémantique métier de chaque variable.</li>
-<li><strong>Nettoyage</strong> — Traiter les valeurs manquantes (imputation par médiane/mode/KNN/MICE selon le mécanisme de manque) ; gérer les outliers (capping, winsorisation ou suppression selon l'impact) ; corriger les types (dates, catégories, numériques) ; dédupliquer les lignes.</li>
-<li><strong>Encoding catégoriel</strong> — Appliquer la bonne stratégie selon la cardinalité et le modèle : one-hot encoding (faible cardinalité, modèles linéaires), label encoding (arbres de décision), target encoding (haute cardinalité, attention au data leakage), ordinal encoding (catégories ordonnées), embeddings (très haute cardinalité).</li>
-<li><strong>Features numériques</strong> — Normaliser/standardiser selon le modèle (StandardScaler, MinMaxScaler, RobustScaler) ; discrétiser en bins (qcut, cut) ; appliquer des transformations logarithmiques pour réduire la skewness ; créer des features polynomiales ou d'interaction pour les modèles linéaires.</li>
-<li><strong>Features temporelles</strong> — Extraire les composantes calendaires (heure, jour, mois, trimestre, jour de semaine, jours fériés) ; créer des lag features (valeur à t-1, t-7, t-30) ; calculer des rolling window statistics (moyenne mobile, std, min, max) ; encoder la cyclicité (sin/cos pour heures, jours).</li>
-<li><strong>Features textuelles</strong> — Vectoriser avec TF-IDF (bag-of-words pondéré), word embeddings (Word2Vec, GloVe, FastText), sentence embeddings (BERT, Sentence Transformers) ; extraire des statistiques textuelles (longueur, nombre de mots, ratio majuscules) ; générer des n-grams pour les modèles classiques.</li>
-<li><strong>Feature selection</strong> — Éliminer les features redondantes via la corrélation (seuil &gt; 0.95) ; mesurer l'importance via mutual information (non-linéaire), permutation importance, valeurs SHAP (interprétabilité) ou RFE (Recursive Feature Elimination) ; valider avec cross-validation pour éviter le surapprentissage.</li>
-<li><strong>Feature store</strong> — Centraliser les features réutilisables dans un feature store (Feast, Tecton, Hopsworks) ; distinguer le serving online (faible latence, Redis/DynamoDB) et offline (entraînement, Parquet/BigQuery) ; versionner les feature pipelines pour la reproductibilité des expériences.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Exploration et audit des données</h3>
+<pre><code class="lang-python">import pandas as pd
+import numpy as np
+
+df.info()                              # types, nulls par colonne
+df.describe(include=&quot;all&quot;)            # stats descriptives
+df.isnull().mean().sort_values()      # % manquants
+df.select_dtypes(&quot;number&quot;).skew()     # skewness
+df.duplicated().sum()                 # doublons
+
+# Corrélations
+corr = df.select_dtypes(&quot;number&quot;).corr(&quot;spearman&quot;)
+# Outliers par IQR
+Q1, Q3 = df[&quot;col&quot;].quantile([0.25, 0.75])
+iqr = Q3 - Q1
+outliers = df[(df[&quot;col&quot;] &lt; Q1 - 1.5*iqr) | (df[&quot;col&quot;] &gt; Q3 + 1.5*iqr)]</code></pre>
+<p><strong>Critère de décision</strong> : Si une colonne dépasse 60 % de valeurs manquantes → supprimer (sauf raison métier forte). Entre 5 % et 60 % → imputer.</p>
+<hr>
+<h3>2. Nettoyage et imputation</h3>
+<pre><code class="lang-python">from sklearn.impute import SimpleImputer, KNNImputer
+from sklearn.pipeline import Pipeline
+
+# Imputation simple (train-only fit, jamais sur le test !)
+imp_median = SimpleImputer(strategy=&quot;median&quot;)
+X_train[&quot;col&quot;] = imp_median.fit_transform(X_train[[&quot;col&quot;]])
+X_test[&quot;col&quot;]  = imp_median.transform(X_test[[&quot;col&quot;]])
+
+# Imputation avancée (MICE via IterativeImputer)
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+imp_mice = IterativeImputer(max_iter=10, random_state=0)
+
+# Winsorisation (capping à 1er/99e percentile)
+from scipy.stats.mstats import winsorize
+df[&quot;col&quot;] = winsorize(df[&quot;col&quot;], limits=[0.01, 0.01])</code></pre>
+<p><strong>Choix d'imputation</strong> :</p>
+<table><thead><tr><th>Mécanisme de manque</th><th>Méthode recommandée</th></tr></thead><tbody><tr><td>MCAR (aléatoire)</td><td>Médiane / mode</td></tr><tr><td>MAR (conditionnel)</td><td>KNN, MICE</td></tr><tr><td>MNAR (non-aléatoire)</td><td>Indicateur binaire + imputation</td></tr></tbody></table>
+<hr>
+<h3>3. Encoding catégoriel</h3>
+<pre><code class="lang-python">import pandas as pd
+from sklearn.preprocessing import OrdinalEncoder, TargetEncoder
+from sklearn.preprocessing import OneHotEncoder
+
+# One-Hot (cardinalité &lt; 15, modèles linéaires)
+pd.get_dummies(df, columns=[&quot;ville&quot;], drop_first=True)
+
+# Ordinal (catégories avec ordre naturel)
+oe = OrdinalEncoder(categories=[[&quot;bas&quot;,&quot;moyen&quot;,&quot;haut&quot;]])
+
+# Target encoding (haute cardinalité, ex : code postal)
+# ⚠ Toujours avec cross-validation pour éviter le leakage
+te = TargetEncoder(smooth=&quot;auto&quot;, cv=5)
+
+# Fréquence encoding (cardinalité très élevée, sans leakage)
+freq = df[&quot;col&quot;].value_counts(normalize=True)
+df[&quot;col_freq&quot;] = df[&quot;col&quot;].map(freq)</code></pre>
+<p><strong>Règle cardinale</strong> : Un encoder appris (TargetEncoder, scaler) doit être <code>.fit()</code> <strong>uniquement sur X_train</strong>.</p>
+<hr>
+<h3>4. Transformations numériques</h3>
+<pre><code class="lang-python">from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
+import numpy as np
+
+# Log pour distributions skewed (skew &gt; 1)
+df[&quot;col_log&quot;] = np.log1p(df[&quot;col&quot;])          # log1p gère les 0
+
+# Box-Cox / Yeo-Johnson (automatique)
+from sklearn.preprocessing import PowerTransformer
+pt = PowerTransformer(method=&quot;yeo-johnson&quot;)  # gère les valeurs négatives
+
+# Binning (discrétisation en quantiles)
+df[&quot;col_bin&quot;] = pd.qcut(df[&quot;col&quot;], q=10, labels=False)
+
+# Interactions polynomiales (modèles linéaires)
+from sklearn.preprocessing import PolynomialFeatures
+poly = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)</code></pre>
+<p><strong>Quel scaler choisir ?</strong></p>
 <ul>
-<li>Fournis des exemples de code Python concrets (scikit-learn Pipeline, pandas, Feature-engine) pour chaque transformation mentionnée.</li>
-<li>Préviens systématiquement contre le data leakage : toute transformation apprise (encoders, scalers) doit être fit sur le train set uniquement.</li>
-<li>Priorise la qualité des features sur la quantité : 10 features bien construites surpassent souvent 100 features bruitées.</li>
-<li>Adapte les techniques au type de modèle : les arbres de décision (XGBoost, LightGBM) nécessitent moins de preprocessing que les modèles linéaires ou les réseaux de neurones.</li>
-<li>Pense toujours à la reproductibilité : encapsuler les transformations dans des pipelines scikit-learn ou des feature pipelines versionnés.</li>
+<li><code>StandardScaler</code> → régression linéaire, SVM, PCA</li>
+<li><code>RobustScaler</code> → présence d'outliers non traités</li>
+<li><code>MinMaxScaler</code> → réseaux de neurones (images, MLP)</li>
+<li>Arbres (XGBoost, LightGBM, Random Forest) → <strong>pas de scaler nécessaire</strong></li>
+</ul>
+<hr>
+<h3>5. Features temporelles</h3>
+<pre><code class="lang-python">df[&quot;dt&quot;] = pd.to_datetime(df[&quot;date&quot;])
+df[&quot;heure&quot;]    = df[&quot;dt&quot;].dt.hour
+df[&quot;dow&quot;]      = df[&quot;dt&quot;].dt.dayofweek
+df[&quot;mois&quot;]     = df[&quot;dt&quot;].dt.month
+df[&quot;is_weekend&quot;] = df[&quot;dow&quot;].isin([5, 6]).astype(int)
+
+# Encodage cyclique (évite la discontinuité 23h→0h)
+df[&quot;heure_sin&quot;] = np.sin(2 * np.pi * df[&quot;heure&quot;] / 24)
+df[&quot;heure_cos&quot;] = np.cos(2 * np.pi * df[&quot;heure&quot;] / 24)
+
+# Lag features (séries temporelles)
+df[&quot;lag_1&quot;]  = df[&quot;valeur&quot;].shift(1)
+df[&quot;lag_7&quot;]  = df[&quot;valeur&quot;].shift(7)
+
+# Rolling stats
+df[&quot;roll_mean_7&quot;] = df[&quot;valeur&quot;].rolling(7).mean()
+df[&quot;roll_std_7&quot;]  = df[&quot;valeur&quot;].rolling(7).std()</code></pre>
+<hr>
+<h3>6. Features textuelles</h3>
+<pre><code class="lang-python">from sklearn.feature_extraction.text import TfidfVectorizer
+
+# TF-IDF (modèles classiques)
+tfidf = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
+X_tfidf = tfidf.fit_transform(train_texts)
+
+# Sentence embeddings (BERT, modèles modernes)
+from sentence_transformers import SentenceTransformer
+model = SentenceTransformer(&quot;all-MiniLM-L6-v2&quot;)
+embeddings = model.encode(texts, batch_size=64)
+
+# Features statistiques textuelles (signal faible mais rapide)
+df[&quot;nb_mots&quot;]     = df[&quot;texte&quot;].str.split().str.len()
+df[&quot;nb_chars&quot;]    = df[&quot;texte&quot;].str.len()
+df[&quot;ratio_upper&quot;] = df[&quot;texte&quot;].apply(lambda x: sum(c.isupper() for c in x) / max(len(x), 1))</code></pre>
+<hr>
+<h3>7. Feature selection</h3>
+<pre><code class="lang-python">from sklearn.feature_selection import mutual_info_classif, RFE
+from sklearn.ensemble import RandomForestClassifier
+import shap
+
+# Supprimer les features quasi-constantes
+from sklearn.feature_selection import VarianceThreshold
+vt = VarianceThreshold(threshold=0.01)
+
+# Supprimer les features très corrélées (&gt; 0.95)
+corr_matrix = df.corr().abs()
+upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(bool))
+to_drop = [col for col in upper.columns if any(upper[col] &gt; 0.95)]
+
+# Mutual information (non-linéaire)
+mi = mutual_info_classif(X_train, y_train)
+top_features = pd.Series(mi, index=X_train.columns).nlargest(30)
+
+# SHAP values (interprétable + sélection)
+explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(X_test)
+shap.summary_plot(shap_values, X_test)</code></pre>
+<hr>
+<h3>8. Pipeline et Feature Store</h3>
+<pre><code class="lang-python">from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+
+num_pipe = Pipeline([
+    (&quot;imputer&quot;, SimpleImputer(strategy=&quot;median&quot;)),
+    (&quot;scaler&quot;, StandardScaler()),
+])
+cat_pipe = Pipeline([
+    (&quot;imputer&quot;, SimpleImputer(strategy=&quot;most_frequent&quot;)),
+    (&quot;encoder&quot;, OneHotEncoder(handle_unknown=&quot;ignore&quot;)),
+])
+
+preprocessor = ColumnTransformer([
+    (&quot;num&quot;, num_pipe, num_cols),
+    (&quot;cat&quot;, cat_pipe, cat_cols),
+])
+
+full_pipeline = Pipeline([
+    (&quot;preprocessor&quot;, preprocessor),
+    (&quot;model&quot;, RandomForestClassifier()),
+])
+full_pipeline.fit(X_train, y_train)</code></pre>
+<p><strong>Feature store</strong> : Pour les équipes multi-projets, utiliser <a href="https://feast.dev/" target="_blank" rel="noopener">Feast</a> (open-source) ou Hopsworks. Distinguer :</p>
+<ul>
+<li><strong>Offline store</strong> : Parquet / BigQuery — pour l'entraînement</li>
+<li><strong>Online store</strong> : Redis / DynamoDB — pour le serving temps-réel</li>
+</ul>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td><strong>Data leakage</strong></td><td>Score parfait en validation, effondrement en prod</td><td>Fit les transformers uniquement sur train</td></tr><tr><td><strong>Target encoding sans CV</strong></td><td>Overfitting caché</td><td>Utiliser <code>TargetEncoder(cv=5)</code> ou leave-one-out</td></tr><tr><td><strong>Normaliser des arbres</strong></td><td>Perte de temps, pas d'impact</td><td>Supprimer scalers pour XGBoost/LightGBM</td></tr><tr><td><strong>Trop de features</strong></td><td>Curse of dimensionality, lenteur</td><td>Sélectionner &lt; 50–100 features significatives</td></tr><tr><td><strong>Log sur valeurs négatives</strong></td><td>NaN silencieux</td><td>Utiliser <code>log1p</code> ou Yeo-Johnson</td></tr><tr><td><strong>Rolling sans groupby</strong></td><td>Fuite entre séries d'entités différentes</td><td>Toujours <code>df.groupby(&quot;entity_id&quot;)[&quot;val&quot;].rolling(n)</code></td></tr><tr><td><strong>One-hot sur cardinalité &gt; 50</strong></td><td>Explosion de dimensions</td><td>Target encoding ou embeddings</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Versioning des features</strong> : tracer avec MLflow <code>log_params</code> ou DVC pour reproductibilité.</li>
+<li><strong>Feature importance ≠ causalité</strong> : valider avec un expert métier avant de supprimer.</li>
+<li><strong>Automatisation</strong> : outils comme <code>featuretools</code> (deep feature synthesis) ou <code>AutoFeat</code> accélèrent l'exploration mais nécessitent une revue humaine.</li>
+<li><strong>Monitoring en production</strong> : détecter le feature drift (PSI &gt; 0.2 = alarme) avec <code>evidently</code> ou <code>nannyml</code>.</li>
+<li><strong>Moins c'est plus</strong> : 10 features bien construites surpassent souvent 100 features bruitées.</li>
 </ul>
 </article>
 </main>

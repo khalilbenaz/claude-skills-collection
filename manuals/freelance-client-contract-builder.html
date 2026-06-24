@@ -96,24 +96,107 @@ cp -r claude-skills-collection/skills/freelance-client-contract-builder ~/.claud
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Client Contract Builder</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identification du besoin</strong> — Déterminer le type de contrat nécessaire : contrat de prestation de services, contrat au forfait, contrat de régie/assistance technique, NDA, ou contrat cadre avec bons de commande.</li>
-<li><strong>Parties et objet</strong> — Définir clairement les parties (identité juridique, SIRET/RC, adresse), l'objet précis de la prestation, le périmètre inclus et explicitement exclu.</li>
-<li><strong>Clauses financières</strong> — Rédiger les conditions financières : montant (TJM ou forfait), modalités de facturation, délais de paiement (30 jours max recommandé), pénalités de retard, acompte à la commande.</li>
-<li><strong>Livrables et planning</strong> — Décrire les livrables attendus, les jalons de validation, les critères d'acceptation (PV de recette), le processus de validation et les délais associés.</li>
-<li><strong>Propriété intellectuelle</strong> — Définir la cession des droits de PI : étendue (droits patrimoniaux cédés), moment de la cession (à la livraison ou au paiement complet), territoire et durée, réserve de droits sur les briques réutilisables.</li>
-<li><strong>Clauses de protection</strong> — Intégrer : limitation de responsabilité (plafond = montant du contrat), clause de confidentialité, clause de non-sollicitation, conditions de résiliation (préavis, motifs), force majeure.</li>
-<li><strong>CGV</strong> — Rédiger ou mettre à jour les Conditions Générales de Vente annexées au contrat, conformes à la législation applicable.</li>
-<li><strong>Relecture et validation</strong> — Vérifier la cohérence du contrat, s'assurer que toutes les clauses sont équilibrées et recommander une relecture par un avocat pour les contrats importants.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de choix du type de contrat</h2>
+<table><thead><tr><th>Situation</th><th>Type recommandé</th></tr></thead><tbody><tr><td>Mission courte, scope figé</td><td>Contrat au forfait</td></tr><tr><td>Mission longue / incertaine</td><td>Régie (TJM) + bon de commande mensuel</td></tr><tr><td>Plusieurs missions récurrentes</td><td>Contrat-cadre + bons de commande</td></tr><tr><td>Partage d'informations confidentielles avant signature</td><td>NDA préalable</td></tr><tr><td>Sous-traitance pour un client final tiers</td><td>Contrat de sous-traitance (mentionner le donneur d'ordre)</td></tr></tbody></table>
+<hr>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Collecter les informations préalables</h3>
+<p>Demander systématiquement :</p>
 <ul>
-<li>Ne jamais commencer une prestation sans contrat signé ou au minimum un bon de commande.</li>
-<li>Toujours conditionner la cession de PI au paiement intégral de la prestation.</li>
-<li>Les CGV doivent être transmises et acceptées avant le début de la prestation.</li>
-<li>Inclure systématiquement une clause de résiliation avec préavis raisonnable (15-30 jours).</li>
-<li>Ce skill fournit des modèles indicatifs, pas des conseils juridiques : recommander un avocat pour les contrats importants.</li>
+<li>Identité juridique complète des deux parties (raison sociale, forme juridique, SIRET/RC, adresse)</li>
+<li>Type et durée estimée de la mission</li>
+<li>TJM ou montant forfaitaire, devise</li>
+<li>Date de début et jalons prévus</li>
+<li>Livrables attendus et critères d'acceptation</li>
+<li>Existence d'un NDA ou d'un contrat-cadre déjà signé</li>
+</ul>
+<h3>2. Rédiger l'objet et le périmètre</h3>
+<p>L'objet doit être précis et délimité. Exemple :</p>
+<pre><code>OBJET : Développement d'une API REST Node.js permettant la gestion des paiements en ligne
+pour le compte du Client. Inclus : conception, développement, tests unitaires, livraison
+d'un code source documenté. Exclus : hébergement, maintenance corrective post-livraison,
+migrations de données.</code></pre>
+<p>Toujours lister explicitement ce qui est <strong>exclu</strong> pour éviter le scope creep.</p>
+<h3>3. Clauses financières</h3>
+<p>Modèle de section paiement (forfait) :</p>
+<pre><code>PRIX : Le montant total de la prestation est fixé à [X] € HT.
+FACTURATION : Facture émise à la signature (30%), à mi-parcours (40%), à la livraison (30%).
+PAIEMENT : 30 jours net date de facture.
+PÉNALITÉS : Tout retard de paiement entraîne l'application de pénalités au taux de 3× le
+taux légal en vigueur, exigibles sans mise en demeure préalable. Indemnité forfaitaire pour
+frais de recouvrement : 40 € (art. L441-10 C.Com.).</code></pre>
+<p>Pour la régie (TJM) :</p>
+<pre><code>TJM : [X] € HT/jour ouvré. Le nombre de jours est validé mensuellement via bon de commande.
+DÉPASSEMENT : Tout jour supplémentaire fait l'objet d'un avenant ou d'un bon de commande
+complémentaire signé avant exécution.</code></pre>
+<h3>4. Livrables, jalons et PV de recette</h3>
+<ul>
+<li>Définir chaque livrable avec son format de sortie (ex: repo Git privé, dossier ZIP, accès Figma).</li>
+<li>Préciser le délai de validation client (ex: <strong>10 jours ouvrés</strong>) — passé ce délai, la validation est réputée acquise.</li>
+<li>Joindre un modèle de PV de recette minimaliste :</li>
+</ul>
+<pre><code>PV DE RECETTE — [Nom du livrable] — [Date]
+Prestataire : [Nom]  /  Client : [Nom]
+Le Client déclare avoir reçu et validé les livrables définis à l'article X.
+Signature : ___________  Date : ___________</code></pre>
+<h3>5. Propriété intellectuelle</h3>
+<p>Clause recommandée (cession conditionnelle au paiement) :</p>
+<pre><code>PROPRIÉTÉ INTELLECTUELLE : Le Prestataire conserve tous les droits de propriété intellectuelle
+sur les développements réalisés jusqu'au paiement intégral de la prestation. À compter du
+paiement complet, il cède au Client, à titre exclusif, les droits patrimoniaux d'exploitation
+(reproduction, représentation, adaptation) pour tout territoire et toute la durée légale de
+protection.
+
+RÉSERVE : Le Prestataire conserve ses droits sur les briques génériques (bibliothèques internes,
+snippets réutilisables, frameworks maison) préexistantes au contrat. Une licence d'utilisation
+non-exclusive et irrévocable est accordée au Client sur ces composants dans le cadre de la
+prestation.</code></pre>
+<h3>6. Clauses de protection obligatoires</h3>
+<p><strong>Limitation de responsabilité :</strong></p>
+<pre><code>Le Prestataire ne peut être tenu responsable de dommages indirects ou immatériels (perte
+de chiffre d'affaires, perte de données). Sa responsabilité directe est plafonnée au montant
+total HT facturé au titre du présent contrat.</code></pre>
+<p><strong>Confidentialité :</strong></p>
+<pre><code>Chaque partie s'engage à garder strictement confidentiels les informations échangées pendant
+et 3 ans après la fin du contrat. Exception : informations déjà publiques ou reçues d'un tiers.</code></pre>
+<p><strong>Non-sollicitation :</strong></p>
+<pre><code>Pendant la mission et 12 mois après, le Client s'interdit de recruter ou solliciter directement
+les collaborateurs du Prestataire ayant participé à la mission. En cas de violation : indemnité
+forfaitaire = 6 mois de TJM du collaborateur concerné.</code></pre>
+<p><strong>Résiliation :</strong></p>
+<pre><code>Chaque partie peut résilier le contrat avec un préavis de [15/30] jours calendaires par écrit.
+En cas de résiliation à l'initiative du Client, les travaux réalisés et validés sont facturés
+au prorata. Les livrables en cours restent la propriété du Prestataire jusqu'au paiement.</code></pre>
+<h3>7. CGV — structure minimale</h3>
+<p>Les CGV doivent être annexées et acceptées <strong>avant</strong> la signature du contrat principal :</p>
+<ol>
+<li>Identification du prestataire (SIRET, TVA intracommunautaire, RCS)</li>
+<li>Champ d'application</li>
+<li>Conditions de commande et de devis</li>
+<li>Prix et conditions de paiement</li>
+<li>Modalités de livraison et d'acceptation</li>
+<li>Propriété intellectuelle (renvoie au contrat si spécifique)</li>
+<li>Garanties et responsabilités</li>
+<li>Données personnelles (RGPD — responsable de traitement, durée de conservation)</li>
+<li>Médiation et droit applicable (droit français, tribunal compétent)</li>
+</ol>
+<h3>8. Relecture et envoi</h3>
+<ul>
+<li>Utiliser <a href="https://www.docusign.com" target="_blank" rel="noopener">DocuSign</a>, <a href="https://yousign.com" target="_blank" rel="noopener">Yousign</a> ou <a href="https://www.signaturit.com" target="_blank" rel="noopener">Signaturit</a> pour signature électronique (valeur légale en France).</li>
+<li>Conserver une copie signée au format PDF archivé ≥ 5 ans.</li>
+<li>Pour les contrats &gt; 5 000 € ou avec clause d'exclusivité, recommander une relecture par avocat spécialisé IT/PI.</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Commencer la mission sans contrat signé</td><td>Zéro protection, litige impossible à prouver</td><td>Toujours bloquer le démarrage jusqu'à signature</td></tr><tr><td>Cession de PI sans paiement garanti</td><td>Le client utilise les livrables sans payer</td><td>Conditionner explicitement la cession au paiement intégral</td></tr><tr><td>Délai de validation client indéfini</td><td>Validation qui traîne, projet bloqué</td><td>Indiquer un délai limite (10 j ouvrés) + acceptation tacite</td></tr><tr><td>Pas de plafond de responsabilité</td><td>Exposition à des dommages dépassant le CA</td><td>Plafonner à 100% du montant HT facturé</td></tr><tr><td>CGV non transmises avant commande</td><td>CGV inopposables au client</td><td>Transmettre + obtenir un accusé de réception écrit</td></tr><tr><td>NDA après échange d'informations sensibles</td><td>Informations déjà divulguées, NDA sans effet</td><td>Signer le NDA avant tout briefing technique</td></tr><tr><td>Clause de non-concurrence trop large</td><td>Clause nulle (déséquilibre significatif)</td><td>Limiter à 12 mois, zone géographique ou secteur précis</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Signature électronique qualifiée eIDAS</strong> : préférer ce niveau pour les contrats &gt; 10 000 € (Yousign qualifié, DocuSign Advanced).</li>
+<li><strong>RGPD / DPA</strong> : si la mission implique un accès à des données personnelles du client, annexer un DPA (Data Processing Agreement) — obligation légale depuis 2018, encore souvent oubliée.</li>
+<li><strong>IA et droits d'auteur</strong> : si des livrables sont générés ou assistés par IA, préciser explicitement dans le contrat à qui appartiennent ces éléments et les outils utilisés (risque de contestation de la cession PI).</li>
+<li><strong>Indexation tarifaire</strong> : intégrer une clause d'indexation annuelle sur l'indice SYNTEC pour les contrats longue durée.</li>
+<li><strong>Assurance RC Pro</strong> : mentionner que le prestataire est couvert par une RC Pro et joindre une attestation d'assurance en annexe.</li>
 </ul>
 </article>
 </main>

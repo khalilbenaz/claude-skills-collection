@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-cloud-cost-optimizer — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Optimise les coûts cloud (Azure, AWS, GCP).">
+<meta name="description" content="Optimise les coûts cloud (Azure, AWS, GCP) avec workflow FinOps structuré — audit, right-sizing, réservations, Spot, stockage, scheduling, monitoring.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-cloud-cost-optimizer</h1>
-<p class="lead">Optimise les coûts cloud (Azure, AWS, GCP).</p>
+<p class="lead">Optimise les coûts cloud (Azure, AWS, GCP) avec workflow FinOps structuré — audit, right-sizing, réservations, Spot, stockage, scheduling, monitoring.</p>
 
 
 
@@ -96,25 +96,187 @@ cp -r claude-skills-collection/skills/dev-cloud-cost-optimizer ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Cloud Cost Optimizer</h1>
-<h2>Workflow</h2>
-<ol>
-<li>Auditer l'infrastructure actuelle : inventorier toutes les ressources (VMs, bases de données, stockage, réseau, services managés), leur utilisation réelle et leur coût mensuel via Cost Explorer (AWS), Cost Management (Azure) ou Cloud Billing (GCP).</li>
-<li>Identifier les ressources sous-utilisées : repérer les instances avec CPU &lt; 10% sur 14 jours, les idle instances (arrêtées mais facturées), les volumes détachés, les IPs publiques non utilisées et les ressources oversized par rapport à la charge.</li>
-<li>Appliquer le right-sizing : ajuster la taille des VMs (downgrade de tier), des containers (limites CPU/mémoire), des bases de données (instance type, storage provisioned IOPS) en s'appuyant sur les recommandations natives du cloud provider.</li>
-<li>Évaluer les Reserved Instances et Savings Plans : calculer le ROI pour 1 an vs 3 ans sur les workloads stables, comparer Reserved Instances (engagement de capacité) vs Savings Plans (flexibilité de service), estimer les économies (jusqu'à 72% vs on-demand).</li>
-<li>Utiliser les Spot/Preemptible instances : identifier les workloads tolérants aux interruptions (batch, CI/CD, rendering, dev/test), configurer les interruption handlers et les stratégies de fallback on-demand.</li>
-<li>Optimiser le stockage : mettre en place les lifecycle policies (S3 Intelligent-Tiering, Azure Blob tiers, GCS Archive), supprimer les snapshots obsolètes, compresser les données froides, utiliser le tier adapté au pattern d'accès.</li>
-<li>Configurer l'auto-scaling et le scheduling : scale-to-zero pour les workloads non-continus (Lambda, Container Apps, Cloud Run), arrêt automatique des environnements dev/staging en dehors des heures de bureau (économies 70%+ sur ces envs).</li>
-<li>Mettre en place le monitoring continu des coûts : budgets avec alertes par équipe/projet, cost anomaly detection, dashboards FinOps, tagging strategy pour l'attribution des coûts, revue mensuelle des recommandations.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Audit initial — inventaire &amp; baseline</h3>
+<p>Collecte le coût mensuel réel par ressource avant toute action.</p>
+<p><strong>AWS</strong></p>
+<pre><code class="lang-bash"># Export Cost Explorer par service (derniers 30 jours)
+aws ce get-cost-and-usage \
+  --time-period Start=2026-05-24,End=2026-06-24 \
+  --granularity MONTHLY \
+  --metrics BlendedCost \
+  --group-by Type=DIMENSION,Key=SERVICE \
+  --output table</code></pre>
+<p><strong>Azure</strong></p>
+<pre><code class="lang-bash"># Résumé de facturation par groupe de ressources
+az consumption usage list \
+  --start-date 2026-05-24 --end-date 2026-06-24 \
+  --query &quot;[].{Resource:instanceName, Cost:pretaxCost, Currency:currency}&quot; \
+  --output table</code></pre>
+<p><strong>GCP</strong></p>
+<pre><code class="lang-bash"># Export vers BigQuery (recommandé) — requête sur le dataset billing
+bq query --use_legacy_sql=false '
+SELECT service.description, SUM(cost) AS total_cost
+FROM `PROJECT.DATASET.gcp_billing_export_v1_*`
+WHERE _PARTITIONTIME BETWEEN &quot;2026-05-24&quot; AND &quot;2026-06-24&quot;
+GROUP BY 1 ORDER BY 2 DESC LIMIT 20'</code></pre>
+<blockquote>Critère de déclenchement : si une ressource représente &gt; 5 % de la facture totale, elle mérite une analyse dédiée.</blockquote>
+<hr>
+<h3>2. Identifier les ressources sous-utilisées (idle / oversized)</h3>
+<p><strong>Critères d'alerte :</strong></p>
+<table><thead><tr><th>Signal</th><th>Seuil</th><th>Action</th></tr></thead><tbody><tr><td>CPU moyen sur 14 j</td><td>&lt; 10 %</td><td>Downsize ou arrêt</td></tr><tr><td>Mémoire utilisée</td><td>&lt; 20 %</td><td>Downsize</td></tr><tr><td>Volume EBS/Disk non attaché</td><td>&gt; 7 j</td><td>Snapshot + suppression</td></tr><tr><td>IP publique non associée</td><td>toute durée</td><td>Libérer</td></tr><tr><td>DB connections actives</td><td>0 sur 7 j</td><td>Arrêt planifié</td></tr></tbody></table>
+<p><strong>AWS — lister les EBS volumes détachés</strong></p>
+<pre><code class="lang-bash">aws ec2 describe-volumes \
+  --filters Name=status,Values=available \
+  --query &quot;Volumes[*].{ID:VolumeId, Size:Size, Type:VolumeType}&quot; \
+  --output table</code></pre>
+<p><strong>Azure — VMs avec CPU &lt; 10 % (Advisor)</strong></p>
+<pre><code class="lang-bash">az advisor recommendation list \
+  --category Cost \
+  --query &quot;[?shortDescription.problem=='Right-size or shutdown underutilized virtual machines']&quot; \
+  --output table</code></pre>
+<hr>
+<h3>3. Right-sizing</h3>
+<p>Utiliser les recommandations natives <strong>avant</strong> de choisir manuellement.</p>
 <ul>
-<li>Adapter les recommandations au cloud provider utilisé (Azure, AWS ou GCP) avec les noms de services exacts.</li>
-<li>Toujours calculer le ROI et les économies estimées en chiffres concrets avant de recommander un engagement (réservations).</li>
-<li>Commencer par les quick wins (ressources idle, right-sizing) avant les changements architecturaux.</li>
-<li>Fournir des commandes CLI et des configs IaC (Terraform, Bicep, CloudFormation) prêtes à l'emploi.</li>
-<li>Ne jamais supprimer de ressources sans confirmation : proposer un plan de nettoyage progressif avec rollback possible.</li>
+<li><strong>AWS</strong> : Compute Optimizer → export CSV des recommandations EC2/RDS/Lambda</li>
+<li><strong>Azure</strong> : Advisor → blade &quot;Cost&quot; → recommandations VM/SQL</li>
+<li><strong>GCP</strong> : Recommender API → <code>gcloud recommender recommendations list --recommender=google.compute.instance.MachineTypeRecommender</code></li>
 </ul>
+<p>Règle de décision :</p>
+<ul>
+<li>Downsize si l'utilisation peak sur 14 j &lt; 40 % de la capacité provisionnée.</li>
+<li>Ne pas descendre en dessous de la P95 de la charge (éviter les throttlings).</li>
+<li>Tester sur staging avant de migrer la prod.</li>
+</ul>
+<p><strong>Terraform — changer le type d'instance sans recréer la ressource</strong></p>
+<pre><code class="lang-hcl">resource &quot;aws_instance&quot; &quot;api&quot; {
+  instance_type = &quot;t3.small&quot;  # Était t3.medium
+  # ...
+  lifecycle { create_before_destroy = true }
+}</code></pre>
+<hr>
+<h3>4. Reserved Instances &amp; Savings Plans</h3>
+<p><strong>Matrice de décision :</strong></p>
+<table><thead><tr><th>Cas</th><th>Recommandation</th></tr></thead><tbody><tr><td>Workload stable 24/7, même région, même famille</td><td>RI 1 an (Standard) — jusqu'à 40 %</td></tr><tr><td>Workload stable mais famille/région variable</td><td>Savings Plan Compute — jusqu'à 66 %</td></tr><tr><td>Engagement fort, 3 ans, paiement anticipé</td><td>RI 3 ans — jusqu'à 72 %</td></tr><tr><td>Workload imprévisible</td><td>On-demand ou Spot</td></tr></tbody></table>
+<p><strong>Calcul ROI rapide (AWS)</strong></p>
+<pre><code class="lang-bash"># Estimation des économies Savings Plans sur 1 an
+aws ce get-savings-plans-purchase-recommendation \
+  --savings-plans-type COMPUTE_SP \
+  --term-in-years ONE_YEAR \
+  --payment-option NO_UPFRONT \
+  --lookback-period-in-days THIRTY_DAYS</code></pre>
+<p>Ne pas acheter de réservations avant d'avoir au moins 30 jours d'historique de charge stable.</p>
+<hr>
+<h3>5. Spot / Preemptible instances</h3>
+<p><strong>Workloads compatibles Spot :</strong></p>
+<ul>
+<li>CI/CD (GitHub Actions runners, GitLab runners)</li>
+<li>Batch processing, ETL, ML training</li>
+<li>Environnements de dev/test</li>
+<li>Rendering, transcoding</li>
+</ul>
+<p><strong>Non compatibles :</strong> bases de données stateful, services critiques sans failover.</p>
+<p><strong>AWS — Auto Scaling Group avec mix Spot/On-demand</strong></p>
+<pre><code class="lang-json">{
+  &quot;MixedInstancesPolicy&quot;: {
+    &quot;InstancesDistribution&quot;: {
+      &quot;OnDemandPercentageAboveBaseCapacity&quot;: 20,
+      &quot;SpotAllocationStrategy&quot;: &quot;capacity-optimized&quot;
+    }
+  }
+}</code></pre>
+<p><strong>Azure — VMSS avec Spot</strong></p>
+<pre><code class="lang-bash">az vmss create --name myVMSS --resource-group myRG \
+  --priority Spot --eviction-policy Deallocate \
+  --max-price -1  # prix marché</code></pre>
+<p>Toujours configurer un interruption handler (SIGTERM sur AWS, Azure Scheduled Events).</p>
+<hr>
+<h3>6. Optimiser le stockage</h3>
+<p><strong>Lifecycle policies — S3</strong></p>
+<pre><code class="lang-json">{
+  &quot;Rules&quot;: [{
+    &quot;Status&quot;: &quot;Enabled&quot;,
+    &quot;Transitions&quot;: [
+      { &quot;Days&quot;: 30, &quot;StorageClass&quot;: &quot;STANDARD_IA&quot; },
+      { &quot;Days&quot;: 90, &quot;StorageClass&quot;: &quot;GLACIER_IR&quot; },
+      { &quot;Days&quot;: 365, &quot;StorageClass&quot;: &quot;DEEP_ARCHIVE&quot; }
+    ],
+    &quot;NoncurrentVersionExpiration&quot;: { &quot;NoncurrentDays&quot;: 30 }
+  }]
+}</code></pre>
+<p><strong>Azure Blob — lifecycle (Bicep)</strong></p>
+<pre><code class="lang-bicep">resource lifecyclePolicy 'Microsoft.Storage/storageAccounts/managementPolicies@2023-01-01' = {
+  name: 'default'
+  properties: {
+    policy: {
+      rules: [{
+        name: 'tiering'
+        type: 'Lifecycle'
+        definition: {
+          actions: { baseBlob: { tierToCool: { daysAfterModificationGreaterThan: 30 }
+                               , tierToArchive: { daysAfterModificationGreaterThan: 90 } } }
+          filters: { blobTypes: ['blockBlob'] }
+        }
+      }]
+    }
+  }
+}</code></pre>
+<p>Supprimer les snapshots orphelins : vérifier que le volume source existe encore avant tout nettoyage.</p>
+<hr>
+<h3>7. Auto-scaling &amp; scheduling</h3>
+<p><strong>Scale-to-zero</strong> pour tous les workloads non-continus :</p>
+<ul>
+<li>AWS Lambda, ECS Fargate (scale to 0 tasks)</li>
+<li>Azure Container Apps (min replicas: 0)</li>
+<li>GCP Cloud Run (concurrency 0)</li>
+</ul>
+<p><strong>Arrêt automatique des envs dev/staging (économies 65-75 %)</strong></p>
+<pre><code class="lang-bash"># AWS — Lambda schedulée via EventBridge (arrêt le soir, démarrage le matin)
+aws events put-rule --schedule-expression &quot;cron(0 19 ? * MON-FRI *)&quot; \
+  --name &quot;StopDevInstances&quot;
+
+# Azure — Start/Stop VMs v2 (solution native gratuite)
+az deployment group create --resource-group myRG \
+  --template-uri https://aka.ms/startstopv2deploy</code></pre>
+<p><strong>Kubernetes — scale down la nuit</strong></p>
+<pre><code class="lang-yaml"># kube-downscaler ou KEDA
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+spec:
+  minReplicaCount: 0
+  scaleTargetRef:
+    name: api-deployment</code></pre>
+<hr>
+<h3>8. Monitoring continu &amp; FinOps</h3>
+<p><strong>Tagging strategy — obligatoire pour l'attribution des coûts</strong></p>
+<pre><code>Environment: prod | staging | dev
+Team: backend | frontend | data
+Project: rivora | access | wfc
+CostCenter: 1234</code></pre>
+<p><strong>Budgets avec alertes (AWS)</strong></p>
+<pre><code class="lang-bash">aws budgets create-budget --account-id 123456789 --budget '{
+  &quot;BudgetName&quot;: &quot;monthly-prod&quot;,
+  &quot;BudgetLimit&quot;: {&quot;Amount&quot;: &quot;5000&quot;, &quot;Unit&quot;: &quot;USD&quot;},
+  &quot;TimeUnit&quot;: &quot;MONTHLY&quot;,
+  &quot;BudgetType&quot;: &quot;COST&quot;
+}' --notifications-with-subscribers '[{
+  &quot;Notification&quot;: {&quot;NotificationType&quot;:&quot;ACTUAL&quot;,&quot;ComparisonOperator&quot;:&quot;GREATER_THAN&quot;,&quot;Threshold&quot;:80},
+  &quot;Subscribers&quot;: [{&quot;SubscriptionType&quot;:&quot;EMAIL&quot;,&quot;Address&quot;:&quot;devops@company.com&quot;}]
+}]'</code></pre>
+<p><strong>Azure Cost Anomaly Detection</strong></p>
+<pre><code class="lang-bash">az costmanagement alert create --scope /subscriptions/{sub-id} \
+  --name anomaly-alert --type Anomaly</code></pre>
+<p>Revue mensuelle obligatoire : comparer la facture N vs N-1, valider les recommandations Advisor/Compute Optimizer non traitées.</p>
+<hr>
+<h2>Garde-fous &amp; anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td>Supprimer directement les ressources idle</td><td>Perte de données, rollback impossible</td><td>Snapshot → désactivation → suppression après 7 j</td></tr><tr><td>Acheter des RI sans historique stable</td><td>Surengagement inutile</td><td>Attendre 30 j, commencer par Savings Plans flexibles</td></tr><tr><td>Spot pour les BDD ou services stateful</td><td>Perte de données sur eviction</td><td>On-demand obligatoire pour stateful</td></tr><tr><td>Ignorer le coût réseau (egress)</td><td>Facture cachée massive</td><td>Auditer le trafic inter-régions et vers internet</td></tr><tr><td>Tags inconsistants ou absents</td><td>Impossible d'imputer les coûts</td><td>Enforcer via Azure Policy / AWS SCP / GCP Org Policy</td></tr><tr><td>Over-provisioning &quot;au cas où&quot;</td><td>40-60 % de gaspillage courant</td><td>Right-sizing + auto-scaling, jamais de marge fixe &gt; 30 %</td></tr><tr><td>Optimiser dev/staging avant prod</td><td>Gains marginaux, risques réels en prod</td><td>Prioriser : prod &gt; staging &gt; dev</td></tr></tbody></table>
+<h2>Ordre de priorité recommandé</h2>
+<ol>
+<li><strong>Quick wins (&lt; 1 semaine)</strong> : idle resources, IPs inutilisées, snapshots orphelins, arrêt env dev la nuit</li>
+<li><strong>Medium term (1-4 semaines)</strong> : right-sizing, lifecycle storage, auto-scaling</li>
+<li><strong>Long term (&gt; 1 mois)</strong> : réservations 1 an, refactoring vers serverless, architecture multi-region optimisée</li>
+</ol>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

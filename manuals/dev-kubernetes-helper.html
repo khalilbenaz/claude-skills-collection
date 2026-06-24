@@ -97,23 +97,199 @@ cp -r claude-skills-collection/skills/dev-kubernetes-helper ~/.claude/skills/</d
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Kubernetes Helper</h1>
 <h2>Workflow</h2>
-<ol>
-<li>Analyse des besoins : type d'application (stateful vs stateless), exigences de scaling, haute disponibilité et contraintes réseau</li>
-<li>Création des manifests Kubernetes (Deployment, Service, ConfigMap, Secret, Ingress) adaptés à l'application</li>
-<li>Configuration du scaling automatique : HPA et VPA, resource requests/limits correctement dimensionnés, PodDisruptionBudget</li>
-<li>Configuration du networking : Services (ClusterIP/NodePort/LoadBalancer), Ingress controllers (NGINX, Traefik), NetworkPolicies et service mesh si nécessaire</li>
-<li>Gestion du stockage : PersistentVolumes, PersistentVolumeClaims, StorageClasses et StatefulSets pour les applications avec état</li>
-<li>Mise en place du monitoring et logging : Prometheus/Grafana pour les métriques, stack EFK/ELK pour les logs, liveness et readiness probes sur chaque pod</li>
-<li>Sécurisation du cluster : RBAC, PodSecurityAdmission, NetworkPolicies restrictives, gestion des secrets avec Sealed Secrets ou External Secrets Operator</li>
-<li>Packaging avec Helm : création de charts réutilisables, gestion des values par environnement, versioning et déploiement via Helm</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Qualifier le besoin</h3>
 <ul>
-<li>Adapte les manifests au provider Kubernetes de l'utilisateur (AKS, EKS, GKE, cluster on-premise)</li>
-<li>Fournis des manifests YAML complets et commentés, organisés par dossier (base, overlays Kustomize si pertinent)</li>
-<li>Priorise la sécurité : RBAC minimal, pas de conteneurs privileged, Network Policies par défaut restrictives</li>
-<li>Propose des solutions progressives : manifests simples fonctionnels d'abord, puis ajout du scaling, monitoring et sécurité avancée</li>
-<li>Inclus systématiquement les liveness/readiness probes et les resource limits dans chaque Deployment</li>
+<li>Stateless ou Stateful ? (StatefulSet + PVC si données persistantes)</li>
+<li>Provider : AKS / EKS / GKE / on-premise — impacte StorageClass, LB, CNI</li>
+<li>Nombre de réplicas cible, SLA, contraintes réseau (NetworkPolicy), GitOps ou CLI ?</li>
+</ul>
+<h3>2. Structure des manifests</h3>
+<p>Organiser par dossier :</p>
+<pre><code>k8s/
+  base/
+    deployment.yaml
+    service.yaml
+    configmap.yaml
+    secret.yaml         # ou ExternalSecrets / SealedSecret
+    ingress.yaml
+  overlays/
+    dev/kustomization.yaml
+    prod/kustomization.yaml</code></pre>
+<h3>3. Deployment minimal prêt pour la prod</h3>
+<pre><code class="lang-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+  namespace: my-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: my-app
+          image: my-registry/my-app:1.2.3   # tag fixe, jamais latest
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: &quot;100m&quot;
+              memory: &quot;128Mi&quot;
+            limits:
+              cpu: &quot;500m&quot;
+              memory: &quot;256Mi&quot;
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: my-app-secret
+                  key: db-password</code></pre>
+<h3>4. Scaling automatique</h3>
+<p><strong>HPA (charge CPU/mémoire)</strong></p>
+<pre><code class="lang-yaml">apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: my-app-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: my-app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60</code></pre>
+<p><strong>PodDisruptionBudget</strong> (toujours ajouter en prod)</p>
+<pre><code class="lang-yaml">apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: my-app-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: my-app</code></pre>
+<h3>5. Networking</h3>
+<table><thead><tr><th>Besoin</th><th>Type Service</th></tr></thead><tbody><tr><td>Interne cluster</td><td>ClusterIP</td></tr><tr><td>Debug local</td><td>NodePort (temp)</td></tr><tr><td>Exposition externe</td><td>LoadBalancer ou Ingress</td></tr></tbody></table>
+<p><strong>Ingress NGINX minimal</strong></p>
+<pre><code class="lang-yaml">apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-app-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: &quot;true&quot;
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: app.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-app
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - app.example.com
+      secretName: my-app-tls</code></pre>
+<h3>6. Sécurité RBAC minimale</h3>
+<pre><code class="lang-yaml">apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: my-ns
+  name: my-app-role
+rules:
+  - apiGroups: [&quot;&quot;]
+    resources: [&quot;configmaps&quot;]
+    verbs: [&quot;get&quot;, &quot;list&quot;]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: my-app-rolebinding
+  namespace: my-ns
+subjects:
+  - kind: ServiceAccount
+    name: my-app-sa
+    namespace: my-ns
+roleRef:
+  kind: Role
+  name: my-app-role
+  apiGroup: rbac.authorization.k8s.io</code></pre>
+<h3>7. Commandes kubectl utiles</h3>
+<pre><code class="lang-bash"># Vérifier l'état du rollout
+kubectl rollout status deployment/my-app -n my-ns
+
+# Rollback rapide
+kubectl rollout undo deployment/my-app -n my-ns
+
+# Logs multi-pods avec label
+kubectl logs -l app=my-app -n my-ns --tail=100 -f
+
+# Describe pod crashant
+kubectl describe pod -l app=my-app -n my-ns
+
+# Exec dans un pod
+kubectl exec -it deploy/my-app -n my-ns -- sh
+
+# Top ressources
+kubectl top pods -n my-ns --sort-by=memory
+
+# Port-forward debug
+kubectl port-forward svc/my-app 8080:80 -n my-ns</code></pre>
+<h3>8. Helm : packaging par environnement</h3>
+<pre><code class="lang-bash"># Créer un chart
+helm create my-app
+
+# Installer avec values spécifiques
+helm upgrade --install my-app ./my-app \
+  -n my-ns --create-namespace \
+  -f values-prod.yaml \
+  --set image.tag=1.2.3
+
+# Diff avant apply (plugin helm-diff)
+helm diff upgrade my-app ./my-app -f values-prod.yaml</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correctif</th></tr></thead><tbody><tr><td><code>image: latest</code></td><td>rollouts non déterministes</td><td>Tag fixe ou digest SHA</td></tr><tr><td>Pas de <code>resources.limits</code></td><td>node starvation</td><td>Toujours définir requests + limits</td></tr><tr><td>Pas de probes</td><td>trafic vers pod non prêt</td><td>readiness + liveness sur chaque container</td></tr><tr><td>Secrets en clair dans le YAML</td><td>fuite dans git</td><td>ExternalSecrets ou SealedSecrets</td></tr><tr><td><code>privileged: true</code></td><td>escalade de privilèges</td><td><code>runAsNonRoot: true</code> + drop ALL capabilities</td></tr><tr><td>1 seul replica en prod</td><td>SPOF</td><td>min 2 replicas + PDB</td></tr><tr><td>NetworkPolicy absente</td><td>mouvement latéral</td><td>default-deny + allow explicite</td></tr><tr><td><code>kubectl apply</code> manuel en prod</td><td>désynchronisation</td><td>GitOps : ArgoCD ou Flux</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Kustomize</strong> pour la gestion multi-environnements (overlays dev/staging/prod), intégré nativement à kubectl</li>
+<li><strong>Server-Side Apply</strong> (<code>kubectl apply --server-side</code>) pour éviter les conflits de field managers</li>
+<li><strong>OPA Gatekeeper / Kyverno</strong> pour les politiques d'admission (remplace PodSecurityPolicy déprécié)</li>
+<li><strong>KEDA</strong> pour le scaling event-driven (files de messages, métriques custom) en complément de HPA</li>
+<li><strong>Cilium</strong> comme CNI pour des NetworkPolicies L7 et l'eBPF observability sans sidecar</li>
+<li><strong>Cosign + policy-controller</strong> pour la vérification des signatures d'images en cluster</li>
+<li>Utiliser <code>topologySpreadConstraints</code> pour répartir les pods sur plusieurs zones AZ</li>
+<li>Activer <code>minReadySeconds</code> sur le Deployment pour absorber les faux positifs au démarrage</li>
 </ul>
 </article>
 </main>

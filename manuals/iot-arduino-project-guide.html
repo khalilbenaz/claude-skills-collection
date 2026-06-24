@@ -96,24 +96,157 @@ cp -r claude-skills-collection/skills/iot-arduino-project-guide ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Arduino Project Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyse du besoin</strong> — Identifier le projet IoT visé, les capteurs/actionneurs nécessaires, les contraintes d'alimentation et de communication</li>
-<li><strong>Sélection du matériel</strong> — Choisir la carte Arduino adaptée (Uno, Mega, Nano, ESP32) et les composants compatibles (capteurs, shields, modules)</li>
-<li><strong>Conception du circuit</strong> — Dessiner le schéma de câblage avec les résistances de protection, les connexions GPIO et l'alimentation appropriée</li>
-<li><strong>Développement du sketch</strong> — Écrire le code Arduino avec setup() et loop(), en utilisant les bibliothèques appropriées et une structure modulaire</li>
-<li><strong>Communication série</strong> — Configurer le moniteur série pour le débogage, implémenter les protocoles de communication (I2C, SPI, UART) si nécessaire</li>
-<li><strong>Calibration des capteurs</strong> — Tester et calibrer chaque capteur individuellement, ajuster les seuils et les filtres de bruit</li>
-<li><strong>Intégration et tests</strong> — Assembler le circuit complet, tester les interactions entre composants et valider le comportement global</li>
-<li><strong>Optimisation</strong> — Réduire la consommation mémoire, optimiser les boucles, implémenter le mode veille si nécessaire pour l'autonomie</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Analyse du besoin</h2>
+<p>Identifier avant tout :</p>
 <ul>
-<li>Toujours inclure des résistances de protection et vérifier les tensions avant de connecter un composant</li>
-<li>Commenter le code de manière détaillée et séparer la logique en fonctions réutilisables</li>
-<li>Privilégier les interruptions plutôt que le polling pour les événements critiques en temps réel</li>
-<li>Proposer un schéma de câblage clair avec la liste complète des composants et leurs références</li>
-<li>Tester chaque composant isolément avant l'intégration finale du circuit</li>
+<li><strong>Type de projet</strong> : lecture périodique (température, humidité), événementiel (bouton, détecteur PIR), temps réel (servo, PID)</li>
+<li><strong>Contraintes alimentation</strong> : USB (debug), batterie 3.7V LiPo, secteur 5V</li>
+<li><strong>Communication</strong> : local seulement, WiFi, BLE, LoRa, UART vers RPi</li>
+</ul>
+<p>Critères de sélection de carte :</p>
+<table><thead><tr><th>Besoin</th><th>Carte recommandée</th></tr></thead><tbody><tr><td>Prototype simple, 5V</td><td>Arduino Uno / Nano</td></tr><tr><td>Nombreuses broches</td><td>Arduino Mega 2560</td></tr><tr><td>WiFi intégré</td><td>ESP8266 (NodeMCU) / ESP32</td></tr><tr><td>Faible conso batterie</td><td>Arduino Pro Mini 3.3V / ESP32 deep sleep</td></tr><tr><td>BLE + WiFi</td><td>ESP32 DevKit</td></tr></tbody></table>
+<hr>
+<h2>2. Conception du circuit</h2>
+<p><strong>Avant de câbler :</strong></p>
+<ul>
+<li>Vérifier la tension logique (3.3V ESP32 vs 5V Uno — diviseur résistif ou level shifter si mixte)</li>
+<li>Ajouter une résistance pull-up/pull-down sur chaque entrée numérique non pilotée (typique : 10kΩ)</li>
+<li>Protéger les sorties LED : R = (Vcc - Vled) / Iled, ex. 5V, LED 2V, 20mA → R = 150Ω</li>
+</ul>
+<p><strong>Règle des broches :</strong></p>
+<pre><code>Analog  → A0–A5 (lecture ADC 10 bits, 0–1023)
+PWM     → 3, 5, 6, 9, 10, 11 (Uno) — marque ~ sur la carte
+I2C     → A4 (SDA), A5 (SCL)
+SPI     → 10 (SS), 11 (MOSI), 12 (MISO), 13 (SCK)
+UART    → 0 (RX), 1 (TX) — éviter pendant l'upload</code></pre>
+<p><strong>Capacité de découplage</strong> : 100nF céramique sur VCC/GND de chaque CI sensible (capteur I2C, module RF).</p>
+<hr>
+<h2>3. Structure du sketch</h2>
+<p>Template minimal opérationnel :</p>
+<pre><code class="lang-cpp">#include &lt;Wire.h&gt;          // I2C
+// #include &lt;SPI.h&gt;        // SPI
+// #include &lt;SoftwareSerial.h&gt;
+
+// --- Constantes ---
+const uint8_t PIN_LED   = 13;
+const uint8_t PIN_BTN   = 2;   // interrupt-capable sur Uno
+const unsigned long INTERVAL_MS = 1000;
+
+// --- Variables globales (volatile si ISR) ---
+volatile bool eventFlag = false;
+unsigned long lastMillis = 0;
+
+// --- ISR ---
+void onButton() {
+  eventFlag = true;
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(PIN_LED, OUTPUT);
+  pinMode(PIN_BTN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(PIN_BTN), onButton, FALLING);
+  Wire.begin();
+}
+
+void loop() {
+  unsigned long now = millis();
+
+  // Tâche périodique non-bloquante (jamais de delay() en prod)
+  if (now - lastMillis &gt;= INTERVAL_MS) {
+    lastMillis = now;
+    readSensors();
+    publishData();
+  }
+
+  // Traitement événement ISR
+  if (eventFlag) {
+    eventFlag = false;
+    handleButton();
+  }
+}</code></pre>
+<p><strong>Règle : ne jamais bloquer <code>loop()</code></strong> — remplacer <code>delay(x)</code> par le pattern <code>millis()</code>.</p>
+<hr>
+<h2>4. Capteurs courants — snippets copiables</h2>
+<h3>DHT22 (température + humidité)</h3>
+<pre><code class="lang-cpp">#include &lt;DHT.h&gt;
+DHT dht(4, DHT22);
+// setup: dht.begin();
+float t = dht.readTemperature();
+float h = dht.readHumidity();
+if (isnan(t) || isnan(h)) { Serial.println(&quot;DHT error&quot;); return; }</code></pre>
+<h3>HC-SR04 (ultrason)</h3>
+<pre><code class="lang-cpp">long getDistance(uint8_t trig, uint8_t echo) {
+  digitalWrite(trig, LOW); delayMicroseconds(2);
+  digitalWrite(trig, HIGH); delayMicroseconds(10);
+  digitalWrite(trig, LOW);
+  long dur = pulseIn(echo, HIGH, 30000UL); // timeout 30ms
+  return dur * 0.034 / 2; // cm
+}</code></pre>
+<h3>Servo</h3>
+<pre><code class="lang-cpp">#include &lt;Servo.h&gt;
+Servo srv;
+// setup: srv.attach(9);
+srv.write(90); // 0–180°</code></pre>
+<h3>I2C scan (debug)</h3>
+<pre><code class="lang-cpp">for (uint8_t addr = 1; addr &lt; 127; addr++) {
+  Wire.beginTransmission(addr);
+  if (Wire.endTransmission() == 0)
+    Serial.println(addr, HEX);
+}</code></pre>
+<hr>
+<h2>5. Communication série et débogage</h2>
+<pre><code class="lang-cpp">Serial.begin(115200);
+Serial.print(&quot;T=&quot;); Serial.print(t); Serial.print(&quot;°C H=&quot;); Serial.println(h);</code></pre>
+<p><strong>Moniteur série</strong> : menu <code>Outils &gt; Moniteur série</code>, baud rate identique au sketch.</p>
+<p><strong>Plotter série</strong> : <code>Outils &gt; Traceur série</code> — affiche les valeurs numériques en graphe temps réel.</p>
+<p>Macro de debug conditionnel (0 overhead en production) :</p>
+<pre><code class="lang-cpp">#define DEBUG 1
+#if DEBUG
+  #define DBG(x) Serial.println(x)
+#else
+  #define DBG(x)
+#endif</code></pre>
+<hr>
+<h2>6. Gestion mémoire (SRAM limitée)</h2>
+<p>Arduino Uno : 2 Ko SRAM, 32 Ko Flash.</p>
+<pre><code class="lang-cpp">// Stocker les strings en Flash, pas en SRAM
+Serial.println(F(&quot;Démarrage OK&quot;));
+
+// Vérifier la SRAM libre
+int freeRam() {
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int)&amp;v - (__brkval == 0 ? (int)&amp;__heap_start : (int)__brkval);
+}</code></pre>
+<p>Si <code>freeRam() &lt; 100</code> : risque de crash — passer sur Mega ou ESP32.</p>
+<hr>
+<h2>7. Optimisation énergie (batterie)</h2>
+<pre><code class="lang-cpp">#include &lt;avr/sleep.h&gt;
+// Mettre l'Uno en sleep entre lectures
+set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+sleep_enable();
+sleep_cpu(); // réveil par interrupt
+
+// ESP32 deep sleep (µA)
+esp_sleep_enable_timer_wakeup(30e6); // 30s
+esp_deep_sleep_start();</code></pre>
+<p>Consommation indicative :</p>
+<ul>
+<li>Uno actif : ~50 mA | sleep : ~35 µA avec watchdog</li>
+<li>ESP32 actif : ~240 mA | deep sleep : ~10 µA</li>
+</ul>
+<hr>
+<h2>8. Anti-patterns / Pièges</h2>
+<table><thead><tr><th>Piège</th><th>Correction</th></tr></thead><tbody><tr><td><code>delay()</code> dans <code>loop()</code></td><td>Pattern <code>millis()</code> non-bloquant</td></tr><tr><td>Variables ISR non <code>volatile</code></td><td>Toujours déclarer <code>volatile</code></td></tr><tr><td>Courant LED sans résistance</td><td>Calcul R obligatoire (→ brûle la broche)</td></tr><tr><td>ESP32 I/O à 5V direct</td><td>Diviseur résistif ou level shifter 3.3V</td></tr><tr><td><code>String</code> dynamique sur Uno</td><td>Utiliser <code>char[]</code> + <code>snprintf()</code> — <code>String</code> fragmente la SRAM</td></tr><tr><td>Lire <code>analogRead()</code> sans stabilisation</td><td>Faire un premier <code>analogRead()</code> factice après changement de pin</td></tr><tr><td>Upload bloqué par Serial sur pins 0/1</td><td>Utiliser <code>SoftwareSerial</code> sur d'autres pins</td></tr><tr><td>Lib manquante = erreur cryptique</td><td>Gestionnaire de bibliothèques : <code>Ctrl+Shift+I</code></td></tr></tbody></table>
+<hr>
+<h2>9. Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>PlatformIO</strong> (VS Code) plutôt qu'Arduino IDE pour les projets &gt; 1 fichier : gestion de dépendances, multi-targets, CI possible.</li>
+<li><strong>Schéma</strong> : utiliser Fritzing ou Wokwi (simulation en ligne) avant de câbler physiquement.</li>
+<li><strong>Versionner</strong> le sketch dans Git (<code>.gitignore</code> : <code>build/</code>, <code>.pio/</code>).</li>
+<li><strong>Tests</strong> : avec PlatformIO + Unity, tester la logique métier hors matériel (native env).</li>
+<li><strong>OTA</strong> : sur ESP32/ESP8266, prévoir <code>ArduinoOTA</code> dès le départ pour les mises à jour sans fil.</li>
 </ul>
 </article>
 </main>

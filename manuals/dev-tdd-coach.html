@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-tdd-coach — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Guide la pratique du Test-Driven Development pas à pas.">
+<meta name="description" content="Guide la pratique du Test-Driven Development pas à pas, avec exemples concrets, snippets copiables et anti-patterns.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-tdd-coach</h1>
-<p class="lead">Guide la pratique du Test-Driven Development pas à pas.</p>
+<p class="lead">Guide la pratique du Test-Driven Development pas à pas, avec exemples concrets, snippets copiables et anti-patterns.</p>
 
 
 
@@ -96,88 +96,141 @@ cp -r claude-skills-collection/skills/dev-tdd-coach ~/.claude/skills/</div><butt
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>TDD Coach</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Comprendre la feature à implémenter</strong></li>
+<h2>Workflow RED → GREEN → REFACTOR</h2>
+<h3>1. Décomposer la feature avant d'ouvrir l'IDE</h3>
 <ul>
-<li>Lire et analyser la user story ou le ticket avec les critères d'acceptation</li>
-<li>Identifier les comportements attendus (inputs/outputs, cas d'erreur)</li>
-<li>Décomposer la feature en petits incréments testables indépendamment</li>
-<li>Choisir par quel comportement commencer (le plus simple ou le plus central)</li>
+<li>Lire la user story et extraire les <strong>comportements</strong> (pas les classes ni les méthodes).</li>
+<li>Lister les cas : happy path, edge cases, cas d'erreur explicites.</li>
+<li>Trier par complexité croissante — commencer par le cas le plus simple.</li>
+<li>Critère d'arrêt : chaque comportement doit tenir dans un seul test lisible.</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Écrire le premier test — RED</strong></li>
+<p><strong>Exemple — user story</strong> : <em>&quot;Un panier vide retourne un total de 0&quot;</em> → un seul test.</p>
+<hr>
+<h3>2. RED — Écrire un test qui échoue</h3>
+<p>Règles strictes :</p>
 <ul>
-<li>Écrire un test qui décrit le comportement attendu avant tout code de production</li>
-<li>Le test doit échouer pour la bonne raison (pas une erreur de compilation)</li>
-<li>Nommer le test de façon expressive : <code>Should_ReturnTotal_When_CartHasItems</code></li>
-<li>Résister à la tentation d'écrire plusieurs tests à la fois</li>
+<li>Le test doit <strong>compiler</strong> mais <strong>échouer</strong> (pas une erreur de build).</li>
+<li>Un seul <code>assert</code> par test (ou un seul comportement observable).</li>
+<li>Nom expressif : <code>[Méthode]_[Contexte]_[Résultat attendu]</code>.</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Implémenter le minimum pour passer le test — GREEN</strong></li>
+<pre><code class="lang-csharp">// C# xUnit
+[Fact]
+public void GetTotal_WhenCartIsEmpty_ReturnsZero()
+{
+    var cart = new ShoppingCart();
+    var total = cart.GetTotal();
+    Assert.Equal(0, total);
+}</code></pre>
+<pre><code class="lang-python"># Python pytest
+def test_get_total_returns_zero_for_empty_cart():
+    cart = ShoppingCart()
+    assert cart.get_total() == 0</code></pre>
+<pre><code class="lang-typescript">// TypeScript Jest
+it(&quot;returns 0 for an empty cart&quot;, () =&gt; {
+  const cart = new ShoppingCart();
+  expect(cart.getTotal()).toBe(0);
+});</code></pre>
+<p>Lancer les tests → confirmer l'échec pour la <strong>bonne raison</strong> :</p>
+<pre><code class="lang-bash">dotnet test          # .NET
+pytest -v            # Python
+npx jest --watch     # Node/TS</code></pre>
+<hr>
+<h3>3. GREEN — Minimum viable pour passer le test</h3>
 <ul>
-<li>Écrire le code de production le plus simple possible pour faire passer le test</li>
-<li>Ne pas anticiper les futurs besoins : implémenter uniquement ce que le test demande</li>
-<li>Accepter temporairement du code naïf ou hard-codé si cela suffit</li>
-<li>Vérifier que tous les tests précédents passent encore (non-régression)</li>
+<li>Écrire le <strong>code le plus stupide possible</strong> qui fait passer le test.</li>
+<li>Hard-coder la valeur de retour si ça suffit : c'est intentionnel.</li>
+<li>Ne jamais écrire de code non couvert par un test existant.</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Refactorer le code — REFACTOR</strong></li>
+<pre><code class="lang-csharp">public class ShoppingCart
+{
+    public decimal GetTotal() =&gt; 0; // volontairement naïf
+}</code></pre>
+<p>Lancer les tests → tous verts → committer :</p>
+<pre><code class="lang-bash">git add -p &amp;&amp; git commit -m &quot;GREEN: GetTotal returns 0 for empty cart&quot;</code></pre>
+<hr>
+<h3>4. REFACTOR — Nettoyer sans casser</h3>
 <ul>
-<li>Améliorer la lisibilité, supprimer la duplication, clarifier les noms</li>
-<li>Extraire des méthodes ou des classes si la logique le justifie</li>
-<li>Ne modifier aucun comportement observable : les tests restent verts</li>
-<li>Refactorer aussi les tests si nécessaire (DRY, lisibilité, fixtures)</li>
+<li>Supprimer la duplication (code de prod <strong>et</strong> tests).</li>
+<li>Renommer pour exprimer l'intention métier.</li>
+<li>Extraire si une méthode dépasse ~10 lignes ou fait plus d'une chose.</li>
+<li>Les tests restent verts à chaque micro-étape du refactoring.</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Itérer vers le prochain comportement</strong></li>
+<p>Checklist rapide :</p>
 <ul>
-<li>Relire les critères d'acceptation et choisir le prochain comportement à tester</li>
-<li>Recommencer le cycle RED → GREEN → REFACTOR</li>
-<li>Chaque cycle dure idéalement 2 à 10 minutes</li>
-<li>Committer à chaque cycle GREEN stable pour conserver un historique propre</li>
+<li>[ ] Noms de variables/méthodes auto-documentés ?</li>
+<li>[ ] Duplication supprimée (DRY) ?</li>
+<li>[ ] Couplage minimal entre tests et détails d'implémentation ?</li>
+<li>[ ] Tests lisibles sans commentaires ?</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Techniques avancées de TDD</strong></li>
+<hr>
+<h3>5. Itérer — prochain comportement</h3>
 <ul>
-<li><strong>Outside-in TDD</strong> : partir du test d'acceptation haut niveau, descendre vers les unités</li>
-<li><strong>Chicago school (classique)</strong> : tester le résultat, favoriser les vraies collaborations</li>
-<li><strong>London school (mockiste)</strong> : mocker toutes les dépendances, tester les interactions</li>
-<li><strong>Double loop TDD</strong> : boucle externe BDD (acceptance test) + boucle interne TDD (unit)</li>
+<li>Ajouter un item au panier → recalculer le total → relancer le cycle.</li>
+<li>Chaque cycle dure <strong>2 à 10 minutes</strong> idéalement.</li>
+<li>Committer à chaque GREEN stable.</li>
 </ul>
-</ol>
-<ol>
-<li><strong>BDD avec Gherkin</strong></li>
+<pre><code class="lang-bash"># Historique propre : un commit par cycle
+git log --oneline
+# GREEN: GetTotal returns 0 for empty cart
+# GREEN: GetTotal sums single item price
+# GREEN: GetTotal sums multiple items
+# REFACTOR: extract calculateItemTotal helper</code></pre>
+<hr>
+<h2>Choisir son école : London vs Chicago</h2>
+<table><thead><tr><th>Critère</th><th>Chicago (classique)</th><th>London (mockiste)</th></tr></thead><tbody><tr><td>Dépendances</td><td>Vraies instances / in-memory</td><td>Mocks systématiques</td></tr><tr><td>Feedback</td><td>Teste le résultat final</td><td>Teste les interactions</td></tr><tr><td>Risque</td><td>Couplage au state</td><td>Over-specification des mocks</td></tr><tr><td>Convient pour</td><td>Logique métier pure, DDD</td><td>Couche applicative, CQRS</td></tr></tbody></table>
+<p><strong>Heuristique</strong> : mocker uniquement les dépendances <strong>externes</strong> (I/O, base, API), jamais la logique interne.</p>
+<hr>
+<h2>Double-loop TDD (Outside-in)</h2>
+<pre><code>[Acceptance test — BDD Gherkin]   ← boucle externe, toujours rouge
+        ↓
+  [Unit test RED]
+        ↓
+  [Unit test GREEN]
+        ↓
+  [Unit REFACTOR]
+        ↓
+[Acceptance test — vérifier progression]</code></pre>
+<p>Scenario Gherkin :</p>
+<pre><code class="lang-gherkin">Feature: Shopping cart total
+  Scenario: Empty cart
+    Given an empty cart
+    When I request the total
+    Then the total is 0
+
+  Scenario: Cart with items
+    Given a cart with 2 items at 5.00 each
+    When I request the total
+    Then the total is 10.00</code></pre>
+<p>Tooling BDD :</p>
 <ul>
-<li>Rédiger les scénarios en langage naturel : <code>Given / When / Then</code></li>
-<li>.NET : SpecFlow avec step definitions en C# et living documentation</li>
-<li>Java : Cucumber avec step definitions en Java ou Kotlin</li>
-<li>JavaScript : Cucumber.js ou Playwright avec syntaxe BDD</li>
-<li>Impliquer les parties prenantes non-techniques dans la rédaction des scénarios</li>
+<li><strong>.NET</strong> : SpecFlow (<code>dotnet add package SpecFlow.xUnit</code>)</li>
+<li><strong>Java/Kotlin</strong> : Cucumber (<code>cucumber-junit5</code>)</li>
+<li><strong>JS/TS</strong> : <code>@cucumber/cucumber</code> ou Playwright BDD</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Katas d'entraînement recommandés</strong></li>
+<hr>
+<h2>Katas d'entraînement (ordre recommandé)</h2>
+<table><thead><tr><th>Kata</th><th>Objectif</th><th>Durée estimée</th></tr></thead><tbody><tr><td>FizzBuzz</td><td>Démarrer le cycle, conditions</td><td>15 min</td></tr><tr><td>String Calculator</td><td>Cas progressifs, regex, parsing</td><td>30 min</td></tr><tr><td>Roman Numerals</td><td>Découverte de patterns par triangulation</td><td>45 min</td></tr><tr><td>Bowling Game</td><td>Refactoring agressif, logique complexe</td><td>1h</td></tr><tr><td>Bank Account</td><td>State, CQRS simplifié, événements</td><td>1h</td></tr></tbody></table>
+<p>Ressources : <a href="https://kata-log.rocks" target="_blank" rel="noopener">kata-log.rocks</a> · <a href="https://cyber-dojo.org" target="_blank" rel="noopener">cyber-dojo.org</a></p>
+<hr>
+<h2>Garde-fous &amp; Anti-patterns</h2>
+<h3>Anti-patterns fréquents</h3>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td><strong>Test-after</strong></td><td>Tests écrits après le code</td><td>Supprimer le code, repartir en RED</td></tr><tr><td><strong>Test trop large</strong></td><td>Un test vérifie 5 comportements</td><td>Un comportement = un test</td></tr><tr><td><strong>Mock everything</strong></td><td>Tests fragiles, cassent au moindre refactoring</td><td>Mocker uniquement les dépendances externes</td></tr><tr><td><strong>Pas de REFACTOR</strong></td><td>Code de prod naïf laissé en l'état</td><td>Refactorer obligatoirement avant le prochain RED</td></tr><tr><td><strong>Tests privés</strong></td><td>Tester les méthodes privées directement</td><td>Tester via l'interface publique</td></tr><tr><td><strong>Trop de setup</strong></td><td><code>Arrange</code> de 40 lignes</td><td>Extraire des builders/factories de test</td></tr><tr><td><strong>Assert multiple</strong></td><td><code>Assert.Equal</code> × 8 dans un test</td><td>Séparer en autant de tests</td></tr></tbody></table>
+<h3>Pièges courants</h3>
 <ul>
-<li><strong>FizzBuzz</strong> : kata d'introduction, conditions et boucles simples</li>
-<li><strong>String Calculator</strong> : addition progressive, gestion des cas spéciaux</li>
-<li><strong>Bowling Game</strong> : logique métier complexe, bon pour pratiquer le refactoring</li>
-<li><strong>Roman Numerals</strong> : conversion de nombres, découverte de patterns progressifs</li>
-<li><strong>Bank Account</strong> : CQRS simple, événements, gestion d'état</li>
+<li><strong>Triangulation oubliée</strong> : écrire au moins 2-3 exemples concrets avant de généraliser l'algorithme.</li>
+<li><strong>Refactoring dans GREEN</strong> : on ne refactore que quand les tests sont verts, jamais pendant RED.</li>
+<li><strong>Tests couplés à l'implémentation</strong> : tester <code>_privateField</code> ou l'ordre des appels internes fragilise la suite.</li>
+<li><strong>Fixtures globales mutables</strong> : état partagé entre tests → non-déterminisme → flakiness.</li>
 </ul>
-</ol>
-<h2>Règles</h2>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Respecte strictement l'ordre RED → GREEN → REFACTOR, sans sauter d'étapes.</li>
-<li>Fournis le code complet de chaque étape du cycle pour l'exemple donné.</li>
-<li>Ne laisse jamais un test en échec plus longtemps que nécessaire.</li>
-<li>Les tests sont la documentation vivante du comportement attendu du système.</li>
-<li>Adapte le style (London vs Chicago, BDD vs TDD pur) au contexte et à l'équipe.</li>
+<li><strong>Mutation testing</strong> : valider la qualité des tests avec <a href="https://stryker-mutator.io" target="_blank" rel="noopener">Stryker</a> (.NET/JS) ou <a href="https://pitest.org" target="_blank" rel="noopener">PITest</a> (Java). Score cible &gt; 80 %.</li>
+<li><strong>Test data builders</strong> : pattern <code>Builder</code> pour construire les objets de test sans setup verbeux.</li>
+<li><strong>Property-based testing</strong> : <a href="https://fscheck.github.io" target="_blank" rel="noopener">FsCheck</a> (.NET), <a href="https://hypothesis.works" target="_blank" rel="noopener">Hypothesis</a> (Python), <a href="https://fast-check.dev" target="_blank" rel="noopener">fast-check</a> (JS) — complémentaire au TDD classique.</li>
+<li><strong>Architecture testable</strong> : préférer l'injection de dépendances native du framework ; éviter les singletons et <code>static</code>.</li>
+<li><strong>CI gate</strong> : bloquer le merge si la couverture de test chute ou si des mutations survivent.</li>
+<li><strong>Living documentation</strong> : générer les rapports HTML depuis SpecFlow/Cucumber et les publier dans la CI.</li>
 </ul>
 </article>
 </main>

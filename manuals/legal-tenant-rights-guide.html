@@ -96,23 +96,140 @@ cp -r claude-skills-collection/skills/legal-tenant-rights-guide ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Tenant Rights Guide</h1>
-<h2>Étape 1 — Situation</h2>
-<p>Pays/région, type de bail, problème rencontré, actions déjà entreprises.</p>
-<h2>Étape 2 — Droits applicables</h2>
-<p>Résumé des droits du locataire pertinents pour la situation, en langage simple.</p>
-<h2>Étape 3 — Ce que vous pouvez faire</h2>
-<p>Actions concrètes ordonnées par priorité :</p>
-<ol>
-<li>Tentative amiable</li>
-<li>Mise en demeure</li>
-<li>Recours administratif</li>
-<li>Recours juridique</li>
-</ol>
-<h2>Étape 4 — Modèles</h2>
-<p>Propose un modèle de courrier si pertinent (mise en demeure, réclamation).</p>
-<h2>Étape 5 — Ressources</h2>
-<p>Organismes d'aide (ADIL en France, associations de locataires…).</p>
-<blockquote>⚠️ Ces informations sont générales. Le droit locatif varie selon le pays et le type de bail. Consultez un juriste ou une association de locataires pour votre situation.</blockquote>
+<blockquote>Ce guide fournit des informations générales à titre éducatif. Le droit locatif est territorial et évolue fréquemment. Pour toute action juridique, consultez un juriste, une ADIL (France), ou une association de locataires de votre région.</blockquote>
+<hr>
+<h2>Étape 1 — Qualifier la situation</h2>
+<p>Avant toute réponse, collecte les éléments essentiels :</p>
+<table><thead><tr><th>Information</th><th>Exemples</th></tr></thead><tbody><tr><td>Pays / région</td><td>France (loi Alur), Belgique, Maroc, Tunisie…</td></tr><tr><td>Type de bail</td><td>Résidence principale, meublé, étudiant, commercial</td></tr><tr><td>Durée dans le logement</td><td>&lt; 3 mois, 1 an, 5 ans…</td></tr><tr><td>Problème exact</td><td>Loyer, travaux, restitution caution, expulsion, nuisances…</td></tr><tr><td>Actions déjà tentées</td><td>Aucune, mail envoyé, courrier RAR, conciliation…</td></tr></tbody></table>
+<p>Si l'utilisateur n'a pas donné ces éléments, pose les questions ciblées avant de continuer.</p>
+<hr>
+<h2>Étape 2 — Identifier les droits applicables</h2>
+<h3>Thèmes fréquents (France — loi du 6 juillet 1989 et loi Alur 2014)</h3>
+<p><strong>Dépôt de garantie</strong></p>
+<ul>
+<li>Logement vide : 1 mois de loyer hors charges maximum.</li>
+<li>Meublé : 2 mois maximum.</li>
+<li>Délai de restitution : 1 mois si état des lieux de sortie conforme, 2 mois sinon.</li>
+<li>Sanction retard : majoration de 10 % du loyer mensuel par mois de retard.</li>
+</ul>
+<p><strong>Augmentation de loyer</strong></p>
+<ul>
+<li>En zone tendue : encadrement strict (IRL + plafond légal).</li>
+<li>Hors zone tendue : révision annuelle possible uniquement si clause dans le bail, indexée sur l'IRL (Indice de Référence des Loyers).</li>
+<li>Augmentation abusive = refus motivé par écrit dans le mois suivant la notification.</li>
+</ul>
+<p><strong>État des lieux</strong></p>
+<ul>
+<li>Obligatoire à l'entrée ET à la sortie, signé par les deux parties.</li>
+<li>Désaccord à l'entrée : possible de compléter dans les 10 jours suivant remise des clés.</li>
+<li>Absence d'état des lieux d'entrée : présomption de bon état en faveur du locataire.</li>
+</ul>
+<p><strong>Travaux et décence</strong></p>
+<ul>
+<li>Le logement doit respecter les critères de décence (surface minimale 9 m², chauffage, étanchéité…).</li>
+<li>Travaux urgents (fuite, chauffage en hiver) : le propriétaire doit intervenir dans un délai raisonnable.</li>
+<li>Refus ou inaction : mise en demeure, puis saisine de la CAF ou du tribunal judiciaire.</li>
+</ul>
+<p><strong>Expulsion</strong></p>
+<ul>
+<li>Aucune expulsion sans décision judiciaire.</li>
+<li>Trêve hivernale (France) : du 1er novembre au 31 mars — aucune expulsion possible.</li>
+<li>Coupure d'eau, de gaz ou d'électricité par le propriétaire = voie de fait, illégale.</li>
+</ul>
+<hr>
+<h2>Étape 3 — Actions concrètes par escalade</h2>
+<p>Respecte cet ordre : chaque étape doit être tentée avant la suivante.</p>
+<h3>1. Contact amiable (oral puis écrit simple)</h3>
+<ul>
+<li>Email avec accusé de lecture ou SMS : trace écrite légère.</li>
+<li>Délai raisonnable à donner : 8 à 15 jours selon l'urgence.</li>
+</ul>
+<h3>2. Mise en demeure par lettre recommandée avec AR (LRAR)</h3>
+<ul>
+<li>Obligatoire avant tout recours juridique.</li>
+<li>Modèle type (voir Étape 4).</li>
+<li>Délai à fixer dans le courrier : 8 jours (urgent) à 1 mois.</li>
+</ul>
+<h3>3. Recours amiable / médiation</h3>
+<ul>
+<li><strong>ADIL</strong> (France) : consultation gratuite en ligne ou en présentiel.</li>
+<li><strong>Commission départementale de conciliation (CDC)</strong> : saisie gratuitement, obligatoire avant certains tribunaux.</li>
+<li><strong>Conciliateur de justice</strong> : gratuit, disponible en mairie.</li>
+</ul>
+<h3>4. Recours administratif / organismes</h3>
+<ul>
+<li><strong>CAF</strong> : signalement logement indécent (peut suspendre APL au propriétaire).</li>
+<li><strong>DDETS / préfecture</strong> : pour les manquements graves (décence, insalubrité).</li>
+<li><strong>Défenseur des droits</strong> : discrimination dans l'accès au logement.</li>
+</ul>
+<h3>5. Recours judiciaire</h3>
+<ul>
+<li><strong>Tribunal judiciaire</strong> (ex-TI) pour litiges locatifs.</li>
+<li>En ligne via <a href="https://www.justice.fr" target="_blank" rel="noopener">justice.fr</a> pour saisine sans avocat jusqu'à 10 000 €.</li>
+<li>Aide juridictionnelle possible sous conditions de ressources.</li>
+</ul>
+<hr>
+<h2>Étape 4 — Modèles de courriers</h2>
+<h3>Mise en demeure — non-restitution du dépôt de garantie</h3>
+<pre><code>[Prénom Nom Locataire]
+[Adresse]
+[Ville, Date]
+
+Madame, Monsieur [Nom propriétaire],
+[Adresse propriétaire]
+
+Lettre recommandée avec accusé de réception
+
+Objet : Mise en demeure — Restitution du dépôt de garantie
+
+Madame, Monsieur,
+
+J'ai quitté le logement situé [adresse] le [date], après remise des clés et réalisation de
+l'état des lieux de sortie. À ce jour, soit plus de [1 ou 2] mois après mon départ, vous
+n'avez pas restitué le dépôt de garantie d'un montant de [montant] €.
+
+Conformément à l'article 22 de la loi du 6 juillet 1989, je vous mets en demeure de me
+restituer cette somme dans un délai de 8 jours à compter de la réception de ce courrier.
+
+Passé ce délai, je me réserve le droit de saisir la commission de conciliation compétente
+ou le tribunal judiciaire, et de réclamer une majoration de 10 % par mois de retard.
+
+Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.
+
+[Signature]</code></pre>
+<h3>Mise en demeure — travaux urgents non réalisés</h3>
+<pre><code>Objet : Mise en demeure — Réalisation de travaux urgents
+
+Je vous informe qu'un problème de [description : fuite, chauffage défaillant…] affecte le
+logement depuis le [date du signalement]. Malgré mes relances du [dates], aucune
+intervention n'a été effectuée.
+
+Je vous mets en demeure de faire réaliser ces travaux dans un délai de 8 jours.
+
+À défaut, je saisirai le tribunal judiciaire pour obtenir leur exécution sous astreinte, et
+réclamerai une réduction de loyer proportionnelle à la période de trouble de jouissance.</code></pre>
+<hr>
+<h2>Étape 5 — Ressources et organismes</h2>
+<table><thead><tr><th>Organisme</th><th>Usage</th><th>Accès</th></tr></thead><tbody><tr><td>ADIL (France)</td><td>Conseil juridique gratuit</td><td>adil.org</td></tr><tr><td>CNL / CLCV</td><td>Associations de locataires</td><td>cnl.asso.fr</td></tr><tr><td>Service-Public.fr</td><td>Fiches pratiques officielles</td><td>service-public.fr</td></tr><tr><td>justice.fr</td><td>Saisine en ligne tribunal</td><td>justice.fr</td></tr><tr><td>CAF</td><td>Logement indécent, APL</td><td>caf.fr</td></tr><tr><td>Maison de Justice</td><td>Aide gratuite de proximité</td><td>Via mairie</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous et pièges fréquents</h2>
+<ul>
+<li><strong>Ne pas envoyer de SMS comme seule preuve</strong> : le propriétaire peut les nier. Toujours doubler d'un email ou d'un LRAR.</li>
+<li><strong>Ne pas quitter le logement sans état des lieux de sortie</strong> : sans lui, le propriétaire peut retenir toute la caution.</li>
+<li><strong>Ne pas accepter de paiement partiel sans réserves écrites</strong> : cela peut valoir quittance.</li>
+<li><strong>Ne pas confondre charges récupérables et charges non récupérables</strong> : le décret du 26 août 1987 liste ce qui est imputable au locataire.</li>
+<li><strong>Ne jamais cesser de payer le loyer sans décision judiciaire</strong> : même en cas de litige, l'impayé crée un motif d'expulsion valable.</li>
+<li><strong>Attention aux délais de prescription</strong> : 3 ans pour les loyers impayés, 3 ans pour la restitution du dépôt de garantie (à compter de la date de restitution théorique).</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Conserver une copie numérique datée de tout document (bail, états des lieux, quittances) dans un cloud personnel.</li>
+<li>Photographier le logement à l'entrée ET à la sortie avec horodatage automatique.</li>
+<li>Pour les échanges sensibles, utiliser un service d'email certifié (ex : AR24, LRE) qui a valeur légale équivalente au LRAR papier.</li>
+<li>En cas de bail numérique, vérifier la conformité de la signature électronique (eIDAS niveau avancé minimum).</li>
+<li>Consulter l'ADIL locale avant d'agir : 30 minutes gratuites évitent souvent des erreurs coûteuses.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

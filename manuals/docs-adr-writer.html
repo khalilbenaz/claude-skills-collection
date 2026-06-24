@@ -96,135 +96,187 @@ cp -r claude-skills-collection/skills/docs-adr-writer ~/.claude/skills/</div><bu
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Rédacteur d'ADR (Architecture Decision Records)</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identifier</strong> : une décision d'architecture significative a été prise ou doit l'être.</li>
-<li><strong>Contextualiser</strong> : décrire le problème et les contraintes.</li>
-<li><strong>Documenter les options</strong> : lister les alternatives avec avantages/inconvénients.</li>
-<li><strong>Rédiger l'ADR</strong> : format structuré, concis et pérenne.</li>
-</ol>
+<h2>Workflow en 5 étapes</h2>
+<h3>1. Identifier si un ADR est nécessaire</h3>
+<table><thead><tr><th>Situation</th><th>ADR ?</th></tr></thead><tbody><tr><td>Choix de framework, langage, runtime</td><td>Oui</td></tr><tr><td>Choix de base de données ou broker</td><td>Oui</td></tr><tr><td>Pattern d'architecture (CQRS, Event Sourcing, Saga)</td><td>Oui</td></tr><tr><td>Migration d'infrastructure ou de cloud</td><td>Oui</td></tr><tr><td>Décision de sécurité (authN, authZ, chiffrement)</td><td>Oui</td></tr><tr><td>Choix de librairie mineure ou utilitaire</td><td>Non</td></tr><tr><td>Refactoring interne sans changement de contrat</td><td>Non</td></tr><tr><td>Convention de nommage ou style de code</td><td>Non (→ guideline)</td></tr></tbody></table>
+<h3>2. Collecter le contexte</h3>
+<p>Répondre à ces questions avant d'écrire :</p>
+<ul>
+<li>Quel problème concret cette décision résout-elle ?</li>
+<li>Quelles contraintes non négociables existent (deadline, budget, compétences équipe, réglementation) ?</li>
+<li>Quel est le volume / scale cible ?</li>
+<li>Quelles décisions antérieures (ADR existants) s'appliquent ?</li>
+</ul>
+<h3>3. Lister les alternatives</h3>
+<p>Au minimum 2 alternatives réalistes (pas de straw man). Pour chaque option :</p>
+<ul>
+<li>Avantages concrets et mesurables si possible</li>
+<li>Inconvénients et risques</li>
+<li>Marquage clair de l'option retenue</li>
+</ul>
+<h3>4. Rédiger l'ADR (voir template)</h3>
+<p>Règle d'or : une décision = un ADR. Numéroter séquentiellement (0001, 0002…).</p>
+<h3>5. Versionner et notifier</h3>
+<pre><code class="lang-bash"># Créer le fichier dans le bon dossier
+docs/adr/NNNN-titre-kebab-case.md
+
+# Committer avec un message explicite
+git add docs/adr/NNNN-*.md
+git commit -m &quot;docs(adr): ADR-NNNN choix [sujet]&quot;
+
+# Mettre à jour l'index
+docs/adr/README.md</code></pre>
+<hr>
 <h2>Template ADR</h2>
 <pre><code class="lang-markdown"># ADR-XXXX : [Titre de la décision]
 
 **Date** : YYYY-MM-DD
 **Statut** : Proposé | Accepté | Déprécié | Remplacé par ADR-YYYY
 **Décideurs** : [Noms ou équipes]
+**Tags** : [backend, infra, sécurité, data…]
 
 ## Contexte
 
-[Quel est le problème ? Pourquoi devons-nous prendre cette décision maintenant ?
-Quelles sont les contraintes (techniques, métier, équipe, budget, délai) ?]
+[Quel est le problème ? Pourquoi maintenant ?
+Contraintes : techniques, métier, équipe, budget, réglementation.]
 
 ## Décision
 
-[La décision prise, formulée clairement.]
-
 **Nous avons décidé de [choix] parce que [raison principale].**
+
+[Détail de la décision en 2-4 phrases maximum.]
 
 ## Alternatives considérées
 
 ### Option A : [Nom]
 - ✅ [Avantage 1]
-- ✅ [Avantage 2]
 - ❌ [Inconvénient 1]
-- ❌ [Inconvénient 2]
 
 ### Option B : [Nom] ← **Retenue**
 - ✅ [Avantage 1]
-- ✅ [Avantage 2]
 - ❌ [Inconvénient 1]
 
 ### Option C : [Nom]
 - ✅ [Avantage 1]
 - ❌ [Inconvénient 1]
-- ❌ [Inconvénient 2]
 
 ## Conséquences
 
 ### Positives
-- [Conséquence positive 1]
-- [Conséquence positive 2]
+- [Bénéfice concret attendu]
 
-### Négatives
-- [Trade-off accepté 1]
-- [Trade-off accepté 2]
+### Négatives / Trade-offs acceptés
+- [Trade-off conscient]
 
-### Risques
-- [Risque identifié + mitigation]
+### Risques et mitigations
+- **Risque** : [description] → **Mitigation** : [action]
 
 ## Références
-- [Lien vers la discussion / ticket / RFC]
-- [Documentation technique pertinente]</code></pre>
-<h2>Exemple concret</h2>
+- [Ticket / RFC / discussion]
+- [Documentation technique]
+- [ADRs liés : ADR-XXXX]</code></pre>
+<hr>
+<h2>Exemple concret : choix de message broker</h2>
 <pre><code class="lang-markdown"># ADR-0012 : Utiliser RabbitMQ comme message broker
 
-**Date** : 2025-10-15
+**Date** : 2026-01-15
 **Statut** : Accepté
 **Décideurs** : Équipe backend, Tech Lead
+**Tags** : backend, messaging, microservices
 
 ## Contexte
 
-Notre architecture microservices a besoin d'un système de messaging
-asynchrone pour la communication inter-services. Le volume actuel est
-de ~50K messages/jour avec une projection à 500K/jour dans 12 mois.
-L'équipe a de l'expérience avec RabbitMQ mais pas avec Kafka.
+Architecture microservices avec besoin de messaging asynchrone inter-services.
+Volume actuel : ~50K messages/jour. Projection : 500K/jour dans 12 mois.
+Contrainte équipe : expérience RabbitMQ existante, aucune sur Kafka.
+Budget infra limité — pas d'opérateur Kafka dédié disponible.
 
 ## Décision
 
-**Nous avons décidé d'utiliser RabbitMQ avec MassTransit parce que
-l'équipe le maîtrise déjà et que le volume projeté reste dans ses
-capacités.**
+**Nous avons décidé d'utiliser RabbitMQ avec MassTransit parce que l'équipe
+le maîtrise, le volume projeté reste dans ses capacités, et MassTransit
+fournit les patterns saga/outbox sans développement custom.**
 
 ## Alternatives considérées
 
 ### Apache Kafka
-- ✅ Meilleur pour les très hauts volumes (&gt;1M msg/s)
-- ✅ Rétention durable des messages
-- ❌ Courbe d'apprentissage élevée pour l'équipe
-- ❌ Surdimensionné pour notre volume actuel
-- ❌ Infrastructure plus lourde (ZooKeeper/KRaft)
+- ✅ Hauts volumes (&gt;1M msg/s), rétention durable, replay natif
+- ❌ Courbe d'apprentissage élevée (KRaft, consumer groups, offset management)
+- ❌ Surdimensionné et coûteux en ops pour notre volume
 
 ### RabbitMQ + MassTransit ← **Retenu**
-- ✅ Équipe expérimentée
-- ✅ MassTransit simplifie les patterns (saga, outbox)
-- ✅ Adapté au volume actuel et projeté
-- ❌ Moins performant que Kafka au-delà de 1M msg/s
+- ✅ Équipe expérimentée, mise en prod rapide
+- ✅ Patterns saga, outbox, retry out-of-the-box
+- ❌ Pas de replay natif, moins performant &gt;1M msg/s
 
 ### Azure Service Bus
-- ✅ Service managé, pas d'infra à gérer
-- ❌ Vendor lock-in Azure
-- ❌ Coût élevé à fort volume
+- ✅ Service managé, zero ops
+- ❌ Vendor lock-in Azure, coût élevé à volume
 
 ## Conséquences
 
 ### Positives
-- Mise en production rapide (équipe déjà formée)
-- Patterns saga et outbox via MassTransit
+- Mise en production dans les 2 semaines (équipe déjà formée)
+- Patterns saga et outbox via MassTransit sans code custom
 
-### Négatives
-- Migration vers Kafka nécessaire si &gt;1M msg/jour
-- Pas de replay de messages natif
+### Négatives / Trade-offs acceptés
+- Migration vers Kafka probable si dépassement des projections
 
-### Risques
-- Si le volume dépasse les projections, revoir cette décision (ADR à planifier)</code></pre>
-<h2>Organisation des ADRs</h2>
+### Risques et mitigations
+- **Risque** : volume dépasse 1M msg/jour → **Mitigation** : ADR de migration
+  à déclencher à 400K/jour (seuil d'alerte à configurer)
+
+## Références
+- https://masstransit.io/documentation/patterns
+- ADR-0008 : Architecture microservices</code></pre>
+<hr>
+<h2>Organisation des fichiers</h2>
 <pre><code>docs/
 └── adr/
-    ├── README.md           # Index des ADRs
-    ├── 0001-use-csharp.md
-    ├── 0002-microservices-architecture.md
-    ├── 0012-use-rabbitmq.md
-    └── template.md         # Template vierge</code></pre>
-<h2>Quand écrire un ADR ?</h2>
-<table><thead><tr><th>Situation</th><th>ADR nécessaire ?</th></tr></thead><tbody><tr><td>Choix de framework/langage</td><td>Oui</td></tr><tr><td>Choix de base de données</td><td>Oui</td></tr><tr><td>Pattern d'architecture (CQRS, Event Sourcing)</td><td>Oui</td></tr><tr><td>Choix de librairie mineure</td><td>Non</td></tr><tr><td>Refactoring interne</td><td>Non (sauf si changement de pattern)</td></tr><tr><td>Migration d'infrastructure</td><td>Oui</td></tr></tbody></table>
-<h2>Règles</h2>
+    ├── README.md               # Index avec statut et lien de chaque ADR
+    ├── template.md             # Template vierge
+    ├── 0001-langage-csharp.md
+    ├── 0002-microservices.md
+    └── 0012-message-broker.md</code></pre>
+<p><strong>Index README.md minimal :</strong></p>
+<pre><code class="lang-markdown"># Architecture Decision Records
+
+| N° | Titre | Statut | Date |
+|----|-------|--------|------|
+| [0001](0001-langage-csharp.md) | Utiliser C# comme langage principal | Accepté | 2024-03-01 |
+| [0012](0012-message-broker.md) | RabbitMQ comme message broker | Accepté | 2026-01-15 |</code></pre>
+<hr>
+<h2>Critères de décision : comment choisir entre les options</h2>
+<ol>
+<li><strong>Compétences équipe</strong> — une techno connue &gt; une techno supérieure sur le papier.</li>
+<li><strong>Coût opérationnel total</strong> — licences + ops + formation + migration future.</li>
+<li><strong>Fit avec le scale cible</strong> — ne pas surdimensionner ; prévoir un seuil de révision.</li>
+<li><strong>Réversibilité</strong> — préférer les décisions réversibles ; documenter le plan de sortie si irréversible.</li>
+<li><strong>Contraintes réglementaires</strong> — souveraineté des données, conformité PCI/RGPD.</li>
+<li><strong>Écosystème existant</strong> — cohérence avec les ADRs antérieurs et l'infra en place.</li>
+</ol>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Correction</th></tr></thead><tbody><tr><td>ADR rédigé 3 mois après la décision</td><td>Rédiger au moment de la décision, même si brouillon</td></tr><tr><td>Un seul ADR pour 5 décisions</td><td>Un ADR = une décision</td></tr><tr><td>Aucune alternative listée</td><td>Minimum 2 alternatives réalistes</td></tr><tr><td>Titre vague : &quot;Choix infra&quot;</td><td>Titre précis : &quot;Utiliser Kubernetes pour l'orchestration conteneurs&quot;</td></tr><tr><td>Statut jamais mis à jour</td><td>Mettre &quot;Remplacé par ADR-YYYY&quot; dès qu'une décision est révisée</td></tr><tr><td>ADR supprimé</td><td>Jamais supprimer — marquer Déprécié ou Remplacé</td></tr><tr><td>Conséquences uniquement positives</td><td>Documenter les trade-offs explicitement ; un ADR sans négatifs est suspect</td></tr><tr><td>Commentaires XML avec <code>--</code> dans le titre</td><td>Si l'ADR est embarqué en XML, éviter <code>--</code> dans les balises</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Un ADR documente <strong>une seule décision</strong>.</li>
-<li>Le statut doit être mis à jour quand une décision est remplacée.</li>
-<li>Inclure au moins <strong>2 alternatives</strong> pour montrer que le choix est réfléchi.</li>
-<li>Les ADRs ne sont <strong>jamais supprimés</strong> — ils sont marqués comme dépréciés/remplacés.</li>
-<li>Écrire l'ADR <strong>au moment de la décision</strong>, pas après coup.</li>
+<li><strong>ADR as code</strong> : stocker dans le dépôt Git du projet, pas dans Confluence ou un wiki externe — la décision vit avec le code.</li>
+<li><strong>Lier les ADRs</strong> : référencer les ADRs antérieurs dans la section &quot;Références&quot; (<code>ADR-NNNN</code>).</li>
+<li><strong>Seuils de révision</strong> : pour les décisions liées à la capacité/volume, fixer un seuil mesurable qui déclenche une révision (ex. : &quot;à revoir si &gt;400K msg/jour&quot;).</li>
+<li><strong>Décision collégiale</strong> : l'ADR doit mentionner les décideurs réels — éviter &quot;l'équipe&quot; sans nommer.</li>
+<li><strong>Statut Proposé → Accepté</strong> : faire valider l'ADR par au moins un pair avant de le passer en &quot;Accepté&quot;.</li>
+<li><strong>Outils</strong> : <code>adr-tools</code> (CLI), <code>log4brains</code> (site statique de visualisation), ou simple dossier Markdown avec CI qui vérifie l'index.</li>
 </ul>
+<pre><code class="lang-bash"># Installer adr-tools (Unix/macOS/WSL)
+brew install adr-tools
+
+# Initialiser
+adr init docs/adr
+
+# Créer un nouvel ADR
+adr new &quot;Utiliser PostgreSQL comme base principale&quot;
+# Génère : docs/adr/0001-utiliser-postgresql-comme-base-principale.md</code></pre>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -96,25 +96,106 @@ cp -r claude-skills-collection/skills/writing-content-repurposer ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Content Repurposer</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Source</strong> : identifier le contenu original et ses points clés.</li>
-<li><strong>Cibles</strong> : quelles plateformes ? (LinkedIn, Twitter/X, Instagram, newsletter, TikTok script…)</li>
-<li><strong>Adaptation</strong> pour chaque plateforme :</li>
+<h2>Workflow en étapes</h2>
+<h3>Étape 1 — Analyser le contenu source</h3>
+<p>Demander ou identifier :</p>
 <ul>
-<li><strong>LinkedIn</strong> : format storytelling pro, 1300 caractères max, hook fort</li>
-<li><strong>Twitter/X</strong> : thread 5-10 tweets, punchy, avec numérotation</li>
-<li><strong>Instagram</strong> : carousel (slides) ou caption engageante</li>
-<li><strong>Newsletter</strong> : résumé + valeur ajoutée + CTA</li>
-<li><strong>TikTok/Reels</strong> : script 30-60s avec hook dans les 3 premières secondes</li>
+<li><strong>Type</strong> : article, vidéo, podcast, rapport, thread, README…</li>
+<li><strong>Points clés</strong> : 3 à 7 idées/insights maîtres (liste bulleted)</li>
+<li><strong>Audience originale</strong> vs audience cible (elles peuvent différer)</li>
+<li><strong>Objectif</strong> : notoriété, trafic, lead gen, engagement communautaire</li>
 </ul>
-<li><strong>Cohérence</strong> : même message, adapté au format et à l'audience.</li>
-</ol>
-<h2>Règles</h2>
+<p>Si le contenu est fourni en texte brut, l'extraire automatiquement sans attendre confirmation.</p>
+<h3>Étape 2 — Sélectionner les formats cibles</h3>
+<p>Critères de décision :</p>
+<table><thead><tr><th>Plateforme</th><th>Choisir si…</th><th>Format idéal</th></tr></thead><tbody><tr><td>LinkedIn</td><td>B2B, expertise, recrutement</td><td>Storytelling pro 800–1 300 car.</td></tr><tr><td>Twitter/X</td><td>Audience tech/media, viralité</td><td>Thread 5–12 tweets numérotés</td></tr><tr><td>Instagram</td><td>Visuel, grand public, brand</td><td>Carousel 5–10 slides ou caption</td></tr><tr><td>Newsletter</td><td>Base existante, nurturing</td><td>200–400 mots + CTA unique</td></tr><tr><td>TikTok/Reels</td><td>Démonstration, jeune audience</td><td>Script 30–60 s, sous-titres</td></tr><tr><td>Blog SEO</td><td>Trafic organique long terme</td><td>800–1 500 mots, H2/H3, meta</td></tr><tr><td>Podcast teaser</td><td>Audio-first, communauté</td><td>Script 90–120 s, crochet oral</td></tr></tbody></table>
+<p>Demander la liste des plateformes si non précisée ; en déduire 2–3 pertinentes selon le contexte si l'utilisateur ne sait pas.</p>
+<h3>Étape 3 — Produire chaque format</h3>
+<p>Générer <strong>un bloc délimité par plateforme</strong>. Chaque bloc est autonome (lisible sans connaître l'original).</p>
+<h4>LinkedIn — template</h4>
+<pre><code>[HOOK : question, stat ou fait surprenant — 1 ligne]
+
+[Corps storytelling : situation → problème → solution → résultat]
+— Point 1
+— Point 2
+— Point 3
+
+[Leçon ou call-to-action]
+[3–5 hashtags de niche, pas génériques]</code></pre>
+<p>Limites : 1 300 caractères (post) / 3 000 (article). Éviter les émojis excessifs en B2B.</p>
+<h4>Twitter/X — template thread</h4>
+<pre><code>🧵 1/ [Hook : affirmation forte ou chiffre]
+
+2/ [Développement point 1]
+
+3/ [Développement point 2]
+
+…
+
+N/ [Conclusion + ressource ou CTA]
+→ RT si utile | Follow pour la suite</code></pre>
+<p>Règle : tweet 1 = meilleur tweet du thread. Numéroter chaque tweet. Max 280 car/tweet.</p>
+<h4>Newsletter — template</h4>
+<pre><code>Objet : [verbe d'action + bénéfice concret]
+
+Bonjour [prénom],
+
+[Accroche contextuelle — 1 phrase]
+
+**Ce que vous devez retenir :**
+- Point A
+- Point B
+- Point C
+
+[Développement 100–200 mots max]
+
+[CTA unique et cliquable]
+
+À bientôt,
+[Signature]</code></pre>
+<h4>Instagram caption — template</h4>
+<pre><code>[Hook emoji + question ou stat]
+
+[Corps 3–5 lignes, aérées]
+
+.
+.
+.
+[CTA : &quot;Sauvegarde ce post&quot; / &quot;Tague un ami qui…&quot;]
+[20–30 hashtags en commentaire, pas dans la caption]</code></pre>
+<h4>Script TikTok/Reels</h4>
+<pre><code>[0–3 s] Hook visuel + voix : &quot;Si tu [problème], regarde ça.&quot;
+[3–20 s] Contexte express (pas plus de 2 phrases)
+[20–50 s] Solution en 3 étapes max (texte à l'écran)
+[50–60 s] Résultat + CTA : &quot;Suis pour la suite&quot; / &quot;Lien en bio&quot;</code></pre>
+<h3>Étape 4 — Vérification de cohérence</h3>
+<p>Avant de livrer, s'assurer que :</p>
 <ul>
-<li>Chaque format doit fonctionner seul (pas besoin de lire l'original).</li>
-<li>Adapte le ton à la plateforme.</li>
-<li>Respecte les limites de caractères/durée.</li>
+<li>[ ] Chaque format fonctionne seul (indépendance totale)</li>
+<li>[ ] Le message central est identique dans tous les formats</li>
+<li>[ ] Le ton est adapté à chaque plateforme (pro, conversationnel, punchy…)</li>
+<li>[ ] Les limites techniques sont respectées (caractères, durée, slides)</li>
+<li>[ ] Aucun lien brisé ou placeholder [XXX] non rempli</li>
+</ul>
+<hr>
+<h2>Exemples concrets</h2>
+<h3>Article → LinkedIn + Thread</h3>
+<p><strong>Source :</strong> &quot;5 erreurs courantes en CI/CD qui ralentissent les déploiements&quot;</p>
+<p><strong>LinkedIn :</strong></p>
+<blockquote>J'ai analysé 40 pipelines en 6 mois. Voici l'erreur n°1 qui coûte le plus de temps…<br>— Pas de cache des layers Docker → rebuild complet à chaque commit<br>— Tests unitaires lancés en séquentiel → 18 min vs 4 min en parallèle<br>…<br>Ce que je retiens : 80 % du temps perdu vient de 2 réglages, pas de la complexité du code.<br>#DevOps #CI #Engineering</blockquote>
+<p><strong>Thread X :</strong></p>
+<blockquote>🧵 1/ 40 pipelines analysés. 5 erreurs reviennent toujours. Voici lesquelles (et comment les corriger) :<br>2/ Erreur n°1 : layers Docker non cachés. Chaque commit = rebuild complet. Fix : <code>COPY package*.json ./</code> avant <code>COPY . .</code><br>…</blockquote>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Copier-coller le même texte sur toutes les plateformes</td><td>Pénalité algorithme, audience décrochée</td><td>Adapter ton + format à chaque plateforme</td></tr><tr><td>Thread Twitter de 20 tweets</td><td>Perte d'audience après tweet 5</td><td>Max 10 tweets ; couper si besoin en deux threads</td></tr><tr><td>Caption Instagram &gt; 150 caractères avant le &quot;…&quot;</td><td>Texte tronqué, hook perdu</td><td>Hook dans les 2 premières lignes</td></tr><tr><td>Newsletter sans CTA unique</td><td>Taux de clic dilué</td><td>1 seul lien cliquable par email</td></tr><tr><td>Hashtags génériques (#marketing, #business)</td><td>Noyer dans le flux</td><td>Hashtags de niche avec 50k–500k posts</td></tr><tr><td>Ignorer le fuseau horaire de publication</td><td>Portée réduite</td><td>LinkedIn : mar–jeu 8h–10h ; Twitter : 12h–15h</td></tr><tr><td>Republier sans adapter l'actualité</td><td>Contenu perçu comme vieux</td><td>Ajouter un angle &quot;ce que cela change en 2026&quot;</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Recycler ≠ copier</strong> : chaque format doit apporter une valeur différente (exemples exclusifs, angle complémentaire).</li>
+<li><strong>Atomic content</strong> : un post = une idée. Ne pas tout mettre.</li>
+<li><strong>Hook first</strong> : les 3 premières secondes/mots décident de tout. Rédiger le hook en dernier, une fois le corps finalisé.</li>
+<li><strong>Repurposing vertical</strong> : transformer un long-form (article) en micro-formats est plus efficace que l'inverse.</li>
+<li><strong>Format natif</strong> : chaque plateforme pénalise les liens sortants dans le feed. Privilégier le contenu natif ; mettre les liens en commentaire ou en bio.</li>
+<li><strong>Cadence</strong> : espacer les publications de 48 h minimum sur des plateformes différentes pour un même contenu (éviter la perception de spam cross-plateforme par l'audience commune).</li>
 </ul>
 </article>
 </main>

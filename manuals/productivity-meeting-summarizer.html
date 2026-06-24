@@ -96,20 +96,109 @@ cp -r claude-skills-collection/skills/productivity-meeting-summarizer ~/.claude/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Meeting Summarizer</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Résumé exécutif</strong> : 3-5 phrases résumant l'essentiel.</li>
-<li><strong>Décisions prises</strong> : liste numérotée des décisions actées.</li>
-<li><strong>Actions à faire</strong> : tableau avec action, responsable, deadline.</li>
-<li><strong>Points en suspens</strong> : questions ouvertes non résolues.</li>
-<li><strong>Prochaine réunion</strong> : date et sujets à préparer si mentionnés.</li>
-<li>Produit 2 formats : version complète + version express (5 lignes max).</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 6 étapes</h2>
+<h3>1. Analyser l'input</h3>
+<p>Avant de produire le résumé, identifier :</p>
 <ul>
-<li>Distingue décision (actée) vs discussion (en cours).</li>
-<li>Si un responsable n'est pas clair, signale-le.</li>
-<li>Reste factuel — ne reformule pas les opinions en décisions.</li>
+<li>Le <strong>type de réunion</strong> (stand-up, retrospective, design review, comité de direction, client call…) — le ton et le niveau de détail s'adaptent.</li>
+<li>La <strong>source</strong> : notes brutes, transcript complet, description orale, audio transcrit.</li>
+<li>Les <strong>participants</strong> nommés ou identifiables (initiales, rôles).</li>
+</ul>
+<p>Si l'input est ambigu (ex. : notes sans contexte), poser une seule question ciblée : <em>&quot;Qui étaient les participants et quel était l'objectif ?&quot;</em></p>
+<h3>2. Résumé exécutif (3-5 phrases)</h3>
+<ul>
+<li>Contexte : pourquoi la réunion a eu lieu.</li>
+<li>Résultat principal : ce qui a changé ou été validé.</li>
+<li>Impact immédiat.</li>
+</ul>
+<p>Exemple :</p>
+<pre><code>Réunion de revue de sprint S42 (24/06/2026, équipe produit).
+Décision de reporter la feature F-217 (paiement récurrent) au sprint S44 faute de capacité.
+Les bugs critiques #3401 et #3402 passent en priorité P0 immédiate.</code></pre>
+<h3>3. Décisions prises</h3>
+<p>Liste numérotée, chaque décision doit être :</p>
+<ul>
+<li><strong>Formulée comme une action factuelle</strong> (verbe au passé ou présent de vérité).</li>
+<li>Associée à un contexte minimal si nécessaire.</li>
+</ul>
+<pre><code>1. [VALIDÉ] Architecture microservices retenue pour le module paiement.
+2. [REPORTÉ] Démo client repoussée au 15/07.
+3. [ANNULÉ] Intégration Stripe suspendue — budget gelé.</code></pre>
+<p>Préfixes utiles : <code>[VALIDÉ]</code> <code>[REPORTÉ]</code> <code>[ANNULÉ]</code> <code>[EN ATTENTE]</code></p>
+<h3>4. Plan d'actions (tableau)</h3>
+<table><thead><tr><th>#</th><th>Action</th><th>Responsable</th><th>Deadline</th><th>Statut</th></tr></thead><tbody><tr><td>1</td><td>Ouvrir ticket Jira pour F-217</td><td>@alice</td><td>25/06</td><td>À faire</td></tr><tr><td>2</td><td>Envoyer devis révisé au client</td><td>@bob</td><td>28/06</td><td>À faire</td></tr><tr><td>3</td><td>Vérifier compatibilité API v3</td><td>@carlos</td><td>30/06</td><td>En cours</td></tr></tbody></table>
+<p>Si le responsable est inconnu : mettre <code>[?]</code> et signaler en bas du tableau.</p>
+<h3>5. Points en suspens</h3>
+<p>Questions ouvertes non résolues pendant la réunion :</p>
+<ul>
+<li>Format : <em>&quot;Qui valide les accès prod ?&quot;</em> → responsable de la réponse + deadline suggérée.</li>
+<li>Ne pas inventer de résolution.</li>
+</ul>
+<h3>6. Prochaine réunion</h3>
+<p>Si mentionnée :</p>
+<pre><code>Date : 01/07/2026 à 10h00
+Sujets à préparer :
+  - Démo F-219 (authentication SSO)
+  - Revue budget Q3</code></pre>
+<hr>
+<h2>Formats de sortie</h2>
+<h3>Format complet (défaut)</h3>
+<p>Sections 2 à 6 complètes. Utilisé pour : PV officiel, archive, partage Confluence/Notion.</p>
+<h3>Format express (≤ 6 lignes)</h3>
+<p>Déclenché si l'utilisateur demande &quot;version courte&quot; ou &quot;TL;DR&quot; :</p>
+<pre><code>RÉUNION : [titre] — [date]
+DÉCIDÉ : [décision 1] / [décision 2]
+ACTIONS : [action] → @resp (deadline) / [action] → @resp (deadline)
+SUSPENDU : [point ouvert]
+PROCHAINE : [date] — [sujet]</code></pre>
+<h3>Format email</h3>
+<p>Déclenché avec &quot;envoie un email&quot; ou &quot;rédige un mail&quot; :</p>
+<pre><code>Objet : CR Réunion [titre] — [date]
+
+Bonjour à tous,
+
+Voici le compte-rendu de notre réunion de [date].
+
+[résumé exécutif]
+
+DÉCISIONS
+[liste]
+
+ACTIONS
+[tableau simplifié]
+
+Prochaine réunion : [date]
+
+Cordialement,
+[Expéditeur]</code></pre>
+<hr>
+<h2>Critères de décision — décision vs discussion</h2>
+<table><thead><tr><th>Signal</th><th>Décision</th><th>Discussion</th></tr></thead><tbody><tr><td>&quot;On décide de…&quot;, &quot;c'est validé&quot;, &quot;go&quot;</td><td>✅</td><td></td></tr><tr><td>&quot;On en reparle&quot;, &quot;à confirmer&quot;, &quot;à étudier&quot;</td><td></td><td>✅</td></tr><tr><td>Vote explicite avec majorité</td><td>✅</td><td></td></tr><tr><td>Désaccord non tranché</td><td></td><td>✅</td></tr><tr><td>Un seul participant l'affirme sans accord général</td><td></td><td>✅</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne pas faire :</strong></p>
+<ul>
+<li>Transformer une opinion en décision (&quot;Alice pense que…&quot; ≠ décision).</li>
+<li>Inventer un responsable quand ce n'est pas clair — mettre <code>[?]</code>.</li>
+<li>Résumer les debates comme des décisions parce que c'est &quot;probable&quot;.</li>
+<li>Ignorer les actions implicites (&quot;Bob va checker ça&quot; = action réelle).</li>
+<li>Coller le résumé sans adapter le niveau de détail au type de réunion.</li>
+</ul>
+<p><strong>Pièges fréquents :</strong></p>
+<ul>
+<li>Les stand-ups n'ont généralement pas de &quot;décisions&quot; — seulement des blockers et des updates.</li>
+<li>Les discussions &quot;off the record&quot; ou hors-agenda ne doivent pas apparaître dans le PV.</li>
+<li>Un transcript automatique (Zoom, Teams) contient des artefacts (noms mal transcrits, répétitions) — les nettoyer sans altérer le fond.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Structurer pour les outils collaboratifs</strong> : Markdown compatible Notion, Confluence, GitHub Issues.</li>
+<li><strong>Tags de priorité</strong> : si l'équipe utilise MoSCoW ou P0/P1/P2, appliquer la même nomenclature.</li>
+<li><strong>Actions SMART</strong> : chaque action doit avoir un verbe d'action précis, un responsable nommé, une deadline.</li>
+<li><strong>Lien vers artefacts</strong> : mentionner les tickets, PRs, docs référencés pendant la réunion (ne pas les créer, juste les citer).</li>
+<li><strong>Durée indicative</strong> : noter la durée réelle si connue (aide à calibrer la densité du CR).</li>
+<li>Pour les réunions clients, toujours distinguer les engagements de l'équipe des demandes du client encore non validées.</li>
 </ul>
 </article>
 </main>

@@ -96,24 +96,149 @@ cp -r claude-skills-collection/skills/dev-data-validation-helper ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Data Validation Helper</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définition des attentes</strong> — Spécifier pour chaque colonne les règles métier : type attendu, plage de valeurs (min/max), format (regex, date pattern), contrainte de nullabilité, unicité, valeurs autorisées (enum), et cardinalité ; documenter les règles dans un format exploitable (YAML, JSON, code).</li>
-<li><strong>Schema validation</strong> — Valider la structure des données à l'entrée du pipeline avec JSON Schema (APIs), Avro/Protobuf (streaming Kafka), Pydantic (Python objects) ou pandera (DataFrames) ; échouer tôt sur les violations de schéma avant toute transformation coûteuse.</li>
-<li><strong>Data quality checks</strong> — Évaluer les cinq dimensions de qualité : complétude (% de non-nulls), exactitude (valeurs dans les plages attendues), cohérence (relations inter-colonnes), fraîcheur (timestamp de dernière mise à jour), et unicité (doublons) ; calculer des scores de qualité agrégés.</li>
-<li><strong>Framework setup</strong> — Configurer le framework adapté : Great Expectations (expectations suites, checkpoints, data docs), dbt tests (schema.yml : not_null, unique, accepted_values, relationships), Soda (SodaCL déclaratif), pandera (schemas DataFrames Python) ou des validateurs custom avec pytest.</li>
-<li><strong>Tests statistiques</strong> — Comparer les distributions actuelles à une référence (KS test, chi-squared) ; détecter les anomalies statistiques (z-score, IQR, isolation forest) ; surveiller les dérives de métriques agrégées (moyenne, std, percentiles) sur les fenêtres temporelles.</li>
-<li><strong>Data contracts</strong> — Formaliser les accords producteur-consommateur (schéma, SLA de fraîcheur, volumétrie attendue) ; utiliser un schema registry (Confluent Schema Registry, AWS Glue) pour les topics Kafka ; gérer les breaking changes avec versioning et période de dépréciation.</li>
-<li><strong>Intégration pipeline</strong> — Insérer des validation gates à chaque étape critique ; router les données invalides vers une zone de quarantaine (dead letter queue, table bad_data) pour inspection sans bloquer le pipeline complet ; déclencher des alertes Slack/PagerDuty sur dépassement du seuil d'erreur acceptable.</li>
-<li><strong>Reporting et dashboards</strong> — Construire des dashboards de qualité (score global, évolution temporelle, top violations) avec les data docs Great Expectations, Metabase, ou Grafana ; suivre les SLA de qualité ; générer des rapports automatiques post-exécution pour les équipes data et métier.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Inventaire et règles métier</h3>
 <ul>
-<li>Fournis des exemples de code concrets (Great Expectations checkpoint, dbt test YAML, pandera schema Python) adaptés aux outils de l'utilisateur.</li>
-<li>Valide toujours le schéma en entrée de pipeline avant d'engager des transformations coûteuses (fail fast).</li>
-<li>Ne bloque pas entièrement le pipeline sur des erreurs non critiques : distingue les violations bloquantes (types incorrects) des warnings (outliers acceptables).</li>
-<li>Priorise la qualité des données sur la quantité : 95% de données valides traités correctement valent mieux que 100% de données douteuses.</li>
-<li>Pense toujours à l'idempotence des validateurs : un recheck sur les mêmes données doit produire les mêmes résultats.</li>
+<li>Lister chaque colonne : type attendu, nullabilité, plage (min/max), format (regex, pattern date), unicité, enum de valeurs autorisées.</li>
+<li>Documenter dans un fichier versionné (<code>expectations.yaml</code>, <code>schema.yaml</code> ou <code>conftest.py</code>).</li>
+<li>Critère clé : distinguer <strong>règle bloquante</strong> (type incorrect, PK dupliquée) de <strong>warning tolerable</strong> (outlier statistique, valeur rare).</li>
+</ul>
+<h3>2. Schema validation — fail fast</h3>
+<p><strong>JSON Schema (API REST) :</strong></p>
+<pre><code class="lang-python">from jsonschema import validate, ValidationError
+
+schema = {
+    &quot;type&quot;: &quot;object&quot;,
+    &quot;properties&quot;: {
+        &quot;user_id&quot;: {&quot;type&quot;: &quot;integer&quot;},
+        &quot;email&quot;:   {&quot;type&quot;: &quot;string&quot;, &quot;format&quot;: &quot;email&quot;},
+        &quot;amount&quot;:  {&quot;type&quot;: &quot;number&quot;,  &quot;minimum&quot;: 0}
+    },
+    &quot;required&quot;: [&quot;user_id&quot;, &quot;email&quot;, &quot;amount&quot;]
+}
+
+try:
+    validate(instance=payload, schema=schema)
+except ValidationError as e:
+    raise ValueError(f&quot;Payload invalide : {e.message}&quot;)</code></pre>
+<p><strong>Pydantic v2 (Python objects) :</strong></p>
+<pre><code class="lang-python">from pydantic import BaseModel, field_validator
+from decimal import Decimal
+
+class Transaction(BaseModel):
+    user_id: int
+    amount: Decimal
+    currency: str
+
+    @field_validator(&quot;currency&quot;)
+    @classmethod
+    def check_currency(cls, v: str) -&gt; str:
+        if v not in {&quot;TND&quot;, &quot;EUR&quot;, &quot;USD&quot;}:
+            raise ValueError(f&quot;Devise inconnue : {v}&quot;)
+        return v</code></pre>
+<p><strong>Pandera (DataFrames) :</strong></p>
+<pre><code class="lang-python">import pandera as pa
+
+schema = pa.DataFrameSchema({
+    &quot;user_id&quot;: pa.Column(int,  nullable=False),
+    &quot;amount&quot;:  pa.Column(float, pa.Check.ge(0)),
+    &quot;status&quot;:  pa.Column(str,  pa.Check.isin([&quot;pending&quot;,&quot;done&quot;,&quot;failed&quot;]))
+})
+
+validated_df = schema.validate(df, lazy=True)  # lazy=True collecte toutes les erreurs</code></pre>
+<h3>3. Dimensions de qualité à mesurer</h3>
+<table><thead><tr><th>Dimension</th><th>Métrique cible</th><th>Requête type</th></tr></thead><tbody><tr><td>Complétude</td><td>% non-null ≥ 99 %</td><td><code>COUNT(*) - COUNT(col) &gt; 0</code></td></tr><tr><td>Unicité</td><td>doublons = 0</td><td><code>COUNT(*) != COUNT(DISTINCT id)</code></td></tr><tr><td>Exactitude</td><td>valeurs dans plage</td><td><code>amount &lt; 0 OR amount &gt; 1e7</code></td></tr><tr><td>Fraîcheur</td><td>lag ≤ SLA</td><td><code>MAX(updated_at) &lt; NOW() - INTERVAL '2 hours'</code></td></tr><tr><td>Cohérence</td><td>FK valide</td><td><code>t.status = 'paid' AND t.paid_at IS NULL</code></td></tr></tbody></table>
+<h3>4. Framework — choix selon contexte</h3>
+<table><thead><tr><th>Contexte</th><th>Outil recommandé</th><th>Raison</th></tr></thead><tbody><tr><td>SQL/dbt</td><td><strong>dbt tests</strong></td><td>natif dans le DAG, zéro overhead</td></tr><tr><td>DataFrame Python</td><td><strong>pandera</strong></td><td>typage fort, intégration pytest</td></tr><tr><td>Pipeline de données riche</td><td><strong>Great Expectations</strong></td><td>data docs, checkpoints réutilisables</td></tr><tr><td>Déclaratif simple</td><td><strong>Soda Core</strong></td><td>SodaCL lisible par les non-développeurs</td></tr><tr><td>Kafka / Avro</td><td><strong>Confluent Schema Registry</strong></td><td>enforcement côté broker</td></tr></tbody></table>
+<p><strong>dbt schema.yml :</strong></p>
+<pre><code class="lang-yaml">models:
+  - name: transactions
+    columns:
+      - name: id
+        tests: [not_null, unique]
+      - name: status
+        tests:
+          - accepted_values:
+              values: [&quot;pending&quot;, &quot;done&quot;, &quot;failed&quot;]
+      - name: user_id
+        tests:
+          - relationships:
+              to: ref('users')
+              field: id</code></pre>
+<p><strong>Great Expectations — checkpoint minimal :</strong></p>
+<pre><code class="lang-python">import great_expectations as gx
+
+context = gx.get_context()
+batch = context.sources.pandas_default.read_dataframe(df)
+suite  = context.add_expectation_suite(&quot;transactions_suite&quot;)
+
+batch.expect_column_values_to_not_be_null(&quot;user_id&quot;)
+batch.expect_column_values_to_be_between(&quot;amount&quot;, min_value=0, max_value=1_000_000)
+batch.expect_column_values_to_be_in_set(&quot;status&quot;, [&quot;pending&quot;,&quot;done&quot;,&quot;failed&quot;])
+
+result = context.run_checkpoint(checkpoint_name=&quot;daily_check&quot;)
+if not result[&quot;success&quot;]:
+    raise RuntimeError(&quot;Checkpoint GE échoué — données en quarantaine.&quot;)</code></pre>
+<h3>5. Tests statistiques et détection de dérive</h3>
+<pre><code class="lang-python">from scipy.stats import ks_2samp
+import numpy as np
+
+# Comparer la distribution actuelle vs référence (baseline)
+stat, p_value = ks_2samp(baseline_amounts, current_amounts)
+if p_value &lt; 0.05:
+    alert(f&quot;Dérive détectée sur 'amount' (KS p={p_value:.4f})&quot;)
+
+# Outliers IQR
+q1, q3 = np.percentile(df[&quot;amount&quot;], [25, 75])
+iqr = q3 - q1
+outliers = df[(df[&quot;amount&quot;] &lt; q1 - 1.5 * iqr) | (df[&quot;amount&quot;] &gt; q3 + 1.5 * iqr)]</code></pre>
+<p>Surveillance en continu : calculer les percentiles p50/p95/p99 par fenêtre temporelle et alerter si la variation dépasse ±20 % de la baseline glissante.</p>
+<h3>6. Data contracts</h3>
+<p>Structure minimale d'un contrat (YAML versionné dans le repo) :</p>
+<pre><code class="lang-yaml">contract_version: &quot;1.2.0&quot;
+producer: &quot;payment-service&quot;
+consumer: &quot;analytics-pipeline&quot;
+schema_ref: &quot;schemas/transactions_v3.avsc&quot;
+sla:
+  freshness_minutes: 30
+  completeness_pct: 99.5
+  max_duplicates: 0
+breaking_change_policy: &quot;deprecation 30 jours, migration guide obligatoire&quot;</code></pre>
+<p>Utiliser le <strong>Schema Registry</strong> (Confluent ou AWS Glue) pour enforcer côté broker :</p>
+<pre><code class="lang-bash"># Vérifier la compatibilité avant deploy
+curl -X POST http://schema-registry:8081/compatibility/subjects/transactions-value/versions/latest \
+  -H &quot;Content-Type: application/vnd.schemaregistry.v1+json&quot; \
+  -d '{&quot;schema&quot;: &quot;&lt;nouveau_schema_json_escaped&gt;&quot;}'</code></pre>
+<h3>7. Intégration pipeline — quarantaine et alertes</h3>
+<pre><code class="lang-python">valid_rows   = df[validation_mask]
+invalid_rows = df[~validation_mask].assign(quarantine_reason=error_series)
+
+# Route vers dead-letter table
+invalid_rows.to_sql(&quot;bad_data&quot;, engine, if_exists=&quot;append&quot;, index=False)
+
+# Alerte si taux d'erreur dépasse le seuil
+error_rate = len(invalid_rows) / len(df)
+if error_rate &gt; 0.02:   # seuil bloquant : 2 %
+    raise PipelineError(f&quot;Taux d'erreur critique : {error_rate:.1%}&quot;)
+elif error_rate &gt; 0.001: # warning : 0.1 %
+    send_slack_alert(f&quot;⚠️ Taux d'erreur : {error_rate:.1%} — vérifier bad_data&quot;)</code></pre>
+<h3>8. Reporting et suivi</h3>
+<ul>
+<li><strong>Great Expectations Data Docs</strong> : générer avec <code>context.build_data_docs()</code>, exposer via S3 ou pages Git.</li>
+<li><strong>Grafana</strong> : stocker les métriques de qualité dans Prometheus/InfluxDB, dashboards par pipeline.</li>
+<li><strong>dbt artifacts</strong> : <code>manifest.json</code> + <code>run_results.json</code> → alimentation d'un catalogue (DataHub, Atlan).</li>
+<li>KPI à suivre : score de qualité global (%), volumétrie par statut (valid/quarantine/error), évolution sur 30 jours, top 5 violations par colonne.</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Valider uniquement en fin de pipeline</td><td>Transformations coûteuses sur des données invalides</td><td>Valider à chaque étape d'ingestion</td></tr><tr><td><code>raise</code> immédiat à la première erreur (<code>strict</code>)</td><td>Perte de visibilité sur le volume total de violations</td><td><code>lazy=True</code> dans pandera, <code>--store-failures</code> dans dbt</td></tr><tr><td>Thresholds figés en dur dans le code</td><td>Faux positifs/négatifs au fil du temps</td><td>Externaliser dans un fichier de config versionné</td></tr><tr><td>Ignorer la dead-letter queue</td><td>Données perdues, non-conformité</td><td>Processer + alerter systématiquement</td></tr><tr><td>Pas de versioning de schéma</td><td>Breaking change silencieux</td><td>Semantic versioning + backward-compat policy</td></tr><tr><td>Valider la structure mais pas la sémantique</td><td><code>amount=0.0</code> valide techniquement mais absurde métier</td><td>Ajouter des règles métier explicites</td></tr><tr><td>Validateur non idempotent</td><td>Résultats inconsistants sur re-run</td><td>Garantir que re-valider les mêmes données = mêmes résultats</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Contract-first</strong> : définir le contrat avant d'écrire le pipeline, pas après.</li>
+<li><strong>Shift-left</strong> : valider dès l'API d'ingestion (Pydantic), pas seulement dans le warehouse.</li>
+<li><strong>Observabilité data</strong> : traiter la qualité comme un SLO — budget d'erreur, alertes PagerDuty si dépassement.</li>
+<li><strong>Tests de non-régression</strong> : rejouer les jeux de données historiques après chaque changement de schéma.</li>
+<li><strong>LLM-assisted validation (2025+)</strong> : utiliser un LLM pour générer des règles candidats depuis un échantillon de données, valider manuellement avant promotion en production.</li>
 </ul>
 </article>
 </main>

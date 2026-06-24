@@ -96,25 +96,100 @@ cp -r claude-skills-collection/skills/dev-wireframe-advisor ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Wireframe Advisor</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Comprendre le contexte</strong> : identifier le type d'app ou de site (SaaS, e-commerce, landing page, dashboard, app mobile), l'audience cible, la plateforme principale (web desktop, mobile-first, PWA), les contraintes techniques, et les objectifs business prioritaires.</li>
-<li><strong>Information Architecture</strong> : définir la hiérarchie du contenu (ce qui est primaire, secondaire, tertiaire), structurer la navigation (flat vs. deep), créer un sitemap ou une carte de navigation, et valider la logique avec un card sorting si nécessaire.</li>
-<li><strong>Choix du layout pattern</strong> : sélectionner le pattern adapté — F-pattern ou Z-pattern pour les pages de contenu, dashboard grid pour les outils analytiques, hero + sections pour les landing pages, catalogue + filtre pour l'e-commerce, sidebar + main pour les SaaS.</li>
-<li><strong>Wireframe low-fidelity</strong> : esquisser la structure en blocs (no style, no couleur) — définir les zones majeures, la navigation, le contenu principal et les CTAs, pour valider rapidement la logique sans se perdre dans les détails visuels.</li>
-<li><strong>Wireframe high-fidelity</strong> : affiner avec les composants réels du design system, le spacing précis (grilles 8px), la typographie représentative, les vraies tailles d'images, et le comportement responsive (breakpoints mobile/tablet/desktop).</li>
-<li><strong>Patterns UX courants</strong> : intégrer et documenter les états essentiels — onboarding (empty state avec CTA), états vides (illustrations + message + action), états d'erreur (messages clairs + récupération), états de chargement (skeleton screens), résultats de recherche (filtres, pagination, sorting).</li>
-<li><strong>Prototypage interactif</strong> : connecter les frames pour simuler les flows principaux, ajouter les transitions et micro-interactions clés, et préparer un prototype testable pour les sessions de user testing.</li>
-<li><strong>Handoff développeur</strong> : annoter le wireframe (spacing, comportements, logique conditionnelle), exporter les specs (Figma Dev Mode, Zeplin), préparer les assets, et documenter les règles responsive et les cas limites.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Étape 1 — Cadrer le contexte (avant de dessiner quoi que ce soit)</h2>
+<p>Collecter impérativement :</p>
 <ul>
-<li>Base-toi sur des principes de design éprouvés (Gestalt, hiérarchie visuelle, loi de Fitts, progressive disclosure).</li>
-<li>Sois constructif : suggère toujours des alternatives de layout avec leurs avantages et inconvénients.</li>
-<li>Fournis des exemples visuels de référence (Dribbble, Mobbin, Landbook) pour contextualiser les patterns recommandés.</li>
-<li>Adapte les recommandations au contexte et à la plateforme cible (mobile-first vs. desktop-first change tout).</li>
-<li>Commence simple : un wireframe lo-fi validé vaut mieux qu'un mockup hi-fi non testé.</li>
+<li><strong>Type de produit</strong> : SaaS dashboard, e-commerce, landing page, app mobile native, PWA, back-office admin</li>
+<li><strong>Audience</strong> : grand public / utilisateurs métier / développeurs — change radicalement la densité et la complexité acceptable</li>
+<li><strong>Plateforme principale</strong> : mobile-first (&lt; 768 px) ou desktop-first (≥ 1280 px) — décision irréversible en lo-fi</li>
+<li><strong>Contraintes</strong> : design system existant ? (MUI, Ant Design, Tailwind UI, shadcn/ui), composants réutilisables imposés ?</li>
+<li><strong>Objectif business du wireframe</strong> : valider un flow avec le PO ? test utilisateur ? handoff dev ?</li>
 </ul>
+<h2>Étape 2 — Information Architecture</h2>
+<p>Avant la mise en page, définir :</p>
+<ol>
+<li>Hiérarchie de contenu : primaire (1 seul élément par vue), secondaire, tertiaire</li>
+<li>Structure de navigation : <strong>flat</strong> (≤ 5 sections, favorise la découverte) vs <strong>deep</strong> (arborescence, favorise la spécialisation)</li>
+<li>Sitemap textuel minimal avant de toucher à Figma :</li>
+</ol>
+<pre><code>/ Home
+├── /products
+│   ├── /products/:id
+│   └── /products/compare
+├── /checkout
+│   ├── /checkout/cart
+│   └── /checkout/payment
+└── /account
+    ├── /account/orders
+    └── /account/settings</code></pre>
+<p>Valider avec le PO ou par card sorting (outil gratuit : OptimalSort, Maze).</p>
+<h2>Étape 3 — Choisir le layout pattern</h2>
+<table><thead><tr><th>Contexte</th><th>Pattern recommandé</th><th>Éviter</th></tr></thead><tbody><tr><td>Dashboard analytique</td><td>CSS Grid 12 colonnes + KPI cards + graphiques</td><td>sidebar masquant le contenu</td></tr><tr><td>SaaS B2B</td><td>Sidebar fixe + main scrollable</td><td>navigation top masquant l'espace vertical</td></tr><tr><td>Landing page</td><td>Z-pattern ou F-pattern, hero full-width</td><td>trop de colonnes sur mobile</td></tr><tr><td>E-commerce listing</td><td>Catalogue 2–4 colonnes + filtres sidebar ou drawer</td><td>filtres en modale (UX lourde)</td></tr><tr><td>App mobile</td><td>Bottom tab bar (≤ 5 items) + stacks de navigation</td><td>hamburger menu sur mobile natif</td></tr><tr><td>Admin/back-office</td><td>Table-first, actions en ligne, bulk actions</td><td>cartes inutiles sur données tabulaires</td></tr></tbody></table>
+<h2>Étape 4 — Lo-fi : structure en blocs texte (Figma ou ASCII)</h2>
+<p>Règle d'or : <strong>pas de couleur, pas de style, juste des boîtes et des labels.</strong></p>
+<p>Exemple de wireframe ASCII pour une page listing SaaS :</p>
+<pre><code>+--[Logo]----------[Nav: Features Pricing Docs]--[Login][CTA]--+
+|                                                               |
+|  [Filters: Status ▼  Date ▼  Search ________________]        |
+|                                                               |
+|  [Checkbox] Name ↕   Status    Created ↕     Actions         |
+|  ─────────────────────────────────────────────────────────   |
+|  [ ] Item A          Active    2026-06-01    [Edit][Delete]   |
+|  [ ] Item B          Draft     2026-06-15    [Edit][Delete]   |
+|  ─────────────────────────────────────────────────────────   |
+|  [Bulk: Delete selected]            [&lt; Prev]  1 2 3  [Next &gt;] |
++---------------------------------------------------------------+</code></pre>
+<p>En Figma : utiliser uniquement des rectangles (<code>R</code>), textes (<code>T</code>) et auto-layout. Pas de fill de couleur — gris <code>#E0E0E0</code> pour les blocs, texte en <code>#333</code>.</p>
+<h2>Étape 5 — Hi-fi : specs et grille</h2>
+<ul>
+<li><strong>Grille 8px</strong> : tous les espacings sont multiples de 8 (margin, padding, gap). Exceptions à 4px pour les micro-espacings.</li>
+<li><strong>Breakpoints standard</strong> (à définir dans Figma &gt; Local Variables) :</li>
+</ul>
+<pre><code>xs  : 0–599 px    (mobile portrait)
+sm  : 600–899 px  (mobile landscape / petite tablette)
+md  : 900–1199 px (tablette)
+lg  : 1200–1535 px (desktop)
+xl  : ≥ 1536 px   (large desktop)</code></pre>
+<ul>
+<li><strong>Typographie</strong> : 3 tailles max en wireframe (heading, body, caption). Ne pas choisir la font en hi-fi — laisser le design system décider.</li>
+<li><strong>Composants</strong> : utiliser des instances de la librairie Figma dès le hi-fi (Button, Input, Badge, etc.). Ne pas redessiner manuellement.</li>
+</ul>
+<h2>Étape 6 — États obligatoires à câbler</h2>
+<p>Chaque vue doit avoir au minimum ces états documentés :</p>
+<table><thead><tr><th>État</th><th>Ce qu'il faut montrer</th></tr></thead><tbody><tr><td><strong>Empty state</strong></td><td>Illustration + message + CTA principal</td></tr><tr><td><strong>Loading</strong></td><td>Skeleton screen (pas de spinner seul sur layout complexe)</td></tr><tr><td><strong>Error</strong></td><td>Message précis + action de récupération (retry, contact support)</td></tr><tr><td><strong>Success</strong></td><td>Feedback immédiat (toast ou inline, jamais les deux)</td></tr><tr><td><strong>Validation</strong></td><td>Erreurs inline sous chaque champ, pas en modale</td></tr><tr><td><strong>Pagination / infinite scroll</strong></td><td>Décision explicite : infinite scroll interdit si l'URL doit être partageable</td></tr></tbody></table>
+<h2>Étape 7 — Prototype interactif (Figma Prototype ou Storybook)</h2>
+<p>Connecter uniquement les <strong>flows critiques</strong> (pas tout le produit) :</p>
+<ol>
+<li>Flow d'onboarding / inscription</li>
+<li>Flow d'action principale (ex : créer une commande, publier un article)</li>
+<li>Flow d'erreur le plus probable</li>
+</ol>
+<p>Dans Figma : <code>Prototype</code> &gt; ajouter des connections <code>On Click</code> &gt; choisir <code>Navigate to</code>. Pour les overlays : <code>Open overlay</code> avec <code>Close when clicking outside</code>.</p>
+<p>Pour tester sans design system : utiliser <strong>Storybook + MSW</strong> pour mocker les API et tester les états en isolation.</p>
+<h2>Étape 8 — Handoff développeur</h2>
+<p>Annotations à fournir (Figma Dev Mode ou commentaires inline) :</p>
+<ul>
+<li>Spacing exact sur chaque composant (pas &quot;environ 16px&quot;, mais <code>padding: 16px 24px</code>)</li>
+<li>Comportement responsive : ce qui se collapse, ce qui se cache, ce qui devient un drawer</li>
+<li>Logique conditionnelle : &quot;ce bouton n'apparaît que si <code>role === admin</code>&quot;</li>
+<li>Cas limites : nom de 100 caractères, liste vide, erreur réseau</li>
+</ul>
+<p>Exporter les specs :</p>
+<pre><code>Figma &gt; Dev Mode &gt; Inspect (Ctrl+Alt+I)
+→ CSS / iOS / Android selon la cible
+→ Assets &gt; Export SVG (icons) ou PNG @2x (images)</code></pre>
+<h2>Anti-patterns / Garde-fous</h2>
+<ul>
+<li><strong>Ne jamais partir en hi-fi sans valider le lo-fi</strong> avec au moins une personne extérieure au projet.</li>
+<li><strong>Ne pas itérer sur la couleur avant que le layout soit figé</strong> — le cerveau se fixe sur le style et oublie la structure.</li>
+<li><strong>Éviter les modales sur mobile</strong> : préférer des bottom sheets ou des pages dédiées.</li>
+<li><strong>Pas d'infinite scroll sur les données paginées par URL</strong> (partage de lien cassé, back du navigateur cassé).</li>
+<li><strong>Ne pas inventer de composants custom</strong> si MUI/Ant Design/shadcn en ont un natif — coût de maintenance élevé.</li>
+<li><strong>Trop d'états hover sur desktop</strong> ignorés sur tactile : toujours tester le wireframe sur un vrai device.</li>
+<li><strong>Copier le layout d'un concurrent sans analyser son audience</strong> : un dashboard dense acceptable pour des analystes financiers est inutilisable pour le grand public.</li>
+</ul>
+<h2>Références et outils (2026)</h2>
+<table><thead><tr><th>Outil</th><th>Usage</th></tr></thead><tbody><tr><td>Figma (gratuit team limité)</td><td>Lo-fi, hi-fi, prototype, handoff</td></tr><tr><td>Excalidraw</td><td>Sketching rapide collaboratif, lo-fi uniquement</td></tr><tr><td>Mobbin.com</td><td>Références patterns iOS/Android/Web réels</td></tr><tr><td>Landbook.com</td><td>Références landing pages</td></tr><tr><td>shadcn/ui</td><td>Composants copiables React, tailwind, accessible</td></tr><tr><td>Storybook</td><td>Documentation et test des composants isolés</td></tr><tr><td>Maze / Hotjar</td><td>Test utilisateur à distance sur prototype Figma</td></tr></tbody></table>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

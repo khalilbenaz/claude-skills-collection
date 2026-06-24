@@ -96,37 +96,100 @@ cp -r claude-skills-collection/skills/psy-med-side-effect-mood-log ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Med Side Effect &amp; Mood Log</h1>
-<p>Quand l'utilisateur parle d'un traitement psychotrope ou d'un changement d'état sous traitement, suis ce workflow.</p>
-<h2>Étape 1 — Identification du traitement</h2>
-<p>Liste :</p>
+<p>Outil d'observation structuré pour accompagner une personne sous traitement psychotrope. Le rôle ici est de collecter, organiser et mettre en mots — jamais de diagnostiquer, jamais de modifier un traitement.</p>
+<hr>
+<h2>Étape 1 — Poser le contexte du traitement</h2>
+<p>Recueille les informations de base avant tout :</p>
+<table><thead><tr><th>Information</th><th>À demander si absente</th></tr></thead><tbody><tr><td>Nom du médicament</td><td>&quot;Quel médicament prenez-vous ?&quot;</td></tr><tr><td>Classe (antidépresseur, anxiolytique, thymorégulateur…)</td><td>Infère si possible, ne devine pas</td></tr><tr><td>Dose et fréquence</td><td>&quot;Combien de mg, combien de fois par jour ?&quot;</td></tr><tr><td>Heure(s) de prise</td><td>Matin / midi / soir / coucher</td></tr><tr><td>Durée depuis le début</td><td>Jours, semaines, mois</td></tr><tr><td>Objectif du traitement</td><td>Ce que le prescripteur vise (dépression, anxiété, trouble bipolaire…)</td></tr><tr><td>Traitement précédent</td><td>Y avait-il quelque chose avant ? Changement récent ?</td></tr></tbody></table>
+<blockquote>Si l'utilisateur ne connaît pas le nom exact, demande la forme (comprimé, gélule, couleur) ou le contexte (prescrit par qui, pour quoi). Ne laisse pas ce champ vide — il conditionne tout le reste.</blockquote>
+<hr>
+<h2>Étape 2 — Évaluation initiale de l'état</h2>
+<p>Pose une série courte de questions sur <strong>l'état actuel</strong> :</p>
+<pre><code>Humeur générale aujourd'hui (0 = très bas, 10 = excellent) : ___
+Niveau d'anxiété (0 = aucune, 10 = insupportable) : ___
+Qualité du sommeil la nuit dernière (0 = très mauvaise, 10 = reposant) : ___
+Durée du sommeil : ___ heures
+Appétit (0 = aucun, 10 = normal) : ___
+Effets physiques notés (nausées, tremblements, maux de tête, sécheresse buccale…) : ___
+Fonctionnement quotidien (travail, tâches, relations) : ___</code></pre>
+<p>Adapte le ton : si l'utilisateur est en détresse, commence par l'écoute avant le questionnaire.</p>
+<hr>
+<h2>Étape 3 — Journal de suivi (tableau quotidien)</h2>
+<p>Propose ce tableau à copier/compléter chaque jour :</p>
+<table><thead><tr><th>Date</th><th>Humeur /10</th><th>Anxiété /10</th><th>Sommeil qualité/durée</th><th>Appétit /10</th><th>Effets physiques</th><th>Fonctionnement</th><th>Notes libres</th></tr></thead><tbody><tr><td>ex : 24/06</td><td>5</td><td>6</td><td>5/7h</td><td>7</td><td>nausée légère matin</td><td>concentré 50%</td><td>1ère semaine</td></tr></tbody></table>
+<p><strong>Conseils pour l'utiliser :</strong></p>
 <ul>
-<li><strong>Médicament</strong> (nom)</li>
-<li><strong>Dose</strong> si connue</li>
-<li><strong>Heure de prise</strong></li>
-<li><strong>Durée depuis le début</strong> du traitement</li>
-<li><strong>Effet recherché</strong> (ce que le médecin vise)</li>
-<li><strong>Effets ressentis</strong> (positifs et négatifs)</li>
+<li>Remplir à heure fixe (ex : chaque soir avant coucher).</li>
+<li>Être bref — une ligne suffit.</li>
+<li>Marquer aussi les jours sans effet notable (données de référence précieuses).</li>
+<li>Ajouter une colonne &quot;Stress externe&quot; si des événements de vie perturbent la lecture.</li>
 </ul>
-<p>Si des informations manquent, pose des questions ciblées.</p>
-<h2>Étape 2 — Tableau de suivi quotidien</h2>
-<table><thead><tr><th>Date</th><th>Humeur (1-10)</th><th>Anxiété (1-10)</th><th>Sommeil (qualité/durée)</th><th>Appétit</th><th>Effets secondaires</th><th>Fonctionnement quotidien</th></tr></thead><tbody></tbody></table>
-<h2>Étape 3 — Classement des effets</h2>
-<p>Sépare :</p>
+<hr>
+<h2>Étape 4 — Classement des effets signalés</h2>
+<p>Une fois les effets listés, aide à les catégoriser :</p>
+<h3>Effets fréquents en début de traitement (souvent transitoires)</h3>
 <ul>
-<li><strong>Effets possibles attendus</strong> : ce qui est fréquent en début de traitement et tend à s'atténuer.</li>
-<li><strong>Effets préoccupants à signaler</strong> : ce qui justifie un appel au médecin rapidement.</li>
-<li><strong>Informations manquantes</strong> : ce qu'il faudrait préciser pour mieux suivre.</li>
+<li>Nausées les premières semaines (ISRS/IRSN)</li>
+<li>Troubles du sommeil initiaux (insomnie ou somnolence excessive)</li>
+<li>Maux de tête, vertiges légers</li>
+<li>Légère agitation ou irritabilité en début de traitement antidépresseur</li>
+<li>Bouche sèche, constipation légère</li>
 </ul>
-<h2>Étape 4 — Règles strictes</h2>
+<blockquote>Ces effets tendent à diminuer entre J7 et J21. Ils méritent d'être notés et mentionnés au médecin, mais ne justifient pas l'arrêt seul.</blockquote>
+<h3>Effets à signaler rapidement au médecin (sans urgence immédiate)</h3>
 <ul>
-<li>N'indique <strong>jamais</strong> d'arrêter brutalement un psychotrope.</li>
-<li>Ne suggère <strong>jamais</strong> de modifier une dose sans avis médical.</li>
-<li>Reste factuel et mesuré.</li>
+<li>Aggravation marquée de l'humeur après plusieurs semaines</li>
+<li>Prise ou perte de poids importante</li>
+<li>Tremblements persistants ou rigidité musculaire</li>
+<li>Troubles sexuels persistants gênants</li>
+<li>Hypersomnie invalidante ou insomnie sévère durable</li>
+<li>Sentiment d'engourdissement émotionnel total (&quot;flat affect&quot;)</li>
 </ul>
-<h2>Étape 5 — Conclusion</h2>
-<p>Termine par les <strong>points à signaler au psychiatre ou médecin</strong> lors du prochain rendez-vous, formulés clairement.</p>
+<h3>Effets nécessitant une consultation urgente (ne pas attendre)</h3>
+<ul>
+<li>Pensées suicidaires ou automutilation — appeler le médecin, ou le 15 / 3114 (France)</li>
+<li>Idées de grandeur soudaines, agitation extrême, désinhibition (possible virage maniaque)</li>
+<li>Fièvre + rigidité musculaire + confusion (syndrome malin des neuroleptiques — urgence)</li>
+<li>Réaction allergique (urticaire, gonflement, difficultés à respirer)</li>
+<li>Convulsions</li>
+</ul>
+<hr>
+<h2>Étape 5 — Synthèse pour le prochain rendez-vous</h2>
+<p>Génère un résumé court et factuel que l'utilisateur peut apporter à son médecin ou psychiatre :</p>
+<pre><code>Synthèse à communiquer au médecin — [date]
+
+Traitement : [nom] [dose] depuis [durée]
+Effets positifs observés : …
+Effets négatifs ou gênants : …
+Évolution sur les [N] derniers jours : stable / améliorée / dégradée
+Questions à poser : …</code></pre>
+<p>Encourage à imprimer ou noter ce résumé avant la consultation — les détails s'oublient facilement en salle d'attente.</p>
+<hr>
+<h2>Garde-fous et pièges à éviter</h2>
+<p><strong>Ne jamais faire :</strong></p>
+<ul>
+<li>Suggérer d'arrêter ou de réduire un psychotrope sans avis médical (l'arrêt brutal peut provoquer un syndrome de sevrage grave)</li>
+<li>Affirmer qu'un effet est &quot;normal&quot; ou &quot;bénin&quot; sans nuance</li>
+<li>Comparer à un autre traitement que l'utilisateur &quot;devrait prendre à la place&quot;</li>
+<li>Donner une liste exhaustive des effets secondaires du médicament (peut générer une anxiété nocebo)</li>
+<li>Interpréter les chiffres du tableau comme un diagnostic</li>
+</ul>
+<p><strong>Anti-patterns courants :</strong></p>
+<ul>
+<li>Trop rassurer trop vite (&quot;c'est normal, ça va passer&quot;) → préférer &quot;c'est fréquent, mérite d'être suivi et signalé&quot;</li>
+<li>Entrer dans un débat sur l'efficacité des psychotropes</li>
+<li>Répondre à &quot;est-ce que ce médicament est bon pour moi ?&quot; → rediriger vers le prescripteur</li>
+<li>Confondre un manque d'effet (traitement insuffisant) avec un effet secondaire</li>
+</ul>
+<p><strong>Bonnes pratiques 2026 :</strong></p>
+<ul>
+<li>Rappeler que l'effet thérapeutique plein des antidépresseurs prend généralement 4 à 8 semaines</li>
+<li>Mentionner l'intérêt d'une psychothérapie en parallèle si le médecin l'a suggérée</li>
+<li>Souligner que le suivi régulier (même téléphonique) avec le prescripteur est la meilleure protection</li>
+</ul>
+<hr>
 <h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce suivi est un outil d'observation. Ne modifiez jamais votre traitement sans l'avis de votre médecin. Signalez tout effet inhabituel rapidement.</blockquote>
+<blockquote><strong>Ce journal est un outil d'observation personnelle, pas un outil médical.</strong><br>Ne modifiez jamais votre traitement (dose, fréquence, arrêt) sans l'accord de votre médecin ou psychiatre.<br>En cas de doute urgent : appelez votre médecin, le 15 (SAMU), ou le 3114 (numéro national de prévention du suicide, disponible 24h/24).</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

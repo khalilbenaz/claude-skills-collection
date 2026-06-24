@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-project-estimation-helper — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Estimation de projets logiciels avec méthodes éprouvées.">
+<meta name="description" content="Estimation de projets logiciels avec méthodes éprouvées, buffers calibrés et communication honnête des fourchettes.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-project-estimation-helper</h1>
-<p class="lead">Estimation de projets logiciels avec méthodes éprouvées.</p>
+<p class="lead">Estimation de projets logiciels avec méthodes éprouvées, buffers calibrés et communication honnête des fourchettes.</p>
 
 
 
@@ -96,39 +96,129 @@ cp -r claude-skills-collection/skills/dev-project-estimation-helper ~/.claude/sk
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Project Estimation Helper</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Décomposer le scope</strong> : Construire un Work Breakdown Structure (WBS) en partant des livrables majeurs, puis découper en user stories, puis en tâches techniques. Aucune tâche ne doit dépasser 2 jours de travail. Une tâche mal découpée est une estimation non-fiable. Identifier et lister explicitement ce qui est hors scope (out of scope) pour éviter les malentendus.</li>
-</ol>
-<ol>
-<li><strong>Choisir la technique d'estimation</strong> : Sélectionner selon le contexte. T-shirt sizing (XS/S/M/L/XL) pour une estimation rapide en début de projet. Planning poker pour l'estimation collective et collaborative en équipe Agile. Three-point PERT ((optimiste + 4×réaliste + pessimiste) / 6) pour les tâches à haute incertitude. Estimation par analogie quand une tâche similaire a déjà été faite — la plus fiable sur du connu.</li>
-</ol>
-<ol>
-<li><strong>Estimer par complexité</strong> : Utiliser la suite de Fibonacci (1, 2, 3, 5, 8, 13, 21) pour les story points, car elle reflète l'incertitude croissante des grandes tâches. Décomposer toute tâche &gt; 8 points. Séparer l'effort de développement, les tests, la revue, le déploiement et la documentation. Inclure les risques techniques identifiés dans l'estimation.</li>
-</ol>
-<ol>
-<li><strong>Ajouter buffers et contingence</strong> : Appliquer le cone d'incertitude : en phase de conception, l'estimation peut varier de ±50 à 100%. Ajouter 20% de buffer minimum pour les projets bien maîtrisés, 40-50% pour les technologies nouvelles ou les équipes récentes. Distinguer la contingence (risques connus) de la réserve de management (risques inconnus). Ne jamais présenter une estimation &quot;sans marge&quot;.</li>
-</ol>
-<ol>
-<li><strong>Identifier les risques</strong> : Lister explicitement : dépendances sur d'autres équipes ou systèmes externes, technologies jamais utilisées par l'équipe, intégrations avec des systèmes legacy, turnover potentiel, flou dans les spécifications. Quantifier chaque risque (probabilité × impact) et intégrer le risque élevé directement dans l'estimation.</li>
-</ol>
-<ol>
-<li><strong>Construire la timeline et les milestones</strong> : Identifier le chemin critique (les tâches qui déterminent la durée totale). Paralléliser les tâches indépendantes. Définir des milestones clairs et mesurables (ex: &quot;MVP déployé en staging avec les 3 features core&quot;). Intégrer les congés, les sprints de stabilisation et les périodes de freeze (fin d'année, lancements). Prévoir des deadlines réalistes, pas optimistes.</li>
-</ol>
-<ol>
-<li><strong>Communiquer l'estimation avec honnêteté</strong> : Toujours présenter une fourchette (min/réaliste/max) jamais un chiffre unique. Indiquer le niveau de confiance (&quot;80% de chances de livrer dans cette fourchette&quot;). Documenter et partager explicitement les hypothèses faites. Présenter les trade-offs : &quot;Si on réduit le scope de 20%, on peut livrer 6 semaines plus tôt&quot;. Former le management à interpréter les fourchettes correctement.</li>
-</ol>
-<ol>
-<li><strong>Suivre et recalibrer en continu</strong> : Mesurer la velocity réelle de l'équipe sprint après sprint. Utiliser les burndown charts pour détecter les dérives tôt. Re-estimer formellement à chaque fin de sprint ou à chaque changement de scope majeur. Organiser des rétrospectives d'estimation pour améliorer la précision de l'équipe. Documenter les écarts et les causes dans un log d'apprentissage.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Cadrer le scope avant tout</h3>
+<p>Construire un Work Breakdown Structure (WBS) descendant :</p>
 <ul>
-<li><strong>Toujours une fourchette, jamais un point</strong> : Donner une estimation unique donne une fausse précision. La fourchette min/réaliste/max est honnête et aide à la prise de décision éclairée.</li>
-<li><strong>Décomposer avant d'estimer</strong> : Estimer une tâche floue ou trop grande est une source d'erreur majeure. Si ça ne peut pas être découpé, l'incertitude doit être explicitement augmentée.</li>
-<li><strong>Documenter les hypothèses</strong> : Chaque estimation repose sur des hypothèses (scope stable, équipe complète, specs claires). Les rendre explicites protège l'équipe en cas de changement.</li>
-<li><strong>Recalibrer régulièrement</strong> : Une estimation faite en début de projet est une prédiction, pas un engagement. La recalibration continue est une pratique saine, pas un aveu d'échec.</li>
-<li><strong>Intégrer les coûts non-fonctionnels</strong> : Tests, revue de code, documentation, déploiement et réunions représentent souvent 30-40% du temps total. Les ignorer conduit systématiquement à des dépassements.</li>
+<li>Niveaux : Épiques → User Stories → Tâches techniques</li>
+<li>Règle du 2 jours : toute tâche &gt; 2 jours doit être redécoupée</li>
+<li>Écrire explicitement ce qui est <strong>hors scope</strong> — un out-of-scope flou est la première cause de dérive</li>
 </ul>
+<pre><code>WBS exemple (feature &quot;Paiement carte&quot;) :
+├── US1 — Saisie carte (FE)         : 3j
+│   ├── Composant form + validation  : 1j
+│   ├── Intégration SDK Stripe       : 1j
+│   └── Tests + revue                : 1j
+├── US2 — Webhook confirmation (BE)  : 2j
+└── US3 — Email de reçu              : 1j
+TOTAL feature : 6j dev + 1j QA + 0,5j deploy = 7,5j</code></pre>
+<h3>2. Choisir la technique selon le contexte</h3>
+<table><thead><tr><th>Contexte</th><th>Technique</th><th>Précision</th></tr></thead><tbody><tr><td>Avant-vente / PMO, besoin rapide</td><td>T-shirt sizing (XS/S/M/L/XL)</td><td>±50 %</td></tr><tr><td>Sprint Agile, équipe impliquée</td><td>Planning poker (Fibonacci)</td><td>±25 %</td></tr><tr><td>Tâche à haute incertitude</td><td>Three-point PERT</td><td>±15 %</td></tr><tr><td>Feature similaire au passé</td><td>Estimation par analogie</td><td>±10 %</td></tr><tr><td>Projet complexe multi-équipes</td><td>Decomposition + bottom-up</td><td>±20 %</td></tr></tbody></table>
+<p><strong>PERT formula</strong> :</p>
+<pre><code>E = (O + 4×M + P) / 6
+σ = (P - O) / 6
+Fourchette 95 % = E ± 2σ
+
+Ex: O=3j, M=5j, P=12j → E=5,8j, σ=1,5 → fourchette [2,8j ; 8,8j]</code></pre>
+<h3>3. Décomposer l'effort par catégorie</h3>
+<p>Ne jamais estimer que le code. Répartition typique d'une feature :</p>
+<pre><code>Développement (code)    : 45 %
+Tests (unit + intégr.)  : 20 %
+Revue de code + fixes   : 10 %
+Documentation           : 5 %
+Déploiement / DevOps    : 10 %
+Réunions / coordination : 10 %
+─────────────────────────────
+                  TOTAL : 100 %</code></pre>
+<p>En pratique : <strong>multiplier l'estimation &quot;code seul&quot; par 1,8 à 2,2</strong>.</p>
+<h3>4. Calibrer les buffers selon l'incertitude</h3>
+<p>Appliquer le <strong>cône d'incertitude</strong> :</p>
+<table><thead><tr><th>Phase projet</th><th>Variance possible</th><th>Buffer recommandé</th></tr></thead><tbody><tr><td>Concept / avant specs</td><td>×4 (−75 % / +300 %)</td><td>60-80 %</td></tr><tr><td>Specs fonctionnelles OK</td><td>×2 (−50 % / +100 %)</td><td>40-50 %</td></tr><tr><td>Design technique validé</td><td>×1,5 (−33 % / +50 %)</td><td>25-35 %</td></tr><tr><td>Début implémentation</td><td>×1,25 (−20 % / +25 %)</td><td>15-20 %</td></tr><tr><td>Code complet, tests en cours</td><td>×1,1</td><td>5-10 %</td></tr></tbody></table>
+<p>Distinguer :</p>
+<ul>
+<li><strong>Contingence</strong> = risques identifiés et quantifiés (intégrée à l'estimation)</li>
+<li><strong>Réserve management</strong> = risques inconnus (tenue séparée, jamais publiée)</li>
+</ul>
+<h3>5. Identifier et quantifier les risques</h3>
+<p>Pour chaque risque : <code>Exposition = Probabilité × Impact (jours)</code></p>
+<pre><code>RISQUES TECHNIQUES
+──────────────────
+API tierce instable        : P=40 %, I=5j → E=2j  → intégrer 2j
+Migration base legacy      : P=60 %, I=8j → E=4,8j → intégrer 5j
+Tech jamais utilisée       : P=70 %, I=6j → E=4,2j → intégrer 4j
+
+RISQUES ORGANISATIONNELS
+────────────────────────
+Specs non finalisées       : P=50 %, I=10j → E=5j  → bloquer livraison
+Dépendance équipe externe  : P=30 %, I=15j → E=4,5j → mitigation SLA</code></pre>
+<p>Critère de décision : exposition &gt; 3 jours → intégrer directement dans l'estimation, pas juste dans les risques.</p>
+<h3>6. Construire la timeline et le chemin critique</h3>
+<pre><code class="lang-bash"># Identifier le chemin critique avec un diagramme réseau
+# (ou outil : MS Project, Linear, Jira Advanced Roadmaps)
+
+Tâche A (5j) → Tâche C (3j) → Tâche E (2j)  ← chemin critique = 10j
+Tâche B (4j) → Tâche D (2j)                   ← slack = 4j</code></pre>
+<p>Règles de planification :</p>
+<ul>
+<li><strong>Paralleliser</strong> les tâches sans dépendance → gain de durée</li>
+<li><strong>Buffer de stabilisation</strong> : prévoir 1 sprint &quot;freeze + bugfixes&quot; avant chaque release majeure</li>
+<li><strong>Exclure</strong> : congés, jours fériés, on-call, séminaires (→ utiliser la capacité nette)</li>
+</ul>
+<pre><code>Capacité nette / sprint 2 semaines (équipe 3 devs) :
+= 3 × 10j × 0,75 (overhead 25 %)
+= 22,5 jours-personne disponibles</code></pre>
+<h3>7. Communiquer la fourchette — format standard</h3>
+<p><strong>Ne jamais donner un chiffre unique.</strong> Template de communication :</p>
+<pre><code>ESTIMATION — [Feature / Projet X]
+Date : YYYY-MM-DD | Niveau de détail : [Conception / Design / Impl.]
+
+  Optimiste  (hypothèses favorables)  :  8 semaines
+  Réaliste   (baseline)               : 12 semaines  ← référence
+  Pessimiste (risques activés)        : 18 semaines
+
+Confiance sur la fourchette réaliste : 70 %
+
+HYPOTHÈSES CLÉS
+───────────────
+- Specs figées au 2026-07-15
+- Équipe complète (3 devs, 1 QA)
+- Intégration API X disponible et documentée
+
+TRADE-OFFS
+──────────
+- Réduire scope de 20 % → gain de 3 semaines
+- Ajouter 1 dev senior → réduit pessimiste à 14 sem.</code></pre>
+<h3>8. Suivre et recalibrer</h3>
+<p>Métriques à mesurer chaque sprint :</p>
+<pre><code>Velocity réelle = story points livrés / sprint
+Accuracy        = estimation initiale / temps réel (objectif : 0,8–1,2)
+Scope creep     = stories ajoutées post-planning / stories initiales</code></pre>
+<ul>
+<li>Re-estimer formellement si scope change &gt; 15 % ou si velocity dévie &gt; 20 %</li>
+<li>Tenir un <strong>estimation log</strong> : date, estimé, réel, cause d'écart</li>
+<li>Rétrospective d'estimation : 15 min par sprint — &quot;qu'est-ce qu'on a mal calibré ?&quot;</li>
+</ul>
+<hr>
+<h2>Anti-patterns — pièges fréquents</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Remède</th></tr></thead><tbody><tr><td>Estimation sous pression</td><td>&quot;On dit 6 semaines pour ne pas perdre le contrat&quot;</td><td>Présenter les trade-offs, jamais plier sur le réaliste</td></tr><tr><td>Paralysis by analysis</td><td>WBS de 200 tâches pour un MVP</td><td>Cap : max 3 niveaux de découpage</td></tr><tr><td>Padding caché</td><td>Buffer dissimulé dans chaque tâche</td><td>Buffer explicite et centralisé</td></tr><tr><td>Estimation individuelle sans revue</td><td>Un seul dev estime tout seul</td><td>Planning poker ou peer review obligatoire</td></tr><tr><td>Scope creep non tracé</td><td>&quot;On ajoute juste un petit truc&quot;</td><td>Toute story ajoutée = re-estimation + accord PM</td></tr><tr><td>Ignorer la dette technique</td><td>&quot;On l'ajoutera plus tard&quot;</td><td>Allouer 15-20 % de la vélocité au tech debt</td></tr><tr><td>Estimation en jours calendaires</td><td>Confondre 5j dev et 1 semaine</td><td>Toujours estimer en jours-personne, convertir ensuite</td></tr></tbody></table>
+<h2>Garde-fous</h2>
+<ul>
+<li><strong>Jamais</strong> d'estimation sur specs orales — exiger un brief écrit minimal</li>
+<li><strong>Jamais</strong> de date de livraison fixée avant l'étape 3 (décomposition complète)</li>
+<li>Si une tâche ne peut pas être décomposée → c'est un spike (time-boxé 1-2 jours) avant re-estimation</li>
+<li>Les estimations faites il y a &gt; 4 semaines sont périmées si le contexte a changé</li>
+<li>Un stakeholder qui &quot;accepte&quot; uniquement le scénario optimiste = risque projet → escalader</li>
+</ul>
+<h2>Références rapides</h2>
+<pre><code>Fibonacci story points : 1 2 3 5 8 13 21 (&gt; 13 = à redécouper)
+T-shirt → jours (calibration typique)
+  XS=0,5j  S=1-2j  M=3-5j  L=6-10j  XL=10-20j  XXL=spike requis
+
+Buffer minimal par technologie :
+  Stack maîtrisée         : +20 %
+  Stack partiellement new : +35 %
+  Stack inconnue          : +60 %
+  Refactoring legacy      : +50-80 %</code></pre>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

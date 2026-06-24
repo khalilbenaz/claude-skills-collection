@@ -96,24 +96,160 @@ cp -r claude-skills-collection/skills/dev-ml-model-deployer ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>ML Model Deployer</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Préparation du modèle</strong> — Sérialiser le modèle dans le format adapté (pickle, ONNX, SavedModel, TorchScript) ; créer la model card (performances, dataset d'entraînement, biais, limites) ; versionner le modèle avec ses métadonnées (hyperparamètres, métriques, hash du dataset).</li>
-<li><strong>Model registry</strong> — Enregistrer le modèle dans un registre centralisé : MLflow Model Registry (stages : Staging → Production), Weights &amp; Biases Artifacts, Azure ML Registry ou SageMaker Model Registry ; gérer les transitions de version et les approbations.</li>
-<li><strong>Serving infrastructure</strong> — Choisir l'infrastructure de serving selon le cas d'usage : REST API synchrone pour les requêtes temps réel, gRPC pour la haute performance, batch inference asynchrone pour les grands volumes, edge deployment (ONNX Runtime, TFLite) pour les appareils embarqués.</li>
-<li><strong>Containerisation</strong> — Construire une image Docker reproductible (base image légère, dépendances épinglées, model artifact intégré) ; gérer les dépendances avec <code>requirements.txt</code> ou conda ; publier sur un container registry (ECR, GCR, ACR) avec tagging sémantique.</li>
-<li><strong>Serving framework</strong> — Déployer via TF Serving (TensorFlow), TorchServe (PyTorch), Triton Inference Server (multi-framework, GPU), BentoML (packaging unifié) ou une API FastAPI/Flask custom avec gestion du batching et du concurrency.</li>
-<li><strong>Monitoring en production</strong> — Surveiller le data drift (distribution des features d'entrée vs référence), le model drift (dégradation des métriques de prédiction), la qualité des prédictions (si labels disponibles), et les métriques système (latence p99, throughput, taux d'erreur).</li>
-<li><strong>A/B testing et rollout</strong> — Implémenter un déploiement progressif : canary (5% → 20% → 100% du trafic), shadow mode (prédictions en parallèle sans impact utilisateur), feature flags pour activer/désactiver un modèle ; comparer les métriques métier entre versions.</li>
-<li><strong>CI/CD ML</strong> — Automatiser le cycle complet : training pipeline déclenché sur nouveau dataset, tests automatisés (performance minimale, tests de non-régression, fairness checks), validation gates avant promotion en production, retraining automatique sur drift détecté.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de décision — quelle stack choisir ?</h2>
+<table><thead><tr><th>Cas d'usage</th><th>Volume</th><th>Stack recommandée</th></tr></thead><tbody><tr><td>MVP / POC rapide</td><td>&lt; 100 req/s</td><td>FastAPI + Docker + MLflow</td></tr><tr><td>Real-time faible latence</td><td>100–10k req/s</td><td>BentoML ou TorchServe + K8s</td></tr><tr><td>Batch nuit/semaine</td><td>très grand</td><td>Spark ML / Airflow batch job</td></tr><tr><td>Multi-framework / GPU</td><td>élevé</td><td>NVIDIA Triton Inference Server</td></tr><tr><td>Edge / embarqué</td><td>N/A</td><td>ONNX Runtime / TFLite</td></tr><tr><td>Géré full-cloud</td><td>variable</td><td>SageMaker / Azure ML / Vertex AI</td></tr></tbody></table>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Préparer et sérialiser le modèle</h3>
+<p>Choisir le format selon le framework :</p>
+<pre><code class="lang-python"># scikit-learn → joblib (préféré à pickle)
+import joblib
+joblib.dump(model, &quot;model.joblib&quot;)
+
+# PyTorch → TorchScript (portable, pas besoin du code source)
+scripted = torch.jit.script(model)
+scripted.save(&quot;model.pt&quot;)
+
+# TensorFlow → SavedModel
+model.save(&quot;saved_model/&quot;)
+
+# Convertir en ONNX (interopérabilité max)
+import torch.onnx
+torch.onnx.export(model, dummy_input, &quot;model.onnx&quot;, opset_version=17)</code></pre>
+<p>Créer une <strong>model card</strong> minimale (YAML dans le registre) :</p>
+<pre><code class="lang-yaml">model_name: churn-predictor-v2
+framework: scikit-learn 1.4.2
+python: &quot;3.11&quot;
+metrics:
+  auc_roc: 0.887
+  precision: 0.81
+dataset_hash: sha256:abc123...
+trained_at: 2026-05-10
+known_limitations: &quot;Biais sous-représentation &lt; 25 ans&quot;</code></pre>
+<h3>2. Enregistrer dans le Model Registry</h3>
+<pre><code class="lang-bash"># MLflow — enregistrement depuis le training run
+mlflow models register \
+  --model-uri &quot;runs:/RUN_ID/model&quot; \
+  --name &quot;churn-predictor&quot;
+
+# Passer en Staging puis Production via API
+mlflow models transition-version-stage \
+  --name &quot;churn-predictor&quot; --version 3 --stage Production</code></pre>
+<p>Alternatives : W&amp;B Artifacts (<code>wandb.log_artifact</code>), Azure ML Registry (<code>az ml model create</code>), SageMaker (<code>create_model</code>).</p>
+<h3>3. Containeriser de façon reproductible</h3>
+<pre><code class="lang-dockerfile">FROM python:3.11-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY model.joblib .
+COPY app.py .
+
+# Health check obligatoire
+HEALTHCHECK --interval=30s --timeout=5s CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+CMD [&quot;uvicorn&quot;, &quot;app:app&quot;, &quot;--host&quot;, &quot;0.0.0.0&quot;, &quot;--port&quot;, &quot;8000&quot;]</code></pre>
+<pre><code class="lang-bash"># Tagging sémantique : image = version du modèle
+docker build -t myregistry/churn-predictor:v2.3.1 .
+docker push myregistry/churn-predictor:v2.3.1</code></pre>
+<h3>4. Exposer via FastAPI (serving custom)</h3>
+<pre><code class="lang-python">from fastapi import FastAPI
+from pydantic import BaseModel
+import joblib, numpy as np
+
+app = FastAPI()
+model = joblib.load(&quot;model.joblib&quot;)
+
+class PredictRequest(BaseModel):
+    features: list[float]
+
+@app.get(&quot;/health&quot;)
+def health(): return {&quot;status&quot;: &quot;ok&quot;}
+
+@app.post(&quot;/predict&quot;)
+def predict(req: PredictRequest):
+    arr = np.array(req.features).reshape(1, -1)
+    proba = model.predict_proba(arr)[0, 1]
+    return {&quot;churn_proba&quot;: round(float(proba), 4)}</code></pre>
+<p>Pour <strong>TorchServe</strong> ou <strong>Triton</strong>, exporter en TorchScript / ONNX puis déclarer le model config.</p>
+<h3>5. CI/CD ML — gates de qualité</h3>
+<pre><code class="lang-yaml"># .github/workflows/ml-deploy.yml (extrait)
+- name: Run model quality gate
+  run: |
+    python scripts/eval_gate.py \
+      --model model.joblib \
+      --min-auc 0.85 \
+      --max-latency-ms 120
+
+- name: Build &amp; push image
+  if: success()
+  run: |
+    docker build -t $IMAGE_TAG .
+    docker push $IMAGE_TAG
+
+- name: Deploy canary (5%)
+  run: kubectl set image deployment/churn-api churn-api=$IMAGE_TAG</code></pre>
+<p>Gate minimal : AUC/F1 ≥ baseline − 1 %, latence p99 &lt; seuil, fairness check sur sous-groupes sensibles.</p>
+<h3>6. Déploiement progressif (canary / shadow)</h3>
+<pre><code class="lang-bash"># Canary K8s — 5 % du trafic sur la nouvelle version
+kubectl apply -f - &lt;&lt;EOF
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+spec:
+  http:
+  - route:
+    - destination: {host: churn-api, subset: v2}
+      weight: 5
+    - destination: {host: churn-api, subset: v1}
+      weight: 95
+EOF</code></pre>
+<p><strong>Shadow mode</strong> : dupliquer le trafic vers le nouveau modèle sans retourner sa réponse aux clients — idéal pour valider avant tout impact.</p>
+<h3>7. Monitoring en production</h3>
+<p>Métriques à surveiller :</p>
+<table><thead><tr><th>Métrique</th><th>Outil</th><th>Alerte si</th></tr></thead><tbody><tr><td>Data drift (features)</td><td>Evidently, NannyML</td><td>PSI &gt; 0.2 ou KL-div &gt; 0.1</td></tr><tr><td>Model drift (labels)</td><td>NannyML, Arize</td><td>accuracy &lt; baseline − 3 %</td></tr><tr><td>Latence p99</td><td>Prometheus + Grafana</td><td>&gt; 200 ms</td></tr><tr><td>Taux d'erreur</td><td>Prometheus</td><td>&gt; 1 % sur 5 min</td></tr></tbody></table>
+<pre><code class="lang-python"># Evidently — rapport drift hebdomadaire
+from evidently.report import Report
+from evidently.metric_preset import DataDriftPreset
+
+report = Report(metrics=[DataDriftPreset()])
+report.run(reference_data=ref_df, current_data=prod_df)
+report.save_html(&quot;drift_report.html&quot;)</code></pre>
+<h3>8. Rollback automatique</h3>
+<pre><code class="lang-python"># Pseudo-code — watcher de métriques
+if current_auc &lt; baseline_auc * 0.97:
+    mlflow.models.transition_version_stage(
+        name=&quot;churn-predictor&quot;,
+        version=current_version,
+        stage=&quot;Archived&quot;
+    )
+    mlflow.models.transition_version_stage(
+        name=&quot;churn-predictor&quot;,
+        version=previous_version,
+        stage=&quot;Production&quot;
+    )
+    alert(&quot;Rollback automatique déclenché — v{} → v{}&quot;.format(
+        current_version, previous_version))</code></pre>
+<hr>
+<h2>Anti-patterns / pièges</h2>
 <ul>
-<li>Fournis des exemples concrets de code Python (FastAPI endpoint, MLflow tracking, Dockerfile) adaptés au framework de l'utilisateur.</li>
-<li>Ne déploie jamais sans monitoring : chaque modèle en production doit avoir au minimum un suivi de data drift et de latence.</li>
-<li>Priorise la reproductibilité : le modèle, ses dépendances et ses données d'évaluation doivent être versionnés ensemble.</li>
-<li>Intègre des rollback automatiques en cas de dégradation de métriques clés (ex. : latence &gt; seuil, accuracy &lt; baseline).</li>
-<li>Adapte la complexité MLOps au contexte : un MVP peut se déployer avec FastAPI + Docker avant d'investir dans Kubeflow ou SageMaker Pipelines.</li>
+<li><strong>Pickle sans version</strong> : un modèle pickle ne se recharge pas si la version scikit-learn change. Toujours épingler la version dans <code>requirements.txt</code> et préférer <code>joblib</code> ou ONNX.</li>
+<li><strong>Pas de health check</strong> : un pod K8s sans <code>/health</code> peut router du trafic vers une instance cassée pendant des minutes.</li>
+<li><strong>Monitoring absent au lancement</strong> : le data drift peut dégrader silencieusement le modèle pendant des semaines. Instrumenter <em>avant</em> le go-live.</li>
+<li><strong>Feature store absent</strong> : différence entre features d'entraînement et features runtime (training-serving skew) = première cause de régression en production.</li>
+<li><strong>Over-engineering dès le MVP</strong> : ne pas déployer Kubeflow + Feast + Seldon dès le premier modèle. Partir de FastAPI + MLflow, migrer quand le besoin est prouvé.</li>
+<li><strong>Pas de reproductibilité du dataset</strong> : versionner le hash du dataset d'évaluation avec le modèle pour pouvoir rejouer les métriques à tout moment.</li>
+<li><strong>Retraining sans gate</strong> : un retraining automatique sur données driftées sans quality gate peut dégrader le modèle en production en boucle.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>ONNX comme format pivot</strong> entre frameworks (PyTorch → ONNX → TensorRT pour GPU).</li>
+<li><strong>Model cards standardisées</strong> (Hugging Face format) pour auditabilité et conformité IA Act.</li>
+<li><strong>Feature store</strong> (Feast, Tecton, Redis) pour éviter le training-serving skew dès que plusieurs modèles partagent des features.</li>
+<li><strong>Quantization</strong> (INT8 / FP16) pour réduire la latence et les coûts GPU sans perte significative de qualité.</li>
+<li><strong>LLM serving</strong> : vLLM ou TGI (Text Generation Inference) pour les modèles de langage ; ne pas utiliser un endpoint FastAPI naïf pour des LLM (pas de batching continu).</li>
 </ul>
 </article>
 </main>

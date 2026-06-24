@@ -97,23 +97,167 @@ cp -r claude-skills-collection/skills/iot-edge-computing-designer ~/.claude/skil
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Edge Computing Designer</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Évaluation des besoins</strong> — Analyser les contraintes de latence, bande passante, volume de données et disponibilité réseau pour déterminer ce qui doit être traité en edge vs cloud</li>
-<li><strong>Architecture edge-cloud</strong> — Concevoir la répartition des traitements entre les appareils edge, les passerelles intermédiaires (fog) et le cloud central</li>
-<li><strong>Sélection du matériel edge</strong> — Choisir les dispositifs adaptés (Jetson Nano, Coral, passerelles industrielles) selon les besoins en calcul, mémoire et connectivité</li>
-<li><strong>Conception offline-first</strong> — Implémenter la logique de stockage local, les files d'attente de messages et la gestion des conflits pour fonctionner sans connexion</li>
-<li><strong>Synchronisation des données</strong> — Mettre en place les mécanismes de synchronisation bidirectionnelle avec le cloud (delta sync, compression, priorisation des données critiques)</li>
-<li><strong>Déploiement des modèles</strong> — Optimiser et déployer les modèles d'IA/ML en edge (quantification, pruning, TensorFlow Lite, ONNX Runtime) pour l'inférence locale</li>
-<li><strong>Orchestration et mise à jour</strong> — Configurer le déploiement à distance des mises à jour logicielles (OTA), le rollback automatique et la gestion de flotte</li>
-<li><strong>Résilience et monitoring</strong> — Implémenter la supervision distribuée, les mécanismes de failover local et les alertes de santé des nœuds edge</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Évaluation des contraintes</h3>
+<p>Avant toute architecture, répondre à ces questions :</p>
+<table><thead><tr><th>Critère</th><th>Edge obligatoire si…</th></tr></thead><tbody><tr><td>Latence</td><td>&lt; 50 ms requis pour l'action locale</td></tr><tr><td>Bande passante</td><td>&gt; 10 MB/s de données brutes en continu</td></tr><tr><td>Disponibilité réseau</td><td>Coupures &gt; 1 h/jour ou sites isolés</td></tr><tr><td>Conformité</td><td>Données ne peuvent pas quitter le site (RGPD, données industrielles)</td></tr><tr><td>Coût cloud</td><td>Traitement brut trop coûteux à envoyer (vidéo HD, capteurs HF)</td></tr></tbody></table>
+<h3>2. Découpage edge / fog / cloud</h3>
+<pre><code>[Capteurs] → [Edge node] → [Fog gateway] → [Cloud]
+               ↓ inférence       ↓ agrégation    ↓ analytics
+               ↓ filtrage        ↓ buffer         ↓ modèles ML
+               local &lt; 10 ms     local &lt; 500 ms   batch</code></pre>
 <ul>
-<li>Concevoir toujours en mode offline-first : le système doit fonctionner de manière autonome même sans connexion au cloud</li>
-<li>Minimiser les données envoyées au cloud en appliquant le filtrage, l'agrégation et la compression directement en edge</li>
-<li>Prévoir des mécanismes de rollback automatique pour toute mise à jour OTA afin d'éviter de bricker les appareils distants</li>
-<li>Sécuriser chaque nœud edge individuellement (chiffrement local, authentification mutuelle, boot sécurisé)</li>
-<li>Documenter clairement la répartition des responsabilités entre edge et cloud avec les critères de décision associés</li>
+<li><strong>Edge node</strong> : Raspberry Pi 5, NVIDIA Jetson Orin, Coral Dev Board, PLC industriel</li>
+<li><strong>Fog gateway</strong> : x86 mini-PC, routeur industriel (Moxa, Advantech)</li>
+<li><strong>Cloud</strong> : AWS Greengrass hub, Azure IoT Hub, GCP Cloud IoT (ou on-prem)</li>
+</ul>
+<p><strong>Règle d'affectation</strong> : si la décision doit se prendre en &lt; 100 ms ou si la donnée n'a pas de valeur au-delà du site, elle reste en edge. Tout le reste monte au cloud.</p>
+<h3>3. Sélection matérielle</h3>
+<pre><code>Charge de calcul faible  → Raspberry Pi 5 (8 Go) + Coral USB Accelerator
+Vision par ordinateur    → NVIDIA Jetson Orin NX (16 Go, 100 TOPS)
+Industrie / -40°C/+85°C → Advantech MIC-720AI ou Moxa V2406C
+Ultra-faible conso       → ESP32-S3 (inférence ML embarquée, ~240 MHz)</code></pre>
+<p>Checklist matérielle :</p>
+<ul>
+<li>[ ] Température opérationnelle compatible avec le site</li>
+<li>[ ] Stockage suffisant pour le buffer offline (min. 24 h de données)</li>
+<li>[ ] Watchdog hardware pour redémarrage automatique</li>
+<li>[ ] Interface réseau redondante (LTE + Ethernet)</li>
+</ul>
+<h3>4. Architecture offline-first</h3>
+<p>Toute application edge doit persister localement avant d'envoyer au cloud.</p>
+<p><strong>Pattern Store-and-Forward avec SQLite :</strong></p>
+<pre><code class="lang-python">import sqlite3, time, requests
+
+DB = &quot;/data/edge.db&quot;
+
+def init_db():
+    with sqlite3.connect(DB) as cx:
+        cx.execute(&quot;&quot;&quot;
+            CREATE TABLE IF NOT EXISTS queue (
+                id INTEGER PRIMARY KEY,
+                payload TEXT,
+                created_at REAL,
+                sent INTEGER DEFAULT 0
+            )
+        &quot;&quot;&quot;)
+
+def enqueue(payload: str):
+    with sqlite3.connect(DB) as cx:
+        cx.execute(&quot;INSERT INTO queue (payload, created_at) VALUES (?,?)&quot;,
+                   (payload, time.time()))
+
+def flush_to_cloud(endpoint: str):
+    with sqlite3.connect(DB) as cx:
+        rows = cx.execute(
+            &quot;SELECT id, payload FROM queue WHERE sent=0 ORDER BY id LIMIT 100&quot;
+        ).fetchall()
+        if not rows:
+            return
+        ids = [r[0] for r in rows]
+        batch = [r[1] for r in rows]
+        try:
+            requests.post(endpoint, json=batch, timeout=10)
+            cx.execute(f&quot;UPDATE queue SET sent=1 WHERE id IN ({','.join('?'*len(ids))})&quot;, ids)
+        except Exception:
+            pass  # retry au prochain cycle</code></pre>
+<p><strong>Gestion des conflits</strong> : utiliser des timestamps logiques (Lamport clock) ou des CRDTs pour les données métriques. Pour les commandes, FIFO strict + idempotency key.</p>
+<h3>5. Synchronisation cloud</h3>
+<pre><code class="lang-bash"># MQTT avec rétention locale — Eclipse Mosquitto + store-and-forward
+mosquitto.conf :
+  persistence true
+  persistence_location /var/lib/mosquitto/
+  queue_qos0_messages true
+  max_queued_messages 10000
+
+# Publier avec QoS 1 (at-least-once) pour garantie de livraison
+mosquitto_pub -h broker -t &quot;site/sensor/temp&quot; -m '{&quot;v&quot;:42.1}' -q 1</code></pre>
+<p>Delta sync : n'envoyer que les changements significatifs (dead-band filtering).</p>
+<pre><code class="lang-python">DEAD_BAND = 0.5  # °C
+
+last_sent = None
+def should_send(value):
+    global last_sent
+    if last_sent is None or abs(value - last_sent) &gt;= DEAD_BAND:
+        last_sent = value
+        return True
+    return False</code></pre>
+<h3>6. Déploiement de modèles ML en edge</h3>
+<pre><code class="lang-bash"># Convertir un modèle PyTorch → TFLite optimisé
+python -c &quot;
+import torch, torch.onnx
+model.eval()
+torch.onnx.export(model, dummy_input, 'model.onnx', opset_version=17)
+&quot;
+
+# Quantiser en INT8 pour Coral / Jetson
+tflite_convert \
+  --saved_model_dir=./saved_model \
+  --output_file=model_quant.tflite \
+  --optimizations=DEFAULT \
+  --inference_input_type=INT8 \
+  --inference_output_type=INT8
+
+# Inférence ONNX Runtime (edge x86/ARM)
+import onnxruntime as ort
+sess = ort.InferenceSession(&quot;model.onnx&quot;, providers=[&quot;CPUExecutionProvider&quot;])
+result = sess.run(None, {&quot;input&quot;: data})</code></pre>
+<p>Cible : modèle &lt; 5 MB, inférence &lt; 20 ms sur CPU ARM Cortex-A55.</p>
+<h3>7. OTA et orchestration de flotte</h3>
+<pre><code class="lang-bash"># Mender.io — déploiement OTA signé avec rollback automatique
+mender-artifact write rootfs-image \
+  --device-type raspberry-pi-5 \
+  --artifact-name firmware-2.4.1 \
+  --file rootfs.img \
+  --output-path firmware-2.4.1.mender
+
+# Vérification d'intégrité post-déploiement (health check)
+mender install firmware-2.4.1.mender &amp;&amp; mender commit || mender rollback</code></pre>
+<p>Alternatives : Balena Fleet (containers), AWS Greengrass v2, Azure IoT Edge modules.</p>
+<p><strong>Règle OTA</strong> : déployer en canary (5 % de la flotte → 48 h de monitoring → 100 %). Ne jamais mettre à jour bootloader et application en même artefact.</p>
+<h3>8. Sécurité edge</h3>
+<pre><code class="lang-bash"># Boot sécurisé Raspberry Pi (config.txt)
+program_usb_boot_mode=0
+# + HAT TPM2.0 pour stockage de clés
+
+# Chiffrement partition données
+cryptsetup luksFormat /dev/mmcblk0p3
+cryptsetup open /dev/mmcblk0p3 data_enc
+mkfs.ext4 /dev/mapper/data_enc
+
+# mTLS entre edge et cloud (certificats x.509)
+mosquitto_pub --cafile ca.crt --cert edge.crt --key edge.key \
+  -h broker -p 8883 -t &quot;data&quot; -m &quot;payload&quot;</code></pre>
+<p>Checklist sécurité :</p>
+<ul>
+<li>[ ] Certificats uniques par appareil (pas de clé partagée)</li>
+<li>[ ] Rotation des certificats automatisée (&lt; 1 an)</li>
+<li>[ ] Firewall local : seuls ports MQTT (8883) et SSH (via bastion) ouverts</li>
+<li>[ ] Logs tamper-evident (append-only, hash chaîné)</li>
+</ul>
+<h3>9. Monitoring distribué</h3>
+<pre><code class="lang-yaml"># Prometheus Node Exporter sur chaque edge node
+# prometheus.yml (scrape depuis fog gateway)
+scrape_configs:
+  - job_name: 'edge_nodes'
+    static_configs:
+      - targets: ['192.168.1.10:9100', '192.168.1.11:9100']
+    scrape_interval: 30s
+
+# Alerte Grafana : nœud silencieux depuis &gt; 5 min
+alert: EdgeNodeDown
+expr: up{job=&quot;edge_nodes&quot;} == 0
+for: 5m</code></pre>
+<p>Métriques indispensables : CPU/mémoire/température, taille de la queue locale, latence d'inférence, dernière synchronisation réussie.</p>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correctif</th></tr></thead><tbody><tr><td>Tout envoyer au cloud brut</td><td>Saturation bande passante, coût x10</td><td>Dead-band filtering + agrégation locale</td></tr><tr><td>Pas de buffer offline</td><td>Perte de données à la moindre coupure</td><td>Store-and-forward systématique</td></tr><tr><td>Mise à jour sans rollback</td><td>Flotte brickée à distance</td><td>Mender/Balena avec commit/rollback</td></tr><tr><td>Certificat partagé entre nodes</td><td>Compromission = toute la flotte</td><td>Un certificat x.509 par appareil</td></tr><tr><td>Modèle ML non quantisé</td><td>Inférence &gt; 500 ms, impossible temps-réel</td><td>TFLite INT8 ou ONNX avec optimisations</td></tr><tr><td>Logs en mémoire seule</td><td>Perte au reboot, diagnostic impossible</td><td>Écriture sur stockage persistant</td></tr><tr><td>NTP absent sur edge</td><td>Timestamps incohérents, conflits de sync</td><td><code>chrony</code> ou PTP obligatoire sur chaque node</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>WebAssembly en edge</strong> : WASM + WASI pour déployer du code portable sur n'importe quel runtime edge (Wasmtime, WasmEdge) — isolation sandbox sans conteneur lourd.</li>
+<li><strong>tinyML</strong> : modèles &lt; 256 KB pour microcontrôleurs (TensorFlow Micro, Edge Impulse) — inférence sur ESP32 sans OS.</li>
+<li><strong>Matter / Thread</strong> : protocole standard pour la couche réseau IoT locale (2026) — préférer à Zigbee propriétaire pour l'interopérabilité.</li>
+<li><strong>Edge AI lifecycle</strong> : versionner les modèles edge comme du code (DVC + MLflow) et tracer chaque version déployée par appareil.</li>
+<li><strong>eBPF sur gateway Linux</strong> : filtrage de paquets et observabilité réseau sans overhead kernel pour les passerelles Fog.</li>
 </ul>
 </article>
 </main>

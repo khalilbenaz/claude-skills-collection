@@ -96,14 +96,29 @@ cp -r claude-skills-collection/skills/writing-changelog-writer ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Rédacteur de Changelog</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Collecter</strong> : analyser les commits depuis la dernière release.</li>
-<li><strong>Catégoriser</strong> : grouper par type (ajout, correction, suppression, etc.).</li>
-<li><strong>Rédiger</strong> : descriptions orientées utilisateur, pas développeur.</li>
-<li><strong>Formater</strong> : suivre le standard Keep a Changelog.</li>
-</ol>
-<h2>Format Keep a Changelog</h2>
+<h2>Workflow en 5 étapes</h2>
+<h3>1. Récupérer les commits depuis le dernier tag</h3>
+<pre><code class="lang-bash"># Dernier tag automatique
+LAST_TAG=$(git describe --tags --abbrev=0)
+
+# Commits en format structuré
+git log $LAST_TAG..HEAD --pretty=format:&quot;%h %s&quot; --no-merges
+
+# Filtrer les types pertinents (Conventional Commits)
+git log $LAST_TAG..HEAD --pretty=format:&quot;%s&quot; --no-merges \
+  | grep -E &quot;^(feat|fix|perf|refactor|security)(\(.+\))?!?:&quot;</code></pre>
+<p>Si pas de tag : <code>git log --oneline</code> ou demander la plage de commits (<code>v2.3.0..v2.4.0</code>).</p>
+<h3>2. Filtrer — quoi inclure / exclure</h3>
+<table><thead><tr><th>Type commit</th><th>Action</th></tr></thead><tbody><tr><td><code>feat:</code></td><td>Inclure → <strong>Ajouté</strong></td></tr><tr><td><code>fix:</code></td><td>Inclure → <strong>Corrigé</strong></td></tr><tr><td><code>perf:</code>, <code>refactor:</code> avec impact utilisateur</td><td>Inclure → <strong>Modifié</strong></td></tr><tr><td><code>feat!:</code> ou <code>BREAKING CHANGE:</code></td><td>Inclure → <strong>Modifié</strong> avec mention <code>⚠ BREAKING</code></td></tr><tr><td><code>security:</code> ou CVE dans message</td><td>Inclure → <strong>Sécurité</strong></td></tr><tr><td><code>chore:</code>, <code>style:</code>, <code>test:</code>, <code>ci:</code>, <code>docs:</code></td><td><strong>Ignorer</strong> sauf exception explicite</td></tr><tr><td>Merges, bumps de version</td><td><strong>Ignorer</strong></td></tr></tbody></table>
+<h3>3. Réécrire en langage utilisateur</h3>
+<p>Les messages de commit sont écrits pour les développeurs ; le changelog est lu par les utilisateurs, les ops, les intégrateurs.</p>
+<pre><code># Commit brut
+fix(payment): null pointer when currency is missing in payload
+
+# Entrée changelog
+- Correction d'un crash lors du traitement d'un paiement sans devise (#312)</code></pre>
+<p>Règle : <strong>une entrée = un bénéfice ou un risque concret</strong>, pas un détail d'implémentation.</p>
+<h3>4. Formater selon Keep a Changelog</h3>
 <pre><code class="lang-markdown"># Changelog
 
 Tous les changements notables de ce projet sont documentés dans ce fichier.
@@ -118,14 +133,18 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - Export CSV des rapports mensuels (#241)
 
 ### Modifié
-- Amélioration du temps de réponse de l'API de paiement (de 800ms à 200ms)
+- ⚠ BREAKING: renommage du champ `amount_cents` → `amount` (entier en centimes) — adapter les intégrateurs avant migration
+- Amélioration du temps de réponse API paiement : 800 ms → 200 ms
 
 ### Corrigé
-- Correction du calcul des frais pour les devises non-EUR (#238)
-- Résolution du timeout sur les webhooks de notification (#240)
+- Crash lors d'un paiement sans devise renseignée (#312)
+- Timeout sur les webhooks de notification (#240)
 
 ### Supprimé
-- Retrait de l'ancien endpoint `/v1/legacy-payments` (déprécié depuis v2.1)
+- Endpoint `/v1/legacy-payments` retiré (déprécié depuis v2.1)
+
+### Sécurité
+- Mise à jour `auth-lib` 3.2.1 → 3.4.0 (corrige CVE-2025-1234, score CVSS 8.1)
 
 ## [2.3.0] - 2025-12-15
 
@@ -133,51 +152,73 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 - Support du paiement en GBP
 - Authentification par API key pour les partenaires
 
-### Sécurité
-- Mise à jour de la dépendance `auth-lib` pour corriger CVE-2025-1234
-
 ## [2.2.1] - 2025-11-28
 
 ### Corrigé
-- Fix du double débit sur les paiements récurrents (#229)</code></pre>
-<h2>Catégories standard</h2>
-<table><thead><tr><th>Catégorie</th><th>Conventional Commit</th><th>Contenu</th></tr></thead><tbody><tr><td><strong>Ajouté</strong></td><td><code>feat:</code></td><td>Nouvelles fonctionnalités</td></tr><tr><td><strong>Modifié</strong></td><td><code>refactor:</code>, <code>perf:</code></td><td>Changements de fonctionnalités existantes</td></tr><tr><td><strong>Déprécié</strong></td><td>—</td><td>Fonctionnalités bientôt supprimées</td></tr><tr><td><strong>Supprimé</strong></td><td>—</td><td>Fonctionnalités supprimées</td></tr><tr><td><strong>Corrigé</strong></td><td><code>fix:</code></td><td>Corrections de bugs</td></tr><tr><td><strong>Sécurité</strong></td><td><code>security:</code></td><td>Corrections de vulnérabilités</td></tr></tbody></table>
-<h2>Depuis les Conventional Commits</h2>
-<h3>Mapping automatique</h3>
-<pre><code>feat: add GBP support              → Ajouté: Support du paiement en GBP
-fix: double charge on recurring    → Corrigé: Fix du double débit récurrent
-perf: optimize payment query       → Modifié: Optimisation requête paiement
-feat!: new auth system             → Modifié (BREAKING): Nouveau système d'auth
-chore: update dependencies         → (ignoré ou Sécurité si CVE)
-docs: update API reference         → (ignoré dans le changelog)</code></pre>
-<h3>Script de génération</h3>
-<pre><code class="lang-bash"># Commits depuis le dernier tag
-git log $(git describe --tags --abbrev=0)..HEAD --oneline --format=&quot;%s&quot;
+- Double débit sur les paiements récurrents (#229)
 
-# Avec conventional commits
-git log v2.2.1..HEAD --oneline | grep -E &quot;^(feat|fix|perf|refactor)(\(.+\))?!?:&quot;</code></pre>
-<h2>Bonnes pratiques de rédaction</h2>
-<h3>À faire</h3>
+[Unreleased]: https://github.com/acme/app/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/acme/app/compare/v2.2.1...v2.3.0
+[2.2.1]: https://github.com/acme/app/releases/tag/v2.2.1</code></pre>
+<h3>5. Intégrer dans CHANGELOG.md</h3>
+<pre><code class="lang-bash"># Ouvrir le fichier existant et insérer la nouvelle section sous ## [Unreleased]
+# ou transformer [Unreleased] en [X.Y.Z] - YYYY-MM-DD lors du release
+sed -i 's/## \[Unreleased\]/## [Unreleased]\n\n## [2.4.0] - '&quot;$(date +%Y-%m-%d)&quot;'/' CHANGELOG.md</code></pre>
+<h2>Critères de décision — quel format utiliser ?</h2>
+<table><thead><tr><th>Contexte</th><th>Format recommandé</th></tr></thead><tbody><tr><td>Projet open source / librairie</td><td>Keep a Changelog strict + liens de comparaison</td></tr><tr><td>API interne / microservice</td><td>Keep a Changelog allégé, accent sur breaking changes</td></tr><tr><td>Release notes produit (end-users)</td><td>Langage non-technique, regrouper par fonctionnalité</td></tr><tr><td>Monorepo multi-packages</td><td>Un CHANGELOG par package + CHANGELOG racine pour les releases globales</td></tr><tr><td>JIRA / Azure DevOps</td><td>Inclure les IDs de tickets (<code>(WFC-4512)</code>) dans chaque entrée</td></tr></tbody></table>
+<h2>Génération semi-automatique avec git-cliff (2026)</h2>
+<pre><code class="lang-bash"># Installer
+cargo install git-cliff
+# ou : brew install git-cliff / pip install git-cliff
+
+# Générer depuis la dernière version
+git cliff --latest -o CHANGELOG.md
+
+# Générer une plage précise
+git cliff v2.2.1..v2.3.0 -o CHANGELOG.md
+
+# Prévisualiser sans écrire
+git cliff --unreleased</code></pre>
+<p>Configuration <code>cliff.toml</code> minimale pour Conventional Commits :</p>
+<pre><code class="lang-toml">[changelog]
+header = &quot;# Changelog\n\n&quot;
+body = &quot;&quot;&quot;
+{% for group, commits in commits | group_by(attribute=&quot;group&quot;) %}
+### {{ group | upper_first }}
+{% for commit in commits %}
+- {{ commit.message }} ({{ commit.id | truncate(length=7, end=&quot;&quot;) }})
+{% endfor %}
+{% endfor %}
+&quot;&quot;&quot;
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+commit_parsers = [
+  { message = &quot;^feat&quot;, group = &quot;Ajouté&quot; },
+  { message = &quot;^fix&quot;, group = &quot;Corrigé&quot; },
+  { message = &quot;^perf|^refactor&quot;, group = &quot;Modifié&quot; },
+  { message = &quot;^security&quot;, group = &quot;Sécurité&quot; },
+  { message = &quot;^chore|^docs|^style|^test|^ci&quot;, skip = true },
+]</code></pre>
+<h2>Anti-patterns — ce qui dégrade un changelog</h2>
 <ul>
-<li>Écrire pour les <strong>utilisateurs</strong>, pas les développeurs</li>
-<li>Inclure les <strong>numéros de tickets/issues</strong> (#123)</li>
-<li>Utiliser des <strong>verbes d'action</strong> (Ajout de, Correction de, Suppression de)</li>
-<li>Documenter les <strong>breaking changes</strong> clairement</li>
-<li>Dater chaque release au format ISO (YYYY-MM-DD)</li>
+<li><strong>Copier les messages de commit bruts</strong> : incompréhensibles hors contexte développeur.</li>
+<li><strong>Entrées trop vagues</strong> : &quot;diverses corrections de bugs&quot;, &quot;améliorations de performance&quot; → toujours donner le détail.</li>
+<li><strong>Oublier les breaking changes</strong> ou les noyer dans les autres catégories : les placer en tête de section <strong>Modifié</strong> avec le préfixe <code>⚠ BREAKING</code>.</li>
+<li><strong>Ne pas dater les releases</strong> : indispensable pour tracer un incident ou un audit.</li>
+<li><strong>Supprimer <code>[Unreleased]</code></strong> : doit toujours exister pour accumuler le travail en cours.</li>
+<li><strong>Mélanger des corrections de sécurité avec des bugs ordinaires</strong> : la catégorie <strong>Sécurité</strong> est séparée pour permettre un filtrage rapide.</li>
+<li><strong>Ignorer les CVE dans les dépendances</strong> : une mise à jour de librairie corrigeant un CVE DOIT apparaître dans <strong>Sécurité</strong>.</li>
+<li><strong>Changelog généré uniquement à la release</strong> : tenir <code>[Unreleased]</code> à jour en continu, entrée par entrée, facilite la rédaction finale.</li>
 </ul>
-<h3>À éviter</h3>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Copier les messages de commit tels quels</li>
-<li>Inclure les commits de type <code>chore</code>, <code>style</code>, <code>test</code></li>
-<li>Des entrées trop vagues (&quot;diverses corrections&quot;)</li>
-<li>Oublier la section <code>[Unreleased]</code> pour le travail en cours</li>
-</ul>
-<h2>Règles</h2>
-<ul>
-<li>Le changelog est un document pour les <strong>utilisateurs</strong>, pas un miroir du <code>git log</code>.</li>
-<li>Chaque release doit être <strong>datée</strong> et <strong>versionnée</strong> (semver).</li>
-<li>Les breaking changes doivent être signalés <strong>explicitement</strong>.</li>
-<li>La section <code>[Unreleased]</code> doit toujours exister en haut du fichier.</li>
+<li>Utiliser les <strong>liens de comparaison</strong> en bas du fichier (<code>[2.3.0]: https://github.com/...</code>) pour navigation rapide.</li>
+<li>Pour les <strong>monorepos</strong> : envisager <a href="https://github.com/changesets/changesets" target="_blank" rel="noopener">changesets</a> ou <a href="https://nx.dev/features/manage-releases" target="_blank" rel="noopener">nx release</a> qui génèrent les changelogs par package.</li>
+<li>Les <strong>tickets</strong> (#123, WFC-4512) doivent pointer vers le tracker — privilégier l'URL complète si le fichier est lu hors du contexte GitHub/ADO.</li>
+<li>En CI : valider automatiquement que <code>[Unreleased]</code> n'est pas vide avant un merge sur <code>main</code> (<code>git cliff --unreleased | grep -q '.'</code>).</li>
 </ul>
 </article>
 </main>

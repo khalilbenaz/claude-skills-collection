@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>health-allergy-reaction-log — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Suit les réactions allergiques ou suspectées, identifie les déclencheurs et prépare un dossier pour l'allergologue.">
+<meta name="description" content="Suit les réactions allergiques ou suspectées, identifie les déclencheurs et prépare un dossier structuré pour l'allergologue.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🩺 Santé</span>
 <h1 class="skill-title">health-allergy-reaction-log</h1>
-<p class="lead">Suit les réactions allergiques ou suspectées, identifie les déclencheurs et prépare un dossier pour l'allergologue.</p>
+<p class="lead">Suit les réactions allergiques ou suspectées, identifie les déclencheurs et prépare un dossier structuré pour l'allergologue.</p>
 
 
 
@@ -96,50 +96,94 @@ cp -r claude-skills-collection/skills/health-allergy-reaction-log ~/.claude/skil
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Allergy Reaction Log</h1>
-<p>Quand l'utilisateur décrit des réactions allergiques ou suspectées, suis ce workflow.</p>
-<h2>Étape 1 — Description de la réaction</h2>
-<p>Pour chaque épisode, identifie :</p>
+<p>Aide l'utilisateur à documenter rigoureusement ses réactions suspectes afin de dégager des patterns et de préparer une consultation allergologique productive.</p>
+<blockquote><strong>Important</strong> : Ce journal est un outil d'observation, pas un outil de diagnostic. Seul un allergologue peut confirmer une allergie via des tests adaptés (prick-test, patch-test, IgE spécifiques). En cas de réaction sévère, composez le 15 (SAMU) ou le 18 (pompiers) immédiatement.</blockquote>
+<hr>
+<h2>Étape 1 — Triage d'urgence immédiat</h2>
+<p>Avant tout, vérifie si la réaction est en cours ou récente :</p>
 <ul>
-<li><strong>Date et heure</strong> de la réaction</li>
-<li><strong>Symptômes</strong> précis (cutanés, respiratoires, digestifs, généraux)</li>
-<li><strong>Intensité</strong> (légère / modérée / sévère)</li>
-<li><strong>Durée</strong> de la réaction</li>
-<li><strong>Évolution</strong> (amélioration spontanée, aggravation, traitement nécessaire)</li>
+<li><strong>Signes d'anaphylaxie</strong> (urgence vitale) : gonflement de la bouche / gorge / langue, difficulté à avaler ou à respirer, hypotension, malaise, perte de connaissance, association peau + respiration + circulation.</li>
+<li><strong>Conduite à tenir</strong> : si l'un de ces signes est présent → interrompre l'entretien, indiquer d'appeler le <strong>15</strong> (SAMU) ou le <strong>112</strong>, utiliser un auto-injecteur d'adrénaline (ex. EpiPen) si prescrit.</li>
 </ul>
-<h2>Étape 2 — Exposition suspectée</h2>
-<p>Identifie ce à quoi l'utilisateur a été exposé avant la réaction :</p>
+<p>Ne passe à l'étape suivante que si la situation n'est pas une urgence active.</p>
+<hr>
+<h2>Étape 2 — Collecte de l'épisode</h2>
+<p>Pour chaque réaction, recueille les informations suivantes (pose les questions une par une, pas en rafale) :</p>
+<h3>2a — La réaction elle-même</h3>
+<table><thead><tr><th>Champ</th><th>Ce qu'il faut préciser</th></tr></thead><tbody><tr><td>Date et heure</td><td>ex. « jeudi 19 juin 2026 vers 14h30 »</td></tr><tr><td>Symptômes</td><td>localisation exacte (dos, paupières, lèvres…), nature (rougeur / plaques / gonflement / démangeaison / essoufflement / vomissements…)</td></tr><tr><td>Intensité</td><td>légère (gêne), modérée (perturbation des activités), sévère (recours aux secours)</td></tr><tr><td>Durée</td><td>minutes, heures, jours</td></tr><tr><td>Évolution</td><td>résolution spontanée / aggravation progressive / amélioration après traitement</td></tr><tr><td>Traitement pris</td><td>antihistaminique, cortisone, adrénaline, rien — préciser dose et heure</td></tr></tbody></table>
+<h3>2b — L'exposition suspectée</h3>
 <ul>
-<li><strong>Aliments</strong> (détailler les ingrédients si possible)</li>
-<li><strong>Médicaments</strong></li>
-<li><strong>Environnement</strong> (pollen, poussière, animaux, produits chimiques…)</li>
-<li><strong>Contact cutané</strong> (cosmétiques, bijoux, tissus…)</li>
-<li><strong>Piqûres</strong> (insectes)</li>
-<li><strong>Délai</strong> entre exposition et réaction</li>
+<li><strong>Aliments</strong> : tout ce qui a été consommé dans les 4 heures précédentes (lister les ingrédients si possible, y compris sauces et additifs).</li>
+<li><strong>Médicaments / compléments</strong> : nom, dose, heure de prise.</li>
+<li><strong>Environnement</strong> : lieu (extérieur, pelouse, appartement avec chat…), activité physique juste avant, saison, taux de pollens si connu.</li>
+<li><strong>Contact cutané</strong> : cosmétique neuf, bijou (métal), tissu synthétique, latex.</li>
+<li><strong>Piqûre / morsure</strong> : insecte identifié ?</li>
+<li><strong>Délai exposition → réaction</strong> : immédiat (&lt; 1 h) ou retardé (1–72 h) — info cruciale pour orienter le bilan.</li>
 </ul>
-<h2>Étape 3 — Historique</h2>
+<hr>
+<h2>Étape 3 — Contexte personnel</h2>
 <ul>
-<li>Première fois ou récurrence ?</li>
-<li>Allergies connues et diagnostiquées ?</li>
-<li>Antécédents familiaux d'allergie ?</li>
-<li>Tests allergologiques déjà réalisés ?</li>
+<li>Première occurrence ou récurrence (combien de fois ?) ?</li>
+<li>Allergies déjà diagnostiquées (aliment, médicament, environnemental) ?</li>
+<li>Atopie personnelle ou familiale (asthme, rhinite, eczéma, urticaire chronique) ?</li>
+<li>Tests allergologiques antérieurs : date, résultats, laboratoire ?</li>
+<li>Traitements de fond en cours (antidépresseurs, IEC, bêtabloquants — interactions possibles) ?</li>
+<li>État au moment de la réaction : stress, effort physique, alcool, infection récente ?</li>
 </ul>
-<h2>Étape 4 — Tableau de suivi</h2>
-<table><thead><tr><th>Date</th><th>Exposition suspectée</th><th>Délai</th><th>Symptômes</th><th>Intensité</th><th>Durée</th><th>Traitement pris</th><th>Résultat</th></tr></thead><tbody></tbody></table>
-<h2>Étape 5 — Conclusion</h2>
-<h3>Schémas observés</h3>
-<p>Corrélations possibles entre expositions et réactions (formulées comme hypothèses).</p>
-<h3>Signes d'alerte</h3>
-<p>Rappelle les signes d'une réaction sévère (gonflement visage/gorge, difficulté à respirer, malaise) qui nécessitent une aide d'urgence.</p>
-<h3>Questions pour l'allergologue</h3>
-<p>5 questions personnalisées pour la consultation.</p>
-<h2>Règles</h2>
+<hr>
+<h2>Étape 4 — Journal structuré (tableau cumulatif)</h2>
+<p>Génère et complète ce tableau à chaque nouvel épisode. Copie-colle-le dans un document texte ou tableur pour le montrer au médecin.</p>
+<pre><code>| N° | Date &amp; heure | Exposition principale suspectée | Délai expo→réaction | Symptômes | Intensité (1–3) | Durée | Traitement pris | Résultat |
+|----|--------------|--------------------------------|--------------------|-----------|--------------------|-------|----------------|----------|
+| 1  |              |                                |                    |           |                    |       |                |          |</code></pre>
+<p><strong>Légende intensité</strong> : 1 = légère, 2 = modérée, 3 = sévère/urgence.</p>
+<hr>
+<h2>Étape 5 — Analyse des patterns</h2>
+<p>Après au moins 2–3 épisodes documentés, propose une synthèse :</p>
+<h3>Corrélations possibles</h3>
+<p>Formule sous forme d'hypothèses uniquement :</p>
 <ul>
-<li>Ne confirme jamais une allergie — seul un test médical peut le faire.</li>
-<li>Signale toujours les signes de réaction sévère (anaphylaxie) comme urgence.</li>
-<li>Formule les liens comme des hypothèses à tester.</li>
+<li>« À chaque épisode, vous avez consommé [X] dans les 2 heures précédentes — à explorer avec votre allergologue. »</li>
+<li>« Tous les épisodes surviennent en période de pollinisation (mars–juin) — rhinite allergique ou allergie croisée possible. »</li>
 </ul>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce journal est un outil d'observation. Seul un allergologue peut confirmer une allergie par des tests appropriés. En cas de réaction sévère (gonflement, difficulté respiratoire), appelez les urgences immédiatement.</blockquote>
+<h3>Facteurs aggravants potentiels</h3>
+<ul>
+<li>Effort physique post-repas (urticaire cholinergique / allergie alimentaire induite par l'exercice — AIAE).</li>
+<li>Prise concomitante d'AINS ou d'alcool (abaissent le seuil de réaction).</li>
+<li>Stress ou infection intercurrente.</li>
+</ul>
+<h3>Absences notables</h3>
+<ul>
+<li>Signale si un aliment ou un allergène est <strong>systématiquement absent</strong> lors des épisodes (aide à écarter des pistes).</li>
+</ul>
+<hr>
+<h2>Étape 6 — Préparation de la consultation allergologique</h2>
+<p>Génère un résumé d'une page à imprimer / envoyer au médecin, comprenant :</p>
+<ol>
+<li><strong>Chronologie des épisodes</strong> (tableau de l'étape 4).</li>
+<li><strong>Hypothèses de déclencheurs</strong> classées par fréquence d'apparition.</li>
+<li><strong>5 questions personnalisées</strong> adaptées au profil, par exemple :</li>
+<ul>
+<li>« Faut-il réaliser un prick-test ou des IgE spécifiques pour [allergène X] ? »</li>
+<li>« Dois-je éviter [aliment] en attendant les tests, ou seulement si les symptômes réapparaissent ? »</li>
+<li>« Quand et comment utiliser l'auto-injecteur d'adrénaline si prescrit ? »</li>
+<li>« Y a-t-il des allergies croisées à surveiller avec [allergène identifié] ? »</li>
+<li>« Mon traitement actuel [médicament] peut-il aggraver les réactions ou masquer les tests ? »</li>
+</ul>
+</ol>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Pourquoi c'est problématique</th><th>Bonne pratique</th></tr></thead><tbody><tr><td>Éviter un aliment entier sur la base d'une seule réaction non confirmée</td><td>Restriction nutritionnelle inutile, surtout chez l'enfant</td><td>Documenter, consulter avant d'éliminer</td></tr><tr><td>Conclure « c'est une allergie » à cause d'une réaction cutanée</td><td>Intolérance, irritation, urticaire factice ont les mêmes symptômes</td><td>Toujours formuler en hypothèse</td></tr><tr><td>Tester soi-même en se ré-exposant délibérément</td><td>Risque d'anaphylaxie</td><td>Réintroduction uniquement sous contrôle médical</td></tr><tr><td>Arrêter un antihistaminique avant un test allergologique sans avis médical</td><td>Peut biaiser les résultats</td><td>Demander au médecin les délais d'arrêt recommandés</td></tr><tr><td>Ignorer un épisode « léger »</td><td>La sévérité peut s'aggraver aux expositions suivantes</td><td>Tout documenter, même les réactions mineures</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Application mobile</strong> : recommander un journal numérique (ex. note horodatée sur smartphone) pris immédiatement après la réaction — la mémoire des détails diminue rapidement.</li>
+<li><strong>Photo</strong> : encourager à photographier les lésions cutanées (avec heure visible ou métadonnées EXIF).</li>
+<li><strong>Code QR de la carte d'urgence</strong> : si l'utilisateur a déjà une allergie confirmée grave, rappeler l'intérêt d'une carte d'urgence (disponible via les associations d'allergiques).</li>
+<li><strong>Partage avec l'allergologue</strong> : le tableau Markdown ci-dessus peut être envoyé par email ou partagé via l'espace patient d'une messagerie sécurisée de santé (ex. Mon Espace Santé en France).</li>
+</ul>
+<hr>
+<blockquote>⚠️ <strong>Rappel professionnel</strong> : Ce journal est un outil d'observation personnel. Il ne remplace ni un diagnostic, ni un bilan allergologique. Pour toute réaction sévère ou récurrente, consultez un allergologue. En cas de réaction sévère en cours, appelez le <strong>15</strong> (SAMU) ou le <strong>112</strong> sans délai.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

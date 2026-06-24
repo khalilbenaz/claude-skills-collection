@@ -97,23 +97,137 @@ cp -r claude-skills-collection/skills/dev-rest-api-designer ~/.claude/skills/</d
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>REST API Designer</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Identification des ressources et relations</strong> : Analyser le modèle de domaine, identifier les entités principales et leurs associations, mapper chaque ressource vers un endpoint (ex. <code>/users</code>, <code>/orders/{id}/items</code>).</li>
-<li><strong>Design des endpoints</strong> : Appliquer les conventions de nommage (noms pluriels, kebab-case), choisir les verbes HTTP appropriés (GET, POST, PUT, PATCH, DELETE), définir les codes de statut attendus (200, 201, 204, 400, 401, 403, 404, 409, 422).</li>
-<li><strong>Pagination, filtrage et tri</strong> : Implémenter la pagination cursor-based pour les grands ensembles (<code>?cursor=xxx&amp;limit=20</code>) ou offset (<code>?page=1&amp;size=20</code>), exposer les filtres via query params (<code>?status=active&amp;created_after=2025-01-01</code>), standardiser le tri (<code>?sort=created_at:desc</code>).</li>
-<li><strong>Versioning strategy</strong> : Choisir la stratégie adaptée — URL path (<code>/v1/users</code>) pour la visibilité, header (<code>Accept: application/vnd.api+json;version=2</code>) pour la propreté sémantique, ou query param (<code>?api-version=2</code>) ; documenter la politique de dépréciation.</li>
-<li><strong>Error handling standardisé</strong> : Adopter RFC 7807 Problem Details (<code>Content-Type: application/problem+json</code>) avec <code>type</code>, <code>title</code>, <code>status</code>, <code>detail</code>, <code>instance</code> ; ajouter des codes d'erreur custom (<code>&quot;code&quot;: &quot;USER_ALREADY_EXISTS&quot;</code>) pour le traitement programmatique côté client.</li>
-<li><strong>Authentication et authorization</strong> : Sécuriser avec JWT (Bearer token), OAuth2 (scopes granulaires), ou API keys (header <code>X-API-Key</code>) selon le cas d'usage ; implémenter le contrôle d'accès au niveau ressource et champ.</li>
-<li><strong>Documentation OpenAPI/Swagger</strong> : Générer la spec OpenAPI 3.x avec schemas réutilisables (<code>$ref</code>), exemples concrets pour chaque endpoint, descriptions en langage naturel, et tags pour grouper les ressources.</li>
-<li><strong>HATEOAS et hypermedia</strong> : Enrichir les réponses avec des liens de navigation (<code>_links.self</code>, <code>_links.next</code>, <code>_links.related</code>) pour améliorer la discoverability et réduire le couplage client-serveur.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Identifier les ressources et relations</h3>
+<p>Partir du domaine métier, pas des tables. Chaque entité devient une collection.</p>
+<pre><code>GET  /users                    # collection
+GET  /users/{id}               # singleton
+GET  /users/{id}/orders        # relation imbriquée (max 2 niveaux)
+GET  /orders/{id}/items/{itemId}</code></pre>
+<p>Règles de nommage :</p>
 <ul>
-<li>Fournis des exemples de code concrets (JSON de requête/réponse, snippets de configuration) dans le langage/framework de l'utilisateur</li>
-<li>Adapte les recommandations au contexte (public API vs interne, REST strict vs pragmatique)</li>
-<li>Toujours mentionner les trade-offs (ex. cursor vs offset : cursor = perf, offset = flexibilité)</li>
-<li>Commence par la solution simple avant la complexe (ex. versioning dans l'URL avant les headers)</li>
-<li>Respecte le principe de moindre surprise : une API bien conçue est intuitive sans documentation</li>
+<li><strong>Pluriel</strong> toujours : <code>/orders</code>, pas <code>/order</code></li>
+<li><strong>kebab-case</strong> : <code>/payment-methods</code>, pas <code>/paymentMethods</code></li>
+<li><strong>Noms, pas verbes</strong> : <code>/users/{id}/activate</code> avec <code>POST</code> — pas <code>GET /activateUser</code></li>
+</ul>
+<h3>2. Choisir les verbes HTTP et codes de statut</h3>
+<table><thead><tr><th>Action</th><th>Verbe</th><th>Succès</th><th>Idempotent</th></tr></thead><tbody><tr><td>Lire</td><td>GET</td><td>200</td><td>Oui</td></tr><tr><td>Créer</td><td>POST</td><td>201 + <code>Location: /resource/{id}</code></td><td>Non</td></tr><tr><td>Remplacer complet</td><td>PUT</td><td>200 ou 204</td><td>Oui</td></tr><tr><td>Mise à jour partielle</td><td>PATCH</td><td>200</td><td>Non (en général)</td></tr><tr><td>Supprimer</td><td>DELETE</td><td>204</td><td>Oui</td></tr><tr><td>Vérifier existence</td><td>HEAD</td><td>200/404</td><td>Oui</td></tr></tbody></table>
+<p>Codes essentiels à maîtriser :</p>
+<ul>
+<li><code>400</code> = requête malformée (validation côté serveur)</li>
+<li><code>401</code> = non authentifié</li>
+<li><code>403</code> = authentifié mais interdit</li>
+<li><code>404</code> = ressource inexistante</li>
+<li><code>409</code> = conflit (doublon, état incompatible)</li>
+<li><code>422</code> = entité non traitable (logique métier, pas format)</li>
+<li><code>429</code> = rate limit atteint (header <code>Retry-After</code>)</li>
+</ul>
+<h3>3. Pagination, filtrage, tri</h3>
+<p><strong>Cursor-based</strong> (préféré pour grandes collections, flux en temps réel) :</p>
+<pre><code>GET /events?cursor=eyJpZCI6MTAwfQ&amp;limit=50
+→ { &quot;data&quot;: [...], &quot;next_cursor&quot;: &quot;eyJpZCI6MTUwfQ&quot;, &quot;has_more&quot;: true }</code></pre>
+<p><strong>Offset</strong> (plus simple, navigation par page) :</p>
+<pre><code>GET /products?page=3&amp;size=25
+→ { &quot;data&quot;: [...], &quot;total&quot;: 1240, &quot;page&quot;: 3, &quot;pages&quot;: 50 }</code></pre>
+<p>Critère de choix : cursor = performances + cohérence ; offset = flexibilité (aller page N directement).</p>
+<p>Filtrage et tri :</p>
+<pre><code>GET /orders?status=pending&amp;created_after=2026-01-01&amp;sort=amount:desc,created_at:asc</code></pre>
+<h3>4. Versioning — choisir sa stratégie</h3>
+<table><thead><tr><th>Stratégie</th><th>Exemple</th><th>Pour</th><th>Contre</th></tr></thead><tbody><tr><td><strong>URL path</strong></td><td><code>/v2/users</code></td><td>Visibilité, cache HTTP natif</td><td>Polluant sémantiquement</td></tr><tr><td><strong>Header</strong></td><td><code>Accept: application/vnd.myapi.v2+json</code></td><td>Propre, REST pur</td><td>Moins discoverable</td></tr><tr><td><strong>Query param</strong></td><td><code>?api-version=2026-01</code></td><td>Simple à tester</td><td>Non standard</td></tr></tbody></table>
+<p>Recommandation par défaut : <strong>URL path</strong> pour API publique, <strong>header</strong> pour API interne/partenaire.</p>
+<p>Politique de dépréciation obligatoire :</p>
+<pre><code>Deprecation: true
+Sunset: Sat, 01 Jan 2027 00:00:00 GMT
+Link: &lt;https://api.example.com/v3/users&gt;; rel=&quot;successor-version&quot;</code></pre>
+<h3>5. Error handling — RFC 7807 Problem Details</h3>
+<pre><code class="lang-json">HTTP/1.1 422 Unprocessable Entity
+Content-Type: application/problem+json
+
+{
+  &quot;type&quot;: &quot;https://api.example.com/errors/validation-failed&quot;,
+  &quot;title&quot;: &quot;Validation Failed&quot;,
+  &quot;status&quot;: 422,
+  &quot;detail&quot;: &quot;Le champ 'email' est invalide.&quot;,
+  &quot;instance&quot;: &quot;/users/register&quot;,
+  &quot;code&quot;: &quot;VALIDATION_FAILED&quot;,
+  &quot;errors&quot;: [
+    { &quot;field&quot;: &quot;email&quot;, &quot;code&quot;: &quot;INVALID_FORMAT&quot;, &quot;message&quot;: &quot;Format attendu : user@domain.tld&quot; }
+  ]
+}</code></pre>
+<p>Toujours inclure :</p>
+<ul>
+<li><code>code</code> machine-readable (snake_upper) pour le traitement programmatique client</li>
+<li><code>errors[]</code> pour les erreurs de validation multiples</li>
+<li><code>instance</code> = URI de la requête ayant échoué</li>
+</ul>
+<h3>6. Authentification et autorisation</h3>
+<pre><code># JWT Bearer (API publique)
+Authorization: Bearer eyJhbGciOiJSUzI1NiJ9...
+
+# API Key (intégrations M2M simples)
+X-API-Key: sk_live_xxxxxxxxxxxx
+
+# OAuth2 Client Credentials (services internes)
+POST /oauth/token
+{ &quot;grant_type&quot;: &quot;client_credentials&quot;, &quot;scope&quot;: &quot;orders:read payments:write&quot; }</code></pre>
+<p>Principes :</p>
+<ul>
+<li>Valider le scope au niveau endpoint (<code>orders:read</code>) ET au niveau ressource (l'utilisateur peut-il accéder à cette commande ?)</li>
+<li>Tokens JWT : durée courte (15 min), refresh token rotatif</li>
+<li>Ne jamais exposer de données sensibles dans un <code>GET</code> avec query params (loggés partout)</li>
+</ul>
+<h3>7. Documentation OpenAPI 3.1</h3>
+<p>Structure minimale viable :</p>
+<pre><code class="lang-yaml">openapi: 3.1.0
+info:
+  title: My API
+  version: 2.0.0
+paths:
+  /users/{id}:
+    get:
+      summary: Récupérer un utilisateur
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+              example: { id: &quot;550e8400-...&quot;, email: &quot;user@example.com&quot; }
+        '404':
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+components:
+  schemas:
+    User:
+      type: object
+      required: [id, email]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }</code></pre>
+<p>Générer la spec avant le code (contract-first) avec Stoplight, Redocly ou directement dans le repo.</p>
+<h3>8. Idempotence et sécurité des opérations critiques</h3>
+<p>Pour les POST non-idempotents (paiement, création de commande) :</p>
+<pre><code>POST /payments
+Idempotency-Key: a1b2c3d4-e5f6-...   # UUID généré côté client
+
+→ Stocker la clé + résultat côté serveur pendant 24h
+→ Même clé = même réponse, pas de double débit</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Solution</th></tr></thead><tbody><tr><td><code>POST /getUsers</code></td><td>Verbe dans l'URL</td><td><code>GET /users</code></td></tr><tr><td>Retourner 200 avec <code>{ &quot;error&quot;: true }</code></td><td>Masque les erreurs aux proxies et clients HTTP</td><td>Utiliser les codes HTTP corrects</td></tr><tr><td>Exposer l'ID incrémental de la DB</td><td>Enumeration attack, couplage schema</td><td>UUID v4 ou ULID</td></tr><tr><td>Imbrication &gt; 2 niveaux</td><td><code>/a/{id}/b/{id}/c/{id}</code> ingérable</td><td>Ressource plate + filtre : <code>GET /c?b_id=x</code></td></tr><tr><td>Ignorer les IDs de corrélation</td><td>Debugging impossible en prod</td><td><code>X-Request-Id</code> en entrée, retourné en réponse</td></tr><tr><td>Pas de rate limiting documenté</td><td>Clients en boucle infinie sur 429</td><td>Header <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>, <code>Retry-After</code></td></tr><tr><td>Réponses différentes pour le même endpoint</td><td><code>GET /users</code> renvoie tantôt array, tantôt objet</td><td>Toujours <code>{ &quot;data&quot;: [...] }</code> enveloppé</td></tr><tr><td><code>DELETE</code> qui renvoie 200 + body</td><td>Non cohérent avec l'idempotence</td><td>204 No Content</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Contract-first</strong> : spec OpenAPI committée dans le repo, générée avant l'implémentation, testée avec Schemathesis ou Dredd</li>
+<li><strong>Liens HATEOAS légers</strong> : ajouter <code>_links.self</code> et <code>_links.next</code> dans les collections sans surcharger avec HAL complet si inutile</li>
+<li><strong>Versionner les breaking changes seulement</strong> : ajouter un champ est non-breaking ; en retirer, changer un type ou renommer = breaking</li>
+<li><strong><code>ETag</code> + <code>If-None-Match</code></strong> pour les GETs fréquents (réduction bande passante, cache côté client)</li>
+<li><strong><code>PATCH</code> avec JSON Merge Patch</strong> (RFC 7396) plutôt que JSON Patch (RFC 6902) pour la majorité des cas : plus lisible, moins complexe</li>
+<li><strong>Documenter les SLAs dans l'OpenAPI</strong> : <code>x-rate-limit</code>, <code>x-response-time-p99</code> dans l'extension <code>info</code></li>
+<li><strong>Tester la surface d'attaque</strong> : fuzzing avec Schemathesis dès la CI, OWASP API Security Top 10 (2023) comme checklist de review</li>
 </ul>
 </article>
 </main>

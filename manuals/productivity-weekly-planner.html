@@ -96,20 +96,94 @@ cp -r claude-skills-collection/skills/productivity-weekly-planner ~/.claude/skil
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Weekly Planner</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Collecte</strong> : liste toutes les tâches, rendez-vous et engagements mentionnés.</li>
-<li><strong>Priorisation</strong> : classe par matrice Eisenhower (urgent/important).</li>
-<li><strong>Time blocking</strong> : répartis sur la semaine en blocs réalistes.</li>
-<li><strong>Résultat</strong> : tableau lundi→dimanche avec créneaux matin/après-midi/soir.</li>
-<li><strong>Top 3</strong> : identifie les 3 objectifs clés de la semaine.</li>
-<li>Termine par les tâches non placées et une suggestion de report.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 6 étapes</h2>
+<h3>1. Collecte des inputs</h3>
+<p>Pose ces questions avant tout planning (une seule fois, groupées) :</p>
 <ul>
-<li>Ne surcharge pas les journées — laisse des marges.</li>
-<li>Adapte au contexte (travail, études, freelance).</li>
-<li>Demande les contraintes fixes avant de planifier.</li>
+<li>Quelles sont les contraintes fixes ? (réunions, rdv, horaires de travail)</li>
+<li>Quel est le contexte ? (<code>travail salarié</code> / <code>freelance</code> / <code>études</code> / <code>mixte</code>)</li>
+<li>Y a-t-il une deadline critique cette semaine ?</li>
+<li>Niveau d'énergie/charge estimé : <code>normal</code> / <code>chargé</code> / <code>léger</code> ?</li>
+</ul>
+<p>Si l'utilisateur liste des tâches directement, infère le contexte sans redemander.</p>
+<h3>2. Priorisation — Matrice Eisenhower</h3>
+<p>Classe chaque tâche dans une des 4 cases :</p>
+<table><thead><tr><th></th><th>Urgent</th><th>Pas urgent</th></tr></thead><tbody><tr><td><strong>Important</strong></td><td>① Faire maintenant</td><td>② Planifier (deep work)</td></tr><tr><td><strong>Pas important</strong></td><td>③ Déléguer ou réduire</td><td>④ Éliminer</td></tr></tbody></table>
+<p><strong>Critères de décision :</strong></p>
+<ul>
+<li>Une deadline &lt; 48 h = urgent</li>
+<li>Impact direct sur un livrable ou une relation clé = important</li>
+<li>En doute → demander &quot;qu'est-ce qui arrive si cette tâche attend 1 semaine ?&quot;</li>
+</ul>
+<h3>3. Estimation du temps</h3>
+<p>Ajoute un coefficient de réalisme × 1.3 sur les estimations spontanées.</p>
+<p>Exemples types :</p>
+<ul>
+<li>Email complexe → 30 min (pas 10)</li>
+<li>Réunion de suivi → réserve 15 min de débrief après</li>
+<li>&quot;Finir le rapport&quot; non découpé → découpe en sous-tâches avant de placer</li>
+</ul>
+<h3>4. Time blocking — Règles d'or</h3>
+<ul>
+<li><strong>Deep work</strong> (quadrant ②) → matin, créneaux de ≥ 90 min sans interruption</li>
+<li><strong>Tâches réactives</strong> (email, Slack, révisions) → fin de matinée ou après-midi</li>
+<li><strong>Maximum 6 h de travail focalisé</strong> par jour productive ; 4 h les jours chargés en réunions</li>
+<li><strong>Buffer obligatoire</strong> : 20 % du temps libre = non planifié (= marge pour imprévus)</li>
+</ul>
+<h3>5. Tableau hebdomadaire</h3>
+<p>Génère un tableau Markdown :</p>
+<pre><code class="lang-markdown">| Créneau        | Lundi | Mardi | Mercredi | Jeudi | Vendredi | Sam/Dim |
+|----------------|-------|-------|----------|-------|----------|---------|
+| Matin (9-12)   |       |       |          |       |          |         |
+| Après-midi     |       |       |          |       |          |         |
+| Soir (option.) |       |       |          |       |          |         |</code></pre>
+<ul>
+<li>Marque les blocs fixes en <strong>gras</strong></li>
+<li>Marque les blocs deep work avec 🔵 ou <code>[FOCUS]</code></li>
+<li>Marque les tâches reportées avec ~~strikethrough~~</li>
+</ul>
+<h3>6. Top 3 + backlog</h3>
+<p>Termine toujours par :</p>
+<pre><code>## Top 3 de la semaine
+1. [Tâche la plus impactante]
+2. [Tâche à deadline]
+3. [Tâche d'investissement long terme]
+
+## Backlog — à reporter ou déléguer
+- [tâche X] → reporter à [date suggestion]
+- [tâche Y] → peut être délégué à [qui/quoi]</code></pre>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Correctif</th></tr></thead><tbody><tr><td>Planifier 8 h de travail focalisé/jour</td><td>Burnout, plan abandonné dès mardi</td><td>Max 5-6 h planifiées</td></tr><tr><td>Tâches sans durée estimée</td><td>Blocs impossibles à placer</td><td>Toujours estimer, même grossièrement</td></tr><tr><td>Lundi surchargé &quot;pour démarrer fort&quot;</td><td>Epuisement précoce, effet domino</td><td>Répartir uniformément ou pic mercredi</td></tr><tr><td>Mélanger réactif et deep work dans le même bloc</td><td>Focus brisé</td><td>Séparer les créneaux types</td></tr><tr><td>Aucune marge pour les imprévus</td><td>Plan obsolète dès le 1er imprévu</td><td>Règle du 20 % non planifié</td></tr><tr><td>Replanifier les tâches non faites sans révision</td><td>Accumulation de dette de planning</td><td>Identifier pourquoi la tâche a glissé</td></tr></tbody></table>
+<hr>
+<h2>Adaptations par contexte</h2>
+<p><strong>Freelance / indépendant</strong></p>
+<ul>
+<li>Inclure du temps de prospection (quadrant ②, souvent négligé)</li>
+<li>Bloquer un créneau administratif hebdomadaire (facturation, suivi clients)</li>
+</ul>
+<p><strong>Études</strong></p>
+<ul>
+<li>Alternance révision active (flashcards, exercices) et lecture passive</li>
+<li>Placer les matières difficiles en pic d'énergie cognitive (typiquement 9-11 h)</li>
+</ul>
+<p><strong>Travail salarié avec réunions fréquentes</strong></p>
+<ul>
+<li>Identifier les jours &quot;réunion lourde&quot; → n'y placer que des tâches légères autour</li>
+<li>Regrouper les réunions sur 2 jours pour préserver 2-3 jours de deep work</li>
+</ul>
+<p><strong>Semaine chargée / crise</strong></p>
+<ul>
+<li>Réduire le Top 3 à un Top 1 obligatoire</li>
+<li>Suspendre les tâches du quadrant ④ sans culpabilité</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Revue du vendredi</strong> : 15 min pour noter ce qui a glissé et pourquoi → ajuste la méthode, pas seulement le plan</li>
+<li><strong>Intention du lundi</strong> : une phrase de mise en contexte avant le tableau (&quot;Cette semaine, la priorité absolue est…&quot;)</li>
+<li><strong>Tâches énergivores vs légères</strong> : alterne pour éviter la fatigue décisionnelle (ne pas enchaîner 3 deep work consécutifs)</li>
+<li><strong>Couplage calendrier</strong> : si l'utilisateur mentionne un outil (Notion, Google Calendar, Obsidian), propose un format ou snippet compatible</li>
 </ul>
 </article>
 </main>

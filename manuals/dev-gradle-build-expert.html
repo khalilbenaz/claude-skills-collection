@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-gradle-build-expert — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Expert en configuration et optimisation Gradle pour Android Kotlin. Gère build.gradle, Kotlin DSL, dépendances, flavours, variants.">
+<meta name="description" content="Expert en configuration et optimisation Gradle pour Android Kotlin. Gère build.gradle, Kotlin DSL, dépendances, flavours, variants, performance, CI/CD et troubleshooting avancé.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-gradle-build-expert</h1>
-<p class="lead">Expert en configuration et optimisation Gradle pour Android Kotlin. Gère build.gradle, Kotlin DSL, dépendances, flavours, variants.</p>
+<p class="lead">Expert en configuration et optimisation Gradle pour Android Kotlin. Gère build.gradle, Kotlin DSL, dépendances, flavours, variants, performance, CI/CD et troubleshooting avancé.</p>
 
 
 
@@ -97,23 +97,150 @@ cp -r claude-skills-collection/skills/dev-gradle-build-expert ~/.claude/skills/<
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Gradle Build Expert (Android Kotlin)</h1>
 <h2>Workflow</h2>
+<h3>1. Lire et auditer la configuration existante</h3>
+<p>Avant tout changement, cartographier ce qui est en place :</p>
+<pre><code class="lang-bash">./gradlew projects          # liste les modules
+./gradlew dependencies      # arbre complet des dépendances du module :app
+./gradlew :app:dependencies --configuration releaseRuntimeClasspath
+./gradlew buildEnvironment  # plugins et leurs versions</code></pre>
+<p>Points à vérifier : DSL (Groovy vs Kotlin), AGP version, Kotlin version, usage ou non du Version Catalog, présence de <code>buildSrc</code> ou <code>convention plugins</code>.</p>
+<hr>
+<h3>2. Migrer vers Kotlin DSL (si pas encore fait)</h3>
+<p>Renommer <code>build.gradle</code> → <code>build.gradle.kts</code>. Changements clés :</p>
+<pre><code class="lang-kotlin">// Groovy                          // Kotlin DSL
+apply plugin: 'kotlin-android'  →  plugins { id(&quot;org.jetbrains.kotlin.android&quot;) }
+compileSdkVersion 35             →  compileSdk = 35
+buildConfigField &quot;String&quot;, &quot;A&quot;   →  buildConfigField(&quot;String&quot;, &quot;A&quot;, &quot;\&quot;val\&quot;&quot;)</code></pre>
+<p>Critère de décision : utiliser Kotlin DSL dès qu'il y a plus d'un module ou que l'on veut l'autocomplétion IDE.</p>
+<hr>
+<h3>3. Centraliser les versions avec Version Catalog</h3>
+<p><code>gradle/libs.versions.toml</code> :</p>
+<pre><code class="lang-toml">[versions]
+agp             = &quot;8.5.2&quot;
+kotlin          = &quot;2.0.21&quot;
+compose-bom     = &quot;2024.12.01&quot;
+hilt            = &quot;2.52&quot;
+coroutines      = &quot;1.9.0&quot;
+
+[libraries]
+androidx-core-ktx         = { module = &quot;androidx.core:core-ktx&quot;,         version = &quot;1.15.0&quot; }
+hilt-android              = { module = &quot;com.google.dagger:hilt-android&quot;,  version.ref = &quot;hilt&quot; }
+hilt-compiler             = { module = &quot;com.google.dagger:hilt-compiler&quot;, version.ref = &quot;hilt&quot; }
+compose-bom               = { module = &quot;androidx.compose:compose-bom&quot;,   version.ref = &quot;compose-bom&quot; }
+
+[plugins]
+android-application  = { id = &quot;com.android.application&quot;,           version.ref = &quot;agp&quot; }
+kotlin-android       = { id = &quot;org.jetbrains.kotlin.android&quot;,       version.ref = &quot;kotlin&quot; }
+hilt                 = { id = &quot;com.google.dagger.hilt.android&quot;,     version.ref = &quot;hilt&quot; }
+kotlin-ksp           = { id = &quot;com.google.devtools.ksp&quot;,            version.ref = &quot;ksp&quot; }</code></pre>
+<p>Référencer dans <code>build.gradle.kts</code> : <code>implementation(libs.hilt.android)</code>, <code>ksp(libs.hilt.compiler)</code>.</p>
+<hr>
+<h3>4. Structurer les Build Types et Product Flavors</h3>
+<pre><code class="lang-kotlin">android {
+    buildTypes {
+        debug {
+            applicationIdSuffix = &quot;.debug&quot;
+            isDebuggable        = true
+            isMinifyEnabled     = false
+        }
+        release {
+            isMinifyEnabled   = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile(&quot;proguard-android-optimize.txt&quot;), &quot;proguard-rules.pro&quot;)
+        }
+    }
+
+    flavorDimensions += &quot;env&quot;
+    productFlavors {
+        create(&quot;dev&quot;)  { dimension = &quot;env&quot;; buildConfigField(&quot;String&quot;, &quot;BASE_URL&quot;, &quot;\&quot;https://api.dev.example.com\&quot;&quot;) }
+        create(&quot;prod&quot;) { dimension = &quot;env&quot;; buildConfigField(&quot;String&quot;, &quot;BASE_URL&quot;, &quot;\&quot;https://api.example.com\&quot;&quot;) }
+    }
+}</code></pre>
+<p>Critère : un flavor par axe variable (env, tier, market). Ne pas multiplier les dimensions sans raison.</p>
+<hr>
+<h3>5. Optimiser la performance du build</h3>
+<p><strong><code>gradle.properties</code> (racine du projet) :</strong></p>
+<pre><code class="lang-properties">org.gradle.jvmargs=-Xmx4g -XX:+UseParallelGC
+org.gradle.parallel=true
+org.gradle.caching=true
+org.gradle.configuration-cache=true
+kotlin.incremental=true
+kotlin.incremental.useClasspathSnapshot=true
+android.enableR8.fullMode=true</code></pre>
+<p><strong>Cibles de performance (2026) :</strong></p>
+<table><thead><tr><th>Type de build</th><th>Cible</th></tr></thead><tbody><tr><td>Incremental (1 fichier)</td><td>&lt; 5 s</td></tr><tr><td>Clean build modulaire</td><td>&lt; 45 s</td></tr><tr><td>Clean build mono-module</td><td>&lt; 90 s</td></tr></tbody></table>
+<p>Diagnostiquer un build lent :</p>
+<pre><code class="lang-bash">./gradlew assembleDebug --profile          # rapport HTML dans build/reports/profile/
+./gradlew assembleDebug --scan             # Gradle Build Scan (cloud)</code></pre>
+<hr>
+<h3>6. Convention Plugins (multi-modules &gt;3 modules)</h3>
+<p>Remplacer <code>buildSrc</code> par des <strong>convention plugins</strong> dans un module <code>build-logic</code> :</p>
+<pre><code>build-logic/
+  convention/src/main/kotlin/
+    AndroidApplicationConventionPlugin.kt
+    AndroidLibraryConventionPlugin.kt
+    HiltConventionPlugin.kt</code></pre>
+<p>Chaque plugin configure les règles communes (compileSdk, Kotlin options, Lint). Les modules <code>build.gradle.kts</code> deviennent minimalistes :</p>
+<pre><code class="lang-kotlin">plugins {
+    id(&quot;convention.android.library&quot;)
+    id(&quot;convention.hilt&quot;)
+}</code></pre>
+<hr>
+<h3>7. Signatures et release sécurisé</h3>
+<p>Ne jamais committer un keystore ou des mots de passe. Lire depuis l'environnement :</p>
+<pre><code class="lang-kotlin">signingConfigs {
+    create(&quot;release&quot;) {
+        storeFile     = file(System.getenv(&quot;KEYSTORE_PATH&quot;) ?: &quot;debug.jks&quot;)
+        storePassword = System.getenv(&quot;KEYSTORE_PASS&quot;) ?: &quot;&quot;
+        keyAlias      = System.getenv(&quot;KEY_ALIAS&quot;)     ?: &quot;&quot;
+        keyPassword   = System.getenv(&quot;KEY_PASS&quot;)      ?: &quot;&quot;
+    }
+}</code></pre>
+<p>Versioning automatique depuis git tags :</p>
+<pre><code class="lang-kotlin">fun gitVersionCode(): Int = &quot;git rev-list --count HEAD&quot;.execute().trim().toInt()
+fun gitVersionName(): String = &quot;git describe --tags --always&quot;.execute().trim()</code></pre>
+<hr>
+<h3>8. Intégration CI/CD (GitHub Actions)</h3>
+<pre><code class="lang-yaml">- name: Build release APK
+  run: ./gradlew :app:assembleProdRelease
+  env:
+    KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH }}
+    KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+    KEY_ALIAS:     ${{ secrets.KEY_ALIAS }}
+    KEY_PASS:      ${{ secrets.KEY_PASS }}
+
+- name: Run unit tests
+  run: ./gradlew testProdReleaseUnitTest
+
+- name: Lint
+  run: ./gradlew :app:lintProdRelease</code></pre>
+<p>Utiliser <code>gradle/actions/setup-gradle@v4</code> pour activer automatiquement le Build Cache sur CI.</p>
+<hr>
+<h3>9. Troubleshooting des erreurs fréquentes</h3>
+<p><strong>Conflit de dépendances :</strong></p>
+<pre><code class="lang-bash">./gradlew :app:dependencyInsight --dependency okhttp --configuration releaseRuntimeClasspath</code></pre>
+<p>Forcer une version :</p>
+<pre><code class="lang-kotlin">configurations.all {
+    resolutionStrategy.force(&quot;com.squareup.okhttp3:okhttp:4.12.0&quot;)
+}</code></pre>
+<p><strong>Erreur R8/ProGuard (class not found en release) :</strong></p>
+<p>Ajouter dans <code>proguard-rules.pro</code> :</p>
+<pre><code>-keep class com.example.model.** { *; }
+-keepattributes Signature, InnerClasses</code></pre>
+<p>Tester le mapping : <code>build/outputs/mapping/release/mapping.txt</code>.</p>
+<p><strong>Configuration Cache incompatible :</strong></p>
+<pre><code class="lang-bash">./gradlew assembleDebug --configuration-cache --info 2&gt;&amp;1 | grep &quot;configuration cache&quot;</code></pre>
+<p>Identifier le plugin incompatible et contacter le maintainer, ou l'exclure via <code>configurationCacheProblems = ConfigurationCacheProblems.WARN</code>.</p>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correctif</th></tr></thead><tbody><tr><td><code>kapt</code> sur un projet KSP-ready</td><td>Build 2× plus lent</td><td>Migrer vers <code>ksp()</code></td></tr><tr><td><code>implementation fileTree(dir: 'libs')</code></td><td>Non reproducible, shadowing</td><td>Déclarer les AAR nommément</td></tr><tr><td>Versions en dur dans chaque module</td><td>Drift de versions</td><td>Version Catalog</td></tr><tr><td><code>buildSrc</code> sur projet &gt;5 modules</td><td>Recompilation globale trop fréquente</td><td>Convention plugins</td></tr><tr><td><code>resolutionStrategy.failOnVersionConflict()</code> sans alignment</td><td>Build cassé sur BOM</td><td>Utiliser <code>platform()</code> + BOM</td></tr><tr><td><code>minifyEnabled false</code> en release</td><td>APK non obfusqué, ressources non purgées</td><td>Toujours activer R8 en release</td></tr><tr><td>Stocker le keystore dans le repo</td><td>Fuite de clé privée</td><td>Variables d'environnement / secrets CI</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>1\. <strong>Analyse du build.gradle</strong> -- Examiner la configuration actuelle : plugins (android, kotlin, kapt, Hilt, Room, Retrofit), Android SDK version, buildTypes (debug/release), productFlavors, Kotlin DSL vs Groovy.</li>
-<li>2\. <strong>Gestion des dépendances</strong> -- Configurer repositories (google(), mavenCentral(), jitpack), version catalog (libs.versions.toml) pour gestion centralisée des versions. Utiliser version ranges et constraints pour éviter conflicts.</li>
-<li>3\. <strong>Build variants et flavors</strong> -- Définir productFlavors (dev/staging/prod, free/paid) avec buildConfigFields, resValues, manifestPlaceholders. Configurer sourceSets pour code partagé et spécifique par flavor.</li>
-<li>4\. <strong>Optimisation du build</strong> -- Activer Gradle Build Cache, parallel builds, daemon, configuration cache. Réduire temps de build avec R8/ProGuard pour release, splitting APK par ABI et density.</li>
-<li>5\. <strong>Signatures et release</strong> -- Configurer signingConfigs avec keystore sécurisé (Environment variables, Android Keystore). Automatiser versioning (versionCode, versionName) via git tags ou CI/CD.</li>
-<li>6\. <strong>Lint et qualité</strong> -- Intégrer androidLint, ktlint, detekt dans le pipeline Gradle. Configurer lintOptions, enable strict mode pour release builds.</li>
-<li>7\. <strong>Troubleshooting avancé</strong> -- Résoudre conflits de dépendances (dependency tree, gradle dependencies), erreurs R8/ProGuard, Native crashes, ANR. Analyser avec Gradle Profiler et Android Profiler.</li>
-<li>8\. <strong>CI/CD Integration</strong> -- Automatiser builds avec GitHub Actions, GitLab CI. Configurer tasks personnalisées, hooks pre-commit, scripts Kotlin (buildSrc) pour logique réutilisable.</li>
-</ul>
-<h2>Règles</h2>
-<ul>
-<li><strong>Toujours utiliser Kotlin DSL</strong> (build.gradle.kts) pour le typage fort, l'autocomplete, et la maintenabilité. Éviter Groovy.</li>
-<li><strong>Version Catalog obligatoire</strong> : Centraliser toutes les versions dans libs.versions.toml. Ex : <code>libs.androidx.lifecycle.viewmodel</code>.</li>
-<li><strong>Modularisation</strong> : Pour les projets &gt;50k LOC, séparer en modules (feature, domain, data, common). Configurer <code>include(&quot;:app&quot;, &quot;:core&quot;, &quot;:features:auth&quot;)</code>.</li>
-<li><strong>Build Types</strong> : Toujours avoir debug (applicationIdSuffix &quot;.debug&quot;, debuggable true) et release (minifyEnabled true, shrinkResources true, proguardFiles).</li>
-<li><strong>Performance</strong> : Gradle 8.x+ avec configuration cache, parallelism. Build time cible : &lt;30s pour clean build, &lt;5s pour incremental.</li>
+<li><strong>AGP 8.5+ / Gradle 8.10+</strong> : utiliser <code>declarativeDsl</code> (expérimental) pour simplifier la configuration.</li>
+<li><strong>KSP</strong> remplace <code>kapt</code> pour tous les nouveaux projets (Hilt 2.48+, Room 2.6+, Moshi 1.15+).</li>
+<li><strong>Isolated Projects</strong> (Gradle 8.8+) : activer pour paralléliser la configuration et préparer la scalabilité.</li>
+<li><strong>Baseline Profiles</strong> : générer via <code>./gradlew generateBaselineProfile</code> pour améliorer le startup de l'app en production.</li>
+<li><strong>Dependency Guard</strong> : ajouter <code>com.dropbox.dependency-guard</code> pour détecter les changements involontaires de dépendances en CI.</li>
 </ul>
 </article>
 </main>

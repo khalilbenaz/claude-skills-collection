@@ -1,25 +1,232 @@
 ---
 name: mobile-sdk-architect
-description: Architecture SDK mobile fintech (Kotlin Multiplatform). Conception modules, APIs, couches, design patterns. Se déclenche avec "architecture", "SDK", "multiplatform", "mobile backend", "module".
+description: Architecture SDK mobile fintech (Kotlin Multiplatform). Conception modules, APIs, couches, design patterns, sécurité, performance. Se déclenche avec "architecture", "SDK", "multiplatform", "mobile backend", "module", "KMP", "SDK fintech".
 ---
 
 # Mobile SDK Architect (Fintech Kotlin)
 
-## Workflow
+## Workflow en étapes
 
-* 1\. **Analyse des besoins métier** -- Identifier les cas d'usage : onboarding KYC, transactions, paiements, notifications push. Définir périmètre SDK : public API, modules internes, limites de responsabilité.
-* 2\. **Architecture modulaire** -- Structurer en couches : presentation (ViewModel, Compose/UI), domain (use cases, entities, repositories interfaces), data (implémentations Retrofit, Room, DataStore). Principes SOLID, clean architecture.
-* 3\. **Design patterns fintech** -- Repository pattern pour abstraction data, Factory pour création objets métier (Transaction, Account), Observer/Flow pour réactivité temps réel, State Machine pour gestion états transaction.
-* 4\. **API design et rétrocompatibilité** -- Design REST/gRPC endpoints. Versioning API (v1/, v2/). Stratégie de migration (feature flags, deprecation warnings). SDK backward compatible : semver strict, changelog exhaustif.
-* 5\. **Sécurité et conformité** -- Chiffrement AES-256-GCM in transit (TLS 1.3) et at rest (Android Keystore, iOS Keychain). Token management (OAuth2, JWT refresh). RGPD Maroc/UE : anonymization, right to erasure.
-* 6\. **Performance mobile** -- Lazy loading, pagination cursor-based, cache LRU (Glide/Coil pour images, OkHttp cache pour API). Background work (WorkManager) pour sync offline. Memory profiling avec Android Profiler.
-* 7\. **Testing et qualité** -- Unit tests (JUnit5, MockK) pour domain layer, Integration tests (Hilt testing module) pour data layer, UI tests (Espresso, Compose testing) pour presentation. Coverage cible >80%.
-* 8\. **Documentation SDK** -- README avec quickstart, KDoc/Javadoc exhaustif, sample apps (Android Kotlin, iOS Swift, Flutter). OpenAPI/Swagger spec pour endpoints. API reference automatique via dokka.
+### 1. Analyse des besoins et périmètre
 
-## Règles
+- Identifier les cas d'usage : KYC, onboarding, paiements P2P, notifications push, réconciliation offline.
+- Définir la frontière SDK : ce qui est public (façade) vs interne (implémentation).
+- Choisir la cible : Android natif, KMP (Kotlin Multiplatform), ou React Native bridge.
 
-* **Clean Architecture stricte** : Domain layer sans dépendance Android/iOS. Use cases purs Kotlin, entities Kotlin data classes. Injection via Hilt (Android) / Koin (iOS).
-* **API publique minimale** : Exposer uniquement ce qui est nécessaire via facades. Classes internes = `internal` (Kotlin) ou `private`. Éviter la fuite d'implémentation.
-* **Async everywhere** : Kotlin Coroutines pour toutes les opérations IO. Dispatcher.IO pour DB/Retrofit, Dispatchers.Main pour UI. Timeout sur tous les appels réseau (30s max).
-* **Error handling standardisé** : Result<E, T> sealed class pour erreurs métier. Custom exceptions avec codes d'erreur métier (ERR_KYC_FAILED, ERR_AUTH_EXPIRED). Jamais de try/catch silencieux.
-* **Offline-first** : Room database comme source de vérité locale. Sync bidirectionnelle intelligente (last-write-wins ou conflict resolution custom). UI toujours affichable même sans réseau.
+**Critère de décision — KMP vs natif vs bridge :**
+
+| Contexte | Choix |
+|---|---|
+| Équipe Kotlin existante, logique métier à partager | KMP (shared `commonMain`) |
+| App mobile unique, Android only | Module Gradle natif |
+| App Flutter/RN existante | Bridge natif (FFI ou JNI/Obj-C) |
+| Time-to-market prioritaire | React Native SDK |
+
+---
+
+### 2. Structure modulaire Gradle / KMP
+
+```
+sdk/
+├── core/            # entités, use cases, interfaces (pas d'Android)
+├── network/         # Retrofit/Ktor, Serialization
+├── storage/         # Room / SQLDelight (KMP)
+├── auth/            # OAuth2, JWT, token refresh
+├── payments/        # logique paiement, state machine
+└── sample-app/      # démo intégration
+```
+
+Déclaration multiplatform (`build.gradle.kts`) :
+
+```kotlin
+kotlin {
+    androidTarget()
+    iosX64(); iosArm64(); iosSimulatorArm64()
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation("io.ktor:ktor-client-core:2.3.12")
+                implementation("app.cash.sqldelight:runtime:2.0.2")
+            }
+        }
+        val androidMain by getting {
+            dependencies {
+                implementation("io.ktor:ktor-client-okhttp:2.3.12")
+            }
+        }
+        val iosMain by getting {
+            dependencies {
+                implementation("io.ktor:ktor-client-darwin:2.3.12")
+            }
+        }
+    }
+}
+```
+
+---
+
+### 3. API publique — design et rétrocompatibilité
+
+- Exposer uniquement via une **façade** (`internal` pour tout le reste).
+- Appliquer **semver strict** : MAJOR = breaking, MINOR = ajout, PATCH = fix.
+- Marquer les deprecations avec `@Deprecated(level = DeprecationLevel.WARNING)` avant retrait.
+
+```kotlin
+// facade publique
+class FintechSDK private constructor(private val config: SDKConfig) {
+    companion object {
+        fun init(config: SDKConfig): FintechSDK = FintechSDK(config)
+    }
+    val payments: PaymentsApi get() = PaymentsApiImpl(...)
+    val kyc: KycApi get() = KycApiImpl(...)
+}
+
+// jamais exposer :
+internal class PaymentsApiImpl(...) : PaymentsApi { ... }
+```
+
+- Versionner les endpoints : `/api/v2/payments`, jamais supprimer v1 sans migration guide.
+- Feature flags via `SDKConfig` pour activer/désactiver modules sans rebuild.
+
+---
+
+### 4. Sécurité et conformité (fintech 2026)
+
+- **TLS 1.3 obligatoire** + certificate pinning (OkHttp `CertificatePinner`).
+- **Android Keystore** pour clés AES-256-GCM ; **iOS Keychain** côté Swift.
+- **Token refresh** : rotation JWT avec sliding window, révocation côté serveur.
+- **RGPD / CNDP Maroc** : anonymisation PII dans les logs, droit à l'effacement via API dédiée.
+
+```kotlin
+// Certificate pinning OkHttp
+val client = OkHttpClient.Builder()
+    .certificatePinner(
+        CertificatePinner.Builder()
+            .add("api.myfintech.com", "sha256/AAAA...==")
+            .build()
+    )
+    .connectTimeout(10, TimeUnit.SECONDS)
+    .readTimeout(30, TimeUnit.SECONDS)
+    .build()
+```
+
+- Ne jamais logger de données sensibles (PAN, IBAN, token) — utiliser un `SensitiveDataFilter` sur le logger.
+- Root/jailbreak detection (SafetyNet/Play Integrity API 2026 ; `DCAppAttestService` iOS).
+
+---
+
+### 5. Error handling standardisé
+
+Sealed class pour erreurs métier, jamais de `try/catch` silencieux :
+
+```kotlin
+sealed class SdkResult<out T> {
+    data class Success<T>(val data: T) : SdkResult<T>()
+    sealed class Failure : SdkResult<Nothing>() {
+        data class Network(val code: Int, val msg: String) : Failure()
+        data class Business(val errorCode: String, val msg: String) : Failure()
+        data class Unexpected(val cause: Throwable) : Failure()
+    }
+}
+
+// codes métier exhaustifs
+object ErrorCodes {
+    const val KYC_FAILED       = "ERR_KYC_001"
+    const val AUTH_EXPIRED     = "ERR_AUTH_002"
+    const val INSUFFICIENT_BALANCE = "ERR_PAY_003"
+}
+```
+
+---
+
+### 6. Performance mobile
+
+- **Offline-first** : Room / SQLDelight comme source de vérité locale ; sync via WorkManager.
+- **Pagination cursor-based** (`after=<id>`) — jamais offset sur grandes collections.
+- **Cache HTTP** : OkHttp Cache 10 MB pour endpoints stables ; `Cache-Control: max-age` côté serveur.
+- **Lazy init** des modules lourds (ex. : caméra KYC) — ne pas tout charger au `SDK.init()`.
+
+```kotlin
+// WorkManager sync périodique
+val syncRequest = PeriodicWorkRequestBuilder<TransactionSyncWorker>(
+    repeatInterval = 15, TimeUnit.MINUTES
+).setConstraints(
+    Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
+).build()
+WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+    "tx_sync", ExistingPeriodicWorkPolicy.KEEP, syncRequest
+)
+```
+
+---
+
+### 7. Testing
+
+| Couche | Outil | Cible |
+|---|---|---|
+| Domain (use cases, entities) | JUnit5 + MockK | > 90 % |
+| Data (Retrofit, Room) | Hilt test + Robolectric | > 75 % |
+| UI / Compose | Compose Testing + Espresso | smoke tests |
+| Contrat API | WireMock / MockWebServer | régression |
+| Performance | Android Profiler + Benchmark | baseline |
+
+```kotlin
+// MockK use case test
+@Test
+fun `transfer fails on insufficient balance`() = runTest {
+    coEvery { repository.getBalance(any()) } returns 10.0
+    val result = transferUseCase(TransferRequest(amount = 500.0, ...))
+    assertIs<SdkResult.Failure.Business>(result)
+    assertEquals(ErrorCodes.INSUFFICIENT_BALANCE, result.errorCode)
+}
+```
+
+---
+
+### 8. Documentation et publication
+
+- **KDoc** sur tout symbole public ; générer la référence via `./gradlew dokkaHtml`.
+- README avec quickstart en < 10 lignes (copier-coller prêt).
+- Sample app dans `sample-app/` couvrant les 3 flux principaux.
+- Publier sur Maven Central ou dépôt privé (Nexus/GitHub Packages) :
+
+```kotlin
+// publishing block (build.gradle.kts)
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "com.mycompany"
+            artifactId = "fintech-sdk"
+            version = "2.1.0"
+            from(components["release"])
+        }
+    }
+}
+```
+
+---
+
+## Garde-fous / Anti-patterns
+
+| Anti-pattern | Conséquence | Correction |
+|---|---|---|
+| Exposer des classes internes dans l'API publique | Breaking changes incontrôlés | `internal` + façade |
+| Crasher au lieu de retourner une erreur métier | App cliente plante | `SdkResult.Failure` systématique |
+| Bloquer le main thread (réseau, DB) | ANR | Coroutines + `Dispatchers.IO` |
+| Stocker tokens en SharedPreferences non chiffrées | Vol de session | `EncryptedSharedPreferences` / Keystore |
+| Pagination offset sur > 10 000 lignes | Timeouts, duplicats | Cursor-based (`after=<id>`) |
+| Logger PAN/IBAN en clair | Non-conformité PCI-DSS | `SensitiveDataFilter` obligatoire |
+| Init SDK bloquant au démarrage | Temps de lancement > 500 ms | Lazy init + coroutine scope |
+| Semver ignoré (breaking en MINOR) | Intégrations cassées en prod | Revue API diff avant release |
+
+---
+
+## Bonnes pratiques 2026
+
+- **Play Integrity API** remplace SafetyNet depuis 2024 — migrer si pas fait.
+- **Predictive Back Gesture** Android 15+ : tester les transitions SDK dans le back stack.
+- **KMP stable** (Kotlin 2.x) : privilégier `commonMain` pour la logique métier, éviter les `expect/actual` inutiles.
+- **Kotlin Coroutines Structured Concurrency** : toujours lier les coroutines à un `CoroutineScope` géré par le cycle de vie ; jamais `GlobalScope`.
+- **Ktor 3.x** : multiplatform natif, remplace OkHttp côté KMP shared layer.
+- **SQLDelight 2.x** : préférer à Room pour KMP, schéma vérifié à la compilation.

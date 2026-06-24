@@ -96,35 +96,144 @@ cp -r claude-skills-collection/skills/devops-gitlab-ci-guide ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide GitLab CI/CD</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Concevoir le pipeline</strong> — Définir les stages du pipeline (<code>build</code>, <code>test</code>, <code>analyze</code>, <code>deploy</code>) dans <code>.gitlab-ci.yml</code>, identifier les jobs nécessaires à chaque stage, et déterminer les règles de déclenchement (<code>rules</code>, <code>only/except</code>).</li>
-</ol>
-<ol>
-<li><strong>Configurer les jobs</strong> — Écrire chaque job avec son image Docker, ses scripts (<code>before_script</code>, <code>script</code>, <code>after_script</code>), ses variables, et ses règles d'exécution conditionnelles basées sur la branche, les tags, les merge requests ou les modifications de fichiers.</li>
-</ol>
-<ol>
-<li><strong>Gérer les runners</strong> — Configurer les runners GitLab adaptés : shared runners pour les tâches standard, group runners pour les projets d'équipe, et specific runners pour les besoins spéciaux (GPU, accès réseau interne, Windows). Optimiser avec les tags et l'auto-scaling.</li>
-</ol>
-<ol>
-<li><strong>Optimiser avec le caching et les artifacts</strong> — Configurer le cache des dépendances (<code>cache:key</code>, <code>cache:paths</code>, <code>cache:policy</code>), les artifacts pour le partage entre jobs (<code>artifacts:paths</code>, <code>artifacts:reports</code>), et les dépendances explicites entre jobs (<code>dependencies</code>, <code>needs</code>).</li>
-</ol>
-<ol>
-<li><strong>Implémenter les environnements</strong> — Configurer les environnements de déploiement (<code>environment:name</code>, <code>environment:url</code>), les review apps dynamiques pour les merge requests, le stop des environnements temporaires, et les déploiements manuels avec protection.</li>
-</ol>
-<ol>
-<li><strong>Créer des pipelines avancés</strong> — Utiliser les pipelines enfants (<code>trigger:include</code>), les pipelines multi-projets (<code>trigger:project</code>), les templates partagés (<code>include:template</code>, <code>include:remote</code>), et le DAG (<code>needs</code>) pour la parallélisation optimale des jobs.</li>
-</ol>
-<ol>
-<li><strong>Intégrer la sécurité</strong> — Activer les scanners GitLab intégrés : SAST, DAST, dependency scanning, container scanning, secret detection. Configurer les politiques de merge basées sur les résultats de sécurité et les approval rules.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Concevoir la structure du pipeline</h2>
+<p>Définir les stages dans l'ordre d'exécution logique. Les jobs d'un même stage tournent en parallèle ; <code>needs:</code> casse cette contrainte pour du DAG.</p>
+<pre><code class="lang-yaml">stages:
+  - build
+  - test
+  - analyze
+  - deploy</code></pre>
+<p><strong>Critères de découpage :</strong></p>
 <ul>
-<li>Utilise <code>rules</code> plutôt que <code>only/except</code> pour les conditions d'exécution — c'est la syntaxe recommandée et la plus flexible.</li>
-<li>Configure toujours un cache approprié pour les dépendances afin de réduire les temps de pipeline.</li>
-<li>Sépare la configuration en fichiers inclus (<code>include:local</code>) pour les projets avec des pipelines complexes plutôt qu'un seul fichier monolithique.</li>
-<li>Protège les variables sensibles avec le masquage (<code>masked: true</code>) et la restriction aux branches protégées (<code>protected: true</code>).</li>
-<li>Documente chaque job avec un commentaire expliquant son rôle dans le pipeline et ses dépendances.</li>
+<li>Un stage = une responsabilité (ne pas mélanger build et test).</li>
+<li>Si un job doit démarrer avant la fin de son stage, utiliser <code>needs:</code> (DAG).</li>
+<li>Limiter à 6-7 stages max — au-delà, refactorer en pipelines enfants.</li>
+</ul>
+<h2>2. Écrire les jobs</h2>
+<p>Structure minimale d'un job de référence :</p>
+<pre><code class="lang-yaml">build:app:
+  stage: build
+  image: node:22-alpine
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 day
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/</code></pre>
+<p><strong>Règles d'exécution — préférer <code>rules:</code> à <code>only/except</code></strong> :</p>
+<pre><code class="lang-yaml">deploy:production:
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+    - if: $CI_PIPELINE_SOURCE == &quot;merge_request_event&quot;
+      when: never
+  environment:
+    name: production
+    url: https://app.example.com</code></pre>
+<h2>3. Gérer les runners</h2>
+<table><thead><tr><th>Type</th><th>Cas d'usage</th><th>Config clé</th></tr></thead><tbody><tr><td>Shared runners</td><td>CI standard, projets publics</td><td>Tags vides ou <code>saas-linux-*</code></td></tr><tr><td>Group runners</td><td>Équipe partageant des secrets d'infra</td><td><code>group_runners_enabled: true</code></td></tr><tr><td>Project runners</td><td>Accès réseau interne, GPU, Windows</td><td>Runner enregistré avec tag dédié</td></tr></tbody></table>
+<p><strong>Enregistrer un runner (GitLab 17+) :</strong></p>
+<pre><code class="lang-bash">gitlab-runner register \
+  --url https://gitlab.example.com \
+  --token $RUNNER_TOKEN \
+  --executor docker \
+  --docker-image alpine:latest \
+  --tag-list &quot;docker,linux,build&quot;</code></pre>
+<p><strong>Auto-scaling avec Docker Machine (on-premise) :</strong> utiliser <code>executor = &quot;docker+machine&quot;</code> + provider cloud dans <code>config.toml</code>. Pour Kubernetes : utiliser le runner Helm chart officiel.</p>
+<h2>4. Cache et artifacts</h2>
+<pre><code class="lang-yaml"># Cache partagé entre branches — clé sur fichier de lock
+cache:
+  key:
+    files:
+      - yarn.lock
+  paths:
+    - node_modules/
+  policy: pull-push   # pull-push par défaut ; &quot;pull&quot; pour jobs read-only
+
+# Artifact de test coverage
+test:unit:
+  script: pytest --cov=src --cov-report=xml
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    expire_in: 7 days</code></pre>
+<p><strong>Règle :</strong> toujours mettre <code>expire_in</code> sur les artifacts — sans ça, GitLab conserve par défaut selon la config instance (peut saturer le stockage).</p>
+<p><strong><code>dependencies: []</code></strong> sur les jobs de déploiement pour ne pas télécharger d'artifacts inutiles.</p>
+<h2>5. Pipelines avancés</h2>
+<h3>DAG avec <code>needs:</code></h3>
+<pre><code class="lang-yaml">test:unit:
+  stage: test
+  needs: [build:app]   # démarre dès que build:app est terminé, pas toute la stage build
+
+test:e2e:
+  stage: test
+  needs: [build:app, build:docker]</code></pre>
+<h3>Pipelines enfants (monorepo)</h3>
+<pre><code class="lang-yaml">trigger:backend:
+  trigger:
+    include: backend/.gitlab-ci.yml
+    strategy: depend   # le parent attend la fin du pipeline enfant
+  rules:
+    - changes:
+        - backend/**/*</code></pre>
+<h3>Templates partagés</h3>
+<pre><code class="lang-yaml">include:
+  - project: 'infra/ci-templates'
+    ref: main
+    file: '/templates/docker-build.yml'
+  - template: 'Security/SAST.gitlab-ci.yml'</code></pre>
+<h2>6. Environnements et déploiements</h2>
+<pre><code class="lang-yaml">deploy:review:
+  stage: deploy
+  script: ./scripts/deploy-review.sh $CI_ENVIRONMENT_SLUG
+  environment:
+    name: review/$CI_COMMIT_REF_SLUG
+    url: https://$CI_ENVIRONMENT_SLUG.preview.example.com
+    on_stop: stop:review
+  rules:
+    - if: $CI_PIPELINE_SOURCE == &quot;merge_request_event&quot;
+
+stop:review:
+  stage: deploy
+  script: ./scripts/teardown-review.sh $CI_ENVIRONMENT_SLUG
+  environment:
+    name: review/$CI_COMMIT_REF_SLUG
+    action: stop
+  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == &quot;merge_request_event&quot;</code></pre>
+<h2>7. Sécurité intégrée</h2>
+<p>Activer les scanners natifs via les templates officiels :</p>
+<pre><code class="lang-yaml">include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Security/Container-Scanning.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml</code></pre>
+<p><strong>Variables sensibles :</strong></p>
+<pre><code class="lang-bash"># Via CLI
+glab variable set MY_SECRET &quot;valeur&quot; --masked --protected --project monprojet</code></pre>
+<p>Dans l'UI : Settings &gt; CI/CD &gt; Variables → cocher <code>Masked</code> + <code>Protected</code>.</p>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Utiliser <code>only/except</code></td><td>Comportement imprévisible sur MR</td><td>Migrer vers <code>rules:</code></td></tr><tr><td>Artifacts sans <code>expire_in</code></td><td>Saturation stockage</td><td>Toujours fixer <code>expire_in</code></td></tr><tr><td>Secrets en clair dans le script</td><td>Fuite dans les logs</td><td>Variables masked + protected</td></tr><tr><td>Un seul <code>.gitlab-ci.yml</code> de 500 lignes</td><td>Illisible, impossible à maintenir</td><td><code>include:local:</code> par domaine</td></tr><tr><td>Cache sans <code>key:files:</code></td><td>Cache invalidé ou réutilisé à tort</td><td>Clé sur fichier de lock</td></tr><tr><td><code>when: always</code> sur les jobs de cleanup</td><td>Exécution même en cas d'échec upstream</td><td><code>when: on_failure</code> ou <code>needs:</code> explicite</td></tr><tr><td>Pas de <code>interruptible: true</code> sur les jobs de build</td><td>Files de runners saturées</td><td>Marquer les jobs annulables</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Pipeline Component Catalog</strong> (GitLab 16.9+) : publier des composants réutilisables dans le Catalog plutôt que des templates <code>include:remote</code>.</li>
+<li><strong>CI/CD Catalog</strong> : préférer <code>component:</code> à <code>include:project:</code> pour la versioning sémantique.</li>
+<li><strong><code>id_tokens:</code></strong> (OIDC) : remplacer les tokens statiques pour l'auth cloud (AWS, Azure, GCP) par des tokens OIDC courts-vivants.</li>
+<li><strong>Merge Train</strong> : activer sur les branches protégées à fort trafic pour éviter les régressions post-merge.</li>
+<li><strong><code>dast_configuration:</code></strong> : pointer sur un environnement de review pour le DAST plutôt qu'une URL codée en dur.</li>
+<li>Tester le pipeline localement avant push : <code>gitlab-runner exec docker build:app</code>.</li>
 </ul>
 </article>
 </main>

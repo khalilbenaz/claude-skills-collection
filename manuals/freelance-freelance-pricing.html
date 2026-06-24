@@ -96,22 +96,94 @@ cp -r claude-skills-collection/skills/freelance-freelance-pricing ~/.claude/skil
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Freelance Pricing</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyse des charges</strong> — Calculer l'ensemble des charges : cotisations sociales (selon statut : micro, EURL, SASU, auto-entrepreneur Maroc), assurances (RC Pro, mutuelle), outils, comptable, épargne retraite, congés non facturés.</li>
-<li><strong>Calcul du TJM plancher</strong> — Déterminer le TJM minimum viable : (revenu net souhaité + charges annuelles) / nombre de jours facturables par an (max 218 jours, réaliste 150-180 jours).</li>
-<li><strong>Étude de marché</strong> — Analyser les tarifs du marché pour le profil et la stack technique : plateformes (Malt, Comet, Crème de la crème), réseau, enquêtes salariales, offres de missions.</li>
-<li><strong>Positionnement</strong> — Choisir sa stratégie de pricing : TJM classique, forfait projet, tarification à la valeur (value-based pricing), packages de services, retainer mensuel.</li>
-<li><strong>Grille tarifaire</strong> — Construire une grille avec différents niveaux selon : type de client (startup/PME/grand compte), durée de mission, complexité technique, urgence.</li>
-<li><strong>Préparation à la négociation</strong> — Préparer les arguments de valeur, les concessions acceptables (durée vs tarif), les limites non négociables et les alternatives à proposer.</li>
-<li><strong>Révision périodique</strong> — Planifier une révision annuelle du TJM en fonction de l'expérience acquise, l'inflation, la demande du marché et le taux de conversion des propositions.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Étape 1 — Calcul du TJM plancher</h2>
+<p>Formule de base :</p>
+<pre><code>TJM_plancher = (Revenu net annuel souhaité + Charges annuelles) / Jours facturables</code></pre>
+<p><strong>Charges à inclure (checklist) :</strong></p>
 <ul>
-<li>Ne jamais descendre en dessous du TJM plancher, même pour décrocher une mission.</li>
-<li>Facturer la valeur apportée, pas le temps passé : un expert résout en 1 jour ce qu'un junior fait en 5.</li>
-<li>Toujours annoncer son tarif en premier pour ancrer la négociation.</li>
-<li>Prévoir une marge de négociation de 10-15% dans le tarif annoncé.</li>
+<li>Cotisations sociales selon statut : ~22 % micro-entrepreneur, ~45-55 % SASU/EURL TNS, ~20 % portage salarial</li>
+<li>RC Pro : 400–1 500 €/an selon domaine</li>
+<li>Mutuelle : 1 200–2 400 €/an (si non couverte)</li>
+<li>Comptable : 1 200–3 600 €/an (EURL/SASU)</li>
+<li>Outils &amp; licences (IDE, SaaS, cloud) : 1 000–3 000 €/an</li>
+<li>Formation continue : 1 000–2 000 €/an</li>
+<li>Épargne retraite (PER) : 10 % du revenu net cible minimum</li>
+<li>Congés et jours non facturés : 40–60 jours/an</li>
+</ul>
+<p><strong>Jours facturables réalistes :</strong></p>
+<ul>
+<li>Théorique : 218 jours ouvrés/an</li>
+<li>Réaliste (prospection + vacances + jours creux) : <strong>150–175 jours</strong></li>
+<li>Pour débuter : commencer à 150 jours pour ne pas se piéger</li>
+</ul>
+<p><strong>Exemple concret :</strong></p>
+<pre><code>Cible nette : 70 000 €
+Charges annuelles totales : 35 000 €
+Jours facturables : 165
+
+TJM plancher = (70 000 + 35 000) / 165 = 636 €/j → arrondir à 650 €/j
+TJM annoncé (avec marge 15 %) = 750 €/j</code></pre>
+<hr>
+<h2>Étape 2 — Étude de marché par stack</h2>
+<p>Sources à croiser :</p>
+<ul>
+<li><strong>Malt</strong> : profils similaires (même stack, ancienneté), onglet &quot;Tarif indicatif&quot;</li>
+<li><strong>Comet / Crème de la crème</strong> : baromètres annuels publiés Q1</li>
+<li><strong>Indie Hackers / communautés Slack</strong> : retours directs freelances</li>
+<li><strong>Offres de missions</strong> : noter les fourchettes indiquées</li>
+</ul>
+<p>Fourchettes 2026 (France, indicatif) :</p>
+<table><thead><tr><th>Profil</th><th>TJM bas</th><th>TJM haut</th></tr></thead><tbody><tr><td>Dev frontend junior (&lt; 3 ans)</td><td>350 €</td><td>500 €</td></tr><tr><td>Dev fullstack confirmé (5 ans)</td><td>550 €</td><td>750 €</td></tr><tr><td>Lead dev / architect (8 ans+)</td><td>750 €</td><td>1 100 €</td></tr><tr><td>Data engineer / ML</td><td>650 €</td><td>1 000 €</td></tr><tr><td>DevOps / SRE senior</td><td>700 €</td><td>1 050 €</td></tr></tbody></table>
+<hr>
+<h2>Étape 3 — Choisir son modèle de tarification</h2>
+<h3>TJM classique</h3>
+<p>Adapté aux missions longues (3 mois+). Facturer à la journée ou demi-journée.</p>
+<pre><code>Avantage : simple, prévisible
+Piège : le client optimise les jours, compression vers le bas</code></pre>
+<h3>Forfait projet</h3>
+<p>Adapté si scope bien défini. Calculer en interne : estimation jours × TJM + buffer 20 %.</p>
+<pre><code>Avantage : vous capturez l'efficacité
+Piège : scope creep sans avenant = perte sèche → toujours un avenant signé</code></pre>
+<h3>Value-based pricing</h3>
+<p>Pour les missions à fort impact business (migration, lancement produit, audit sécurité). Raisonnement : si la migration fait économiser 200 k€/an, facturer 15–20 % de la valeur créée est légitime.</p>
+<pre><code>Avantage : découplé du temps, TJM implicite x2 à x5
+Condition : démontrer l'impact en chiffres</code></pre>
+<h3>Retainer mensuel</h3>
+<p>Forfait mensuel récurrent (maintenance, astreinte, conseil). Idéal pour sécuriser un revenu de base.</p>
+<pre><code>Exemple : 3 j/mois × TJM – 10 % fidélité = revenu garanti</code></pre>
+<hr>
+<h2>Étape 4 — Grille tarifaire multi-niveaux</h2>
+<p>Construire une grille selon ces axes :</p>
+<table><thead><tr><th>Levier</th><th>Majoration</th><th>Exemple</th></tr></thead><tbody><tr><td>Grand compte (CAC40, banque)</td><td>+15 à +25 %</td><td>Processus lourd, budget confortable</td></tr><tr><td>Urgence / démarrage &lt; 2 semaines</td><td>+20 %</td><td>Disponibilité immédiate</td></tr><tr><td>Stack rare / expertise niche</td><td>+20 à +40 %</td><td>Rust, Terraform avancé, K8s prod</td></tr><tr><td>Mission &lt; 1 mois</td><td>+15 %</td><td>Pas de visibilité long terme</td></tr><tr><td>Mission &gt; 6 mois</td><td>–5 à –10 %</td><td>Sécurité, moins de prospection</td></tr><tr><td>Startup pré-série A</td><td>–10 % max + equity</td><td>Négocier BSPCE, pas de ristourne cash</td></tr></tbody></table>
+<hr>
+<h2>Étape 5 — Négociation</h2>
+<p><strong>Règles d'ancrage :</strong></p>
+<ol>
+<li>Toujours annoncer en premier — l'ancre fixe la référence</li>
+<li>Annoncer le TJM cible + 15 % (marge de négociation)</li>
+<li>Ne jamais justifier avec &quot;mes charges&quot; — justifier avec la valeur et le marché</li>
+<li>Si le client pousse : concéder sur la durée, pas sur le tarif</li>
+</ol>
+<p><strong>Réponses aux objections courantes :</strong></p>
+<table><thead><tr><th>Objection</th><th>Réponse</th></tr></thead><tbody><tr><td>&quot;C'est trop cher&quot;</td><td>&quot;Mon positionnement correspond au marché pour ce niveau. Que proposez-vous ?&quot;</td></tr><tr><td>&quot;On a un budget fixe de X&quot;</td><td>&quot;Sur X, je peux couvrir [scope réduit]. Pour le scope complet : X + Y.&quot;</td></tr><tr><td>&quot;Nos freelances habituels sont à 400 €&quot;</td><td>&quot;Je comprends. Ma valeur ajoutée est [expertise spécifique]. Si 400 € est votre plafond, nous ne sommes pas alignés.&quot;</td></tr></tbody></table>
+<hr>
+<h2>Étape 6 — Révision annuelle</h2>
+<p>Calendrier recommandé :</p>
+<ul>
+<li><strong>Janvier</strong> : révision inflation (objectif : TJM net réel ≥ inflation + 2 %)</li>
+<li><strong>Après chaque mission réussie</strong> : +5 à +10 % sur le prochain devis</li>
+<li><strong>Si taux de conversion &gt; 80 %</strong> : vous êtes sous-tarifé, monter de 10–15 % immédiatement</li>
+<li><strong>Si taux de conversion &lt; 30 %</strong> : revoir le positionnement ou la communication de valeur</li>
+</ul>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<ul>
+<li><strong>Ne jamais descendre sous le TJM plancher</strong> — même pour &quot;se lancer&quot;, même pour un client sympa. Chaque exception crée un précédent difficile à corriger.</li>
+<li><strong>Éviter la facturation à l'heure</strong> — incite le client à comptabiliser chaque minute, génère friction et sous-estimation.</li>
+<li><strong>Ne pas aligner son tarif sur son ancien salaire brut</strong> — le seuil de départ devrait être salaire brut / 100 (en TJM) comme ordre de grandeur, puis ajuster au marché.</li>
+<li><strong>Ne pas accepter un retard de paiement sans clause pénale</strong> — inclure systématiquement : pénalité = 3× taux BCE + indemnité forfaitaire 40 € (art. L441-10 code commerce).</li>
+<li><strong>Ne pas oublier la TVA</strong> — en micro-entreprise sous seuil franchise : pas de TVA mais surveiller les seuils (36 800 € services en 2026). Au-delà : TVA 20 % à ajouter au TJM affiché.</li>
+<li><strong>Ne pas confondre TJM et revenu net</strong> — un TJM de 600 €/j × 170 jours = 102 000 € brut ≠ revenu net (déduire charges, impôts, non-facturé).</li>
 </ul>
 </article>
 </main>

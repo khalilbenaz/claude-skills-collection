@@ -97,23 +97,148 @@ cp -r claude-skills-collection/skills/dev-mobile-app-architect ~/.claude/skills/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Mobile App Architect</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyse des besoins</strong> — Identifier les plateformes cibles (iOS, Android, web), le budget alloué, les exigences de performance (temps de démarrage, fluidité des animations, consommation batterie), la timeline et les compétences de l'équipe disponible.</li>
-<li><strong>Choix technologique</strong> — Comparer et justifier le choix parmi : natif iOS (Swift/SwiftUI), natif Android (Kotlin/Compose), Flutter (Dart, une seule codebase, performances proches du natif), React Native (JavaScript/TypeScript, écosystème JS), MAUI (.NET, pour les équipes C#) ou Kotlin Multiplatform (partage de la logique métier uniquement).</li>
-<li><strong>Architecture pattern</strong> — Sélectionner et documenter le pattern adapté : MVVM (séparation claire View/ViewModel/Model), MVI (flux unidirectionnel, états immuables), Clean Architecture (couches Use Cases/Repository/DataSource), BLoC (Flutter, événements et états explicites), ou Redux (state global prévisible).</li>
-<li><strong>Gestion de la navigation</strong> — Concevoir le système de navigation : stack navigation (push/pop), tab navigation (bottom bar, drawer), deep linking (URI schemes, Universal Links/App Links), routing typé et gestion des transitions entre écrans.</li>
-<li><strong>State management</strong> — Choisir la solution de gestion d'état selon le framework : Provider/Riverpod (Flutter), Redux Toolkit/Zustand/React Query (React Native), Combine/SwiftUI state wrappers (@State, @ObservedObject), ou StateFlow/LiveData avec ViewModel (Android).</li>
-<li><strong>Data layer</strong> — Concevoir la couche de données : stockage local (SQLite via Room/sqflite, Realm, Hive, Core Data), client API (Retrofit, Dio, URLSession), stratégie de cache (TTL, invalidation), synchronisation offline-first (conflict resolution, queue des mutations en attente).</li>
-<li><strong>Sécurité mobile</strong> — Intégrer les bonnes pratiques : certificate pinning (protection contre les MITM), secure storage (Keychain iOS, EncryptedSharedPreferences Android, flutter_secure_storage), authentification biométrique (Face ID, Touch ID, BiometricPrompt), obfuscation du code (ProGuard/R8, obfuscation Dart).</li>
-<li><strong>CI/CD mobile</strong> — Mettre en place le pipeline : Fastlane pour l'automatisation (tests, build, upload), code signing automatisé (match/Fastlane pour iOS, keystores pour Android), distribution bêta (TestFlight, Firebase App Distribution), déploiement App Store/Play Store avec release notes et versioning automatique.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Qualifier le besoin avant de choisir un framework</h3>
+<p>Poser ces questions avant toute décision :</p>
+<table><thead><tr><th>Critère</th><th>Impact</th></tr></thead><tbody><tr><td>Plateformes cibles</td><td>iOS seul → Swift/SwiftUI ; Android seul → Kotlin/Compose ; les deux → cross-platform</td></tr><tr><td>Animations custom &amp; jeux</td><td>Natif ou Flutter (Impeller) ; React Native acceptable avec Skia</td></tr><tr><td>Accès hardware spécifique (BLE, NFC, ARKit)</td><td>Natif de préférence ; sinon plugin Flutter/RN à vérifier avant de committer</td></tr><tr><td>Taille équipe / compétences</td><td>Équipe JS → React Native ; équipe C# → MAUI ; équipe polyvalente → Flutter</td></tr><tr><td>Time-to-market</td><td>Cross-platform réduit ~30-40 % du temps pour les apps &quot;standard&quot;</td></tr><tr><td>Performance critique (&lt;16 ms frames)</td><td>Flutter (Dart AOT) ou natif ; React Native avec JSI+Fabric acceptable</td></tr></tbody></table>
+<hr>
+<h3>2. Choisir la stack technologique</h3>
+<p><strong>Matrice de décision rapide (2026) :</strong></p>
+<pre><code>Native iOS   → Swift 6 + SwiftUI 5 + Combine/Swift Concurrency
+Native Android → Kotlin 2 + Jetpack Compose 1.7 + Coroutines + Flow
+Flutter      → Dart 3 + Flutter 3.22+ + Riverpod 2 + Impeller (default)
+React Native → RN 0.75+ + Expo SDK 52 + New Architecture (Fabric+JSI) activée
+KMP          → Kotlin Multiplatform + Compose Multiplatform (UI partagée si besoin)
+MAUI         → .NET 9 + MAUI pour équipes C# existantes</code></pre>
+<p><strong>Règle empirique :</strong></p>
 <ul>
-<li>Fournis du code complet et fonctionnel illustrant chaque décision d'architecture, avec des exemples concrets adaptés au framework choisi.</li>
-<li>Adapte les recommandations aux dernières versions stables des frameworks et des outils (Flutter 3.x, React Native 0.73+, Swift 5.9+, Kotlin 1.9+).</li>
-<li>Priorise la performance et l'UX : justifie chaque choix technique par son impact sur la fluidité, la consommation mémoire et la réactivité de l'interface.</li>
-<li>Mentionne systématiquement les alternatives et leurs compromis (trade-offs) pour permettre une décision éclairée selon le contexte du projet.</li>
-<li>En cas de besoin offline-first, détaille la stratégie de synchronisation, la résolution de conflits et la gestion des états de connectivité.</li>
+<li>App vitrine / catalogue / dashboard → Flutter ou RN, gain de temps net</li>
+<li>App fintech / bancaire critique → natif par plateforme ou KMP (logique partagée, UI native)</li>
+<li>App déjà en Swift/Kotlin → ajouter KMP plutôt que réécrire</li>
+</ul>
+<hr>
+<h3>3. Architecturer les couches (Clean Architecture mobile)</h3>
+<p>Structure recommandée (indépendante du framework) :</p>
+<pre><code>presentation/
+  screens/         ← UI pure, aucune logique métier
+  viewmodels/      ← expose des états immuables à la vue
+domain/
+  usecases/        ← une classe = une action métier
+  entities/        ← modèles purs sans annotations framework
+  repositories/    ← interfaces uniquement
+data/
+  repositories/    ← implémentations concrètes
+  datasources/
+    remote/        ← API REST/GraphQL/gRPC
+    local/         ← Room, sqflite, Core Data, SQLDelight
+  models/          ← DTOs + mappers vers entities</code></pre>
+<p><strong>Pattern par framework :</strong></p>
+<table><thead><tr><th>Framework</th><th>Pattern recommandé</th><th>Alternative</th></tr></thead><tbody><tr><td>Flutter</td><td>BLoC 8+ ou Riverpod 2</td><td>Provider (legacy)</td></tr><tr><td>React Native</td><td>Zustand + React Query</td><td>Redux Toolkit</td></tr><tr><td>SwiftUI</td><td>MVVM + @Observable (iOS 17)</td><td>TCA (The Composable Architecture)</td></tr><tr><td>Jetpack Compose</td><td>MVVM + ViewModel + StateFlow</td><td>MVI avec Orbit/MoleculeFlow</td></tr></tbody></table>
+<p><strong>Exemple Flutter (Riverpod + UseCase) :</strong></p>
+<pre><code class="lang-dart">// domain/usecases/get_transactions.dart
+class GetTransactions {
+  final TransactionRepository _repo;
+  const GetTransactions(this._repo);
+  Future&lt;List&lt;Transaction&gt;&gt; call(String accountId) =&gt; _repo.fetch(accountId);
+}
+
+// presentation/providers/transactions_provider.dart
+@riverpod
+Future&lt;List&lt;Transaction&gt;&gt; transactions(Ref ref, String accountId) {
+  return ref.watch(getTransactionsProvider).call(accountId);
+}</code></pre>
+<hr>
+<h3>4. Navigation et deep linking</h3>
+<pre><code class="lang-dart">// Flutter — GoRouter 14+ (type-safe routes)
+@TypedGoRoute&lt;HomeRoute&gt;(path: '/')
+class HomeRoute extends GoRouteData {
+  const HomeRoute();
+  Widget build(BuildContext context, GoRouterState state) =&gt; const HomeScreen();
+}
+
+// Deep link universel : https://app.example.com/payment/42
+// → GoRouter intercepte via flutter_branch_io ou firebase_dynamic_links</code></pre>
+<pre><code class="lang-swift">// SwiftUI — NavigationStack (iOS 16+)
+NavigationStack(path: $path) {
+    ContentView()
+        .navigationDestination(for: Route.self) { route in
+            switch route {
+            case .payment(let id): PaymentDetailView(id: id)
+            }
+        }
+}</code></pre>
+<hr>
+<h3>5. Data layer : offline-first</h3>
+<p>Stratégie en 4 temps :</p>
+<ol>
+<li><strong>Lecture</strong> → SQLite local en source de vérité ; réseau en refresh asynchrone (stale-while-revalidate)</li>
+<li><strong>Écriture</strong> → file de mutations offline (Drift/Room + worker background)</li>
+<li><strong>Sync</strong> → résolution de conflits : Last-Write-Wins par défaut, CRDT si collaboration temps réel</li>
+<li><strong>Connectivité</strong> → surveiller <code>connectivity_plus</code> (Flutter) / <code>NetInfo</code> (RN) pour déclencher la sync</li>
+</ol>
+<pre><code class="lang-kotlin">// Android — Room + WorkManager (offline queue)
+@Entity data class PendingOperation(
+    @PrimaryKey val id: String = UUID.randomUUID().toString(),
+    val payload: String,   // JSON sérialisé
+    val retries: Int = 0,
+    val createdAt: Long = System.currentTimeMillis()
+)</code></pre>
+<hr>
+<h3>6. Sécurité mobile — checklist actionnable</h3>
+<ul>
+<li>[ ] <strong>Certificate pinning</strong> : <code>dio</code> + <code>http_certificate_pinning</code> (Flutter) / TrustKit (iOS) / OkHttp CertificatePinner (Android)</li>
+<li>[ ] <strong>Secure storage</strong> : <code>flutter_secure_storage</code> / <code>KeyStore</code> Android / Keychain iOS — jamais SharedPreferences/UserDefaults pour tokens</li>
+<li>[ ] <strong>Biométrie</strong> : <code>local_auth</code> (Flutter) — toujours fallback PIN, jamais bloquer l'accès</li>
+<li>[ ] <strong>Obfuscation</strong> : <code>flutter build apk --obfuscate --split-debug-info=./debug</code> ; ProGuard/R8 activé en release Android</li>
+<li>[ ] <strong>Jailbreak/root detection</strong> : <code>flutter_jailbreak_detection</code> — adapter la réponse (désactiver features sensibles, ne pas crasher)</li>
+<li>[ ] <strong>Pas de secrets dans le code</strong> : <code>.env</code> via <code>flutter_dotenv</code>, jamais committé ; secrets injectés en CI via Secrets Manager</li>
+</ul>
+<hr>
+<h3>7. Performance — points de contrôle critiques</h3>
+<pre><code class="lang-bash"># Flutter — profiling
+flutter run --profile
+flutter pub run flutter_launcher_icons  # vérifier tailles
+# DevTools → Timeline, Memory, CPU Profiler
+
+# React Native — Hermes + Flipper
+npx react-native start --experimental-debugger
+# Activer Hermes dans android/app/build.gradle : hermesEnabled = true</code></pre>
+<p>Cibles 2026 :</p>
+<ul>
+<li>Startup à froid &lt; 2 s (budget : splash → premier frame interactif)</li>
+<li>Frame budget : 16 ms (60 fps) / 8 ms (120 fps — iPad Pro, Pixel 9)</li>
+<li>APK/IPA &lt; 30 MB pour le premier install ; assets en lazy loading</li>
+</ul>
+<hr>
+<h3>8. CI/CD mobile</h3>
+<pre><code class="lang-yaml"># GitHub Actions — Flutter
+- uses: subosito/flutter-action@v2
+  with: { flutter-version: '3.22.x', channel: 'stable' }
+- run: flutter test --coverage
+- run: flutter build appbundle --release --obfuscate --split-debug-info=./debug-symbols
+- uses: r0adkll/upload-google-play@v1   # deploy Play Store</code></pre>
+<pre><code class="lang-ruby"># Fastlane — iOS
+lane :beta do
+  match(type: &quot;appstore&quot;)           # certificates via git repo chiffré
+  build_ios_app(scheme: &quot;MyApp&quot;)
+  upload_to_testflight
+  slack(message: &quot;Beta #{lane_context[SharedValues::BUILD_NUMBER]} uploadé&quot;)
+end</code></pre>
+<p>Versioning automatique :</p>
+<pre><code class="lang-bash"># Incrémenter build number depuis le numéro de run CI
+VERSION_CODE=$GITHUB_RUN_NUMBER
+flutter build apk --build-number=$VERSION_CODE</code></pre>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Pourquoi c'est un problème</th><th>Correction</th></tr></thead><tbody><tr><td>Logique métier dans les Widgets/Views</td><td>Impossible à tester, couplage fort</td><td>Extraire dans ViewModel/UseCase</td></tr><tr><td>setState() global dans Flutter</td><td>Re-renders inutiles, performance</td><td>Riverpod/BLoC scoped</td></tr><tr><td>Appels réseau sans retry/timeout</td><td>UX cassée sur réseau mobile instable</td><td>Dio interceptors + retry package</td></tr><tr><td>Tokens JWT en clair dans AsyncStorage</td><td>Vol trivial via backup ADB</td><td>Secure Storage obligatoire</td></tr><tr><td>Gros monorepo sans lazy imports</td><td>Startup time &gt; 4 s</td><td>Code splitting + deferred loading</td></tr><tr><td>Navigation par routes string</td><td>Erreurs silencieuses à runtime</td><td>Routes typées (GoRouter, TCA Router)</td></tr><tr><td>Tests uniquement sur simulateur</td><td>Ne détecte pas les régressions perf réelles</td><td>Firebase Test Lab / AWS Device Farm</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Swift 6 strict concurrency</strong> : activer <code>SWIFT_STRICT_CONCURRENCY = complete</code> dès le départ, évite les data races</li>
+<li><strong>Compose Multiplatform</strong> : stable pour iOS depuis fin 2024, viable pour les apps non-critique en perf</li>
+<li><strong>Expo EAS</strong> : remplace Fastlane pour React Native dans la majorité des projets (build cloud, OTA updates)</li>
+<li><strong>Impeller (Flutter)</strong> : activé par défaut sur Android depuis Flutter 3.22 — profiler avec <code>flutter run --profile</code> si régressions</li>
+<li><strong>Privacy manifests (iOS 17+)</strong> : obligatoire pour toute soumission App Store — déclarer chaque API accédant aux données utilisateur</li>
+<li><strong>AGP 8+ / Gradle 8+</strong> : activer <code>nonTransitiveRClass = true</code> et <code>enableR8FullMode = true</code> pour réduire la taille APK</li>
 </ul>
 </article>
 </main>

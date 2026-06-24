@@ -96,24 +96,150 @@ cp -r claude-skills-collection/skills/database-sql-server-tuner ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>SQL Server Tuner</h1>
-<h2>Workflow</h2>
+<h2>Workflow en étapes</h2>
+<h3>1. Baseline — Collecter les informations système</h3>
+<p>Avant tout diagnostic, fixer le contexte :</p>
+<pre><code class="lang-sql">-- Version, édition, mémoire configurée
+SELECT @@VERSION;
+SELECT name, value_in_use FROM sys.configurations
+WHERE name IN ('max server memory (MB)', 'cost threshold for parallelism',
+               'max degree of parallelism', 'optimize for ad hoc workloads');
+
+-- Taille et état de chaque base
+SELECT name, state_desc, log_reuse_wait_desc,
+       CAST(size * 8.0 / 1024 AS INT) AS size_MB
+FROM sys.databases ORDER BY size DESC;</code></pre>
+<h3>2. Identifier les goulets — Wait Stats</h3>
+<p><strong>Point d'entrée systématique</strong> : les wait stats expliquent 80 % des lenteurs.</p>
+<pre><code class="lang-sql">-- Top 10 waits (hors idle)
+SELECT TOP 10 wait_type,
+       waiting_tasks_count,
+       CAST(wait_time_ms / 1000.0 AS DECIMAL(10,2)) AS wait_sec,
+       CAST(signal_wait_time_ms * 100.0 / wait_time_ms AS DECIMAL(5,2)) AS pct_signal
+FROM sys.dm_os_wait_stats
+WHERE wait_type NOT IN (
+    'SLEEP_TASK','BROKER_TO_FLUSH','BROKER_EVENTHANDLER','WAITFOR',
+    'SLEEP_DBSTARTUP','DISPATCHER_QUEUE_SEMAPHORE','XE_TIMER_EVENT',
+    'SQLTRACE_BUFFER_FLUSH','CLR_QUANTUM_TASK','HADR_WORK_QUEUE',
+    'LOGMGR_QUEUE','REQUEST_FOR_DEADLOCK_SEARCH','SNI_HTTP_ACCEPT',
+    'ONDEMAND_TASK_MANAGER','SERVER_IDLE_CHECK','SLEEP_MASTERDBREADY',
+    'FT_IFTS_SCHEDULER_IDLE_WAIT','XE_DISPATCHER_WAIT','ASYNC_NETWORK_IO',
+    'SLEEP_TEMPDBSTARTUP','DBMIRROR_EVENTS_QUEUE')
+ORDER BY wait_time_ms DESC;</code></pre>
+<p><strong>Critères de décision rapide :</strong></p>
+<table><thead><tr><th>Wait type</th><th>Cause probable</th><th>Action</th></tr></thead><tbody><tr><td><code>PAGEIOLATCH_SH/EX</code></td><td>I/O disque, manque de mémoire</td><td>Augmenter <code>max server memory</code>, vérifier PLE</td></tr><tr><td><code>LCK_M_*</code></td><td>Contention de verrous</td><td>Analyser requêtes bloquantes, envisager RCSI</td></tr><tr><td><code>CXPACKET / CXCONSUMER</code></td><td>Parallelisme excessif</td><td>Ajuster MAXDOP, <code>cost threshold</code></td></tr><tr><td><code>RESOURCE_SEMAPHORE</code></td><td>Pression mémoire sur grants</td><td>Requêtes avec sort/hash coûteux, revoir index</td></tr><tr><td><code>WRITELOG</code></td><td>I/O log lent</td><td>Déplacer LDF sur SSD dédié</td></tr></tbody></table>
+<h3>3. Identifier les requêtes coûteuses</h3>
+<pre><code class="lang-sql">-- Top requêtes par CPU total (Query Store, SQL 2016+)
+SELECT TOP 20
+    qsq.query_id,
+    SUBSTRING(qsqt.query_sql_text, 1, 200) AS sql_text,
+    SUM(qsrs.count_executions) AS executions,
+    CAST(SUM(qsrs.avg_cpu_time * qsrs.count_executions) / 1e6 AS DECIMAL(10,2)) AS total_cpu_sec,
+    CAST(AVG(qsrs.avg_duration) / 1e6 AS DECIMAL(10,4)) AS avg_dur_sec
+FROM sys.query_store_query qsq
+JOIN sys.query_store_query_text qsqt ON qsq.query_text_id = qsqt.query_text_id
+JOIN sys.query_store_plan qsp ON qsq.query_id = qsp.query_id
+JOIN sys.query_store_runtime_stats qsrs ON qsp.plan_id = qsrs.plan_id
+GROUP BY qsq.query_id, qsqt.query_sql_text
+ORDER BY total_cpu_sec DESC;
+
+-- Alternative : DMV en temps réel (pas de persistence)
+SELECT TOP 20
+    total_worker_time / execution_count AS avg_cpu_us,
+    execution_count,
+    total_elapsed_time / execution_count AS avg_dur_us,
+    SUBSTRING(st.text, (qs.statement_start_offset/2)+1,
+        ((CASE statement_end_offset WHEN -1 THEN DATALENGTH(st.text)
+          ELSE qs.statement_end_offset END - qs.statement_start_offset)/2)+1) AS stmt
+FROM sys.dm_exec_query_stats qs
+CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) st
+ORDER BY avg_cpu_us DESC;</code></pre>
+<h3>4. Optimiser les index</h3>
+<p><strong>Processus décisionnel :</strong></p>
 <ol>
-<li><strong>Collecter les informations système</strong> — Identifier la version SQL Server, l'édition, la configuration mémoire et CPU, et les bases de données concernées via les DMV sys.dm_os_sys_info et sys.configurations.</li>
-<li><strong>Analyser les requêtes coûteuses</strong> — Utiliser sys.dm_exec_query_stats, Query Store et les plans d'exécution (actual execution plan) pour identifier les requêtes les plus consommatrices en CPU, I/O et durée.</li>
-<li><strong>Optimiser les index</strong> — Examiner les DMV d'index manquants (sys.dm_db_missing_index_details), supprimer les index inutilisés et consolider les index redondants en utilisant les index columnstore si approprié.</li>
-<li><strong>Tuner les requêtes</strong> — Réécrire les requêtes problématiques, éliminer les scans de table, optimiser les jointures et utiliser les hints de requête uniquement en dernier recours.</li>
-<li><strong>Configurer tempdb</strong> — Dimensionner tempdb avec le bon nombre de fichiers de données (1 par CPU logique, max 8), activer les optimisations de métadonnées en mémoire (SQL Server 2019+).</li>
-<li><strong>Mettre en place Always On</strong> — Configurer les groupes de disponibilité avec le mode de commit approprié (synchrone/asynchrone), le routage en lecture seule et la stratégie de failover.</li>
-<li><strong>Planifier la maintenance</strong> — Configurer les jobs de rebuild/reorganize d'index, mise à jour des statistiques et vérifications d'intégrité (DBCC CHECKDB) selon les fenêtres de maintenance.</li>
-<li><strong>Documenter et suivre</strong> — Créer un baseline de performance et mettre en place des alertes sur les métriques critiques (PLE, batch requests/sec, wait stats).</li>
+<li>Vérifier les index manquants signalés :</li>
 </ol>
-<h2>Règles</h2>
+<pre><code class="lang-sql">SELECT TOP 20
+    migs.avg_total_user_cost * migs.avg_user_impact * (migs.user_seeks + migs.user_scans) AS score,
+    mid.statement AS table_name,
+    mid.equality_columns, mid.inequality_columns, mid.included_columns
+FROM sys.dm_db_missing_index_group_stats migs
+JOIN sys.dm_db_missing_index_groups mig ON migs.group_handle = mig.index_group_handle
+JOIN sys.dm_db_missing_index_details mid ON mig.index_handle = mid.index_handle
+ORDER BY score DESC;</code></pre>
+<ol>
+<li>Repérer les index inutilisés (candidats à la suppression) :</li>
+</ol>
+<pre><code class="lang-sql">SELECT OBJECT_NAME(i.object_id) AS table_name, i.name AS index_name,
+       i.type_desc, ius.user_seeks, ius.user_scans, ius.user_lookups, ius.user_updates
+FROM sys.indexes i
+LEFT JOIN sys.dm_db_index_usage_stats ius
+    ON i.object_id = ius.object_id AND i.index_id = ius.index_id
+    AND ius.database_id = DB_ID()
+WHERE OBJECTPROPERTY(i.object_id,'IsUserTable') = 1
+  AND i.type_desc &lt;&gt; 'HEAP'
+  AND (ius.user_seeks IS NULL OR ius.user_seeks + ius.user_scans + ius.user_lookups = 0)
+ORDER BY ISNULL(ius.user_updates, 0) DESC;</code></pre>
+<ol>
+<li><strong>Critère création index</strong> : score &gt; 100 000 ET ratio seeks/scans &gt; 10. Préférer un index couvrant (INCLUDE) plutôt que plusieurs index partiels.</li>
+</ol>
+<ol>
+<li><strong>Columnstore</strong> : envisager un index columnstore non-clustered sur les tables &gt; 10 M lignes accédées en analytique.</li>
+</ol>
+<h3>5. Tuner les requêtes</h3>
+<p>Pièges fréquents à éliminer en priorité :</p>
 <ul>
-<li>Toujours capturer le plan d'exécution réel (actual execution plan) et non le plan estimé pour diagnostiquer les problèmes de performance.</li>
-<li>Ne jamais ajouter un index sans vérifier son impact sur les opérations d'écriture (INSERT, UPDATE, DELETE) et l'espace disque.</li>
-<li>Toujours analyser les wait stats (sys.dm_os_wait_stats) pour comprendre la nature des ralentissements avant d'appliquer des corrections.</li>
-<li>Éviter les curseurs et les boucles WHILE en faveur des opérations ensemblistes (set-based) pour les traitements de données.</li>
-<li>Tester les changements de configuration et d'index sur un environnement de pré-production avec une charge représentative.</li>
+<li><strong>Implicit conversion</strong> : <code>WHERE VarcharCol = 123</code> → force un scan. Typer correctement.</li>
+<li><strong>Functions on indexed columns</strong> : <code>WHERE YEAR(DateCol) = 2025</code> → non SARGable. Réécrire en range.</li>
+<li><strong>SELECT \</strong>* : ramène des colonnes inutiles, bloque les index couvrants.</li>
+<li><strong>N+1 loops</strong> : remplacer par un JOIN ou une table-valued parameter.</li>
+</ul>
+<pre><code class="lang-sql">-- Réécriture SARGable
+-- Avant (non-SARGable)
+WHERE CONVERT(DATE, CreatedAt) = '2025-01-01'
+-- Après
+WHERE CreatedAt &gt;= '2025-01-01' AND CreatedAt &lt; '2025-01-02'</code></pre>
+<h3>6. Configurer tempdb</h3>
+<pre><code class="lang-sql">-- Nombre de fichiers recommandé : MIN(nb_CPU_logiques, 8), taille pré-allouée identique
+-- SQL Server 2019+ : activer optimisation metadata en mémoire
+ALTER SERVER CONFIGURATION SET MEMORY_OPTIMIZED TEMPDB_METADATA = ON;
+-- Vérifier la fragmentation tempdb
+SELECT file_id, name, physical_name, size * 8 / 1024 AS size_MB
+FROM tempdb.sys.database_files;</code></pre>
+<p><strong>Règle</strong> : tous les fichiers de données tempdb doivent avoir la même taille initiale et le même autogrowth pour éviter la contention sur l'allocation.</p>
+<h3>7. RCSI / Isolation levels</h3>
+<p>Activer RCSI sur les bases OLTP pour réduire la contention lecture/écriture sans changer le code applicatif :</p>
+<pre><code class="lang-sql">-- Vérifier l'état
+SELECT name, is_read_committed_snapshot_on FROM sys.databases;
+-- Activer (nécessite accès exclusif momentané)
+ALTER DATABASE [MaBase] SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK AFTER 5 SECONDS;</code></pre>
+<h3>8. Maintenance planifiée</h3>
+<pre><code class="lang-sql">-- Rebuild si fragmentation &gt; 30%, reorganize entre 10% et 30%
+SELECT OBJECT_NAME(ips.object_id) AS table_name, i.name, ips.avg_fragmentation_in_percent
+FROM sys.dm_db_index_physical_stats(DB_ID(), NULL, NULL, NULL, 'LIMITED') ips
+JOIN sys.indexes i ON ips.object_id = i.object_id AND ips.index_id = i.index_id
+WHERE ips.avg_fragmentation_in_percent &gt; 10 AND ips.page_count &gt; 1000
+ORDER BY avg_fragmentation_in_percent DESC;</code></pre>
+<p><strong>Fréquences recommandées :</strong></p>
+<table><thead><tr><th>Opération</th><th>Fréquence</th><th>Remarque</th></tr></thead><tbody><tr><td>Rebuild index</td><td>Hebdo (nuit)</td><td>Online si édition Enterprise</td></tr><tr><td>Update statistics</td><td>Après rebuild + quotidien si changement &gt; 20 %</td><td><code>WITH FULLSCAN</code> sur tables clés</td></tr><tr><td>DBCC CHECKDB</td><td>Hebdo off-peak</td><td>Jamais skipper ; alerter sur erreur</td></tr><tr><td>Backup full</td><td>Quotidien</td><td>Tester la restauration</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<ul>
+<li><strong>Ne jamais</strong> ajouter un index sans mesurer l'impact sur les INSERT/UPDATE/DELETE (overhead écriture + espace).</li>
+<li><strong>Ne jamais</strong> appliquer un hint de requête (<code>NOLOCK</code>, <code>FORCESEEK</code>) sans comprendre ses effets secondaires ; <code>NOLOCK</code> = lectures sales, données fantômes.</li>
+<li><strong>Éviter</strong> les curseurs et boucles WHILE sur de gros volumes ; préférer les opérations set-based ou les TVP.</li>
+<li><strong>Ne pas</strong> augmenter <code>max server memory</code> à 100 % de la RAM physique ; laisser au moins 4 Go pour l'OS (plus sur serveurs &gt; 64 Go).</li>
+<li><strong>Ne jamais</strong> désactiver <code>auto update statistics</code> sans un plan de mise à jour manuel rigoureux.</li>
+<li><strong>Toujours</strong> capturer le plan d'exécution <strong>réel</strong> (actual), pas estimé : les card-estimations incorrectes sont invisibles sur le plan estimé.</li>
+<li><strong>Tester</strong> tout changement (index, config, réécriture) en pré-production avec une charge représentative avant passage en prod.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Query Store activé</strong> sur toutes les bases de production (SQL 2016+) ; mode <code>READ_WRITE</code>, rétention 30 jours minimum.</li>
+<li><strong>Intelligent Query Processing (IQP)</strong> : utiliser le compatibility level 150+ pour bénéficier de l'adaptive joins, batch mode on rowstore, memory grant feedback.</li>
+<li><strong>Accelerated Database Recovery (ADR)</strong> : activer sur les bases avec longues transactions pour réduire le temps de recovery.</li>
+<li><strong>Ledger tables</strong> (SQL 2022) pour les tables d'audit à intégrité garantie sans overhead applicatif.</li>
+<li><strong>Monitoring</strong> : alerter sur PLE &lt; 300 s, batch requests/sec chute &gt; 30 %, wait stats PAGEIOLATCH croissants.</li>
 </ul>
 </article>
 </main>

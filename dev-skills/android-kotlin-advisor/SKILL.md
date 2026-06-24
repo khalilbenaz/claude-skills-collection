@@ -1,23 +1,250 @@
 ---
 name: android-kotlin-advisor
-description: Développement Android natif avec Kotlin et Jetpack Compose. Se déclenche avec "Android", "Kotlin", "Jetpack Compose", "Android Studio", "Gradle", "Room", "Hilt", "Coroutines", "Play Store".
+description: Développement Android natif avec Kotlin et Jetpack Compose — architecture MVVM/MVI, UI Compose, Hilt, Room, Coroutines, Flow, tests, Gradle KTS, Play Store. Se déclenche avec "Android", "Kotlin", "Jetpack Compose", "Android Studio", "Gradle", "Room", "Hilt", "Coroutines", "Play Store".
 ---
 
 # Android Kotlin Advisor
 
-## Workflow
-1. **Architecture** — Définir l'architecture selon la taille et la complexité : MVVM + Repository (recommandé par Google, ViewModel expose StateFlow, Repository abstrait les sources de données), MVI (état immuable, intentions, reducers — idéal avec Compose), Clean Architecture en multi-module (couches domain/data/presentation séparées, indépendance aux frameworks), avec les modules Gradle feature/:feature-name pour la séparation des fonctionnalités et les builds incrementaux plus rapides.
-2. **UI avec Jetpack Compose** — Construire les interfaces avec Compose : Composables stateless (paramètre state + lambda events), Material 3 (MaterialTheme, ColorScheme, Typography, dynamic color Android 12+), theming (light/dark mode automatique, custom shapes), navigation-compose (NavHost, NavController, arguments typés, nested graphs), et les animations Compose (AnimatedVisibility, animateContentSize, Crossfade, transition APIs).
-3. **State management** — Gérer l'état avec les APIs Jetpack modernes : ViewModel (survie aux changements de configuration), StateFlow/SharedFlow (flux de données réactifs, collecte lifecycle-aware avec collectAsStateWithLifecycle), MutableState et remember (état local Compose, recomposition efficace), rememberSaveable (persistance au-delà de la recomposition et de la recréation d'activité), et les UiState data classes sealed pour les états Success/Loading/Error.
-4. **Dependency injection** — Configurer l'injection de dépendances avec Hilt (basé sur Dagger, annotations @HiltAndroidApp, @AndroidEntryPoint, @Inject, @HiltViewModel — recommandé pour les projets Google-standard), ou Koin (DSL Kotlin, léger, setup simplifié sans génération de code, idéal pour petits projets ou équipes préférant éviter le boilerplate Dagger). Documenter les modules et les scopes (Singleton, ActivityScoped, ViewModelScoped).
-5. **Data layer** — Implémenter la couche de données : Room (ORM SQLite, @Entity/@Dao/@Database, migrations, Flow queries réactives), DataStore (remplacement de SharedPreferences, Proto DataStore pour les schémas typés, Preferences DataStore pour les cas simples), Retrofit + OkHttp (client REST, interceptors, logging, authentification), Kotlin Serialization (sérialisation JSON typée, kotlinx.serialization) ou Gson/Moshi selon les préférences d'équipe.
-6. **Concurrency** — Utiliser les Coroutines et Flow Kotlin : CoroutineScope lifecycle-aware (viewModelScope, lifecycleScope), suspend functions pour les opérations asynchrones, Flow pour les streams de données (map, filter, combine, zip), StateFlow/SharedFlow pour l'exposition depuis le ViewModel, Channels pour la communication one-shot (navigation events, snackbars), et la gestion des erreurs avec try/catch, CoroutineExceptionHandler et le structured concurrency.
-7. **Testing** — Écrire des tests complets : JUnit 4/5 + Truth pour les unit tests (ViewModel, Repository, Use Cases), Compose UI Tests (createComposeRule, onNodeWithText, performClick, assertions sémantiques), Espresso pour les tests d'intégration UI (UIAutomator pour les flux multi-app), MockK (mocking idiomatique Kotlin, coEvery, verify), Turbine (testing des Flow Kotlin, awaitItem, cancelAndIgnoreRemainingEvents), et Hilt Testing pour les tests avec injection.
-8. **Build et déploiement** — Configurer Gradle avec les Convention Plugins (build-logic/, fichiers .gradle.kts partagés), les build variants (debug/staging/release) et product flavors (free/paid, par environnement), ProGuard/R8 (minification, obfuscation, shrinking des resources), la configuration du keystore de signature (store en dehors du dépôt, CI via variables d'environnement), et la publication Play Store (Internal Testing, Closed Testing, Open Testing, Production) via Play Console ou Fastlane supply.
+## 1. Choix d'architecture
 
-## Règles
-- Fournis du code Kotlin complet et idiomatique (extensions, scope functions, data classes, sealed classes), avec les imports Gradle nécessaires dans build.gradle.kts.
-- Adapte les exemples aux versions actuelles : Kotlin 1.9+, Jetpack Compose BOM 2024.x, Android Gradle Plugin 8.x, compileSdk 34/35, et l'API Lifecycle 2.7+.
-- Priorise la performance et l'UX : signale les recompositions Compose excessives (outils : Layout Inspector, Recomposition Counts), les opérations bloquantes sur le main thread, et les fuites mémoire (Context dans Singleton).
-- Mentionne les alternatives (Hilt vs Koin, Room vs SQLDelight, Retrofit vs Ktor) avec leurs compromis pour guider le choix selon le contexte du projet.
-- En cas de migration d'un projet XML/View System vers Compose, propose une stratégie de migration progressive (ComposeView dans les fragments existants, puis migration feature par feature).
+| Contexte | Pattern recommandé |
+|---|---|
+| App simple, 1–3 écrans | MVVM + Repository (StateFlow) |
+| App Compose multi-écrans | MVI (état immuable, `sealed class UiState`) |
+| Large équipe / multi-feature | Clean Architecture + multi-module Gradle |
+
+Structure recommandée multi-module :
+```
+app/
+feature/home/
+feature/profile/
+core/data/
+core/domain/
+core/ui/
+build-logic/               ← convention plugins partagés
+```
+
+## 2. UI avec Jetpack Compose
+
+Toujours préférer les composables **stateless** (state hoisting) :
+
+```kotlin
+// BON : state hissé, composable testable et réutilisable
+@Composable
+fun LoginForm(
+    state: LoginUiState,
+    onEmailChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+) { ... }
+
+// MAUVAIS : état caché dans le composable, non testable
+@Composable
+fun LoginForm() {
+    var email by remember { mutableStateOf("") }
+    ...
+}
+```
+
+Checklist Compose :
+- Material 3 BOM : `implementation(platform("androidx.compose:compose-bom:2025.05.00"))`
+- Dynamic Color (Android 12+) : `dynamicLightColorScheme(context)`
+- Navigation : `NavHost` + `NavController`, arguments typés via `NavType`
+- Éviter `LocalContext.current` profondément imbriqué → passer en paramètre
+
+## 3. State management
+
+```kotlin
+// ViewModel pattern recommandé
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val repo: PostRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    init { loadPosts() }
+
+    private fun loadPosts() = viewModelScope.launch {
+        repo.getPosts()
+            .catch { _uiState.value = HomeUiState.Error(it.message) }
+            .collect { _uiState.value = HomeUiState.Success(it) }
+    }
+}
+
+sealed class HomeUiState {
+    object Loading : HomeUiState()
+    data class Success(val posts: List<Post>) : HomeUiState()
+    data class Error(val msg: String?) : HomeUiState()
+}
+```
+
+Collecte lifecycle-aware dans un composable :
+```kotlin
+val state by viewModel.uiState.collectAsStateWithLifecycle()
+```
+
+## 4. Injection de dépendances
+
+**Hilt** (recommandé pour projets standard Google) :
+```kotlin
+// App
+@HiltAndroidApp class App : Application()
+
+// Fragment/Activity
+@AndroidEntryPoint class HomeFragment : Fragment()
+
+// Module
+@Module @InstallIn(SingletonComponent::class)
+object NetworkModule {
+    @Provides @Singleton
+    fun provideRetrofit(): Retrofit = Retrofit.Builder()
+        .baseUrl(BuildConfig.BASE_URL)
+        .build()
+}
+```
+
+**Koin** (léger, sans génération de code) :
+```kotlin
+val appModule = module {
+    singleOf(::UserRepository)
+    viewModelOf(::HomeViewModel)
+}
+// App: startKoin { modules(appModule) }
+```
+
+Critère de choix : Hilt si AGP 8+, équipe > 3, besoin de validation compile-time. Koin si prototype, équipe Dagger-phobe, ou KMP envisagé.
+
+## 5. Couche Data
+
+**Room** (ORM local) :
+```kotlin
+@Entity data class Post(@PrimaryKey val id: Int, val title: String)
+
+@Dao interface PostDao {
+    @Query("SELECT * FROM post") fun getAll(): Flow<List<Post>>
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insert(post: Post)
+}
+
+@Database(entities = [Post::class], version = 2)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun postDao(): PostDao
+    // migration : addMigrations(MIGRATION_1_2)
+}
+```
+
+**Retrofit + kotlinx.serialization** :
+```kotlin
+@Serializable data class PostDto(val id: Int, val title: String)
+
+interface PostApi {
+    @GET("posts") suspend fun getPosts(): List<PostDto>
+}
+// OkHttp : ajouter HttpLoggingInterceptor en DEBUG seulement
+```
+
+**DataStore** (remplace SharedPreferences) :
+```kotlin
+val Context.dataStore by preferencesDataStore("settings")
+val DARK_MODE = booleanPreferencesKey("dark_mode")
+// write: dataStore.edit { it[DARK_MODE] = true }
+// read:  dataStore.data.map { it[DARK_MODE] ?: false }
+```
+
+## 6. Concurrence — Coroutines & Flow
+
+```kotlin
+// NE PAS utiliser GlobalScope
+// NE PAS bloquer avec runBlocking dans le code de prod
+
+// Dispatchers : IO pour réseau/disk, Default pour CPU, Main pour UI
+viewModelScope.launch(Dispatchers.IO) {
+    val result = api.getPosts()      // suspend fun
+    withContext(Dispatchers.Main) { /* màj UI */ }
+}
+
+// Canal one-shot (navigation, snackbar)
+private val _events = Channel<UiEvent>(Channel.BUFFERED)
+val events = _events.receiveAsFlow()
+// emit: _events.send(UiEvent.NavigateToDetail(id))
+```
+
+## 7. Tests
+
+```kotlin
+// Unit test ViewModel avec Turbine + MockK
+@Test fun `loading posts emits Success state`() = runTest {
+    val repo = mockk<PostRepository>()
+    every { repo.getPosts() } returns flowOf(listOf(Post(1, "titre")))
+    val vm = HomeViewModel(repo)
+    vm.uiState.test {
+        assertEquals(HomeUiState.Loading, awaitItem())
+        assertTrue(awaitItem() is HomeUiState.Success)
+        cancelAndIgnoreRemainingEvents()
+    }
+}
+
+// Compose UI test
+@get:Rule val composeRule = createComposeRule()
+
+@Test fun `login button is disabled when email is empty`() {
+    composeRule.setContent { LoginForm(state = LoginUiState(), ...) }
+    composeRule.onNodeWithTag("btn_submit").assertIsNotEnabled()
+}
+```
+
+Dépendances test :
+```kotlin
+testImplementation("io.mockk:mockk:1.13.x")
+testImplementation("app.cash.turbine:turbine:1.x")
+testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.x")
+androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+```
+
+## 8. Gradle KTS & build
+
+Convention plugin partagé (`build-logic/`) :
+```kotlin
+// build-logic/src/.../AndroidFeatureConventionPlugin.kt
+class AndroidFeatureConventionPlugin : Plugin<Project> {
+    override fun apply(target: Project) = with(target) {
+        pluginManager.apply("com.android.library")
+        pluginManager.apply("org.jetbrains.kotlin.android")
+        extensions.configure<LibraryExtension> {
+            compileSdk = 35
+            defaultConfig.minSdk = 24
+        }
+    }
+}
+```
+
+Signature en CI (ne jamais committer le keystore) :
+```bash
+# Variables CI : KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD, KEYSTORE_BASE64
+echo "$KEYSTORE_BASE64" | base64 -d > release.jks
+```
+
+## Garde-fous / Anti-patterns
+
+| Anti-pattern | Correctif |
+|---|---|
+| Context dans un Singleton/ViewModel | Utiliser `applicationContext` ou injecter via Hilt `@ApplicationContext` |
+| Recomposition excessive | Wrapper lambda en `remember { {} }`, utiliser `derivedStateOf` pour les calculs coûteux |
+| `runBlocking` en prod | Toujours `launch` ou `async` dans un scope approprié |
+| Mutation d'état UI depuis le thread IO | Toujours `withContext(Dispatchers.Main)` ou `StateFlow` |
+| SharedPreferences dans code Compose | Migrer vers DataStore |
+| Hardcoder les URLs / clés API | `BuildConfig` + variables CI / secrets manager |
+| Ignorer les migrations Room | Toujours définir `Migration(oldV, newV)`, ne jamais utiliser `fallbackToDestructiveMigration()` en prod |
+| Fragment backstack manuel en Compose | Déléguer entièrement à `navigation-compose` |
+
+## Versions de référence (2026)
+
+- Kotlin : **2.0.x**
+- AGP : **8.5.x**
+- Compose BOM : **2025.05.00**
+- `compileSdk` / `targetSdk` : **35**
+- `minSdk` recommandé : **24** (Android 7.0, ~97 % devices)
+- Lifecycle / ViewModel : **2.8.x**
+- Hilt : **2.51.x**
+- Room : **2.7.x**
+- Coroutines : **1.8.x**

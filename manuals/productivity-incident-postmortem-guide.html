@@ -96,105 +96,180 @@ cp -r claude-skills-collection/skills/productivity-incident-postmortem-guide ~/.
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide de Post-Mortem d'Incident</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Documenter</strong> : capturer la timeline complète de l'incident.</li>
-<li><strong>Analyser</strong> : identifier les causes racines (pas les symptômes).</li>
-<li><strong>Proposer</strong> : actions correctives concrètes et mesurables.</li>
-<li><strong>Partager</strong> : communication blameless à l'équipe.</li>
-</ol>
-<h2>Template de post-mortem</h2>
-<pre><code class="lang-markdown"># Post-Mortem : [Titre de l'incident]
+<h2>Workflow en 6 étapes</h2>
+<h3>1. Déclencher le post-mortem (J+0, pendant ou juste après l'incident)</h3>
+<p>Critère : rédiger un post-mortem pour tout incident SEV1 ou SEV2, et pour tout SEV3 récurrent (3e occurrence en 30 jours).</p>
+<p>Désigner immédiatement :</p>
+<ul>
+<li><strong>Incident Commander</strong> — coordonne la résolution en direct</li>
+<li><strong>Scribe</strong> — capture la timeline en temps réel dans un doc partagé (Confluence, Notion, doc Google)</li>
+<li><strong>Auteur du post-mortem</strong> — rédige l'analyse a posteriori (peut être différent du scribe)</li>
+</ul>
+<h3>2. Collecter les données brutes (J+0 → J+1)</h3>
+<p>Extraire les logs, métriques et événements <strong>avant</strong> d'interpréter. Sources typiques :</p>
+<pre><code class="lang-bash"># Logs applicatifs sur une fenêtre horaire (exemple Loki/logcli)
+logcli query '{app=&quot;api-gateway&quot;} |= &quot;ERROR&quot;' \
+  --from=&quot;2026-06-24T14:00:00Z&quot; --to=&quot;2026-06-24T15:00:00Z&quot; \
+  --output=jsonl &gt; incident_logs.jsonl
 
-**Date** : YYYY-MM-DD
-**Durée** : HH:MM (de détection à résolution)
-**Sévérité** : SEV1 / SEV2 / SEV3
-**Auteur** : [Nom]
-**Révisé par** : [Nom(s)]
+# Métriques Prometheus : taux d'erreur 5xx sur 1h
+promtool query range \
+  'sum(rate(http_requests_total{status=~&quot;5..&quot;}[1m]))' \
+  --start=2026-06-24T14:00:00Z --end=2026-06-24T15:00:00Z \
+  --step=60s
 
-## Résumé
+# Historique des déploiements (exemple kubectl)
+kubectl rollout history deployment/api-gateway --namespace=prod
 
-[2-3 phrases décrivant l'incident, son impact et sa résolution]
+# Historique des commits récents sur la branche main
+git log --oneline --since=&quot;24 hours ago&quot; origin/main</code></pre>
+<p>Documenter chaque événement avec timestamp UTC précis. Ne pas reconstituer de mémoire.</p>
+<h3>3. Construire la timeline (J+1)</h3>
+<p>Règle : une ligne = un fait daté, source citée. Pas d'interprétation dans la timeline.</p>
+<pre><code class="lang-markdown">| Heure (UTC)    | Événement                                              | Source            |
+|----------------|--------------------------------------------------------|-------------------|
+| 14:00:12       | Déploiement v2.3.1 mergé en prod (commit `a3f9c12`)   | CI/CD Argo        |
+| 14:14:47       | Alerte Prometheus : error_rate &gt; 5% (seuil configuré) | Alertmanager      |
+| 14:16:03       | PagerDuty notifie @on-call                             | PagerDuty log     |
+| 14:23:00       | Diagnostic : pool DB à 100% (max_connections=50)      | pg_stat_activity  |
+| 14:29:15       | Décision rollback vers v2.3.0                          | Slack #incidents  |
+| 14:31:08       | Rollback déclenché (`kubectl rollout undo`)            | kubectl events    |
+| 14:34:22       | error_rate &lt; 1%, service restauré                      | Grafana dashboard |
+| 14:45:00       | Confirmation client : service nominal                  | Support ticket    |</code></pre>
+<h3>4. Analyser les causes racines</h3>
+<p><strong>Choisir la méthode selon la complexité :</strong></p>
+<table><thead><tr><th>Complexité</th><th>Méthode recommandée</th></tr></thead><tbody><tr><td>Incident simple, cause linéaire</td><td>5 Whys</td></tr><tr><td>Plusieurs causes interdépendantes</td><td>Fishbone (Ishikawa)</td></tr><tr><td>Incidents systémiques récurrents</td><td>STAMP / fault tree</td></tr></tbody></table>
+<p><strong>Exemple 5 Whys complet :</strong></p>
+<pre><code>Symptôme : API de paiement en erreur 503 pendant 34 minutes
+
+1. Pourquoi le service retourne 503 ? → Pool de connexions DB épuisé (50/50 actives)
+2. Pourquoi le pool est épuisé ? → Une requête `SELECT * FROM orders` sans WHERE ni LIMIT
+3. Pourquoi cette requête existe-t-elle ? → Ajoutée dans v2.3.1 pour l'export CSV, pas testée sur data prod
+4. Pourquoi pas testée sur data prod ? → L'env de staging n'a que 1 000 lignes ; prod en a 4,2 millions
+5. Pourquoi cette différence n'est pas détectée ? → Pas de test de performance dans la PR checklist
+
+Cause racine systémique : absence de tests de charge représentatifs avant mise en prod</code></pre>
+<p><strong>Facteurs contributifs</strong> (ne pas confondre avec la cause racine) :</p>
+<ul>
+<li><code>max_connections=50</code> jamais revisité depuis 2 ans</li>
+<li>Pas de circuit breaker sur les appels DB de longue durée</li>
+<li>Alerte sur la taille du pool absente du monitoring</li>
+</ul>
+<h3>5. Rédiger le document final (J+1 → J+2)</h3>
+<p>Template complet copiable :</p>
+<pre><code class="lang-markdown"># Post-Mortem : [Titre court et factuel]
+
+**Date** : YYYY-MM-DD  
+**Durée** : HH:MM (détection → résolution complète)  
+**Sévérité** : SEV1 / SEV2 / SEV3  
+**Statut** : Brouillon / En revue / Finalisé  
+**Auteur** : [Nom]  
+**Réviseurs** : [Noms]  
+
+---
+
+## Résumé exécutif (3 phrases max)
+
+Le déploiement v2.3.1 a introduit une requête SQL non paginée qui a saturé le pool de
+connexions PostgreSQL en 14 minutes. L'API de paiement a été indisponible 34 minutes
+pour 100% des utilisateurs. Un rollback vers v2.3.0 a restauré le service.
 
 ## Impact
 
-| Métrique | Valeur |
-|----------|--------|
-| Utilisateurs impactés | X |
-| Durée d'indisponibilité | HH:MM |
-| Transactions perdues | X |
-| Revenu impacté | X € |
-| SLA impacté | Oui/Non |
+| Métrique              | Valeur              |
+|-----------------------|---------------------|
+| Utilisateurs impactés | ~12 000             |
+| Durée d'indisponibilité | 00:34             |
+| Transactions échouées | 847                 |
+| Revenu différé        | ~42 000 €           |
+| SLA breached          | Oui (99.9% → 99.1%) |
 
-## Timeline
+## Timeline détaillée
 
-| Heure (UTC) | Événement |
-|-------------|-----------|
-| 14:00 | Déploiement de la version 2.3.1 en production |
-| 14:15 | Première alerte Prometheus : taux d'erreur &gt; 5% |
-| 14:18 | L'équipe on-call est notifiée |
-| 14:25 | Diagnostic : connexions DB saturées |
-| 14:30 | Décision de rollback vers v2.3.0 |
-| 14:35 | Rollback effectué, taux d'erreur en baisse |
-| 14:45 | Retour à la normale confirmé |
+[Insérer tableau section 3]
 
-## Causes racines
+## Analyse des causes racines
 
 ### Cause immédiate
-[Ce qui a directement causé l'incident]
+Requête `SELECT * FROM orders` sans pagination exécutée en prod au déploiement de v2.3.1.
 
-### Causes sous-jacentes (5 Whys)
-1. **Pourquoi** le service a crashé ? → Pool de connexions DB saturé
-2. **Pourquoi** le pool était saturé ? → Nouvelle requête sans pagination
-3. **Pourquoi** la requête n'avait pas de pagination ? → Pas de review perf
-4. **Pourquoi** pas de review perf ? → Pas dans la checklist de PR
-5. **Pourquoi** pas dans la checklist ? → Jamais formalisé comme exigence
+### 5 Whys
+[Insérer analyse section 4]
 
 ### Facteurs contributifs
-- [Facteur 1 : absence de monitoring sur la taille du pool]
-- [Facteur 2 : pas de load test avant déploiement]
+[Liste des facteurs]
 
 ## Ce qui a bien fonctionné
-- Alerte Prometheus déclenchée en 15 minutes
-- Procédure de rollback fonctionnelle et rapide
-- Communication claire dans le canal #incidents
+- Alerte Prometheus déclenchée en 14 min 47 s (SLO : &lt; 15 min) ✓
+- Rollback complet en moins de 3 minutes ✓
+- Communication dans #incidents continue et structurée ✓
 
 ## Ce qui peut être amélioré
-- Délai de 7 minutes entre l'alerte et la notification on-call
-- Pas de runbook pour ce type d'incident
-- Load tests non automatisés dans la CI
+- Délai de 2 min entre l'alerte et la notification PagerDuty (bug de config)
+- Aucun runbook pour les incidents &quot;pool DB saturé&quot;
+- Staging non représentatif du volume de données prod
 
 ## Actions correctives
 
 | # | Action | Priorité | Responsable | Deadline | Ticket |
 |---|--------|----------|-------------|----------|--------|
-| 1 | Ajouter une alerte sur la taille du pool de connexions | P1 | @ops | J+3 | #456 |
-| 2 | Ajouter la review perf dans la checklist PR | P1 | @lead | J+5 | #457 |
-| 3 | Implémenter la pagination sur toutes les requêtes list | P2 | @dev | J+10 | #458 |
-| 4 | Créer un runbook pour les incidents DB | P2 | @ops | J+14 | #459 |
-| 5 | Automatiser les load tests dans la CI | P3 | @devops | J+30 | #460 |
+| 1 | Alerte sur `pg_stat_activity` &gt; 80% du pool | P1 | @ops-alice | J+3 | #1234 |
+| 2 | Ajouter &quot;test de pagination sur toute requête list&quot; dans PR checklist | P1 | @lead-bob | J+5 | #1235 |
+| 3 | Script de seed staging avec 1M lignes anonymisées | P2 | @dev-carol | J+14 | #1236 |
+| 4 | Runbook &quot;pool DB saturé&quot; dans le wiki ops | P2 | @ops-alice | J+14 | #1237 |
+| 5 | Circuit breaker sur appels DB &gt; 5 s | P2 | @dev-dave | J+21 | #1238 |
+| 6 | Load test automatisé dans la CI (k6, seuil 10 rps) | P3 | @devops-eve | J+30 | #1239 |
 
 ## Leçons apprises
-- [Leçon clé que l'équipe retient de cet incident]</code></pre>
-<h2>Méthodologie des 5 Whys</h2>
-<p>Technique pour remonter des symptômes à la cause racine en posant &quot;Pourquoi ?&quot; de manière itérative. S'arrêter quand on atteint une cause systémique (processus, outil, culture) plutôt qu'une erreur humaine.</p>
-<h2>Niveaux de sévérité</h2>
-<table><thead><tr><th>Niveau</th><th>Critère</th><th>Exemple</th></tr></thead><tbody><tr><td><strong>SEV1</strong></td><td>Service principal indisponible, impact majeur</td><td>API de paiement down</td></tr><tr><td><strong>SEV2</strong></td><td>Dégradation significative, workaround possible</td><td>Latence x10, certaines fonctions KO</td></tr><tr><td><strong>SEV3</strong></td><td>Impact mineur, peu d'utilisateurs touchés</td><td>Bug sur une page secondaire</td></tr></tbody></table>
-<h2>Principes du blameless postmortem</h2>
+- Les requêtes SQL sans pagination sont un vecteur d'incident systémique sur des données en croissance.
+- L'écart staging/prod en volume de données doit être une exigence explicite, pas un état de fait.</code></pre>
+<h3>6. Partager et suivre les actions (J+2 → clôture)</h3>
 <ul>
-<li>Se concentrer sur les <strong>systèmes et processus</strong>, pas sur les personnes</li>
-<li>Chaque erreur humaine est un symptôme d'un <strong>problème systémique</strong></li>
-<li>L'objectif est d'<strong>apprendre</strong>, pas de punir</li>
-<li>Documenter les <strong>faits</strong>, pas les jugements</li>
-<li>Les actions correctives doivent être <strong>mesurables</strong> et <strong>assignées</strong></li>
+<li>Envoyer le post-mortem dans le canal #post-mortems et par email à toute l'équipe technique.</li>
+<li>Créer les tickets d'actions correctives <strong>immédiatement</strong> après validation du document.</li>
+<li>Faire un point de suivi 30 jours plus tard : cocher chaque action dans le doc, rouvrir si bloquée.</li>
 </ul>
-<h2>Règles</h2>
+<pre><code class="lang-bash"># Vérifier l'avancement des tickets (exemple GitHub CLI)
+gh issue list --label &quot;postmortem-2026-06-24&quot; --state open</code></pre>
+<hr>
+<h2>Niveaux de sévérité</h2>
+<table><thead><tr><th>Niveau</th><th>Critère</th><th>Post-mortem obligatoire</th></tr></thead><tbody><tr><td><strong>SEV1</strong></td><td>Service principal indisponible, impact revenue direct</td><td>Toujours, sous 48 h</td></tr><tr><td><strong>SEV2</strong></td><td>Dégradation significative, workaround difficile</td><td>Toujours, sous 72 h</td></tr><tr><td><strong>SEV3</strong></td><td>Impact mineur, peu d'utilisateurs touchés</td><td>Si récurrent (3x/30j)</td></tr></tbody></table>
+<hr>
+<h2>Pièges et anti-patterns</h2>
+<p><strong>Ne jamais faire :</strong></p>
 <ul>
-<li>Un post-mortem doit être rédigé dans les <strong>48 heures</strong> suivant la résolution.</li>
-<li>Chaque action corrective doit avoir un <strong>responsable</strong>, une <strong>deadline</strong> et un <strong>ticket</strong>.</li>
-<li>Le post-mortem est <strong>blameless</strong> — pas de mise en cause individuelle.</li>
-<li>Les causes racines doivent être <strong>systémiques</strong>, pas &quot;erreur humaine&quot;.</li>
-<li>Le post-mortem doit être <strong>partagé</strong> avec toute l'équipe.</li>
+<li>Rédiger la timeline de mémoire 3 jours après — reconstitution biaisée garantie.</li>
+<li>Terminer les 5 Whys à &quot;erreur humaine&quot; ou &quot;manque d'attention&quot; — c'est un symptôme, pas une cause.</li>
+<li>Laisser une action corrective sans ticket, responsable et deadline — elle ne sera jamais faite.</li>
+<li>Identifier une cause racine unique quand l'incident est systémique — les incidents complexes ont plusieurs causes.</li>
+<li>Attendre la réunion de post-mortem pour ouvrir les tickets P1 — ouvrir dès la résolution.</li>
+<li>Publier un post-mortem qui blame implicitement une personne (&quot;Dave a oublié de tester&quot;) — rephrase en systémique (&quot;l'absence de test de charge dans la CI n'a pas détecté la régression&quot;).</li>
+</ul>
+<p><strong>Signaux d'un mauvais post-mortem :</strong></p>
+<ul>
+<li>Les actions correctives sont vagues (&quot;améliorer le monitoring&quot;, &quot;mieux tester&quot;).</li>
+<li>La section &quot;causes racines&quot; ne contient qu'une cause immédiate.</li>
+<li>Aucune mention de ce qui a bien fonctionné.</li>
+<li>Le document est rédigé à la première personne du singulier.</li>
+</ul>
+<hr>
+<h2>Principes blameless</h2>
+<ul>
+<li>Chaque erreur humaine révèle une faiblesse systémique : process, outillage, formation, contexte.</li>
+<li>Un humain n'a jamais &quot;fait une erreur&quot; dans le vide — quelles conditions l'ont rendu possible ?</li>
+<li>L'objectif du post-mortem est d'empêcher le prochain incident, pas de documenter le passé.</li>
+<li>Partagez systématiquement les post-mortems avec les équipes voisines : un incident sur un service peut en prévenir un autre.</li>
+</ul>
+<hr>
+<h2>Checklist de validation avant publication</h2>
+<ul>
+<li>[ ] Timeline basée sur des logs/métriques, pas sur des souvenirs</li>
+<li>[ ] Au moins 3 niveaux de &quot;Pourquoi ?&quot; dans les 5 Whys</li>
+<li>[ ] Causes racines systémiques (process/outil), pas &quot;erreur humaine&quot;</li>
+<li>[ ] Chaque action corrective : ticket créé, responsable nommé, deadline fixée</li>
+<li>[ ] Section &quot;Ce qui a bien fonctionné&quot; renseignée</li>
+<li>[ ] Aucune mise en cause individuelle dans le document</li>
+<li>[ ] Document relu par au moins une personne extérieure à l'incident</li>
 </ul>
 </article>
 </main>

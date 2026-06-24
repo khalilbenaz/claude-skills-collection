@@ -1,36 +1,257 @@
 ---
 name: face-matching-kyc
-description: Vérification biométrique d'identité : face matching selfie vs document, liveness detection, deepfake detection. Se déclenche avec "face matching", "vérification identité", "KYC biométrique", "selfie vs document", "liveness", "deepfake", "biometrie", "one-to-one matching".
+description: Vérification biométrique d'identité : face matching selfie vs document, liveness detection, deepfake detection, pipeline KYC complet avec seuils décision, conformité RGPD/loi 09-08. Se déclenche avec "face matching", "vérification identité", "KYC biométrique", "selfie vs document", "liveness", "deepfake", "biometrie", "one-to-one matching".
 ---
 
 # Face Matching KYC
 
-## Workflow
+## Workflow KYC — étapes numérotées
 
-*   1\. **Détection de visage et alignement** — Détecter les visages dans les deux images (selfie et photo document) avec MTCNN (Multi-task Cascaded CNN, précise et rapide pour mobile), RetinaFace (SOTA pour détection robuste en conditions difficiles : faible luminosité, angle oblique), ou MediaPipe Face Mesh (468 points faciaux, très rapide sur mobile). Aligner les visages via 5 points de repères (yeux gauche/droite, nez, coins bouche) avec une transform affine (similarity transform), normaliser à 112x112 pixels, et appliquer la normalisation des couleurs (mean = [0.5, 0.5, 0.5], std = [0.5, 0.5, 0.5]).
+### 1. Détection et alignement de visage
 
-*   2\. **Extraction d'embedding facial** — Générer le vecteur d'embedding 128-D ou 512-D pour chaque visage avec ArcFace (margin-based softmax, SOTA pour face recognition), FaceNet (Inception-ResNetV1 backbone, embedding 128-D), ou MobileFaceNet (optimisé mobile, 560k paramètres, embedding 128-D, accuracy >99.5% sur LFW). Les embeddings doivent être L2-normalisés pour que le calcul de similarité soit un produit scalaire (dot product). Pour le mobile, utiliser les modèles quantifiés INT8 (TFLite) avec délégué GPU/NNAPI pour l'accélération hardware.
+Librairies recommandées (par priorité) :
 
-*   3\. **Similarity scoring et seuils** — Calculer la similarité cosinus entre les deux embeddings (score = 1 - cosine_distance = 1 - (1 - dot_product) = dot_product). Appliquer les seuils métier par niveau de confiance : > 0.65 = match à faible confiance (flag review manuelle), > 0.75 = match moyen (pass automatique si combiné avec liveness), > 0.85 = match haute confiance (requis pour transactions critiques). Pour les apps fintech/KYC, recommander le seuil 0.85+ pour les flux d'ouverture de compte, 0.75+ pour les flux de login biométrique. Le FAR (False Accept Rate) à 0.75 est ~0.1% et le FRR (False Reject Rate) ~2-3%.
+| Contexte | Librairie | Points repères |
+|---|---|---|
+| Mobile Android/iOS (offline) | MediaPipe FaceMesh | 468 points |
+| Qualité maximale (backend) | RetinaFace | 5 points |
+| Équilibre vitesse/qualité | MTCNN | 5 points |
 
-*   4\. **Liveness Detection (anti-spoofing)** — Détecter si le selfie provient d'une personne réelle ou d'un écran/photo/impression 3D. Technique Passive : analyser les micro-mouvements de la peau (rPPG pour détecter le pouls via variations de couleur), les reflets cornéens (specular reflection), la texture de la peau (Local Binary Patterns pour détecter l'impression écran), et les distorsions de Moiré (artefacts de ré-photographie d'écran). Technique Active : défi liveness avec mouvement guidé (tourner la tête gauche/droite/haut/bas, sourire, cligner des yeux) via le flux caméra temps réel. Combiner les deux approches : passive pour le premier frame, active si score passive < seuil. Retourner `liveness_score: float (0-1)` et `liveness_result: PASS/FAIL`.
+Transform affine sur 5 points (yeux G/D, nez, coins bouche) → normalisation 112×112 px.
 
-*   5\. **Deepfake et spoofing avancé** — Détecter les attaques sophistiquées : deepfake génératif (GANs, diffusion models pour générer des visages synthétiques réalistes), presentation attacks (photo imprimée, masque 3D, vidéo replay sur écran), et injection attacks (man-in-the-middle sur le flux caméra). Utiliser des modèles de détection de deepfake comme XceptionNet (pré-entraîné sur FaceForensics++), MesoNet (détection rapide de meso-scale artefacts), ou EfficientNet-B4 (SOTA sur DFDC). Signaler `deepfake_probability` et bloquer les scores > 0.5 sans review humaine. Pour les apps fintech, intégrer la vérification de l'authenticité du hardware (Android SafetyNet Attestation API / Play Integrity API, iOS DeviceCheck) pour détecter les émulateurs et les dispositifs rootés/jailbreakés.
+```python
+# Python – alignement avec insightface
+from insightface.app import FaceAnalysis
+app = FaceAnalysis(allowed_modules=["detection", "recognition"])
+app.prepare(ctx_id=0, det_size=(640, 640))
 
-*   6\. **Pipeline complet KYC (onboarding)** — Orchestrer le workflow complet : (1) Capture selfie + OCR document (via ocr-document-scanner skill) → (2) Vérification qualité image (face-matching-kyc step 1) → (3) Extraction embedding selfie + embedding photo document → (4) Similarity score + seuil décision → (5) Liveness detection → (6) Deepfake check → (7) Compilation du rapport KYC avec `overall_result: PASS/FAIL/REVIEW`, `face_match_score`, `liveness_score`, `deepfake_score`, `document_mrz_valid`, `extracted_fields`, et `timestamp`. Le rapport doit être signé cryptographiquement (HMAC-SHA256) pour audit trail.
+def align_and_embed(img_bgr):
+    faces = app.get(img_bgr)
+    if not faces:
+        raise ValueError("Aucun visage détecté")
+    return faces[0].normed_embedding  # float32 array 512-D, L2-normalisé
+```
 
-*   7\. **Préservation de la vie privée et conformité** — Ne jamais stocker les images brutes ou les embeddings faciaux après la session (privacy by design). Utiliser le chiffrement de bout en bout (AES-256-GCM en transit, chiffrement au repos pour les logs). Respecter le RGPD/lois marocaines (loi 09-08 sur la protection des données personnelles) : consentement explicite de l'utilisateur, droit à l'effacement, limitation de la finalité (vérification identité uniquement), et durée de conservation minimale. Pour les données biométriques, appliquer les mesures de sécurité renforcées (chiffrement avec HSM/KMS, accès restreint aux opérations cryptographiques).
+Critères de rejet image avant traitement :
+- Résolution < 224×224 px → `IMAGE_QUALITY_LOW`
+- Confiance détection < 0.90 → `NO_FACE_DETECTED`
+- Plus d'un visage détecté → `MULTIPLE_FACES`
+- Blur score (Laplacien) < 100 → `BLURRY_IMAGE`
 
-*   8\. **Intégration mobile et backend** — Fournir le code pour intégration : Kotlin avec ML Kit Face Detection + FaceNet TFLite (CameraX pour la capture temps réel), React Native avec react-native-vision-camera et react-native-fast-tflite (inference on-device), Flutter avec google_mlkit_face_detection et tflite_flutter. Pour le backend : FastAPI/Python avec DeepFace (facade library unifiée), InsightFace (ArcFace embeddings), ou Amazon Rekognition (managed service). Documenter les APIs REST avec endpoints POST `/face/verify` (selfie + document_photo → similarity score) et POST `/face/liveness` (video_frames ou selfie → liveness score).
+### 2. Extraction d'embedding facial
 
-## Règles
+Modèle par contexte :
 
-*   •  Fournis le code avec les dépendances exactes : pour Kotlin/Android, inclure les build.gradle.kts avec les versions TFLite 2.13+, ML Kit 16.1.5+, CameraX 1.3+ ; pour Python, requirements.txt avec `deepface==0.0.90`, `insightface==0.7.3`, `opencv-python==4.9.0`.
+| Modèle | Embedding | FAR @ threshold 0.75 | Cas d'usage |
+|---|---|---|---|
+| ArcFace R100 | 512-D | ~0.05% | KYC bancaire, onboarding critique |
+| MobileFaceNet | 128-D | ~0.3% | Mobile, contrainte latence |
+| FaceNet InceptionResNetV1 | 128-D | ~0.1% | Backend général |
 
-*   •  Utilise ArcFace comme modèle d'embedding par défaut (SOTA, margin de 0.5, embedding 512-D) pour les applications critique (KYC bancaire, accès sécurisé). Pour les cas mobiles contraints, recommande MobileFaceNet (embedding 128-D, <1ms inference sur flagship).
+**Règle** : toujours L2-normaliser l'embedding avant le calcul de similarité.
 
-*   •  Combine toujours face matching + liveness detection dans les flux KYC : un match élevé sans liveness est vulnérable aux presentation attacks (photo de la photo du document). Le score final doit être une fonction pondérée (ex. final_score = 0.6 * face_match + 0.4 * liveness).
+```python
+import numpy as np
 
-*   •  Pour les documents marocains (CIN biométrique, passeport) : la photo sur la CIN contient un filigrane micro-texte et une hologramme. Si l'image document a une qualité insuffisante (photo recadrée, faible résolution < 200x250 pixels), flag `document_photo_quality: LOW` et exiger une re-capture.
+def cosine_similarity(emb1: np.ndarray, emb2: np.ndarray) -> float:
+    # Les embeddings insightface/ArcFace sont déjà L2-normalisés
+    return float(np.dot(emb1, emb2))  # dot product = cosine similarity si normalisés
+```
 
-*   •  Logue tous les événements de décision (audit log immutable) : timestamp, device_fingerprint, face_match_score, liveness_score, decision, et reviewer_id (si review manuelle). Stocke les logs dans un système append-only (ex. AWS CloudWatch Logs avec KMS, ou ELK Stack avec WORM storage).
+### 3. Seuil de décision — similarity score
+
+```
+Score cosinus   Décision             Cas d'usage
+─────────────   ──────────────────   ─────────────────────────────────
+< 0.65          REJECT               Blocage systématique
+0.65 – 0.75     REVIEW               File de revue manuelle obligatoire
+0.75 – 0.85     PASS (medium)        Login biométrique, flux secondaires
+≥ 0.85          PASS (high)          Ouverture compte, transaction critique
+```
+
+Score final pondéré (à adapter selon contexte réglementaire) :
+
+```python
+def compute_final_score(face_score: float, liveness_score: float) -> dict:
+    final = 0.6 * face_score + 0.4 * liveness_score
+    if final >= 0.85:
+        decision = "PASS_HIGH"
+    elif final >= 0.75:
+        decision = "PASS_MEDIUM"
+    elif final >= 0.65:
+        decision = "REVIEW"
+    else:
+        decision = "REJECT"
+    return {"final_score": round(final, 4), "decision": decision}
+```
+
+### 4. Liveness Detection (anti-spoofing)
+
+**Passive (premier frame, zéro friction utilisateur)**
+- Détection pouls via rPPG (variations de couleur peau)
+- Analyse texture LBP (Local Binary Patterns) → détecter impression papier
+- Détection artefacts Moiré (ré-photographie d'écran)
+- Reflets cornéens (specular reflection absents sur photo 2D)
+
+**Active (si passive score < 0.7 — défi challenge)**
+- Tourner la tête gauche/droite, cligner, sourire
+- Validé frame-by-frame avec MediaPipe FaceMesh (468 points, mesure angle 3D)
+
+```python
+# Passive liveness avec Silent Face Anti-Spoofing (miniFASNet)
+# pip install silent-face-anti-spoofing
+from silent_face import SilentFaceAntiSpoofing
+model = SilentFaceAntiSpoofing()
+
+def check_liveness(img_bgr) -> dict:
+    score = model.predict(img_bgr)  # 0=spoof, 1=real
+    return {
+        "liveness_score": round(float(score), 4),
+        "liveness_result": "PASS" if score >= 0.7 else "FAIL"
+    }
+```
+
+### 5. Deepfake et attaques avancées
+
+Modèles de détection (par ordre de précision décroissante) :
+
+| Modèle | Dataset entraîn. | Vitesse | Notes |
+|---|---|---|---|
+| EfficientNet-B4 | DFDC | ~150ms GPU | SOTA, recommandé backend |
+| XceptionNet | FaceForensics++ | ~80ms GPU | Bonne généralisation |
+| MesoNet | Custom | ~10ms CPU | Léger, embarqué possible |
+
+Types d'attaques à couvrir :
+- **Presentation attack** : photo imprimée, masque 3D, replay vidéo
+- **Digital injection** : remplacement flux caméra (V4L2 loopback, virtual cam)
+- **Deepfake génératif** : GAN/diffusion model (FaceSwap, SimSwap, DALL-E avatars)
+
+Contre-mesures injection attack (mobile) :
+- Android : Play Integrity API (remplace SafetyNet 2024) → détecter émulateur/root
+- iOS : DeviceCheck + App Attest → vérifier intégrité device
+
+```python
+# Seuil deepfake — bloquer sans review si probabilité haute
+def evaluate_deepfake(deepfake_prob: float) -> str:
+    if deepfake_prob > 0.5:
+        return "BLOCK"       # Blocage immédiat, alerter équipe fraude
+    elif deepfake_prob > 0.3:
+        return "REVIEW"      # Revue humaine obligatoire
+    return "PASS"
+```
+
+### 6. Pipeline KYC complet — orchestration
+
+```python
+from dataclasses import dataclass, asdict
+import hmac, hashlib, json, time
+
+@dataclass
+class KYCReport:
+    timestamp: str
+    face_match_score: float
+    liveness_score: float
+    deepfake_probability: float
+    document_photo_quality: str   # OK | LOW
+    overall_result: str           # PASS | REVIEW | REJECT
+    signature: str = ""
+
+def run_kyc(selfie_bgr, document_bgr) -> dict:
+    emb_selfie   = align_and_embed(selfie_bgr)
+    emb_document = align_and_embed(document_bgr)
+
+    face_score   = cosine_similarity(emb_selfie, emb_document)
+    liveness     = check_liveness(selfie_bgr)
+    deepfake     = evaluate_deepfake(get_deepfake_prob(selfie_bgr))
+
+    decision = compute_final_score(face_score, liveness["liveness_score"])
+
+    if deepfake == "BLOCK":
+        overall = "REJECT"
+    elif deepfake == "REVIEW" or decision["decision"] == "REVIEW":
+        overall = "REVIEW"
+    elif decision["decision"].startswith("PASS"):
+        overall = "PASS"
+    else:
+        overall = "REJECT"
+
+    report = KYCReport(
+        timestamp=str(int(time.time())),
+        face_match_score=face_score,
+        liveness_score=liveness["liveness_score"],
+        deepfake_probability=0.0,  # à remplir
+        document_photo_quality="OK",
+        overall_result=overall,
+    )
+    payload = json.dumps(asdict(report), separators=(",", ":")).encode()
+    report.signature = hmac.new(SECRET_KEY, payload, hashlib.sha256).hexdigest()
+    return asdict(report)
+```
+
+### 7. Intégration mobile
+
+**Android (Kotlin)**
+```kotlin
+// build.gradle.kts
+implementation("com.google.mlkit:face-detection:16.1.5")
+implementation("org.tensorflow:tensorflow-lite:2.14.0")
+implementation("org.tensorflow:tensorflow-lite-gpu:2.14.0")
+implementation("androidx.camera:camera-camera2:1.3.2")
+```
+
+```kotlin
+val options = FaceDetectorOptions.Builder()
+    .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
+    .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
+    .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
+    .build()
+val detector = FaceDetection.getClient(options)
+```
+
+**React Native**
+```
+yarn add react-native-vision-camera react-native-fast-tflite
+```
+
+**API REST — endpoints backend**
+```
+POST /face/verify
+  Body : { selfie: base64, document_photo: base64 }
+  Return: { face_match_score, liveness_score, deepfake_probability, overall_result }
+
+POST /face/liveness
+  Body : { frames: [base64, ...] }   # 5-10 frames pour active liveness
+  Return: { liveness_score, liveness_result }
+```
+
+### 8. Conformité et vie privée
+
+- **Ne jamais persister** les embeddings faciaux ou images brutes au-delà de la session
+- **Chiffrement en transit** : TLS 1.3 + certificate pinning mobile
+- **Chiffrement au repos** : AES-256-GCM via KMS (AWS KMS / Azure Key Vault)
+- **RGPD / Loi 09-08 (Maroc)** : consentement explicite avant capture, finalité limitée (identification uniquement), droit à l'effacement, durée rétention minimale (recommandé : supprimer après validation ou 30 jours max)
+- **Audit log immuable** (append-only) : timestamp, device_fingerprint, scores, décision, reviewer_id
+
+---
+
+## Garde-fous / Anti-patterns / Pièges
+
+| Piège | Conséquence | Contre-mesure |
+|---|---|---|
+| Seuil unique pour tous les flux | FAR trop élevé sur les cas critiques | Seuils différenciés par flux (0.75 login, 0.85 onboarding) |
+| Face matching sans liveness | Attaque photo-sur-photo triviale | Toujours combiner matching + liveness |
+| Stocker embeddings bruts | Données biométriques persistées = RGPD violation | Privacy by design : effacer post-session |
+| Photo document trop petite | Embedding de mauvaise qualité → faux rejets | Vérifier résolution ≥ 200×250 px avant embedding |
+| Ignorer les injections digitales | Contournement via caméra virtuelle | Play Integrity API (Android) + App Attest (iOS) |
+| Score deepfake sans seuil de blocage | Deepfake validé automatiquement | Bloquer strictement si deepfake_prob > 0.5 |
+| Modèle non fine-tuné sur CIN marocaine | Dégradation qualité sur hologramme/filigrane | Fine-tuner ou tester sur dataset CIN biométrique marocaine |
+| Un seul modèle pour détection + embedding | Point de défaillance unique | Pipeline modulaire : détection / embedding / liveness séparés |
+
+## Bonnes pratiques 2026
+
+- **Play Integrity API** (Google, remplace SafetyNet depuis 2024) : obligatoire pour KYC Android en prod
+- **ISO/IEC 30107-3** : standard liveness detection — viser niveau PAD (Presentation Attack Detection) Level 2 minimum pour KYC réglementé
+- **eIDAS 2.0 / PVID** (contexte EU) : si votre app vise la conformité européenne, auditer avec un prestataire PVID certifié ANSSI
+- **Model versioning** : versionner les modèles d'embedding (ArcFace v1 ≠ v2) — un changement de modèle invalide tous les embeddings stockés → prévoir migration ou re-enrollment
+- **Biais démographique** : évaluer FAR/FRR par groupe (genre, ethnie, âge) — les modèles entraînés sur datasets non représentatifs pénalisent certains groupes
+- **Fallback humain** : tout flux REVIEW doit avoir un chemin de revue manuelle documenté avec SLA (ex. < 4h ouvrées)

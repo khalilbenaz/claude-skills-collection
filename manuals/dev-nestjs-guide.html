@@ -96,38 +96,208 @@ cp -r claude-skills-collection/skills/dev-nestjs-guide ~/.claude/skills/</div><b
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide NestJS</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le besoin</strong> — Identifier le type de backend (API REST, GraphQL, microservices, WebSocket) et définir l'architecture modulaire : découpage en feature modules, choix de l'ORM (TypeORM, Prisma, MikroORM), et stratégie d'authentification.</li>
-</ol>
-<ol>
-<li><strong>Structurer le projet</strong> — Organiser en modules NestJS avec la CLI (<code>nest g module/controller/service</code>). Chaque feature module contient ses controllers, services, DTOs, entities et guards. Configurer le <code>CoreModule</code> pour les services transversaux et le <code>SharedModule</code> pour les éléments réutilisables.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les controllers</strong> — Créer les controllers avec les décorateurs de route (<code>@Get</code>, <code>@Post</code>, <code>@Put</code>, <code>@Delete</code>), typer les paramètres avec <code>@Param</code>, <code>@Query</code>, <code>@Body</code>, configurer les interceptors de sérialisation, et documenter avec <code>@ApiTags</code> et <code>@ApiOperation</code> pour Swagger.</li>
-</ol>
-<ol>
-<li><strong>Développer les providers et services</strong> — Créer les services injectables avec <code>@Injectable()</code>, implémenter le repository pattern pour l'accès aux données, utiliser les custom providers (<code>useFactory</code>, <code>useValue</code>, <code>useClass</code>) pour la configuration dynamique et les connexions externes.</li>
-</ol>
-<ol>
-<li><strong>Configurer les pipes et la validation</strong> — Utiliser <code>ValidationPipe</code> global avec <code>class-validator</code> et <code>class-transformer</code> pour la validation automatique des DTOs. Créer des pipes custom pour les transformations spécifiques et activer <code>whitelist</code> et <code>forbidNonWhitelisted</code>.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les guards et l'authentification</strong> — Créer les guards avec <code>@UseGuards()</code> pour l'authentification JWT via Passport, les rôles avec <code>@Roles()</code> et un <code>RolesGuard</code> custom, et les permissions granulaires avec CASL ou un système custom.</li>
-</ol>
-<ol>
-<li><strong>Gérer les interceptors et middleware</strong> — Développer des interceptors pour le logging, la transformation de réponse, le cache et la gestion des timeouts. Configurer les middleware pour le rate limiting, la compression, les CORS et les headers de sécurité avec Helmet.</li>
-</ol>
-<ol>
-<li><strong>Tester et déployer</strong> — Écrire des tests unitaires avec Jest et le <code>TestingModule</code>, des tests e2e avec Supertest, mocker les dépendances avec <code>createMock()</code>. Configurer le déploiement Docker avec health checks et graceful shutdown.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Bootstrap du projet</h2>
+<pre><code class="lang-bash">npm i -g @nestjs/cli
+nest new my-api --strict          # TypeScript strict activé d'emblée
+cd my-api
+nest g resource users             # CRUD complet : module + controller + service + dto + entity</code></pre>
+<p>Choix d'ORM :</p>
+<table><thead><tr><th>Cas</th><th>ORM recommandé</th></tr></thead><tbody><tr><td>Relations complexes, legacy DB</td><td>TypeORM</td></tr><tr><td>DX moderne, migrations auto</td><td>Prisma</td></tr><tr><td>Multi-DB, unit-of-work strict</td><td>MikroORM</td></tr></tbody></table>
+<h2>2. Structure modulaire</h2>
+<pre><code>src/
+  app.module.ts          ← racine
+  core/                  ← CoreModule (logger, config, DB)
+  shared/                ← SharedModule (guards, pipes, interceptors réutilisables)
+  users/
+    users.module.ts
+    users.controller.ts
+    users.service.ts
+    dto/
+      create-user.dto.ts
+      update-user.dto.ts
+    entities/
+      user.entity.ts</code></pre>
+<p>Règle : un feature module déclare et exporte ce dont les autres ont besoin. Ne rien exporter par défaut.</p>
+<pre><code class="lang-typescript">@Module({
+  imports: [TypeOrmModule.forFeature([User])],
+  controllers: [UsersController],
+  providers: [UsersService],
+  exports: [UsersService],   // seulement si d'autres modules en ont besoin
+})
+export class UsersModule {}</code></pre>
+<h2>3. Controllers et DTOs</h2>
+<pre><code class="lang-typescript">@ApiTags('users')
+@Controller('users')
+export class UsersController {
+  constructor(private readonly usersService: UsersService) {}
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  create(@Body() dto: CreateUserDto) {
+    return this.usersService.create(dto);
+  }
+
+  @Get(':id')
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.findOneOrFail(id);
+  }
+}</code></pre>
+<p>DTO avec validation :</p>
+<pre><code class="lang-typescript">import { IsEmail, IsString, MinLength } from 'class-validator';
+
+export class CreateUserDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(8)
+  password: string;
+}</code></pre>
+<p>Active le pipe global dans <code>main.ts</code> :</p>
+<pre><code class="lang-typescript">app.useGlobalPipes(
+  new ValidationPipe({
+    whitelist: true,          // strip propriétés non décorées
+    forbidNonWhitelisted: true,
+    transform: true,          // cast automatique (string → number, etc.)
+  }),
+);</code></pre>
+<h2>4. Services et injection de dépendances</h2>
+<pre><code class="lang-typescript">@Injectable()
+export class UsersService {
+  constructor(
+    @InjectRepository(User)
+    private readonly repo: Repository&lt;User&gt;,
+    private readonly configService: ConfigService,
+  ) {}
+
+  async findOneOrFail(id: string): Promise&lt;User&gt; {
+    const user = await this.repo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException(`User ${id} not found`);
+    return user;
+  }
+}</code></pre>
+<p>Custom provider (ex : client externe) :</p>
+<pre><code class="lang-typescript">{
+  provide: 'PAYMENT_CLIENT',
+  useFactory: (cfg: ConfigService) =&gt;
+    new PaymentClient(cfg.get('PAYMENT_API_KEY')),
+  inject: [ConfigService],
+}</code></pre>
+<h2>5. Guards et authentification JWT</h2>
+<pre><code class="lang-typescript">// auth.guard.ts
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {}
+
+// roles.guard.ts
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(ctx: ExecutionContext): boolean {
+    const roles = this.reflector.getAllAndOverride&lt;string[]&gt;('roles', [
+      ctx.getHandler(),
+      ctx.getClass(),
+    ]);
+    if (!roles) return true;
+    const { user } = ctx.switchToHttp().getRequest();
+    return roles.some((r) =&gt; user.roles?.includes(r));
+  }
+}
+
+// usage
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin')
+@Delete(':id')
+remove(@Param('id', ParseUUIDPipe) id: string) { ... }</code></pre>
+<p>Config Passport JWT dans <code>JwtStrategy</code> :</p>
+<pre><code class="lang-typescript">@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(cfg: ConfigService) {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: cfg.get('JWT_SECRET'),
+    });
+  }
+  validate(payload: JwtPayload) { return payload; }
+}</code></pre>
+<h2>6. Interceptors et gestion des erreurs</h2>
+<p>Interceptor de logging/transform :</p>
+<pre><code class="lang-typescript">@Injectable()
+export class TransformInterceptor&lt;T&gt;
+  implements NestInterceptor&lt;T, { data: T; timestamp: string }&gt;
+{
+  intercept(ctx: ExecutionContext, next: CallHandler) {
+    return next.handle().pipe(
+      map((data) =&gt; ({ data, timestamp: new Date().toISOString() })),
+    );
+  }
+}</code></pre>
+<p>Exception filter global :</p>
+<pre><code class="lang-typescript">@Catch()
+export class AllExceptionsFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const status =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : HttpStatus.INTERNAL_SERVER_ERROR;
+    ctx.getResponse().status(status).json({
+      statusCode: status,
+      message: exception instanceof HttpException
+        ? exception.message
+        : 'Internal server error',
+      timestamp: new Date().toISOString(),
+    });
+  }
+}</code></pre>
+<p>Enregistrement dans <code>main.ts</code> :</p>
+<pre><code class="lang-typescript">app.useGlobalFilters(new AllExceptionsFilter());
+app.useGlobalInterceptors(new TransformInterceptor());</code></pre>
+<h2>7. Configuration et variables d'environnement</h2>
+<pre><code class="lang-typescript">// app.module.ts
+ConfigModule.forRoot({
+  isGlobal: true,
+  validationSchema: Joi.object({
+    NODE_ENV: Joi.string().valid('development', 'production', 'test').required(),
+    DATABASE_URL: Joi.string().required(),
+    JWT_SECRET: Joi.string().min(32).required(),
+  }),
+}),</code></pre>
+<h2>8. Tests</h2>
+<pre><code class="lang-typescript">// users.service.spec.ts
+describe('UsersService', () =&gt; {
+  let service: UsersService;
+  let repo: jest.Mocked&lt;Repository&lt;User&gt;&gt;;
+
+  beforeEach(async () =&gt; {
+    const module = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        { provide: getRepositoryToken(User), useValue: createMock&lt;Repository&lt;User&gt;&gt;() },
+      ],
+    }).compile();
+    service = module.get(UsersService);
+    repo = module.get(getRepositoryToken(User));
+  });
+
+  it('throws NotFoundException when user not found', async () =&gt; {
+    repo.findOne.mockResolvedValue(null);
+    await expect(service.findOneOrFail('abc')).rejects.toThrow(NotFoundException);
+  });
+});</code></pre>
+<p>Test e2e :</p>
+<pre><code class="lang-bash">npm run test:e2e   # utilise supertest + app.init()</code></pre>
+<h2>9. Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td>Logique métier dans le controller</td><td>Couplage HTTP/métier</td><td>Déplacer dans le service</td></tr><tr><td><code>any</code> sur les corps de requête</td><td>Bypass de validation</td><td>DTO + <code>ValidationPipe</code> obligatoire</td></tr><tr><td>Module circulaire</td><td>Erreur runtime</td><td><code>forwardRef(() =&gt; ModuleB)</code> ou refactorer</td></tr><tr><td>Pas de <code>whitelist: true</code></td><td>Propriétés injectées silencieuses</td><td>Toujours activer</td></tr><tr><td><code>new Service()</code> manuel</td><td>Échappe au DI, non testable</td><td>Injecter via constructeur</td></tr><tr><td>Secrets hardcodés</td><td>Fuite de sécurité</td><td><code>ConfigService</code> + <code>.env</code> validé par Joi</td></tr><tr><td>N+1 queries</td><td>Perf dégradée</td><td><code>relations</code> dans <code>findOne</code> ou QueryBuilder</td></tr><tr><td>Pas de graceful shutdown</td><td>Requêtes coupées</td><td><code>app.enableShutdownHooks()</code></td></tr></tbody></table>
+<h2>10. Bonnes pratiques 2026</h2>
 <ul>
-<li>Respecte toujours l'architecture modulaire NestJS — chaque feature doit avoir son propre module avec ses dépendances déclarées explicitement.</li>
-<li>Utilise systématiquement les DTOs avec <code>class-validator</code> pour valider toutes les entrées — ne fais jamais confiance aux données brutes du client.</li>
-<li>Injecte les dépendances via le constructeur plutôt que d'instancier manuellement — laisse le conteneur IoC de NestJS gérer le cycle de vie.</li>
-<li>Implémente toujours la gestion d'erreurs avec des <code>HttpException</code> typées et des exception filters custom pour un format de réponse cohérent.</li>
-<li>Sépare la logique métier dans les services et la logique de transport dans les controllers — un service ne doit jamais dépendre du protocole HTTP.</li>
+<li><strong>Versioning API</strong> : <code>app.enableVersioning({ type: VersioningType.URI })</code> + <code>@Version('2')</code> sur le controller.</li>
+<li><strong>Rate limiting</strong> : <code>@nestjs/throttler</code> global + override par route avec <code>@Throttle()</code>.</li>
+<li><strong>Swagger automatique</strong> : <code>@nestjs/swagger</code> + <code>PluginOptions</code> dans <code>nest-cli.json</code> pour inférer les types sans décorateurs redondants.</li>
+<li><strong>Health checks</strong> : <code>@nestjs/terminus</code> — exposer <code>/health</code> avec checks DB, Redis, mémoire.</li>
+<li><strong>Logging structuré</strong> : remplacer le logger par défaut par <code>pino</code> via <code>nestjs-pino</code> (JSON en prod, pretty en dev).</li>
+<li><strong>Sécurité</strong> : <code>helmet()</code>, CORS strict, <code>express-rate-limit</code>, et jamais <code>app.enableCors()</code> sans <code>origin</code> explicite.</li>
+<li><strong>Docker</strong> : image multi-stage, <code>node:20-alpine</code>, copier uniquement <code>dist/</code> + <code>node_modules</code> pruned.</li>
 </ul>
 </article>
 </main>

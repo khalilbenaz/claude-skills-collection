@@ -96,46 +96,187 @@ cp -r claude-skills-collection/skills/dev-ocr-document-scanner ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>OCR Document Scanner</h1>
-<h2>Workflow</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Prétraitement d'image</h3>
+<p>Corriger l'image AVANT d'envoyer à l'OCR — c'est l'étape qui impacte le plus la précision.</p>
+<pre><code class="lang-python">import cv2
+import numpy as np
+
+def preprocess_document(img: np.ndarray) -&gt; np.ndarray:
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # CLAHE pour le contraste adaptatif
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    enhanced = clahe.apply(gray)
+    # Débruitage
+    denoised = cv2.fastNlMeansDenoising(enhanced, h=10)
+    # Binarisation Otsu
+    _, binary = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return binary</code></pre>
+<p>Critères qualité à vérifier <strong>avant</strong> OCR :</p>
 <ul>
-<li>1\. <strong>Prétraitement d'image mobile</strong> — Optimiser l'image capturée avant l'OCR : détection des bords du document (contour finding + perspective transform), correction de perspective (homographie matrix), ajustement automatique de la luminosité et du contraste (CLAHE — Contrast Limited Adaptive Histogram Equalization), détection et correction de la rotation (deskewing via Projection Profile Method), réduction du bruit (Gaussian blur ou bilateral filter), et upscaling si résolution &lt; 72 DPI.</li>
+<li>Variance Laplacien ≥ 100 (sinon flou → rejeter)</li>
+<li>Document occupe ≥ 60 % de l'image</li>
+<li>Aucune zone RGB &gt; 250 (reflet)</li>
+<li>Rotation ≤ 5° (sinon deskew via Projection Profile Method)</li>
 </ul>
+<p>Si l'image ne passe pas les critères → demander une nouvelle capture avec feedback précis (&quot;document trop petit&quot;, &quot;image floue&quot;, &quot;reflet détecté&quot;).</p>
+<hr>
+<h3>2. Détection du type de document</h3>
+<p>Classifier avant d'appliquer les regex/modèles spécialisés.</p>
+<p><strong>Heuristiques rapides (sans ML)</strong> :</p>
+<table><thead><tr><th>Signal</th><th>Document probable</th></tr></thead><tbody><tr><td>2 lignes OCR-A en bas</td><td>Passeport (TD3) ou CIN biométrique</td></tr><tr><td>3 lignes OCR-A 30 chars</td><td>Titre de voyage TD1</td></tr><tr><td>Champ IBAN / RIB</td><td>Relevé bancaire</td></tr><tr><td>QR code + montant</td><td>Facture</td></tr></tbody></table>
+<p><strong>Avec ML Kit (on-device)</strong> : utiliser un MobileNetV2 TFLite quantifié INT8 pour ≤ 15 ms d'inférence. Retourner <code>{ &quot;document_type&quot;: &quot;CIN_MA_RECTO&quot;, &quot;confidence&quot;: 0.94 }</code>.</p>
+<hr>
+<h3>3. Extraction OCR — choix du moteur</h3>
+<table><thead><tr><th>Moteur</th><th>Cas d'usage</th><th>Précision</th><th>Déploiement</th></tr></thead><tbody><tr><td><strong>Google ML Kit v2</strong></td><td>Mobile Kotlin/Flutter, arabe+latin</td><td>~96 %</td><td>On-device</td></tr><tr><td><strong>Tesseract 5 LSTM</strong></td><td>Backend Python, arabe+français</td><td>~92 %</td><td>Serveur / Edge</td></tr><tr><td><strong>EasyOCR</strong></td><td>Python, texte incliné/diagonal</td><td>~90 %</td><td>Backend</td></tr><tr><td><strong>AWS Textract</strong></td><td>Documents complexes, tableaux</td><td>~98 %</td><td>Cloud</td></tr><tr><td><strong>Azure Form Recognizer</strong></td><td>Formulaires structurés avec labels</td><td>~97 %</td><td>Cloud</td></tr></tbody></table>
+<p><strong>Tesseract — configuration minimale pour documents marocains</strong> :</p>
+<pre><code class="lang-bash">tesseract image.png output --oem 3 --psm 3 -l ara+fra \
+  --dpi 300 -c preserve_interword_spaces=1</code></pre>
+<p><strong>ML Kit (Kotlin)</strong> :</p>
+<pre><code class="lang-kotlin">val recognizer = TextRecognition.getClient(
+    TextRecognizerOptions.Builder()
+        .setExecutor(Dispatchers.Default.asExecutor())
+        .build()
+)
+val result = recognizer.process(InputImage.fromBitmap(bitmap, 0)).await()
+result.textBlocks.forEach { block -&gt;
+    val text = block.text
+    val boundingBox = block.boundingBox
+}</code></pre>
+<hr>
+<h3>4. Parsing MRZ (Machine Readable Zone)</h3>
+<p>Formats ICAO 9303 à connaître :</p>
 <ul>
-<li>2\. <strong>Détection de type de document</strong> — Classifier le type de document avant d'appliquer le modèle OCR : CIN (recto/verso, format biométrique), passeport (page de données, MRZ line), permis de conduire, carte de séjour, RIB, facture, ou contrat. Utiliser un CNN léger (MobileNetV2 quantifié en TFLite pour le mobile) ou des heuristiques visuelles (présence de MRZ line, couleurs dominantes, dimensions). Retourner <code>document_type</code> et <code>confidence</code>.</li>
+<li><strong>TD3</strong> : 2 lignes × 44 chars → passeport marocain (<code>P&lt;MAR...</code>)</li>
+<li><strong>TD1</strong> : 3 lignes × 30 chars → CIN biométrique marocaine</li>
+<li>Checksum : algorithme pondéré 7-3-1 sur chaque champ critique</li>
 </ul>
+<pre><code class="lang-python"># Lib recommandée : passporteye ou mrz-python
+from mrz.checker.td3 import TD3CodeChecker
+
+checker = TD3CodeChecker(&quot;P&lt;MARBENBRAHIM&lt;&lt;KHALIL&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;\nAB1234567MAR9001011M3012315&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;02&quot;)
+if checker.valid():
+    fields = checker.fields()
+    print(fields.surname, fields.name, fields.date_of_birth)</code></pre>
+<p><strong>Pièges MRZ</strong> :</p>
 <ul>
-<li>3\. <strong>Extraction de texte (OCR)</strong> — Extraire le texte avec les moteurs OCR adaptés : Tesseract 5 LSTM (pré-entraîné avec langpacks ar/ara pour l'arabe et fra pour le français, page segmentation mode 3 ou 1 selon la mise en page), Google ML Kit Text Recognition v2 (on-device, supporte arabe/latin, rapide sur mobile), EasyOCR (Python, supporte 80+ langues avec détection de texte en diagonale), ou les OCR cloud (AWS Textract, Azure Form Recognizer) pour les documents complexes. Extraire les bounding boxes (coordonnées x, y, w, h) pour chaque ligne/mot.</li>
+<li>OCR-A mal reconnu : <code>0</code> vs <code>O</code>, <code>1</code> vs <code>I</code> → normaliser avant parse</li>
+<li>Ligne MRZ souvent en bas du document : crop la zone <code>y &gt; 80%</code> avant OCR MRZ</li>
+<li>Checksum invalide → ne jamais valider le document, demander retry</li>
 </ul>
+<hr>
+<h3>5. Extraction de champs structurés</h3>
+<p><strong>Regex par document marocain</strong> :</p>
+<pre><code class="lang-python">import re
+
+# CIN marocaine
+CIN_PATTERN = re.compile(r'\b([A-Z]{1,2}[0-9]{5,6})\b')
+
+# Numéro passeport marocain
+PASSPORT_PATTERN = re.compile(r'\b([A-Z]{2}[0-9]{7})\b')
+
+# Date format DD/MM/YYYY ou DD-MM-YYYY
+DATE_PATTERN = re.compile(r'\b(\d{2})[/-](\d{2})[/-](\d{4})\b')
+
+# CIN recto — extraction NER via spaCy (fr_core_news_md)
+import spacy
+nlp = spacy.load(&quot;fr_core_news_md&quot;)
+doc = nlp(raw_text)
+names = [ent.text for ent in doc.ents if ent.label_ == &quot;PER&quot;]</code></pre>
+<p>Pour les champs structurés complexes (LayoutLM) :</p>
 <ul>
-<li>4\. <strong>Parsing MRZ (Machine Readable Zone)</strong> — Pour passeport, CIN biométrique, carte de séjour : détecter la zone MRZ (les 2-3 lignes en bas du document avec police OCR-A), parser le format TD1 (3 lignes, 30 caractères) ou TD3 (2 lignes, 44 caractères), extraire les champs structurés (type de document, code pays, nom, prénoms, numéro de document, date de naissance, sexe, date d'expiration, numéro personnel), valider le checksum (chiffre de contrôle via algorithme ICAO 9303), et retourner une structure JSON avec <code>mrz_valid: boolean</code>.</li>
+<li><strong>Donut</strong> (Microsoft) : modèle end-to-end sans OCR séparé, efficace sur documents uniformes</li>
+<li><strong>LayoutLMv3</strong> : requiert paires texte + coordonnées bounding box en entrée</li>
 </ul>
+<hr>
+<h3>6. Post-processing et validation</h3>
+<pre><code class="lang-python">def clean_ocr_field(value: str, field_type: str) -&gt; dict:
+    value = value.strip().upper()
+    # Corrections OCR typiques
+    ocr_fixes = {&quot;0&quot;: &quot;O&quot;, &quot;1&quot;: &quot;I&quot;, &quot;5&quot;: &quot;S&quot;, &quot;8&quot;: &quot;B&quot;}
+    if field_type in (&quot;NAME&quot;, &quot;SURNAME&quot;):
+        for wrong, right in ocr_fixes.items():
+            value = value.replace(wrong, right)
+    # Dates → format ISO
+    if field_type == &quot;DATE&quot;:
+        match = re.match(r'(\d{2})[/-](\d{2})[/-](\d{4})', value)
+        if match:
+            value = f&quot;{match.group(3)}-{match.group(2)}-{match.group(1)}&quot;
+    confidence = compute_field_confidence(value, field_type)
+    return {&quot;value&quot;: value, &quot;confidence&quot;: confidence, &quot;needs_review&quot;: confidence &lt; 0.7}</code></pre>
+<p>Seuils de confiance recommandés :</p>
 <ul>
-<li>5\. <strong>Extraction de champs structurés</strong> — Pour les champs non-MRZ (cin, passeport, permis) : utiliser regex spécifiques par pays (ex. CIN marocaine : <code>[A-Z]{2}[0-9]{6}</code>, numéros CIN, série, lieu de naissance), NER (Named Entity Recognition) pour extraire nom/prénom/adresse/date de naissance dans le texte brut, et des modèles de layout (LayoutLMv2/Donut) pour associer les labels aux zones du document. Gérer les champs multisegments (adresse sur plusieurs lignes, noms composés). Retourner un objet <code>extracted_fields</code> avec <code>confidence</code> par champ.</li>
+<li>MRZ : <code>&lt; 0.99</code> → retry obligatoire</li>
+<li>Champs imprimés : <code>&lt; 0.80</code> → marquer pour review</li>
+<li>Champs manuscrits : <code>&lt; 0.65</code> → rejeter, saisie manuelle</li>
 </ul>
+<hr>
+<h3>7. Feedback UX mobile en temps réel</h3>
+<p>Implémenter un <strong>live preview overlay</strong> dans CameraX (Kotlin) :</p>
+<pre><code class="lang-kotlin">val imageAnalysis = ImageAnalysis.Builder()
+    .setTargetResolution(Size(1280, 720))
+    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+    .build()
+
+imageAnalysis.setAnalyzer(executor) { imageProxy -&gt;
+    val laplacianVariance = computeBlurScore(imageProxy.toBitmap())
+    runOnUiThread {
+        when {
+            laplacianVariance &lt; 100 -&gt; showOverlay(&quot;Image floue — stabilisez l'appareil&quot;, RED)
+            documentCoverage &lt; 0.60 -&gt; showOverlay(&quot;Rapprochez l'appareil du document&quot;, YELLOW)
+            else -&gt; showOverlay(&quot;Capture prête&quot;, GREEN)
+        }
+    }
+    imageProxy.close()
+}</code></pre>
+<hr>
+<h3>8. Intégration API backend</h3>
+<p>Format d'entrée recommandé (REST) :</p>
+<pre><code class="lang-http">POST /api/v1/ocr/scan
+Content-Type: multipart/form-data
+
+image: &lt;fichier JPEG/PNG/WebP, max 5 MB&gt;
+document_type: CIN_MA | PASSPORT_MA | DRIVING_LICENSE | INVOICE | AUTO</code></pre>
+<p>Format de sortie :</p>
+<pre><code class="lang-json">{
+  &quot;document_type&quot;: &quot;CIN_MA_RECTO&quot;,
+  &quot;mrz_valid&quot;: true,
+  &quot;extracted_fields&quot;: {
+    &quot;cin_number&quot;: { &quot;value&quot;: &quot;AB123456&quot;, &quot;confidence&quot;: 0.98 },
+    &quot;surname&quot;: { &quot;value&quot;: &quot;BENBRAHIM&quot;, &quot;confidence&quot;: 0.95 },
+    &quot;date_of_birth&quot;: { &quot;value&quot;: &quot;1990-01-01&quot;, &quot;confidence&quot;: 0.92, &quot;needs_review&quot;: false }
+  },
+  &quot;processing_ms&quot;: 340,
+  &quot;image_quality&quot;: { &quot;blur_score&quot;: 210, &quot;coverage&quot;: 0.73 }
+}</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne jamais faire</strong> :</p>
 <ul>
-<li>6\. <strong>Post-processing et validation</strong> — Nettoyer et valider les champs extraits : normaliser les encodages (UTF-8, suppression des diacritiques non nécessaires), standardiser les formats de dates (DD/MM/YYYY), trimmer et dedoubler les espaces, corriger les erreurs OCR typiques (0↔O, 1↔l↔I, 5↔S, 8↔B) via contexte et dictionnaire, valider les checksums (numéro CIN, numéro passeport), et flagger les champs à faible confiance (<code>confidence &lt; 0.7</code>) pour review manuelle.</li>
+<li>Envoyer l'image brute à Tesseract sans prétraitement → précision -20 à -30 %</li>
+<li>Ignorer le checksum MRZ → faux positifs en KYC</li>
+<li>Utiliser <code>--psm 6</code> (bloc uniforme) sur des documents bilingues arabe/français → segmentation cassée</li>
+<li>Stocker les images de documents en clair côté serveur → violation RGPD / loi 09-08 (Maroc)</li>
+<li>Valider un document uniquement sur la confiance OCR sans vérification de checksum</li>
 </ul>
+<p><strong>Pièges fréquents</strong> :</p>
 <ul>
-<li>7\. <strong>Qualité d'image et UX mobile</strong> — Guider l'utilisateur pour capturer une image exploitable : détection de flou (Laplacian variance &lt; 100 → flou), détection de reflets (zones saturées RGB &gt; 250), vérification que le document occupe &gt; 60% de l'image, détection de la main ou de doigts obstruant le document (segmentation sémantique), et feedback temps réel (cadre de superposition, guide de distance, alerte de mouvement). Si qualité insuffisante, rejeter la capture et inviter à refaire la photo.</li>
+<li>CIN marocaines anciennes (format <code>I&lt;chiffres&gt;</code>) : regex <code>[A-Z]{2}[0-9]{6}</code> ne match pas → ajouter pattern legacy <code>[A-Z][0-9]{7}</code></li>
+<li>Arabe RTL avec Tesseract : ajouter <code>--psm 6</code> ET charger <code>ara.traineddata</code> depuis tessdata_best, pas tessdata_fast</li>
+<li>Images HEIC (iPhone) : convertir en JPEG avant envoi, ML Kit ne supporte pas HEIC directement</li>
+<li>ML Kit v2 sur Android &lt; API 23 : non supporté → fallback Tesseract</li>
 </ul>
+<p><strong>Limites de précision par type</strong> :</p>
+<table><thead><tr><th>Document</th><th>MRZ</th><th>Imprimé</th><th>Manuscrit</th></tr></thead><tbody><tr><td>Passeport</td><td>~99.5 %</td><td>~97 %</td><td>N/A</td></tr><tr><td>CIN biométrique</td><td>~99 %</td><td>~95 %</td><td>~75 %</td></tr><tr><td>Permis de conduire</td><td>N/A</td><td>~93 %</td><td>~70 %</td></tr><tr><td>Facture</td><td>N/A</td><td>~95 %</td><td>~65 %</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>8\. <strong>Intégration mobile (SDK)</strong> — Fournir les snippets pour intégration dans les apps mobile : Kotlin/Jetpack Compose avec ML Kit et Tesseract (CameraX + preview overlay), React Native avec react-native-vision-camera et react-native-ml-kit, Flutter avec Google ML Kit, ou intégration backend via REST API (image en base64 ou multipart/form-data avec image/jpg). Documenter les tailles max d'image (ex. 5MB), les formats acceptés (JPEG, PNG, WebP), et les limites de débit (rate limiting).</li>
-</ul>
-<h2>Règles</h2>
-<ul>
-<li>•  Fournis du code complet dans le langage cible (Kotlin, Python, JS) avec les dépendances exactes (versions Gradle, build.gradle.kts, requirements.txt, package.json).</li>
-</ul>
-<ul>
-<li>•  Supporte systématiquement le bilingue arabe/français : configure Tesseract avec <code>--oem 3 --psm 3</code> et <code>-l ara+fra</code> pour les documents marocains, ou le TFLite model de ML Kit v2 qui supporte les scripts arabes nativement.</li>
-</ul>
-<ul>
-<li>•  Priorise l'on-device : pour les apps mobile fintech/KYC, le traitement doit se faire côté device (ML Kit, Tesseract mobile) pour garantir la confidentialité des données personnelles et éviter la latence réseau.</li>
-</ul>
-<ul>
-<li>•  Indique les limites de précision par type de document : MRZ ~99%+ (format standardisé), champs imprimés ~95%, champs manuscrits ~70-80% (nécessite liveness ou review manuelle), et documents pliés/déchirés ~60% (nécessite preprocessing avancé).</li>
-</ul>
-<ul>
-<li>•  Pour les documents marocains spécifiquement : pars le format CIN biométrique (recto : CIN, nom, prénom, date naissance, sexe, lieu naissance, date délivrance ; verso : adresse en arabe/français, profession, autorité délivrance), et le passeport marocain (MRZ TD3 ligne 1 P&lt;MAR, ligne 2 avec numéro de passeport, checksum, date naissance, date expiration, checksum final).</li>
+<li><strong>On-device first</strong> : ML Kit v3 (2025) supporte 100+ scripts ; préférer au cloud pour KYC afin de respecter la confidentialité</li>
+<li><strong>Donut vs Tesseract</strong> : pour les formulaires avec layout fixe (CIN, passeport), Donut donne de meilleurs résultats sans étape OCR séparée</li>
+<li><strong>Liveness check couplé</strong> : coupler l'OCR document avec une vérification de vivacité (liveness) pour les flux KYC — ne pas traiter l'OCR seul comme preuve d'identité</li>
+<li><strong>Versioning des modèles</strong> : toujours versionner les modèles TFLite embarqués et prévoir un mécanisme de mise à jour OTA (Firebase Remote Config ou équivalent)</li>
+<li><strong>Rate limiting</strong> : appliquer un rate limit par userId côté backend (ex. 10 scans/min) pour éviter les abus et les coûts cloud OCR</li>
+<li><strong>Audit trail</strong> : loguer les tentatives OCR (sans stocker l'image) avec hash SHA-256 de l'image et le résultat de validation pour audit KYC</li>
 </ul>
 </article>
 </main>

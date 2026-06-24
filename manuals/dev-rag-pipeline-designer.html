@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-rag-pipeline-designer — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Conception de pipelines RAG (Retrieval-Augmented Generation).">
+<meta name="description" content="Conception de pipelines RAG (Retrieval-Augmented Generation) — architecture, chunking, embeddings, vector stores, retrieval hybride, re-ranking, évaluation RAGAS.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-rag-pipeline-designer</h1>
-<p class="lead">Conception de pipelines RAG (Retrieval-Augmented Generation).</p>
+<p class="lead">Conception de pipelines RAG (Retrieval-Augmented Generation) — architecture, chunking, embeddings, vector stores, retrieval hybride, re-ranking, évaluation RAGAS.</p>
 
 
 
@@ -97,57 +97,198 @@ cp -r claude-skills-collection/skills/dev-rag-pipeline-designer ~/.claude/skills
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>RAG Pipeline Designer</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyse des données sources</strong> — Inventorier les types de documents (PDF, DOCX, HTML, Markdown, code, CSV), le volume (&lt; 1K docs = approche simple, &gt; 100K = architecture distribuée), la fréquence de mise à jour (statique → batch indexing, dynamique → incremental indexing), et la structure (documents homogènes vs corpus hétérogène). Identifier les langues (impacte le choix du modèle d'embedding), les relations entre documents (références croisées, hiérarchies), et les contraintes de confidentialité (cloud vs on-premise).</li>
-</ol>
-<ol>
-<li><strong>Pipeline d'ingestion</strong> — Construire la chaîne de traitement : <strong>chargement</strong> (LangChain document loaders, LlamaIndex readers, ou custom), <strong>parsing</strong> (PyMuPDF pour PDF, python-docx, BeautifulSoup pour HTML), <strong>nettoyage</strong> (supprimer headers/footers répétitifs, normaliser les espaces, détecter la langue), <strong>extraction de métadonnées</strong> (titre, date, auteur, source, section, page). Stocker les métadonnées pour le filtrage ultérieur.</li>
-</ol>
-<p>   ```python    from langchain.document_loaders import PyMuPDFLoader, DirectoryLoader    from langchain.text_splitter import RecursiveCharacterTextSplitter</p>
-<p>   loader = DirectoryLoader(&quot;./docs&quot;, glob=&quot;**/*.pdf&quot;, loader_cls=PyMuPDFLoader)    documents = loader.load()</p>
-<p>   # Ajouter des métadonnées    for doc in documents:        doc.metadata[&quot;indexed_at&quot;] = datetime.now().isoformat()        doc.metadata[&quot;source_type&quot;] = &quot;pdf&quot;    ```</p>
-<ol>
-<li><strong>Chunking strategy</strong> — Choisir la stratégie selon le contenu : <strong>Fixed size</strong> (512-1024 tokens, overlap 10-20%, simple et efficace), <strong>Recursive character</strong> (divise sur <code>\n\n</code>, puis <code>\n</code>, puis <code>.</code> — recommandé par défaut), <strong>Semantic</strong> (divise sur les changements de sujet, plus précis mais plus lent), <strong>Sentence-based</strong> (chaque phrase comme chunk, pour les textes courts et précis). <strong>Règle clé</strong> : chunk size ≈ taille de la réponse attendue. Tester avec 3-5 tailles différentes sur votre dataset.</li>
-</ol>
-<p>   ```python    from langchain.text_splitter import RecursiveCharacterTextSplitter</p>
-<p>   splitter = RecursiveCharacterTextSplitter(        chunk_size=800,        # tokens approximatifs        chunk_overlap=100,     # 12.5% overlap        separators=[&quot;\n\n&quot;, &quot;\n&quot;, &quot;. &quot;, &quot;! &quot;, &quot;? &quot;, &quot; &quot;],        length_function=len    )    chunks = splitter.split_documents(documents)    print(f&quot;{len(documents)} docs → {len(chunks)} chunks&quot;)    ```</p>
-<ol>
-<li><strong>Embedding model selection</strong> — <strong>Critères</strong> : qualité (score MTEB), coût, latence, support multilingue. <strong>Cloud</strong> : <code>text-embedding-3-large</code> (OpenAI, 3072 dims, meilleure qualité, $0.13/1M tokens), <code>text-embedding-3-small</code> (1536 dims, bon compromis). <strong>Local</strong> : <code>sentence-transformers/all-MiniLM-L6-v2</code> (384 dims, rapide), <code>intfloat/multilingual-e5-large</code> (meilleur pour le multilingue). <strong>Cohere</strong> : <code>embed-multilingual-v3.0</code> (excellent pour plusieurs langues). Attention : une fois le modèle choisi, changer = ré-indexer tout le corpus.</li>
-</ol>
-<p>   ```python    # OpenAI embeddings    from langchain_openai import OpenAIEmbeddings    embeddings = OpenAIEmbeddings(model=&quot;text-embedding-3-small&quot;)</p>
-<p>   # Local avec sentence-transformers    from langchain_community.embeddings import HuggingFaceEmbeddings    embeddings = HuggingFaceEmbeddings(        model_name=&quot;intfloat/multilingual-e5-large&quot;,        model_kwargs={&quot;device&quot;: &quot;cuda&quot;}  # ou &quot;cpu&quot;    )    ```</p>
-<ol>
-<li><strong>Vector store setup</strong> — Choisir selon la taille et l'infrastructure : <strong>FAISS</strong> (local, in-memory ou fichier, idéal &lt; 1M vecteurs, aucune infra), <strong>ChromaDB</strong> (local ou self-hosted, simple, bonne DX), <strong>Qdrant</strong> (self-hosted ou cloud, haute performance, filtrage avancé), <strong>Pinecone</strong> (SaaS, scalable, $70/mois pour 1M vecteurs), <strong>pgvector</strong> (PostgreSQL extension, idéal si vous avez déjà Postgres). Indexer par batch de 500-1000 documents pour éviter les timeouts.</li>
-</ol>
-<p>   ```python    # ChromaDB    from langchain_chroma import Chroma    vectorstore = Chroma.from_documents(chunks, embeddings,                                        persist_directory=&quot;./chroma_db&quot;)</p>
-<p>   # Pinecone    from langchain_pinecone import PineconeVectorStore    vectorstore = PineconeVectorStore.from_documents(        chunks, embeddings, index_name=&quot;my-index&quot;    )</p>
-<p>   # pgvector    from langchain_postgres import PGVector    vectorstore = PGVector(embeddings=embeddings, connection=DATABASE_URL)    ```</p>
-<ol>
-<li><strong>Retrieval optimization</strong> — <strong>Dense retrieval</strong> seul est rarement optimal. Implémenter la <strong>hybrid search</strong> : combiner BM25 (keyword, précis sur les termes exacts) et dense vector search (sémantique), fusionner avec Reciprocal Rank Fusion (RRF). <strong>Re-ranking</strong> : après retrieval initial (top 20), re-ranker avec <code>cross-encoder/ms-marco-MiniLM-L-6-v2</code> ou Cohere Rerank pour obtenir les 3-5 meilleurs. <strong>MMR (Maximal Marginal Relevance)</strong> : réduire la redondance dans les résultats. <strong>Metadata filtering</strong> : pré-filtrer par date, source, catégorie avant la recherche vectorielle.</li>
-</ol>
-<p>   ```python    from langchain.retrievers import EnsembleRetriever, BM25Retriever    from langchain.retrievers import ContextualCompressionRetriever    from langchain.retrievers.document_compressors import CrossEncoderReranker</p>
-<p>   bm25 = BM25Retriever.from_documents(chunks, k=10)    dense = vectorstore.as_retriever(search_kwargs={&quot;k&quot;: 10})    ensemble = EnsembleRetriever(retrievers=[bm25, dense], weights=[0.4, 0.6])</p>
-<p>   reranker = CrossEncoderReranker(model_name=&quot;cross-encoder/ms-marco-MiniLM-L-6-v2&quot;, top_n=4)    retriever = ContextualCompressionRetriever(base_compressor=reranker, base_retriever=ensemble)    ```</p>
-<ol>
-<li><strong>Generation avec context</strong> — Construire un prompt template qui injecte les documents récupérés avec leurs métadonnées (source, page). Inclure une instruction anti-hallucination explicite : <code>&quot;Si la réponse n'est pas dans les documents fournis, dis-le clairement&quot;</code>. Implémenter la <strong>citation</strong> : demander au modèle de référencer les sources utilisées. Limiter le contexte injecté à 4-8 chunks (qualité &gt; quantité).</li>
-</ol>
-<p>   ```python    RAG_PROMPT = &quot;&quot;&quot;Tu es un assistant expert. Réponds à la question en te basant UNIQUEMENT    sur les documents fournis. Si l'information n'est pas dans les documents, réponds:    &quot;Je n'ai pas trouvé cette information dans la base de connaissances.&quot;</p>
-<p>   Documents:    {context}</p>
-<p>   Question: {question}</p>
-<p>   Réponse (cite les sources entre [brackets]):&quot;&quot;&quot;</p>
-<p>   from langchain_core.prompts import ChatPromptTemplate    prompt = ChatPromptTemplate.from_template(RAG_PROMPT)    chain = {&quot;context&quot;: retriever, &quot;question&quot;: RunnablePassthrough()} | prompt | llm    ```</p>
-<ol>
-<li><strong>Évaluation</strong> — Mesurer 4 métriques clés avec <strong>RAGAS</strong> : <strong>Faithfulness</strong> (la réponse est-elle fidèle aux documents ? — détecte les hallucinations), <strong>Answer Relevancy</strong> (la réponse répond-elle à la question ?), <strong>Context Precision</strong> (les documents récupérés sont-ils pertinents ?), <strong>Context Recall</strong> (tous les documents nécessaires ont-ils été récupérés ?). Créer un dataset de 50-100 questions/réponses attendues manuellement validées. Tester différentes configs de chunking, retrieval et re-ranking pour optimiser.</li>
-</ol>
-<p>   ```python    from ragas import evaluate    from ragas.metrics import faithfulness, answer_relevancy, context_precision    from datasets import Dataset</p>
-<p>   test_data = Dataset.from_dict({        &quot;question&quot;: questions, &quot;answer&quot;: answers,        &quot;contexts&quot;: contexts, &quot;ground_truth&quot;: ground_truths    })    results = evaluate(test_data, metrics=[faithfulness, answer_relevancy, context_precision])    print(results.to_pandas())    ```</p>
-<h2>Règles</h2>
+<h3>1. Analyse des données sources</h3>
+<p>Avant toute ligne de code, inventorier :</p>
+<table><thead><tr><th>Critère</th><th>Impact</th></tr></thead><tbody><tr><td>Volume (&lt; 10K / &lt; 1M / &gt; 1M docs)</td><td>FAISS local → Qdrant → architecture distribuée</td></tr><tr><td>Fréquence de mise à jour</td><td>Batch indexing statique vs incremental avec détection de changements</td></tr><tr><td>Langues</td><td>Modèle d'embedding multilingue obligatoire si &gt; 1 langue</td></tr><tr><td>Structure</td><td>Homogène (1 splitter) vs hétérogène (splitters par type)</td></tr><tr><td>Confidentialité</td><td>Cloud embeddings ou modèle local (Ollama / llama.cpp)</td></tr></tbody></table>
+<p>Identifier les relations inter-documents (références croisées, hiérarchies) : elles orientent vers un RAG <strong>Graph</strong> ou une stratégie <strong>parent-child chunking</strong>.</p>
+<hr>
+<h3>2. Pipeline d'ingestion</h3>
+<p>Chaîne : <strong>chargement → parsing → nettoyage → enrichissement métadonnées → stockage brut</strong></p>
+<pre><code class="lang-python">from langchain_community.document_loaders import PyMuPDFLoader, DirectoryLoader
+from datetime import datetime
+
+loader = DirectoryLoader(&quot;./docs&quot;, glob=&quot;**/*.pdf&quot;, loader_cls=PyMuPDFLoader)
+documents = loader.load()
+
+for doc in documents:
+    doc.metadata.update({
+        &quot;indexed_at&quot;: datetime.now().isoformat(),
+        &quot;source_type&quot;: &quot;pdf&quot;,
+        # ajouter : title, department, version, expiry_date si dispo
+    })</code></pre>
+<p>Loaders recommandés par type :</p>
 <ul>
-<li><strong>La qualité du chunking est primordiale</strong> : un mauvais découpage détruit la pertinence du retrieval — tester au moins 3 stratégies (fixed, recursive, semantic) sur votre corpus avant de choisir. Visualiser les chunks manuellement.</li>
-<li><strong>Toujours utiliser le re-ranking</strong> : la recherche vectorielle seule retourne les documents &quot;proches&quot; mais pas forcément les meilleurs — un cross-encoder de re-ranking améliore la précision de 20-40%.</li>
-<li><strong>Stocker les métadonnées dès l'ingestion</strong> : source, date, auteur, section — indispensable pour le filtrage et la citation. Difficile à ajouter après coup.</li>
-<li><strong>Évaluer avant d'optimiser</strong> : sans dataset d'évaluation, toute &quot;amélioration&quot; est anecdotique. Construire le dataset en priorité, puis itérer sur les métriques RAGAS.</li>
-<li><strong>Prévoir la mise à jour incrémentale</strong> : les documents évoluent — implémenter un pipeline de détection de changements et de ré-indexation partielle dès le début.</li>
+<li>PDF → <code>PyMuPDFLoader</code> (rapide, conserve layout) ou <code>PDFPlumberLoader</code> (tableaux)</li>
+<li>DOCX → <code>Docx2txtLoader</code></li>
+<li>HTML/Web → <code>RecursiveUrlLoader</code> + <code>Html2TextTransformer</code></li>
+<li>Code → <code>GenericLoader</code> + <code>LanguageParser</code> (LangChain)</li>
+<li>CSV/XLSX → chunker personnalisé par ligne ou par groupe de lignes</li>
+</ul>
+<hr>
+<h3>3. Chunking strategy</h3>
+<p><strong>Règle de base</strong> : chunk size ≈ taille de la réponse attendue. Toujours tester ≥ 3 tailles.</p>
+<table><thead><tr><th>Stratégie</th><th>Quand l'utiliser</th><th>chunk_size conseillé</th></tr></thead><tbody><tr><td><code>RecursiveCharacterTextSplitter</code></td><td>Défaut universel</td><td>600–1000 tokens, overlap 10–15%</td></tr><tr><td><code>MarkdownHeaderTextSplitter</code></td><td>Markdown structuré</td><td>Par section H2/H3</td></tr><tr><td><code>SemanticChunker</code> (LangChain)</td><td>Texte dense, sujets variés</td><td>Variable</td></tr><tr><td>Parent-child chunking</td><td>Contexte large + précision fine</td><td>Parent 2000 / enfant 300</td></tr><tr><td>Sentence-level</td><td>FAQ, contenu court</td><td>1–3 phrases</td></tr></tbody></table>
+<pre><code class="lang-python">from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=800,
+    chunk_overlap=120,           # ~15% overlap
+    separators=[&quot;\n\n&quot;, &quot;\n&quot;, &quot;. &quot;, &quot;! &quot;, &quot;? &quot;, &quot; &quot;],
+    length_function=len,
+    add_start_index=True,        # métadonnée de position dans le doc
+)
+chunks = splitter.split_documents(documents)
+print(f&quot;{len(documents)} docs → {len(chunks)} chunks&quot;)
+
+# Inspecter manuellement 10 chunks aléatoires avant d'indexer
+import random
+for c in random.sample(chunks, 10):
+    print(&quot;---&quot;, c.metadata.get(&quot;source&quot;), c.page_content[:200])</code></pre>
+<hr>
+<h3>4. Embedding model selection</h3>
+<p>Une fois choisi, changer = ré-indexer tout le corpus. Bien choisir dès le départ.</p>
+<table><thead><tr><th>Modèle</th><th>Dims</th><th>Cas d'usage</th><th>Coût</th></tr></thead><tbody><tr><td><code>text-embedding-3-small</code> (OpenAI)</td><td>1536</td><td>Bon compromis qualité/prix</td><td>$0.02/1M tokens</td></tr><tr><td><code>text-embedding-3-large</code> (OpenAI)</td><td>3072</td><td>Meilleure qualité en</td><td>$0.13/1M tokens</td></tr><tr><td><code>intfloat/multilingual-e5-large</code></td><td>1024</td><td>Multilingue local</td><td>Gratuit (GPU)</td></tr><tr><td><code>BAAI/bge-m3</code></td><td>1024</td><td>Multilingue, dense+sparse</td><td>Gratuit (GPU)</td></tr><tr><td><code>Cohere embed-multilingual-v3.0</code></td><td>1024</td><td>Multilingue SaaS</td><td>$0.10/1M tokens</td></tr></tbody></table>
+<pre><code class="lang-python"># OpenAI
+from langchain_openai import OpenAIEmbeddings
+embeddings = OpenAIEmbeddings(model=&quot;text-embedding-3-small&quot;)
+
+# Local GPU/CPU
+from langchain_community.embeddings import HuggingFaceEmbeddings
+embeddings = HuggingFaceEmbeddings(
+    model_name=&quot;BAAI/bge-m3&quot;,
+    model_kwargs={&quot;device&quot;: &quot;cuda&quot;},   # &quot;cpu&quot; si pas de GPU
+    encode_kwargs={&quot;normalize_embeddings&quot;: True},
+)</code></pre>
+<hr>
+<h3>5. Vector store setup</h3>
+<table><thead><tr><th>Store</th><th>Hébergement</th><th>Volume max conseillé</th><th>Point fort</th></tr></thead><tbody><tr><td>FAISS</td><td>Local / fichier</td><td>&lt; 5M vecteurs</td><td>Zéro infra, rapide</td></tr><tr><td>ChromaDB</td><td>Local / Docker</td><td>&lt; 10M</td><td>DX simple, filtrage OK</td></tr><tr><td>Qdrant</td><td>Docker / Cloud</td><td>100M+</td><td>Filtrage avancé, payload</td></tr><tr><td>pgvector</td><td>PostgreSQL</td><td>10M+</td><td>Si Postgres déjà en place</td></tr><tr><td>Pinecone</td><td>SaaS</td><td>Illimité</td><td>Scalabilité, serverless</td></tr><tr><td>Weaviate</td><td>Docker / Cloud</td><td>100M+</td><td>GraphQL, modules intégrés</td></tr></tbody></table>
+<pre><code class="lang-python"># ChromaDB (dev / staging)
+from langchain_chroma import Chroma
+vectorstore = Chroma.from_documents(
+    chunks, embeddings, persist_directory=&quot;./chroma_db&quot;
+)
+
+# Qdrant (production self-hosted)
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
+client = QdrantClient(url=&quot;http://localhost:6333&quot;)
+vectorstore = QdrantVectorStore.from_documents(
+    chunks, embeddings, client=client, collection_name=&quot;my_kb&quot;
+)
+
+# pgvector (stack PostgreSQL existante)
+from langchain_postgres import PGVector
+vectorstore = PGVector(
+    embeddings=embeddings,
+    connection=&quot;postgresql+psycopg://user:pass@localhost/mydb&quot;,
+    collection_name=&quot;documents&quot;,
+)</code></pre>
+<p>Indexer par batch de 500–1000 chunks pour éviter les timeouts.</p>
+<hr>
+<h3>6. Retrieval optimization</h3>
+<p>La recherche vectorielle seule est insuffisante. Pipeline recommandé :</p>
+<pre><code>Query → [BM25 top-20] + [Dense top-20] → RRF fusion → Cross-encoder re-rank top-5 → LLM</code></pre>
+<pre><code class="lang-python">from langchain.retrievers import EnsembleRetriever, BM25Retriever
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import CrossEncoderReranker
+
+# Hybrid search : BM25 + dense, pondéré
+bm25 = BM25Retriever.from_documents(chunks, k=15)
+dense = vectorstore.as_retriever(search_kwargs={&quot;k&quot;: 15})
+ensemble = EnsembleRetriever(
+    retrievers=[bm25, dense],
+    weights=[0.35, 0.65],   # ajuster selon corpus
+)
+
+# Re-ranking cross-encoder
+reranker = CrossEncoderReranker(
+    model_name=&quot;cross-encoder/ms-marco-MiniLM-L-6-v2&quot;,
+    top_n=5,
+)
+retriever = ContextualCompressionRetriever(
+    base_compressor=reranker,
+    base_retriever=ensemble,
+)
+
+# Filtrage par métadonnées avant la recherche vectorielle (Qdrant/Chroma)
+retriever_filtered = vectorstore.as_retriever(
+    search_kwargs={&quot;k&quot;: 10, &quot;filter&quot;: {&quot;department&quot;: &quot;finance&quot;, &quot;year&quot;: 2025}}
+)</code></pre>
+<p><strong>Techniques avancées 2026 :</strong></p>
+<ul>
+<li><strong>HyDE (Hypothetical Document Embeddings)</strong> : générer une réponse fictive, embedder cette réponse pour chercher les vrais documents — améliore le recall sur requêtes abstraites.</li>
+<li><strong>Multi-query retrieval</strong> : LangChain <code>MultiQueryRetriever</code> génère 3–5 variantes de la question, fusionne les résultats.</li>
+<li><strong>Contextual retrieval</strong> (Anthropic 2025) : enrichir chaque chunk avec un résumé de contexte généré par LLM avant indexation.</li>
+</ul>
+<hr>
+<h3>7. Generation avec contexte</h3>
+<pre><code class="lang-python">from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+from langchain_openai import ChatOpenAI
+
+RAG_PROMPT = &quot;&quot;&quot;\
+Tu es un assistant expert. Réponds à la question en te basant UNIQUEMENT
+sur les documents fournis ci-dessous. Si l'information n'est pas présente,
+réponds : &quot;Je n'ai pas trouvé cette information dans la base de connaissances.&quot;
+Ne complète jamais avec tes connaissances générales.
+
+Documents :
+{context}
+
+Question : {question}
+
+Réponse (cite les sources entre [brackets]) :&quot;&quot;&quot;
+
+def format_docs(docs):
+    return &quot;\n\n&quot;.join(
+        f&quot;[{d.metadata.get('source','?')} p.{d.metadata.get('page','?')}]\n{d.page_content}&quot;
+        for d in docs
+    )
+
+llm = ChatOpenAI(model=&quot;gpt-4o-mini&quot;, temperature=0)
+prompt = ChatPromptTemplate.from_template(RAG_PROMPT)
+
+chain = (
+    {&quot;context&quot;: retriever | format_docs, &quot;question&quot;: RunnablePassthrough()}
+    | prompt
+    | llm
+)
+response = chain.invoke(&quot;Quelle est la politique de remboursement ?&quot;)</code></pre>
+<p>Limiter à 4–6 chunks dans le contexte : au-delà, la qualité baisse (lost-in-the-middle).</p>
+<hr>
+<h3>8. Évaluation (RAGAS)</h3>
+<p>Construire un dataset de 50–100 paires question / réponse attendue <strong>manuellement validé</strong> avant d'optimiser quoi que ce soit.</p>
+<pre><code class="lang-python">from ragas import evaluate
+from ragas.metrics import (
+    faithfulness,           # hallucinations : réponse ⊂ documents ?
+    answer_relevancy,       # la réponse répond-elle à la question ?
+    context_precision,      # documents récupérés pertinents ?
+    context_recall,         # tous les docs nécessaires récupérés ?
+)
+from datasets import Dataset
+
+test_data = Dataset.from_dict({
+    &quot;question&quot;:     questions,
+    &quot;answer&quot;:       generated_answers,
+    &quot;contexts&quot;:     retrieved_contexts,   # liste de listes de strings
+    &quot;ground_truth&quot;: ground_truths,
+})
+results = evaluate(test_data, metrics=[faithfulness, answer_relevancy,
+                                        context_precision, context_recall])
+print(results.to_pandas())
+# Seuils minimaux acceptables : faithfulness &gt; 0.85, context_precision &gt; 0.75</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Chunks trop grands (&gt; 1500 tokens)</td><td>Retrieval dilué, mauvaises réponses</td><td>Réduire à 600–900 + overlap</td></tr><tr><td>Chunks trop petits (&lt; 100 tokens)</td><td>Manque de contexte dans la réponse</td><td>Monter à 400–600 + parent-child</td></tr><tr><td>Pas de re-ranking</td><td>Top-k peu pertinents malgré bon recall</td><td>Ajouter cross-encoder</td></tr><tr><td>Métadonnées non stockées</td><td>Impossible de filtrer ou citer les sources</td><td>Enrichir dès l'ingestion</td></tr><tr><td>Dense retrieval seul</td><td>Mauvais sur termes exacts (codes, noms propres)</td><td>Hybrid BM25 + dense</td></tr><tr><td>Contexte &gt; 8 chunks</td><td>&quot;Lost in the middle&quot;, réponse dégradée</td><td>Limiter à 5–6 chunks</td></tr><tr><td>Aucun dataset d'éval</td><td>Optimisation aveugle</td><td>RAGAS dataset en priorité</td></tr><tr><td>Modèle d'embedding changé sans ré-indexation</td><td>Scores incohérents, retrieval cassé</td><td>Toujours ré-indexer intégralement</td></tr><tr><td>Pas de stratégie d'update</td><td>Index périmé silencieusement</td><td>Détection de changements + ré-indexation incrémentale</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Observabilité dès le jour 1</strong> : logger query, retrieved docs, latence et score de faithfulness par requête (LangSmith, Phoenix/Arize, ou simple CSV).</li>
+<li><strong>Cache sémantique</strong> : GPTCache ou Redis avec recherche vectorielle — évite de re-calculer pour des questions similaires (économie 30–60% de tokens LLM).</li>
+<li><strong>Sécurité</strong> : filtrer les chunks par rôle utilisateur via métadonnées (<code>user_role</code> dans le filtre vector store) — ne pas mélanger données sensibles sans ACL.</li>
+<li><strong>Modèles d'embedding locaux</strong> : pour la confidentialité ou les volumes importants, <code>BAAI/bge-m3</code> rivalise avec les modèles cloud sur MTEB (score ~65 vs ~64 pour <code>text-embedding-3-large</code>).</li>
+<li><strong>Agentic RAG</strong> : pour les questions multi-hop, utiliser un agent (LangGraph, LlamaIndex Workflows) qui décompose la question, itère sur le retrieval et synthèse — meilleur que RAG naïf sur questions complexes.</li>
+<li><strong>Structured RAG</strong> : combiner vector search + SQL/GraphQL pour les données mixtes (texte + données tabulaires).</li>
 </ul>
 </article>
 </main>

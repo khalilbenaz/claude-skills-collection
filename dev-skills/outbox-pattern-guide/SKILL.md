@@ -5,208 +5,324 @@ description: Implémentation du pattern Outbox et Saga pour garantir la cohéren
 
 # Guide du Pattern Outbox & Saga
 
-## Workflow
+## 1. Identifier le problème
 
-1. **Identifier le problème** : dual write, perte de messages, incohérence entre services.
-2. **Choisir le pattern** : Outbox pour la publication fiable, Saga pour les transactions multi-services.
-3. **Concevoir** : tables, processus de polling/CDC, compensation.
-4. **Implémenter** : avec le framework approprié (MassTransit, NServiceBus, custom).
+**Symptômes qui déclenchent ce guide :**
+- Événements perdus entre la DB et le broker de messages.
+- État incohérent entre deux services après un crash entre deux opérations.
+- Besoin de transaction distribuée sans 2PC (two-phase commit).
+- Workflow multi-étapes qui doit être compensable.
 
-## Le problème du Dual Write
-
+**Arbre de décision :**
 ```
-❌ PROBLÈME : Dual Write
-Service → Save to DB        ✅ Succès
-Service → Publish to Broker  ❌ Échec
-→ DB mis à jour mais message perdu = incohérence
-```
+Besoin de publier un événement de façon fiable depuis un seul service ?
+  → OUI → Transactional Outbox
 
-## Pattern Outbox
-
-### Principe
-
-```
-✅ SOLUTION : Outbox
-Service → Transaction DB {
-    Save entity to DB
-    Save event to OutboxMessages table
-} → Commit atomique
-
-Background Worker → Poll OutboxMessages
-    → Publish to Broker
-    → Mark as processed
+Besoin de coordonner une transaction traversant plusieurs services ?
+  → OUI + logique centralisée  → Saga Orchestrée (recommandée)
+  → OUI + services totalement découplés → Saga Chorégraphiée (attention : complexité++)
 ```
 
-### Table Outbox
+---
+
+## 2. Pattern Outbox — implémentation pas à pas
+
+### Pourquoi le dual write échoue
+
+```
+❌ Dual Write
+1. BEGIN TX  → INSERT order          → COMMIT
+2. bus.Publish(OrderCreated)          → CRASH  ← message perdu, DB déjà commité
+```
+
+### Table SQL (SQL Server / PostgreSQL)
 
 ```sql
+-- SQL Server
 CREATE TABLE OutboxMessages (
-    Id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    EventType NVARCHAR(256) NOT NULL,
-    Payload NVARCHAR(MAX) NOT NULL,
-    CreatedAt DATETIMEOFFSET NOT NULL DEFAULT SYSDATETIMEOFFSET(),
-    ProcessedAt DATETIMEOFFSET NULL,
-    RetryCount INT NOT NULL DEFAULT 0,
-    Error NVARCHAR(MAX) NULL,
+    Id              UNIQUEIDENTIFIER    PRIMARY KEY DEFAULT NEWID(),
+    EventType       NVARCHAR(256)       NOT NULL,
+    Payload         NVARCHAR(MAX)       NOT NULL,   -- JSON sérialisé
+    CreatedAt       DATETIMEOFFSET      NOT NULL DEFAULT SYSDATETIMEOFFSET(),
+    ProcessedAt     DATETIMEOFFSET      NULL,
+    RetryCount      INT                 NOT NULL DEFAULT 0,
+    Error           NVARCHAR(1000)      NULL,
 
-    INDEX IX_OutboxMessages_Unprocessed (ProcessedAt, CreatedAt)
+    INDEX IX_Outbox_Pending (ProcessedAt, CreatedAt)
         WHERE ProcessedAt IS NULL
 );
+
+-- PostgreSQL équivalent
+CREATE INDEX CONCURRENTLY idx_outbox_pending
+    ON outbox_messages (created_at)
+    WHERE processed_at IS NULL;
 ```
 
-### Implémentation C#
+### Étape A — Écrire dans la transaction applicative
 
 ```csharp
-// 1. Sauvegarder l'entité + l'événement dans la même transaction
-public async Task CreateOrder(CreateOrderCommand command)
+// Dans le handler de commande — un seul SaveChangesAsync = atomique
+public async Task Handle(CreateOrderCommand cmd, CancellationToken ct)
 {
-    var order = new Order(command);
-    var outboxMessage = new OutboxMessage
+    var order = Order.Create(cmd.CustomerId, cmd.Amount);
+
+    _ctx.Orders.Add(order);
+    _ctx.OutboxMessages.Add(new OutboxMessage
     {
         EventType = nameof(OrderCreated),
-        Payload = JsonSerializer.Serialize(new OrderCreated
-        {
-            OrderId = order.Id,
-            CustomerId = command.CustomerId,
-            Amount = command.Amount
-        })
-    };
+        Payload   = JsonSerializer.Serialize(new OrderCreated(order.Id, cmd.Amount))
+    });
 
-    _context.Orders.Add(order);
-    _context.OutboxMessages.Add(outboxMessage);
-    await _context.SaveChangesAsync(); // Transaction atomique
+    await _ctx.SaveChangesAsync(ct); // atomique : les deux rows ou aucune
 }
+```
 
-// 2. Worker qui publie les messages en attente
-public class OutboxProcessor : BackgroundService
+### Étape B — Worker de publication (polling simple)
+
+```csharp
+public class OutboxWorker : BackgroundService
 {
+    private static readonly TimeSpan Interval = TimeSpan.FromSeconds(5);
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         while (!ct.IsCancellationRequested)
         {
-            var messages = await _context.OutboxMessages
-                .Where(m => m.ProcessedAt == null)
-                .OrderBy(m => m.CreatedAt)
-                .Take(100)
-                .ToListAsync(ct);
-
-            foreach (var message in messages)
-            {
-                try
-                {
-                    await _bus.Publish(message.EventType, message.Payload);
-                    message.ProcessedAt = DateTimeOffset.UtcNow;
-                }
-                catch (Exception ex)
-                {
-                    message.RetryCount++;
-                    message.Error = ex.Message;
-                }
-            }
-
-            await _context.SaveChangesAsync(ct);
-            await Task.Delay(TimeSpan.FromSeconds(5), ct);
+            await ProcessBatchAsync(ct);
+            await Task.Delay(Interval, ct);
         }
+    }
+
+    private async Task ProcessBatchAsync(CancellationToken ct)
+    {
+        // Verrouillage pessimiste pour multi-instances
+        var pending = await _ctx.OutboxMessages
+            .FromSqlRaw("""
+                SELECT TOP 50 * FROM OutboxMessages WITH (UPDLOCK, READPAST)
+                WHERE ProcessedAt IS NULL
+                ORDER BY CreatedAt
+            """)
+            .ToListAsync(ct);
+
+        foreach (var msg in pending)
+        {
+            try
+            {
+                await _bus.Publish(msg.EventType, msg.Payload, ct);
+                msg.ProcessedAt = DateTimeOffset.UtcNow;
+                msg.Error       = null;
+            }
+            catch (Exception ex)
+            {
+                msg.RetryCount++;
+                msg.Error = ex.Message;
+                // Backoff exponentiel : ne republier qu'après 2^retryCount minutes
+            }
+        }
+
+        await _ctx.SaveChangesAsync(ct);
     }
 }
 ```
 
-### Avec MassTransit (Outbox intégré)
+> **Tip multi-instances** : `WITH (UPDLOCK, READPAST)` sur SQL Server évite que deux workers prennent le même message. Sous PostgreSQL, utiliser `FOR UPDATE SKIP LOCKED`.
+
+### Étape C — Idempotence côté consommateur
+
+Chaque consommateur doit ignorer un message déjà traité :
 
 ```csharp
-// Configuration automatique de l'outbox
+public async Task Consume(ConsumeContext<OrderCreated> ctx)
+{
+    if (await _store.AlreadyProcessed(ctx.Message.MessageId)) return;
+
+    // traitement métier...
+
+    await _store.MarkProcessed(ctx.Message.MessageId);
+}
+```
+
+### Variante — MassTransit Outbox (zéro code infrastructure)
+
+```csharp
 builder.Services.AddMassTransit(x =>
 {
     x.AddEntityFrameworkOutbox<AppDbContext>(o =>
     {
-        o.UseSqlServer();
-        o.UseBusOutbox();
+        o.UseSqlServer();   // ou UsePostgres()
+        o.UseBusOutbox();   // intercepte tous les Publish/Send dans le scope EF
         o.QueryDelay = TimeSpan.FromSeconds(5);
+        o.QueryTimeout = TimeSpan.FromSeconds(30);
     });
 
-    x.UsingRabbitMq((context, cfg) =>
-    {
-        cfg.ConfigureEndpoints(context);
-    });
+    x.UsingRabbitMq((ctx, cfg) => cfg.ConfigureEndpoints(ctx));
 });
 ```
 
-## Pattern Saga
+### Variante — CDC (Change Data Capture) avec Debezium
 
-### Saga Chorégraphiée
+Aucun worker applicatif ; Debezium lit le WAL/binlog et pousse vers Kafka :
 
+```yaml
+# connector config (REST POST /connectors)
+{
+  "name": "outbox-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.sqlserver.SqlServerConnector",
+    "table.include.list": "dbo.OutboxMessages",
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.table.field.event.type": "EventType",
+    "transforms.outbox.route.by.field": "EventType"
+  }
+}
 ```
-Order Service → OrderCreated
-    → Payment Service → PaymentProcessed
-        → Inventory Service → InventoryReserved
-            → Notification Service → OrderConfirmed
 
-Si échec à n'importe quelle étape :
-    → Compensation en sens inverse
-```
+**Quand choisir CDC ?** Volume > 1 000 événements/s, latence < 1 s requise, infrastructure Kafka déjà en place.
 
-### Saga Orchestrée (recommandée)
+---
+
+## 3. Pattern Saga
+
+### Chorégraphie vs Orchestration
+
+| Critère | Chorégraphie | Orchestration |
+|---------|-------------|---------------|
+| Couplage | Faible (events) | Modéré (orchestrateur) |
+| Visibilité du flux | Difficile | Centralisée |
+| Complexité compensation | Dispersée dans chaque service | Centralisée |
+| Recommandé si | ≤ 3 étapes simples | ≥ 3 étapes ou compensation complexe |
+
+**Règle** : dès que le workflow dépasse 3 services ou nécessite des états intermédiaires, préférer l'orchestration.
+
+### Saga Orchestrée avec MassTransit
 
 ```csharp
 public class OrderSaga : MassTransitStateMachine<OrderSagaState>
 {
+    public State AwaitingPayment { get; private set; } = null!;
+    public State AwaitingInventory { get; private set; } = null!;
+    public State Completed { get; private set; } = null!;
+    public State Cancelled { get; private set; } = null!;
+
+    public Event<OrderSubmitted>    OrderSubmitted    { get; private set; } = null!;
+    public Event<PaymentProcessed>  PaymentProcessed  { get; private set; } = null!;
+    public Event<PaymentFailed>     PaymentFailed     { get; private set; } = null!;
+    public Event<InventoryReserved> InventoryReserved { get; private set; } = null!;
+
     public OrderSaga()
     {
         InstanceState(x => x.CurrentState);
 
-        Event(() => OrderSubmitted, x => x.CorrelateById(m => m.Message.OrderId));
+        Event(() => OrderSubmitted,   x => x.CorrelateById(m => m.Message.OrderId));
         Event(() => PaymentProcessed, x => x.CorrelateById(m => m.Message.OrderId));
-        Event(() => PaymentFailed, x => x.CorrelateById(m => m.Message.OrderId));
+        Event(() => PaymentFailed,    x => x.CorrelateById(m => m.Message.OrderId));
+        Event(() => InventoryReserved,x => x.CorrelateById(m => m.Message.OrderId));
 
         Initially(
             When(OrderSubmitted)
-                .Then(context =>
-                {
-                    context.Saga.OrderId = context.Message.OrderId;
-                    context.Saga.Amount = context.Message.Amount;
-                })
-                .Publish(context => new ProcessPayment
-                {
-                    OrderId = context.Saga.OrderId,
-                    Amount = context.Saga.Amount
-                })
+                .Then(ctx => { ctx.Saga.OrderId = ctx.Message.OrderId; ctx.Saga.Amount = ctx.Message.Amount; })
+                .Publish(ctx => new ProcessPayment { OrderId = ctx.Saga.OrderId, Amount = ctx.Saga.Amount })
                 .TransitionTo(AwaitingPayment)
         );
 
         During(AwaitingPayment,
             When(PaymentProcessed)
-                .Publish(context => new ReserveInventory
-                {
-                    OrderId = context.Saga.OrderId
-                })
+                .Publish(ctx => new ReserveInventory { OrderId = ctx.Saga.OrderId })
                 .TransitionTo(AwaitingInventory),
-
             When(PaymentFailed)
-                .Publish(context => new CancelOrder
-                {
-                    OrderId = context.Saga.OrderId,
-                    Reason = "Payment failed"
-                })
-                .TransitionTo(Cancelled)
-                .Finalize()
+                .Publish(ctx => new CancelOrder { OrderId = ctx.Saga.OrderId, Reason = "Payment declined" })
+                .TransitionTo(Cancelled).Finalize()
         );
+
+        During(AwaitingInventory,
+            When(InventoryReserved)
+                .Publish(ctx => new ConfirmOrder { OrderId = ctx.Saga.OrderId })
+                .TransitionTo(Completed).Finalize()
+        );
+
+        SetCompletedWhenFinalized();
     }
 }
 ```
 
-## Choisir entre Outbox et Saga
+### Actions de compensation obligatoires
 
-| Critère | Outbox | Saga |
-|---------|--------|------|
-| **Portée** | Un seul service | Multi-services |
-| **Complexité** | Faible | Élevée |
-| **Usage** | Publication fiable d'événements | Transaction distribuée |
-| **Compensation** | Non nécessaire | Obligatoire |
-| **Latence** | Légère (polling) | Variable |
+Chaque étape doit avoir son inverse :
 
-## Règles
-- Ne jamais faire de dual write (DB + broker dans deux transactions séparées).
-- Chaque étape d'une saga doit avoir une action de **compensation**.
-- Les messages outbox doivent être **idempotents** côté consommateur.
-- Préférer la saga orchestrée à la chorégraphiée pour les flux complexes.
-- Monitorer la table outbox — une accumulation signale un problème.
+| Étape | Compensation |
+|-------|-------------|
+| `ProcessPayment` | `RefundPayment` |
+| `ReserveInventory` | `ReleaseInventory` |
+| `SendEmail` | (non compensable — log + alerte) |
+
+---
+
+## 4. Choisir entre Outbox et Saga
+
+| Critère | Outbox seul | Outbox + Saga |
+|---------|-------------|---------------|
+| Portée | 1 service | N services |
+| Rollback | Non nécessaire | Compensation explicite |
+| Complexité | Faible | Élevée |
+| Exemple | Publier `OrderCreated` après INSERT | Paiement → Stock → Notification |
+
+---
+
+## 5. Garde-fous, anti-patterns, pièges
+
+### Anti-patterns
+
+- **Publier dans le même thread avant le commit** — toujours écrire dans l'outbox, jamais `bus.Publish()` directement dans le handler.
+- **Saga chorégraphiée pour des flux complexes** — les events se croisent, le debugging devient un cauchemar. Passer à l'orchestration.
+- **Ne pas implémenter l'idempotence consommateur** — les retries (at-least-once delivery) peuvent dupliquer les effets métier.
+- **Outbox sans index filtrant sur `ProcessedAt IS NULL`** — la table grossit, le worker ralentit. Purger régulièrement les messages traités.
+- **Saga sans timeout** — un service qui ne répond jamais bloque la saga indéfiniment. Toujours définir un `TimeoutIn`.
+
+### Pièges opérationnels
+
+```csharp
+// PIÈGE : lock contention si un seul worker lit sans SKIP LOCKED
+// → plusieurs workers lisent le même batch → double publication
+// SOLUTION : UPDLOCK/READPAST (SQL Server) ou FOR UPDATE SKIP LOCKED (PG)
+
+// PIÈGE : sérialiser des types polymorphes sans discriminant
+// → lors de la désérialisation, le type est perdu
+// SOLUTION : stocker EventType + un champ TypeName dans le payload
+var payload = JsonSerializer.Serialize(evt, evt.GetType());
+// Et côté consommateur :
+var type = Type.GetType(msg.TypeName)!;
+var evt  = (IEvent)JsonSerializer.Deserialize(msg.Payload, type)!;
+```
+
+### Monitoring indispensable
+
+```sql
+-- Alerter si des messages sont bloqués depuis > 10 min
+SELECT COUNT(*) AS Stuck
+FROM OutboxMessages
+WHERE ProcessedAt IS NULL
+  AND CreatedAt < DATEADD(MINUTE, -10, SYSDATETIMEOFFSET());
+
+-- Surveiller les RetryCount élevés
+SELECT TOP 10 EventType, RetryCount, Error, CreatedAt
+FROM OutboxMessages
+WHERE RetryCount > 3
+ORDER BY RetryCount DESC;
+```
+
+**Seuils d'alerte recommandés :**
+- Messages en attente > 5 min → WARNING
+- Messages en attente > 15 min → CRITICAL
+- RetryCount > 5 → investigation manuelle
+
+---
+
+## 6. Bonnes pratiques 2026
+
+- **Utiliser MassTransit Outbox** si déjà sur MassTransit — zéro code infrastructure, testable via `InMemoryTestHarness`.
+- **CDC (Debezium)** pour les volumes élevés ou la faible latence ; sinon le polling est suffisant et plus simple.
+- **Purge automatique** : supprimer les messages `ProcessedAt < NOW() - 7 days` via un job nocturne.
+- **Saga state in DB, pas en mémoire** — la saga doit survivre aux redémarrages.
+- **Tests** : tester chaque step de saga en isolation avec des fakes de bus ; tester le worker outbox avec une vraie DB de test (TestContainers).
+- **Nommage des events** : `{Aggregate}{PastTense}` — `OrderCreated`, `PaymentFailed` — jamais de verbes au présent.

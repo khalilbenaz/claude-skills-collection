@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>networking-firewall-configurator — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Configuration de firewalls et règles de sécurité réseau pour iptables, pfSense, Azure NSG et AWS Security Groups.">
+<meta name="description" content="Configuration de firewalls et règles de sécurité réseau pour iptables/nftables, pfSense, Azure NSG, AWS Security Groups et Cisco ACL.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🌐 Réseaux</span>
 <h1 class="skill-title">networking-firewall-configurator</h1>
-<p class="lead">Configuration de firewalls et règles de sécurité réseau pour iptables, pfSense, Azure NSG et AWS Security Groups.</p>
+<p class="lead">Configuration de firewalls et règles de sécurité réseau pour iptables/nftables, pfSense, Azure NSG, AWS Security Groups et Cisco ACL.</p>
 
 
 
@@ -97,23 +97,158 @@ cp -r claude-skills-collection/skills/networking-firewall-configurator ~/.claude
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Firewall Configurator</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Audit de l'existant</strong> — Recenser les règles de firewall actuellement en place, identifier les politiques par défaut (ACCEPT/DROP) et documenter les flux autorisés.</li>
-<li><strong>Définition de la matrice de flux</strong> — Établir la liste complète des flux réseau nécessaires (source, destination, port, protocole) en collaboration avec les équipes applicatives.</li>
-<li><strong>Conception des règles</strong> — Rédiger les règles de firewall en respectant le principe du moindre privilège, en ordonnant les règles du plus spécifique au plus général.</li>
-<li><strong>Validation en environnement de test</strong> — Déployer les règles sur un environnement de pré-production et vérifier que les flux légitimes passent et que les flux non autorisés sont bloqués.</li>
-<li><strong>Déploiement en production</strong> — Appliquer les règles en production avec un plan de rollback prêt, en utilisant les commandes appropriées selon la plateforme (iptables, pfSense, Azure CLI, AWS CLI).</li>
-<li><strong>Test de non-régression</strong> — Valider le bon fonctionnement de tous les services après l'application des règles en testant chaque flux de la matrice.</li>
-<li><strong>Monitoring et journalisation</strong> — Configurer les logs de firewall pour capturer les connexions refusées et mettre en place des alertes sur les tentatives d'accès suspectes.</li>
-<li><strong>Documentation finale</strong> — Mettre à jour la documentation réseau avec les nouvelles règles, les justifications métier et les procédures de modification.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Inventaire de l'existant</h3>
+<p>Recenser les règles actives avant toute modification.</p>
+<pre><code class="lang-bash"># iptables — lister les règles avec numéros de ligne et compteurs
+iptables -nvL --line-numbers
+
+# nftables (Linux moderne)
+nft list ruleset
+
+# pfSense — via CLI
+pfctl -sr
+
+# Azure NSG — lister toutes les règles effectives sur une NIC
+az network nic list-effective-nsg --name myNIC --resource-group myRG -o table
+
+# AWS Security Group — voir les règles entrantes/sortantes
+aws ec2 describe-security-groups --group-ids sg-xxxxx \
+  --query 'SecurityGroups[*].{In:IpPermissions,Out:IpPermissionsEgress}'</code></pre>
+<h3>2. Matrice de flux</h3>
+<p>Avant d'écrire une règle, remplir ce tableau pour chaque flux :</p>
+<table><thead><tr><th>Source</th><th>Destination</th><th>Port/Proto</th><th>Sens</th><th>Justification</th></tr></thead><tbody><tr><td>10.0.1.0/24</td><td>10.0.2.10</td><td>443/tcp</td><td>IN</td><td>API frontend→backend</td></tr><tr><td>0.0.0.0/0</td><td>10.0.5.0/24</td><td>22/tcp</td><td>IN</td><td>Accès SSH ops (à restreindre)</td></tr></tbody></table>
+<p><strong>Critère de décision — quelle plateforme ?</strong></p>
 <ul>
-<li>Toujours appliquer une politique par défaut de type DROP/DENY et n'autoriser explicitement que les flux nécessaires (approche whitelist).</li>
-<li>Ne jamais ouvrir de ports sans justification documentée et validation par l'équipe sécurité ; chaque règle doit avoir un commentaire explicatif.</li>
-<li>Tester systématiquement les règles dans un environnement isolé avant tout déploiement en production pour éviter les interruptions de service.</li>
-<li>Maintenir une numérotation et un ordonnancement cohérent des règles pour faciliter la lecture, l'audit et la maintenance future.</li>
-<li>Conserver un historique versionné de toutes les modifications de règles avec la date, l'auteur et la raison du changement.</li>
+<li>Machine Linux bare-metal/VM → <code>nftables</code> (iptables en legacy)</li>
+<li>Routeur/appliance BSD → <code>pfSense</code> / <code>pfctl</code></li>
+<li>Infra Azure → NSG (attaché subnet ou NIC)</li>
+<li>Infra AWS → Security Group (stateful) + NACL (stateless)</li>
+<li>On-prem Cisco → ACL étendue</li>
+</ul>
+<h3>3. Rédaction des règles</h3>
+<p><strong>iptables — politique par défaut DROP + règles minimales</strong></p>
+<pre><code class="lang-bash"># Vider et poser la politique DROP
+iptables -F &amp;&amp; iptables -X
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+
+# Permettre loopback et connexions établies
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# SSH restreint à un bastion
+iptables -A INPUT -s 10.0.0.5/32 -p tcp --dport 22 -m comment --comment &quot;SSH depuis bastion&quot; -j ACCEPT
+
+# HTTPS public
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+
+# Persister (Debian/Ubuntu)
+iptables-save &gt; /etc/iptables/rules.v4</code></pre>
+<p><strong>nftables — équivalent moderne</strong></p>
+<pre><code class="lang-nft">table inet filter {
+  chain input {
+    type filter hook input priority 0; policy drop;
+    iif lo accept
+    ct state established,related accept
+    ip saddr 10.0.0.5 tcp dport 22 comment &quot;SSH bastion&quot; accept
+    tcp dport 443 accept
+    limit rate 5/second counter log prefix &quot;DROP: &quot; drop
+  }
+  chain forward { type filter hook forward priority 0; policy drop; }
+  chain output  { type filter hook output  priority 0; policy accept; }
+}</code></pre>
+<p><strong>Azure NSG via CLI</strong></p>
+<pre><code class="lang-bash"># Autoriser HTTPS entrant, priorité 100 (plus petit = priorité haute)
+az network nsg rule create \
+  --resource-group myRG \
+  --nsg-name myNSG \
+  --name Allow-HTTPS-In \
+  --priority 100 \
+  --direction Inbound \
+  --access Allow \
+  --protocol Tcp \
+  --destination-port-ranges 443 \
+  --description &quot;HTTPS public&quot;
+
+# Bloquer tout le reste (règle de fin explicite, priorité 4096)
+az network nsg rule create \
+  --resource-group myRG --nsg-name myNSG \
+  --name DenyAll-In --priority 4096 \
+  --direction Inbound --access Deny \
+  --protocol '*' --destination-port-ranges '*'</code></pre>
+<p><strong>AWS Security Group via CLI</strong></p>
+<pre><code class="lang-bash"># Autoriser HTTPS depuis Internet
+aws ec2 authorize-security-group-ingress \
+  --group-id sg-xxxxx \
+  --protocol tcp --port 443 --cidr 0.0.0.0/0
+
+# Révoquer une règle existante
+aws ec2 revoke-security-group-ingress \
+  --group-id sg-xxxxx \
+  --protocol tcp --port 3389 --cidr 0.0.0.0/0</code></pre>
+<h3>4. Validation avant production</h3>
+<pre><code class="lang-bash"># Tester la connectivité TCP sans établir de session (ncat)
+nc -zv 10.0.2.10 443
+
+# Simuler un paquet avec hping3
+hping3 -S -p 443 10.0.2.10
+
+# Test de port bloqué (doit timeout)
+curl --connect-timeout 3 http://10.0.2.10:8080 || echo &quot;Bloqué OK&quot;
+
+# Azure — tester le routage effectif
+az network watcher test-connectivity \
+  --resource-group myRG \
+  --source-resource myVM \
+  --dest-address 10.0.2.10 --dest-port 443</code></pre>
+<h3>5. Déploiement avec rollback prêt</h3>
+<pre><code class="lang-bash"># iptables — sauvegarder AVANT toute modification
+iptables-save &gt; /tmp/iptables_backup_$(date +%Y%m%d_%H%M%S).rules
+
+# Appliquer les nouvelles règles (script à rouler)
+bash apply_rules.sh
+
+# En cas de coupure : rollback en 1 ligne
+iptables-restore &lt; /tmp/iptables_backup_20260624_143000.rules</code></pre>
+<p>Pour les sessions SSH à risque : utiliser <code>at</code> pour un rollback automatique :</p>
+<pre><code class="lang-bash">echo &quot;iptables-restore &lt; /tmp/backup.rules&quot; | at now + 5 minutes
+# Si tout va bien, annuler le job
+atrm &lt;job-id&gt;</code></pre>
+<h3>6. Journalisation et monitoring</h3>
+<pre><code class="lang-bash"># iptables — loguer les paquets DROP avant la règle terminale
+iptables -I INPUT -m limit --limit 5/min -j LOG --log-prefix &quot;FW-DROP: &quot; --log-level 4
+
+# nftables — compteur + log
+table inet filter {
+  chain input {
+    ...
+    counter log prefix &quot;DROP: &quot; drop
+  }
+}
+
+# Analyser les logs (systemd)
+journalctl -k | grep &quot;FW-DROP&quot; | awk '{print $12}' | sort | uniq -c | sort -rn | head 20</code></pre>
+<p>Outils de monitoring recommandés :</p>
+<ul>
+<li><strong>iptraf-ng</strong> — trafic réseau temps réel</li>
+<li><strong>fail2ban</strong> — ban automatique sur patterns de logs</li>
+<li><strong>Azure Monitor / NSG Flow Logs</strong> — activez via Azure Network Watcher</li>
+<li><strong>AWS VPC Flow Logs</strong> — activer sur le VPC ou ENI cible</li>
+</ul>
+<h3>7. Documentation</h3>
+<p>Chaque règle doit avoir : date, auteur, ticket associé, justification. Versionner avec git.</p>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td>Politique par défaut ACCEPT</td><td>Toute règle manquante = ouverture</td><td>Toujours <code>policy drop</code> en INPUT/FORWARD</td></tr><tr><td>Règle <code>0.0.0.0/0</code> sur port 22</td><td>Exposition SSH au monde</td><td>Restreindre au bastion ou VPN</td></tr><tr><td>Appliquer sans backup</td><td>Rollback impossible</td><td><code>iptables-save</code> avant chaque modif</td></tr><tr><td>Priorités NSG toutes à 100</td><td>Conflits silencieux</td><td>Espacer de 100 (100, 200, 300…)</td></tr><tr><td>Security Group sans description</td><td>Audit impossible</td><td>Toujours renseigner le champ <code>description</code></td></tr><tr><td>Règles temporaires jamais nettoyées</td><td>Surface d'attaque croissante</td><td>Revue trimestrielle + TTL documenté</td></tr><tr><td>Ouvrir un range de ports (1000-9000)</td><td>Moindre privilège violé</td><td>Ouvrir uniquement les ports nécessaires</td></tr><tr><td>NACL AWS stateless oublié</td><td>Réponses bloquées en sortie</td><td>Toujours paire IN+OUT sur NACL</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Zero-trust perimeter</strong> : ne pas faire confiance au trafic est-ouest interne ; appliquer des NSG/SG aussi entre sous-réseaux internes.</li>
+<li><strong>Infrastructure as Code</strong> : gérer les règles via Terraform/Bicep, jamais en mode console manuel en prod.</li>
+<li><strong>Tagging obligatoire</strong> (cloud) : chaque SG/NSG doit avoir les tags <code>env</code>, <code>owner</code>, <code>ticket</code>.</li>
+<li><strong>Audit régulier</strong> : exécuter un scan de règles inutilisées (<code>aws ec2 describe-security-groups</code> + script de comparaison avec les flux réels via VPC Flow Logs).</li>
+<li><strong>Séparation SSH/RDP</strong> : accès administration uniquement via bastion ou VPN, jamais exposé directement.</li>
+<li><strong>IPv6</strong> : toujours configurer <code>ip6tables</code> ou les règles NSG IPv6 en parallèle ; une règle IPv4 n'affecte pas IPv6.</li>
 </ul>
 </article>
 </main>

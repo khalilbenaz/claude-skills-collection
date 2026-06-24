@@ -98,21 +98,130 @@ cp -r claude-skills-collection/skills/dev-design-patterns-advisor ~/.claude/skil
 <h1>Design Patterns Advisor</h1>
 <h2>Workflow</h2>
 <ol>
-<li>Comprendre le problème concret (pas le pattern, le PROBLÈME) — poser des questions ciblées sur le contexte métier, les contraintes et la douleur actuelle du code</li>
-<li>Classifier le besoin (création, structure, comportement, architectural) — mapper le problème sur la bonne famille de patterns GoF ou architectural</li>
-<li>Proposer 2-3 patterns candidats avec pros/cons pour le contexte spécifique — ne pas présenter des patterns hors-sujet ou trop abstraits</li>
-<li>Implémenter le pattern recommandé dans le langage de l'utilisateur — code complet, fonctionnel et commenté, adapté au style du projet</li>
-<li>Montrer l'avant/après avec le code refactoré — mettre en évidence les gains concrets (lisibilité, testabilité, extensibilité)</li>
-<li>Expliquer quand NE PAS utiliser ce pattern (over-engineering) — signaler les cas où une solution plus simple suffit</li>
-<li>Liens avec les principes SOLID concernés — expliquer quel principe est satisfait et pourquoi c'est important dans ce cas</li>
-</ol>
-<h2>Règles</h2>
+<li><strong>Qualifier le problème</strong> — poser 1-2 questions précises sur la douleur actuelle : couplage fort ? code dupliqué ? difficile à tester ? trop de <code>if/switch</code> ? besoin d'extension sans modification ?</li>
+<li><strong>Classifier le besoin</strong> — mapper sur la bonne famille :</li>
 <ul>
-<li>Adapte toujours l'implémentation au langage et au framework de l'utilisateur (.NET, Node, Python, Java, Go...) avec un code exécutable</li>
-<li>Privilégie la simplicité : un pattern n'est justifié que s'il réduit la complexité ou améliore la maintenabilité de façon mesurable</li>
-<li>Fournis systématiquement un exemple de code concret avant et après refactoring pour illustrer la valeur du pattern</li>
-<li>Justifie chaque choix technique avec les trade-offs : un pattern mal appliqué est pire qu'aucun pattern</li>
+<li><strong>Création</strong> : instanciation complexe, cache d'instances, familles d'objets</li>
+<li><strong>Structure</strong> : adapter une interface, décorer un comportement, encapsuler une hiérarchie</li>
+<li><strong>Comportement</strong> : algorithmes interchangeables, notifications, état interne variable</li>
+<li><strong>Architectural</strong> : séparation UI/logique, CQRS, pipeline de traitement</li>
 </ul>
+<li><strong>Proposer 2-3 candidats</strong> avec critères de décision (voir tableau ci-dessous) — pas de liste exhaustive, uniquement ceux pertinents</li>
+<li><strong>Implémenter le pattern recommandé</strong> dans le langage du projet — code complet, copiable, commenté</li>
+<li><strong>Montrer l'avant/après</strong> — mettre en évidence les gains mesurables (testabilité, lignes supprimées, points d'extension)</li>
+<li><strong>Signaler les garde-fous</strong> — cas où le pattern est inutile ou contre-productif</li>
+<li><strong>Relier aux principes SOLID</strong> concernés — expliquer le lien de façon pratique</li>
+</ol>
+<hr>
+<h2>Critères de décision rapide</h2>
+<table><thead><tr><th>Symptôme du code</th><th>Famille</th><th>Patterns à considérer</th></tr></thead><tbody><tr><td><code>new ConcreteClass()</code> éparpillé</td><td>Création</td><td>Factory Method, Abstract Factory, Builder</td></tr><tr><td>Une seule instance globale nécessaire</td><td>Création</td><td>Singleton (avec précaution), Monostate</td></tr><tr><td>Interfaces incompatibles</td><td>Structure</td><td>Adapter, Facade</td></tr><tr><td>Ajout de comportement sans héritage</td><td>Structure</td><td>Decorator, Proxy</td></tr><tr><td>Plusieurs algorithmes interchangeables</td><td>Comportement</td><td>Strategy, Command</td></tr><tr><td>Couplage fort entre producteur/consommateur</td><td>Comportement</td><td>Observer, Mediator, Event Bus</td></tr><tr><td>État interne qui change le comportement</td><td>Comportement</td><td>State</td></tr><tr><td>Pipeline de transformations</td><td>Comportement</td><td>Chain of Responsibility, Pipeline</td></tr><tr><td>Logique métier + UI mélangées</td><td>Architectural</td><td>MVC, MVP, MVVM, Clean Architecture</td></tr><tr><td>Lecture/écriture asymétriques</td><td>Architectural</td><td>CQRS, Repository</td></tr></tbody></table>
+<hr>
+<h2>Exemples concrets par pattern</h2>
+<h3>Strategy — algorithmes interchangeables</h3>
+<p><strong>Avant (if/switch ingérable) :</strong></p>
+<pre><code class="lang-csharp">// Ajout d'une méthode = modifier cette classe
+public decimal CalculateFee(string type, decimal amount) {
+    if (type == &quot;standard&quot;) return amount * 0.02m;
+    else if (type == &quot;premium&quot;) return amount * 0.01m;
+    else if (type == &quot;corporate&quot;) return amount * 0.005m;
+    throw new ArgumentException();
+}</code></pre>
+<p><strong>Après (Strategy) :</strong></p>
+<pre><code class="lang-csharp">public interface IFeeStrategy { decimal Calculate(decimal amount); }
+
+public class StandardFee : IFeeStrategy { public decimal Calculate(decimal amount) =&gt; amount * 0.02m; }
+public class PremiumFee  : IFeeStrategy { public decimal Calculate(decimal amount) =&gt; amount * 0.01m; }
+public class CorporateFee: IFeeStrategy { public decimal Calculate(decimal amount) =&gt; amount * 0.005m; }
+
+public class FeeCalculator(IFeeStrategy strategy) {
+    public decimal Calculate(decimal amount) =&gt; strategy.Calculate(amount);
+}
+// Extension = nouvelle classe, zéro modification existante (OCP)</code></pre>
+<h3>Observer — découplage producteur/consommateur</h3>
+<pre><code class="lang-typescript">// Implémentation légère sans dépendance externe
+type Handler&lt;T&gt; = (payload: T) =&gt; void;
+
+class EventBus&lt;T&gt; {
+    private handlers: Handler&lt;T&gt;[] = [];
+    subscribe(h: Handler&lt;T&gt;) { this.handlers.push(h); }
+    publish(payload: T) { this.handlers.forEach(h =&gt; h(payload)); }
+}
+
+const orderBus = new EventBus&lt;{ orderId: string; amount: number }&gt;();
+orderBus.subscribe(({ orderId }) =&gt; console.log(`Email confirmation ${orderId}`));
+orderBus.subscribe(({ amount }) =&gt; updateStats(amount));
+orderBus.publish({ orderId: &quot;123&quot;, amount: 500 });</code></pre>
+<h3>Decorator — enrichissement sans héritage</h3>
+<pre><code class="lang-python">from functools import wraps
+
+def retry(max_attempts=3):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_attempts):
+                try:
+                    return fn(*args, **kwargs)
+                except Exception as e:
+                    if attempt == max_attempts - 1:
+                        raise
+        return wrapper
+    return decorator
+
+@retry(max_attempts=3)
+def call_external_api(url: str) -&gt; dict:
+    ...  # logique inchangée</code></pre>
+<h3>Factory Method — instanciation déléguée</h3>
+<pre><code class="lang-java">// Contexte : création de parsers selon le format de fichier
+public interface DocumentParser { Document parse(InputStream in); }
+
+public class ParserFactory {
+    public static DocumentParser create(String contentType) {
+        return switch (contentType) {
+            case &quot;application/pdf&quot;  -&gt; new PdfParser();
+            case &quot;text/csv&quot;         -&gt; new CsvParser();
+            case &quot;application/json&quot; -&gt; new JsonParser();
+            default -&gt; throw new UnsupportedFormatException(contentType);
+        };
+    }
+}
+// Ajout d'un format = nouvelle classe + 1 ligne dans le switch</code></pre>
+<h3>Repository — abstraction de la persistance</h3>
+<pre><code class="lang-csharp">public interface IOrderRepository {
+    Task&lt;Order?&gt; FindById(Guid id);
+    Task&lt;IEnumerable&lt;Order&gt;&gt; FindByStatus(OrderStatus status);
+    Task Save(Order order);
+}
+
+// Implémentation swappable : EF Core, Dapper, mock pour tests
+public class EfOrderRepository(AppDbContext ctx) : IOrderRepository {
+    public async Task&lt;Order?&gt; FindById(Guid id) =&gt; await ctx.Orders.FindAsync(id);
+    public async Task Save(Order order) { ctx.Orders.Add(order); await ctx.SaveChangesAsync(); }
+    // ...
+}</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<ul>
+<li><strong>Singleton</strong> : éviter pour tout ce qui a un état mutable ou dépend d'une config runtime — préférer l'injection de dépendances. Le Singleton global tue la testabilité.</li>
+<li><strong>Over-engineering</strong> : un <code>if/else</code> avec 2 branches ne justifie pas un Strategy. Le pattern doit réduire la complexité, pas l'augmenter.</li>
+<li><strong>Abstract Factory trop tôt</strong> : ne créer une famille d'objets abstraite que si plusieurs variantes coexistent réellement. Sinon : YAGNI.</li>
+<li><strong>Observer sans cleanup</strong> : toujours prévoir le désabonnement (<code>unsubscribe</code>/<code>Dispose</code>) — sinon fuites mémoire.</li>
+<li><strong>Decorator imbriqué en cascade</strong> : au-delà de 3 niveaux, préférer un pipeline explicite ou un middleware pattern.</li>
+<li><strong>Repository sur un CRUD trivial</strong> : si toute la logique est <code>GET/POST/PUT/DELETE</code> sans règle métier, un simple DAO ou l'ORM direct suffit.</li>
+<li><strong>Pattern sans tests</strong> : chaque pattern introduit une abstraction — écrire les tests avant de refactorer pour valider le comportement est conservé.</li>
+</ul>
+<hr>
+<h2>Principes SOLID associés</h2>
+<table><thead><tr><th>Principe</th><th>Patterns qui l'expriment directement</th></tr></thead><tbody><tr><td>S — Single Responsibility</td><td>Facade, Command, Repository</td></tr><tr><td>O — Open/Closed</td><td>Strategy, Decorator, Factory Method</td></tr><tr><td>L — Liskov Substitution</td><td>Template Method, Strategy</td></tr><tr><td>I — Interface Segregation</td><td>Adapter, Proxy</td></tr><tr><td>D — Dependency Inversion</td><td>Factory, Abstract Factory, Repository, tous les patterns à base d'interface</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Préférer la composition à l'héritage</strong> — les langages modernes (Go, Rust, Kotlin, Swift) favorisent les interfaces et traits ; éviter les hiérarchies profondes.</li>
+<li><strong>Patterns fonctionnels</strong> : en TypeScript/Kotlin/Python, Strategy et Command se réduisent souvent à une simple fonction de premier ordre — pas besoin d'une classe.</li>
+<li><strong>Architecture hexagonale</strong> : combiner Repository + Domain Events + Use Cases pour isoler le domaine de l'infrastructure.</li>
+<li><strong>Event-driven par défaut</strong> : dans les microservices, Observer devient un Event Bus (Kafka, Azure Service Bus) — appliquer les mêmes principes de découplage.</li>
+<li><strong>Valider avec des tests</strong> : après tout refactoring vers un pattern, exécuter la suite de tests existante avant de pousser :</li>
+</ul>
+<p>  ```bash   dotnet test --no-build   # .NET   npx jest --runInBand     # Node/TS   pytest -x                # Python   ```</p>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

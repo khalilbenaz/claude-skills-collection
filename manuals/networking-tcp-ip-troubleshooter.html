@@ -96,24 +96,142 @@ cp -r claude-skills-collection/skills/networking-tcp-ip-troubleshooter ~/.claude
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>TCP/IP Troubleshooter</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identification du symptôme</strong> — Recueillir les informations sur le problème signalé (lenteur, timeout, connexion refusée, résolution échouée) et déterminer la couche OSI potentiellement concernée.</li>
-<li><strong>Vérification de la connectivité de base</strong> — Exécuter des tests <code>ping</code> vers la passerelle locale, le DNS et la cible distante pour isoler le segment défaillant.</li>
-<li><strong>Analyse du chemin réseau</strong> — Utiliser <code>traceroute</code> / <code>tracert</code> pour identifier les sauts problématiques, la latence par noeud et les boucles de routage éventuelles.</li>
-<li><strong>Diagnostic DNS</strong> — Vérifier la résolution de noms avec <code>nslookup</code> ou <code>dig</code>, contrôler les serveurs DNS configurés et tester les résolutions directes et inverses.</li>
-<li><strong>Inspection des interfaces et routes</strong> — Examiner la configuration IP (<code>ip addr</code>, <code>ifconfig</code>), la table de routage (<code>ip route</code>, <code>route -n</code>) et les métriques des interfaces réseau.</li>
-<li><strong>Analyse des paquets</strong> — Capturer le trafic avec <code>tcpdump</code> ou Wireshark pour identifier les retransmissions TCP, les paquets fragmentés ou les connexions bloquées.</li>
-<li><strong>Vérification des services et ports</strong> — Utiliser <code>netstat</code>, <code>ss</code> ou <code>telnet</code> pour confirmer que les services écoutent sur les bons ports et que les connexions sont établies.</li>
-<li><strong>Documentation et remédiation</strong> — Consigner les résultats du diagnostic, appliquer le correctif approprié et valider la résolution du problème avec des tests de bout en bout.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow de diagnostic en 8 étapes</h2>
+<h3>1. Qualifier le symptôme</h3>
+<p>Avant toute commande, déterminer :</p>
 <ul>
-<li>Toujours commencer par les tests les plus simples (ping local) avant de passer aux diagnostics avancés, en procédant couche par couche du modèle OSI.</li>
-<li>Ne jamais modifier la configuration réseau en production sans avoir documenté l'état actuel et préparé un plan de rollback.</li>
-<li>Utiliser les outils natifs du système d'exploitation en priorité avant de recourir à des outils tiers pour garantir la reproductibilité.</li>
-<li>Corréler les résultats de plusieurs outils de diagnostic pour confirmer la cause racine avant de proposer une solution.</li>
-<li>Inclure les timestamps et les résultats bruts des commandes dans chaque rapport de diagnostic pour assurer la traçabilité.</li>
+<li><strong>Type</strong> : timeout, connexion refusée, lenteur intermittente, résolution DNS échouée, perte de paquets</li>
+<li><strong>Portée</strong> : un hôte, un sous-réseau, tous les clients, intermittent ou permanent</li>
+<li><strong>Couche OSI probable</strong> : physique/liaison (1-2) → réseau (3) → transport (4) → application (7)</li>
+</ul>
+<p>Exemple d'arbre décisionnel rapide :</p>
+<pre><code>Ping gateway KO  → couche 1-3 (câble, IP, route)
+Ping gateway OK, ping DNS KO → routing ou firewall
+DNS OK, port cible KO → couche 4 (port bloqué, service down)
+Port OK, appli KO → couche 7 (TLS, auth, timeout app)</code></pre>
+<hr>
+<h3>2. Connectivité de base (couche 3)</h3>
+<pre><code class="lang-bash"># Linux/Mac — tester loopback, gateway, DNS, cible
+ping -c 4 127.0.0.1
+ping -c 4 192.168.1.1          # gateway locale
+ping -c 4 8.8.8.8              # DNS public (bypass résolution)
+ping -c 4 example.com          # résolution + connectivité
+
+# Windows
+ping -n 4 8.8.8.8
+Test-NetConnection 8.8.8.8 -Port 443   # PowerShell — teste port aussi</code></pre>
+<p>Critère de décision :</p>
+<ul>
+<li>Loopback KO → stack TCP/IP corrompue (reinitialiser : <code>netsh int ip reset</code> Windows)</li>
+<li>Gateway KO → problème L2/L3 local (VLAN, ARP, IP incorrecte)</li>
+<li>8.8.8.8 KO mais gateway OK → routing ou firewall upstream</li>
+</ul>
+<hr>
+<h3>3. Analyse du chemin réseau</h3>
+<pre><code class="lang-bash"># Linux
+traceroute -n 8.8.8.8          # -n évite la résolution inverse (plus rapide)
+mtr --report --report-cycles 20 8.8.8.8   # outil préféré : stats par saut
+
+# Windows
+tracert -d 8.8.8.8
+Test-NetConnection -TraceRoute 8.8.8.8</code></pre>
+<p>Interpréter <code>mtr</code> :</p>
+<ul>
+<li><strong>Loss% &gt; 0 sur un saut intermédiaire mais 0 sur les suivants</strong> → ICMP rate-limiting, pas de vraie perte</li>
+<li><strong>Loss% croissant et persistant à partir d'un saut</strong> → congestion ou filtre à ce nœud</li>
+<li><strong>Latence qui double brutalement</strong> → saut intercontinental ou lien saturé</li>
+</ul>
+<hr>
+<h3>4. Diagnostic DNS</h3>
+<pre><code class="lang-bash"># Résolution standard
+nslookup example.com
+dig example.com A              # plus détaillé, voir AUTHORITY/ANSWER section
+
+# Tester un serveur spécifique
+dig @1.1.1.1 example.com A
+nslookup example.com 8.8.8.8
+
+# Résolution inverse
+dig -x 93.184.216.34
+nslookup 93.184.216.34
+
+# Vider le cache DNS
+sudo systemd-resolve --flush-caches    # Linux systemd
+ipconfig /flushdns                     # Windows</code></pre>
+<p>Pièges DNS courants :</p>
+<ul>
+<li>TTL élevé après changement d'IP → attendre ou forcer <code>dig +nocache</code></li>
+<li>Split-horizon DNS : réponse différente interne/externe → tester depuis les deux zones</li>
+<li>DNSSEC invalide → <code>dig +dnssec</code> montre <code>SERVFAIL</code></li>
+</ul>
+<hr>
+<h3>5. Interfaces et table de routage</h3>
+<pre><code class="lang-bash"># Linux
+ip addr show                   # IPs, masques, état UP/DOWN
+ip route show                  # table de routage
+ip neigh show                  # cache ARP
+ss -tuln                       # ports en écoute (remplace netstat)
+
+# Windows
+ipconfig /all
+route print
+arp -a
+netstat -ano | findstr LISTEN</code></pre>
+<p>Vérifier :</p>
+<ul>
+<li>Interface active avec la bonne IP et masque</li>
+<li>Route par défaut (0.0.0.0/0) présente et correcte</li>
+<li>Pas d'entrées ARP périmées (<code>ip neigh flush all</code> pour réinitialiser)</li>
+</ul>
+<hr>
+<h3>6. Analyse de paquets (couche 2-4)</h3>
+<pre><code class="lang-bash"># Capturer le trafic vers une IP/port cible
+sudo tcpdump -i eth0 -nn host 93.184.216.34 and port 443 -w /tmp/cap.pcap
+
+# Afficher en direct les retransmissions TCP
+sudo tcpdump -i eth0 'tcp[tcpflags] &amp; (tcp-rst|tcp-syn) != 0' -nn
+
+# Statistiques de retransmission sans capture complète
+ss -ti dst 93.184.216.34       # retrans, rtt, cwnd</code></pre>
+<p>Indicateurs critiques dans Wireshark/tcpdump :</p>
+<ul>
+<li><code>[RST]</code> immédiat → port fermé ou firewall stateful</li>
+<li>Retransmissions &gt; 1 % → congestion ou perte sur le lien</li>
+<li><code>ICMP Fragmentation Needed</code> → MTU mismatch (tester : <code>ping -M do -s 1472 gateway</code>)</li>
+</ul>
+<hr>
+<h3>7. Vérification des services et ports</h3>
+<pre><code class="lang-bash"># Tester un port TCP depuis le client
+nc -zv 192.168.1.10 443        # Linux (netcat)
+telnet 192.168.1.10 443        # cross-platform basique
+Test-NetConnection 192.168.1.10 -Port 443   # Windows PowerShell
+
+# Voir ce qui écoute côté serveur
+ss -tlnp | grep :443           # Linux
+netstat -ano | findstr :443    # Windows
+
+# Tracer une connexion applicative avec strace (Linux)
+strace -e trace=network -p &lt;pid&gt;</code></pre>
+<p>Critère : si <code>nc</code> KO depuis client mais <code>ss</code> montre le port ouvert → firewall intermédiaire ou binding incorrect (écoute sur 127.0.0.1 au lieu de 0.0.0.0).</p>
+<hr>
+<h3>8. Remédiation et validation</h3>
+<ol>
+<li>Documenter l'état avant modification (snapshots <code>ip route</code>, <code>iptables -L</code>, etc.)</li>
+<li>Appliquer <strong>un seul changement à la fois</strong> et tester immédiatement</li>
+<li>Valider end-to-end avec le même chemin que l'utilisateur final</li>
+<li>Pour un rollback réseau Linux : <code>ip route replace</code> / <code>ip addr replace</code> ou redémarrage interface <code>ip link set eth0 down &amp;&amp; ip link set eth0 up</code></li>
+</ol>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Alternative</th></tr></thead><tbody><tr><td>Modifier plusieurs paramètres en même temps</td><td>Impossible d'isoler la cause</td><td>Un changement, un test</td></tr><tr><td>Se fier uniquement au ping ICMP</td><td>Bloqué par firewalls, pas représentatif TCP</td><td>Compléter avec <code>nc</code>/<code>Test-NetConnection</code></td></tr><tr><td>Ignorer <code>Loss%</code> intermédiaire sans vérifier les sauts suivants</td><td>Faux positif mtr</td><td>Comparer avec le saut N+1</td></tr><tr><td>Vider le cache ARP en prod sans coordination</td><td>Micro-coupure sur tous les flux actifs</td><td>Attendre expiration naturelle ou fenêtre de maintenance</td></tr><tr><td>Capturer sans filtre sur un lien haut débit</td><td>Saturation disque en secondes</td><td>Toujours filtrer : <code>host X and port Y</code></td></tr><tr><td>Changer le DNS resolver en prod sans test préalable</td><td>Rupture des résolutions internes</td><td>Tester d'abord depuis une VM isolée</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Préférer <code>ss</code> à <code>netstat</code> (déprécié sur les kernels modernes)</li>
+<li>Utiliser <code>mtr</code> plutôt que <code>traceroute</code> seul (statistiques sur 20 cycles)</li>
+<li>Sur les environnements cloud (AWS/Azure/GCP) : vérifier les Security Groups / NSG avant toute capture — 80 % des blocages sont des règles de firewall cloud</li>
+<li>En conteneurs Kubernetes : débugger avec <code>kubectl exec</code> + <code>netshoot</code> image (<code>nicolaka/netshoot</code>) qui embarque tous les outils réseau</li>
+<li>IPv6 : toujours tester en parallèle (<code>ping6</code>, <code>traceroute6</code>, <code>dig AAAA</code>) — un hôte dual-stack peut avoir une connectivité IPv4 OK et IPv6 KO</li>
+<li>Journaliser chaque commande exécutée avec timestamp (<code>script</code> ou <code>tee</code>) pour le rapport d'incident</li>
 </ul>
 </article>
 </main>

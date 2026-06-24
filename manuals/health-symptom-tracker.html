@@ -96,57 +96,107 @@ cp -r claude-skills-collection/skills/health-symptom-tracker ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Symptom Tracker</h1>
-<p>Quand l'utilisateur décrit des symptômes, suis ce workflow étape par étape.</p>
-<h2>Étape 1 — Contexte temporel</h2>
+<p>Ce skill aide l'utilisateur à consigner, organiser et analyser ses symptômes dans le temps afin de préparer au mieux une consultation médicale. Il ne pose aucun diagnostic et ne remplace jamais un avis médical.</p>
+<hr>
+<h2>Étape 1 — Cadrage temporel</h2>
+<ol>
+<li>Extrais la date ou la période mentionnée (ex. &quot;depuis lundi&quot;, &quot;3 fois cette semaine&quot;, &quot;depuis 2 mois&quot;).</li>
+<li>Si aucun repère temporel n'est donné, pose la question directement :</li>
+</ol>
+<blockquote>&quot;Depuis quand ressentez-vous ce symptôme ? Et est-ce la première fois, ou cela s'est déjà produit avant ?&quot;</blockquote>
+<ol>
+<li>Note la chronologie : premier épisode → épisodes récurrents → évolution (amélioration, aggravation, stabilité).</li>
+</ol>
+<hr>
+<h2>Étape 2 — Inventaire des symptômes</h2>
+<p>Chaque symptôme distinct = une entrée séparée. Ne regroupe pas des symptômes différents sous une même ligne.</p>
+<p>Exemples de distinctions importantes :</p>
 <ul>
-<li>Extrais la date ou la période mentionnée (ex. &quot;depuis lundi&quot;, &quot;la semaine dernière&quot;, &quot;ce matin&quot;).</li>
-<li>Si aucune date n'est précisée, demande à l'utilisateur quand les symptômes ont commencé.</li>
+<li>Douleur abdominale haute vs basse</li>
+<li>Fatigue constante vs fatigue post-effort</li>
+<li>Nausée sans vomissement vs nausée avec vomissement</li>
 </ul>
-<h2>Étape 2 — Lister les symptômes séparément</h2>
-<p>Chaque symptôme distinct doit être traité comme une entrée à part entière (ex. douleur abdominale ≠ nausée ≠ fatigue).</p>
-<h2>Étape 3 — Détailler chaque symptôme</h2>
-<p>Pour chaque symptôme, note autant d'éléments que possible parmi :</p>
+<p>Si l'utilisateur décrit plusieurs gênes d'un coup, liste-les et valide la liste avec lui avant de continuer.</p>
+<hr>
+<h2>Étape 3 — Détail de chaque symptôme</h2>
+<p>Pour chaque entrée, collecte les dimensions suivantes (pose des questions ciblées si des éléments manquent) :</p>
+<table><thead><tr><th>Dimension</th><th>Question type</th></tr></thead><tbody><tr><td><strong>Intensité</strong></td><td>&quot;Sur 10, à combien évaluez-vous cette douleur/gêne ?&quot;</td></tr><tr><td><strong>Fréquence</strong></td><td>&quot;Combien de fois par jour/semaine cela arrive-t-il ?&quot;</td></tr><tr><td><strong>Durée</strong></td><td>&quot;Combien de temps dure chaque épisode ? Minutes ? Heures ?&quot;</td></tr><tr><td><strong>Localisation</strong></td><td>&quot;Où exactement ? Irradiation vers d'autres zones ?&quot;</td></tr><tr><td><strong>Contexte</strong></td><td>&quot;Dans quelle situation cela survient-il ? Nuit/jour, repos/effort ?&quot;</td></tr><tr><td><strong>Facteurs aggravants</strong></td><td>&quot;Qu'est-ce qui empire le symptôme ?&quot;</td></tr><tr><td><strong>Facteurs soulageants</strong></td><td>&quot;Qu'est-ce qui le calme (position, médicament, repas, etc.) ?&quot;</td></tr><tr><td><strong>Signes associés</strong></td><td>&quot;D'autres signes apparaissent-ils en même temps ?&quot;</td></tr></tbody></table>
+<p>Ne surcharge pas l'utilisateur : priorise les 3-4 dimensions les plus pertinentes selon le symptôme décrit.</p>
+<hr>
+<h2>Étape 4 — Identification des déclencheurs</h2>
+<p>Repère dans le récit de l'utilisateur les déclencheurs potentiels et classe-les par catégorie :</p>
 <ul>
-<li><strong>Intensité</strong> (légère / modérée / sévère — demande si non précisée)</li>
-<li><strong>Fréquence</strong> (combien de fois par jour/semaine)</li>
-<li><strong>Durée</strong> (combien de temps dure chaque épisode)</li>
-<li><strong>Contexte de survenue</strong> (à quel moment, dans quelle situation)</li>
-<li><strong>Facteurs aggravants</strong> (ce qui empire le symptôme)</li>
-<li><strong>Facteurs soulageants</strong> (ce qui le calme ou le réduit)</li>
+<li><strong>Alimentation</strong> : gras, épicé, lactose, gluten, alcool, café, jeûne prolongé</li>
+<li><strong>Médicaments</strong> : nouveaux traitements, changement de dose, AINS, antibiotiques, contraceptifs</li>
+<li><strong>Psychologique</strong> : stress aigu, anxiété chronique, charge mentale, émotions fortes</li>
+<li><strong>Sommeil</strong> : manque, décalage horaire, insomnie, apnée suspectée</li>
+<li><strong>Physique</strong> : effort intense, sédentarité prolongée, posture</li>
+<li><strong>Hormonal</strong> : cycle menstruel, ménopause, thyroïde connue</li>
+<li><strong>Environnement</strong> : allergènes, saison, température, pollution</li>
+<li><strong>Social</strong> : isolement, conflits, changement de rythme de vie</li>
 </ul>
-<p>Si des informations manquent, pose des questions ciblées à l'utilisateur pour compléter.</p>
-<h2>Étape 4 — Identifier les déclencheurs possibles</h2>
-<p>Repère dans le récit de l'utilisateur les déclencheurs potentiels :</p>
+<p>Présente toujours les déclencheurs comme des <strong>hypothèses à explorer</strong>, jamais comme des causes certifiées.</p>
+<hr>
+<h2>Étape 5 — Tableau récapitulatif</h2>
+<p>Génère un tableau clair et directement copiable :</p>
+<pre><code>| Date / Période | Symptôme          | Intensité (/10) | Durée   | Déclencheur possible | Facteur soulageant | Remarques        |
+|----------------|-------------------|-----------------|---------|----------------------|--------------------|------------------|
+| 20 juin        | Douleur abdominale| 6               | 2 h     | Repas copieux        | Position allongée  | Apparaît le soir |
+| 22 juin        | Fatigue intense   | 7               | Journée | Mauvaise nuit        | —                  | 5h de sommeil    |</code></pre>
+<p>Adapte les colonnes si certaines dimensions sont non pertinentes pour le cas. La lisibilité prime.</p>
+<hr>
+<h2>Étape 6 — Synthèse et préparation à la consultation</h2>
+<h3>Tendances observées</h3>
+<p>Résume en 2-4 phrases les patterns qui se dégagent : fréquence, déclencheurs récurrents, évolution dans le temps. Reste factuel et non alarmiste.</p>
+<p>Exemple de formulation correcte :</p>
+<blockquote>&quot;Les épisodes semblent survenir principalement le soir et après des repas riches. La durée est stable (environ 2h) mais la fréquence a augmenté cette semaine. Cela peut valoir la peine d'en parler à votre médecin.&quot;</blockquote>
+<h3>Informations encore manquantes</h3>
+<p>Liste ce qui serait utile à noter avant la consultation :</p>
 <ul>
-<li>Aliments (gras, épicés, laitiers, alcool…)</li>
-<li>Médicaments (nouveaux, changés, arrêtés)</li>
-<li>Stress, anxiété, charge mentale</li>
-<li>Sommeil (manque, décalage, insomnie)</li>
-<li>Effort physique ou sédentarité</li>
-<li>Cycle hormonal</li>
-<li>Autres facteurs mentionnés</li>
+<li>Antécédents personnels ou familiaux pertinents</li>
+<li>Traitements en cours (y compris compléments alimentaires)</li>
+<li>Résultats d'examens récents (bilan sanguin, imagerie…)</li>
+<li>Évolution du poids, de l'appétit, du sommeil</li>
 </ul>
-<p><strong>Important</strong> : Présente les déclencheurs comme des hypothèses à explorer, jamais comme des causes certaines.</p>
-<h2>Étape 5 — Générer le tableau récapitulatif</h2>
-<p>Produis un tableau clair avec les colonnes suivantes :</p>
-<table><thead><tr><th>Date / Période</th><th>Symptôme</th><th>Intensité</th><th>Durée</th><th>Déclencheur possible</th><th>Remarques</th></tr></thead><tbody></tbody></table>
-<p>Utilise le Visualizer si disponible pour un rendu plus lisible.</p>
-<h2>Étape 6 — Analyse et recommandations</h2>
-<h3>Ce qu'il faut surveiller</h3>
-<p>Mentionne les tendances, évolutions ou symptômes à suivre dans les jours à venir. Ne sois pas alarmiste sans justification claire ; reste factuel et mesuré.</p>
-<h3>Informations manquantes</h3>
-<p>Liste les éléments que l'utilisateur n'a pas encore fournis et qui seraient utiles pour mieux comprendre la situation (ex. antécédents, traitements en cours, résultats d'examens…).</p>
-<h3>5 questions utiles pour un médecin</h3>
-<p>Propose 5 questions pertinentes et personnalisées que l'utilisateur pourrait poser lors de sa prochaine consultation.</p>
-<h2>Règle de ton</h2>
+<h3>5 questions à poser au médecin</h3>
+<p>Propose 5 questions personnalisées et concrètes. Exemples de structure :</p>
+<ol>
+<li>&quot;Ces symptômes peuvent-ils être liés à [déclencheur hypothétique identifié] ?&quot;</li>
+<li>&quot;Faut-il tenir un journal alimentaire/de sommeil avant le prochain rendez-vous ?&quot;</li>
+<li>&quot;Quels examens complémentaires seraient pertinents ici ?&quot;</li>
+<li>&quot;Ces épisodes peuvent-ils s'aggraver si rien n'est fait ?&quot;</li>
+<li>&quot;Y a-t-il des signaux d'alarme qui devraient m'amener aux urgences ?&quot;</li>
+</ol>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne jamais faire :</strong></p>
 <ul>
-<li>Ne jamais employer un ton alarmiste sans justification.</li>
-<li>Rester factuel, bienveillant et mesuré.</li>
-<li>Éviter de poser un diagnostic ou de conclure à une pathologie.</li>
+<li>Nommer une pathologie ou un diagnostic (&quot;vous avez probablement un SII / une gastrite / une dépression…&quot;)</li>
+<li>Recommander un médicament, même courant, sans précaution</li>
+<li>Minimiser un symptôme signalé comme sévère ou soudain</li>
+<li>Surcharger l'utilisateur avec 10 questions d'affilée</li>
 </ul>
+<p><strong>Signaux d'alarme à signaler explicitement</strong> (sans dramatiser, mais clairement) :</p>
+<ul>
+<li>Douleur thoracique intense ou irradiant dans le bras/mâchoire</li>
+<li>Perte de conscience, convulsions</li>
+<li>Sang dans les selles, urines ou vomissements</li>
+<li>Fièvre élevée (&gt; 39 °C) persistante</li>
+<li>Symptôme neurologique soudain (vision double, perte de force, trouble de la parole)</li>
+</ul>
+<p>Dans ces cas, recommande de <strong>consulter rapidement</strong> ou d'appeler le 15 (SAMU) / 112 selon l'urgence perçue.</p>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Fréquence de journalisation</strong> : inviter l'utilisateur à noter les symptômes au moment où ils surviennent, pas de mémoire le lendemain (biais de rappel élevé).</li>
+<li><strong>Format export</strong> : proposer un résumé en texte brut copiable dans l'application de santé de l'utilisateur (Apple Santé, Google Health, dossier patient partagé avec le médecin).</li>
+<li><strong>Continuité</strong> : si l'utilisateur revient avec de nouveaux épisodes, consolider les entrées dans le même tableau plutôt que de repartir de zéro.</li>
+<li><strong>Confidentialité</strong> : rappeler que les informations partagées restent dans la conversation ; éviter de demander des données d'identification (nom complet, numéro de sécurité sociale).</li>
+</ul>
+<hr>
 <h2>Rappel obligatoire</h2>
-<p><strong>Termine TOUJOURS la réponse par ce rappel :</strong></p>
-<blockquote>⚠️ Ce suivi ne remplace pas un diagnostic médical. Il est conçu pour vous aider à organiser vos observations avant une consultation avec un professionnel de santé. En cas de symptômes graves ou persistants, consultez un médecin.</blockquote>
+<p>Termine TOUJOURS la réponse par ce rappel :</p>
+<blockquote>⚠️ Ce suivi ne remplace pas un diagnostic médical. Il est conçu pour vous aider à organiser vos observations avant une consultation avec un professionnel de santé. En cas de symptômes graves, soudains ou persistants, consultez un médecin ou appelez le 15 (SAMU).</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

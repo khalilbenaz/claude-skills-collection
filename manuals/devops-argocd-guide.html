@@ -96,24 +96,245 @@ cp -r claude-skills-collection/skills/devops-argocd-guide ~/.claude/skills/</div
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>ArgoCD Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Installer et configurer ArgoCD</strong> — Déployer ArgoCD sur le cluster Kubernetes de management avec Helm ou les manifestes officiels. Configurer l'accès SSO (OIDC, LDAP, Azure AD). Définir les RBAC policies pour séparer les rôles admin, developer et viewer.</li>
-<li><strong>Connecter les repositories Git</strong> — Enregistrer les repos Git (GitHub, GitLab, Bitbucket) comme sources. Configurer l'authentification par SSH keys ou tokens. Organiser la structure du repo GitOps : un répertoire par application, un par environnement (dev, staging, prod).</li>
-<li><strong>Définir les Applications</strong> — Créer les ressources Application ArgoCD en déclaratif (YAML). Spécifier la source (repo, path, revision), la destination (cluster, namespace) et la sync policy. Utiliser les ApplicationSets pour générer dynamiquement des applications à partir de templates.</li>
-<li><strong>Configurer la synchronisation</strong> — Définir la sync policy : auto-sync (avec ou sans self-heal et prune), ou sync manuelle pour la production. Configurer les sync windows pour restreindre les déploiements à certaines plages horaires. Utiliser les sync waves et hooks pour orchestrer l'ordre de déploiement.</li>
-<li><strong>Implémenter le pattern App of Apps</strong> — Créer une application racine qui gère toutes les autres applications. Structurer en arbre hiérarchique : root app → cluster apps → namespace apps → workload apps. Permettre le bootstrapping complet d'un cluster à partir d'un seul point d'entrée.</li>
-<li><strong>Gérer les rollbacks</strong> — Utiliser l'historique des sync pour revenir à une version précédente. Configurer les health checks personnalisés pour détecter les déploiements défaillants. Implémenter des progressive rollouts avec Argo Rollouts (canary, blue-green, analysis).</li>
-<li><strong>Configurer le multi-cluster</strong> — Enregistrer les clusters distants avec <code>argocd cluster add</code>. Déployer les applications sur plusieurs clusters avec les ApplicationSets et les generators (list, cluster, Git). Centraliser la gestion depuis un seul ArgoCD de management.</li>
-<li><strong>Monitorer et auditer</strong> — Intégrer les notifications (Slack, Teams, email) pour les événements de sync. Exporter les métriques Prometheus d'ArgoCD. Auditer toutes les opérations via les logs d'ArgoCD et l'historique Git comme source de vérité.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Installation et configuration initiale</h2>
+<pre><code class="lang-bash"># Helm (recommandé en prod)
+helm repo add argo https://argoproj.github.io/argo-helm
+helm install argocd argo/argo-cd \
+  --namespace argocd --create-namespace \
+  --set server.insecure=false \
+  --set configs.params.&quot;server\.insecure&quot;=false \
+  -f argocd-values.yaml
+
+# Récupérer le mot de passe admin initial
+argocd admin initial-password -n argocd
+
+# Login CLI
+argocd login argocd.example.com --username admin --grpc-web</code></pre>
+<p><strong>SSO (Azure AD OIDC) — config minimale dans <code>argocd-cm</code> :</strong></p>
+<pre><code class="lang-yaml">data:
+  oidc.config: |
+    name: Azure
+    issuer: https://login.microsoftonline.com/&lt;tenant-id&gt;/v2.0
+    clientID: &lt;app-id&gt;
+    clientSecret: $oidc.azure.clientSecret
+    requestedScopes: [openid, profile, email]</code></pre>
+<p><strong>RBAC — <code>argocd-rbac-cm</code> :</strong></p>
+<pre><code class="lang-yaml">data:
+  policy.csv: |
+    p, role:developer, applications, sync, */*, allow
+    p, role:developer, applications, get, */*, allow
+    g, team-dev@example.com, role:developer
+  policy.default: role:readonly</code></pre>
+<hr>
+<h2>2. Connecter un repository Git</h2>
+<pre><code class="lang-bash"># SSH key
+argocd repo add git@github.com:org/gitops-repo.git \
+  --ssh-private-key-path ~/.ssh/id_ed25519
+
+# HTTPS token
+argocd repo add https://github.com/org/gitops-repo.git \
+  --username argocd --password &lt;token&gt;</code></pre>
+<p><strong>Structure de repo recommandée (monorepo) :</strong></p>
+<pre><code>gitops-repo/
+├── apps/                   # App of Apps (root)
+│   ├── dev/
+│   └── prod/
+├── manifests/
+│   ├── my-app/
+│   │   ├── base/
+│   │   └── overlays/
+│   │       ├── dev/
+│   │       └── prod/
+└── infra/
+    └── monitoring/</code></pre>
+<hr>
+<h2>3. Déclarer une Application (déclaratif YAML)</h2>
+<pre><code class="lang-yaml">apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-app-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # cascade delete
+spec:
+  project: production
+  source:
+    repoURL: git@github.com:org/gitops-repo.git
+    targetRevision: main
+    path: manifests/my-app/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: my-app
+  syncPolicy:
+    automated:
+      prune: false          # JAMAIS true en prod sans sync window
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m</code></pre>
+<p><strong>Critères sync policy :</strong></p>
+<table><thead><tr><th>Env</th><th>auto-sync</th><th>prune</th><th>selfHeal</th><th>Sync window</th></tr></thead><tbody><tr><td>dev</td><td>oui</td><td>oui</td><td>oui</td><td>non</td></tr><tr><td>staging</td><td>oui</td><td>oui</td><td>oui</td><td>optionnel</td></tr><tr><td>prod</td><td>non (ou oui)</td><td><strong>non</strong></td><td>oui</td><td><strong>obligatoire</strong></td></tr></tbody></table>
+<hr>
+<h2>4. App of Apps — bootstrapping cluster</h2>
+<pre><code class="lang-yaml"># root-app.yaml — appliqué une seule fois manuellement
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:org/gitops-repo.git
+    targetRevision: HEAD
+    path: apps/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true</code></pre>
+<p>Le dossier <code>apps/prod/</code> contient des <code>Application</code> YAML pour chaque workload. ArgoCD les crée en cascade. Un seul <code>kubectl apply -f root-app.yaml</code> bootstrap le cluster entier.</p>
+<hr>
+<h2>5. ApplicationSet — multi-cluster / multi-env</h2>
+<pre><code class="lang-yaml">apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: my-app-clusters
+  namespace: argocd
+spec:
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            env: production
+  template:
+    metadata:
+      name: &quot;my-app-{{name}}&quot;
+    spec:
+      project: production
+      source:
+        repoURL: git@github.com:org/gitops-repo.git
+        targetRevision: main
+        path: &quot;manifests/my-app/overlays/{{metadata.labels.env}}&quot;
+      destination:
+        server: &quot;{{server}}&quot;
+        namespace: my-app</code></pre>
+<p><strong>Enregistrer un cluster distant :</strong></p>
+<pre><code class="lang-bash"># Le context kubeconfig doit pointer sur le cluster cible
+argocd cluster add prod-eu-west \
+  --name prod-eu-west \
+  --label env=production</code></pre>
+<hr>
+<h2>6. Sync waves et hooks</h2>
+<p>Contrôler l'ordre de déploiement (ex: CRD avant opérateur, migration DB avant app) :</p>
+<pre><code class="lang-yaml"># CRD déployée en wave -1 (avant tout)
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: &quot;-1&quot;
+---
+# Job de migration en wave 0
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: &quot;0&quot;
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+---
+# App en wave 1
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: &quot;1&quot;</code></pre>
+<hr>
+<h2>7. Rollback</h2>
+<pre><code class="lang-bash"># Lister l'historique
+argocd app history my-app-prod
+
+# Rollback vers une révision précédente (ID depuis history)
+argocd app rollback my-app-prod &lt;revision-id&gt;
+
+# Forcer un sync sur un commit Git précis
+argocd app set my-app-prod --revision abc1234
+argocd app sync my-app-prod</code></pre>
+<p>Après rollback manuel, désactiver l'auto-sync sinon ArgoCD re-synce immédiatement vers HEAD :</p>
+<pre><code class="lang-bash">argocd app set my-app-prod --sync-policy none</code></pre>
+<hr>
+<h2>8. Secrets — ne jamais stocker en clair dans Git</h2>
+<table><thead><tr><th>Outil</th><th>Quand l'utiliser</th></tr></thead><tbody><tr><td><strong>External Secrets Operator</strong></td><td>Secrets dans Vault / AWS SSM / Azure Key Vault — recommandé 2026</td></tr><tr><td><strong>SOPS + age/KMS</strong></td><td>Chiffrement in-repo, rotation manuelle, simple à auditer</td></tr><tr><td><strong>Sealed Secrets</strong></td><td>Cluster-specific, sans dépendance externe</td></tr></tbody></table>
+<pre><code class="lang-yaml"># ExternalSecret (ESO)
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: db-creds
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: db-creds
+  data:
+    - secretKey: password
+      remoteRef:
+        key: secret/my-app/db
+        property: password</code></pre>
+<hr>
+<h2>9. Monitoring et notifications</h2>
+<pre><code class="lang-bash"># Métriques Prometheus exposées par argocd-metrics:8082
+# Alertes utiles :
+# argocd_app_sync_total{phase=&quot;Error&quot;} &gt; 0
+# argocd_app_health_status{health_status!=&quot;Healthy&quot;} &gt; 0</code></pre>
+<p><strong>Notification Slack (argocd-notifications) :</strong></p>
+<pre><code class="lang-yaml"># argocd-notifications-cm
+data:
+  trigger.on-sync-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send: [app-sync-failed]
+  template.app-sync-failed: |
+    message: |
+      App {{.app.metadata.name}} sync FAILED: {{.app.status.operationState.message}}</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
 <ul>
-<li>Toujours utiliser le mode déclaratif (Application YAML dans Git) plutôt que la CLI ou l'UI pour créer des applications, afin de respecter le principe GitOps.</li>
-<li>Ne jamais activer auto-sync avec prune sur les environnements de production sans sync windows et sans approbation manuelle préalable.</li>
-<li>Toujours configurer des health checks personnalisés pour les CRDs et les ressources non-standard afin qu'ArgoCD puisse évaluer correctement l'état de santé.</li>
-<li>Séparer les credentials et secrets du repo GitOps en utilisant Sealed Secrets, SOPS ou External Secrets Operator pour ne jamais stocker de secrets en clair dans Git.</li>
-<li>Implémenter le pattern App of Apps pour tout nouveau cluster afin de garantir un bootstrapping reproductible et une gestion centralisée.</li>
+<li><strong>prune: true en prod sans sync window</strong> — supprime des ressources inattendues dès qu'elles disparaissent du repo (oubli d'un fichier = outage).</li>
+<li><strong>Créer des Applications via l'UI ou la CLI seulement</strong> — non auditable, disparaît si ArgoCD est recréé. Toujours committer le YAML.</li>
+<li><strong>Stocker des secrets en clair dans le repo GitOps</strong> — violation immédiate si le repo est compromis. Utiliser ESO ou SOPS.</li>
+<li><strong>Ignorer les sync waves pour les CRDs</strong> — ArgoCD tente de créer des resources custom avant que la CRD existe → erreur de sync.</li>
+<li><strong>Un seul AppProject <code>default</code> pour tous les environnements</strong> — perte de l'isolation RBAC. Créer un AppProject par équipe/env.</li>
+<li><strong>targetRevision: HEAD en prod</strong> — un merge accidentel se déploie aussitôt. Préférer un tag ou un sha fixe, ou utiliser une sync window.</li>
+<li><strong>health checks manquants pour les CRDs</strong> — ArgoCD rapporte <code>Healthy</code> même si l'opérateur est en erreur. Définir un custom health check Lua.</li>
+</ul>
+<pre><code class="lang-lua">-- Exemple health check Lua pour un CRD custom
+hs = {}
+if obj.status ~= nil then
+  if obj.status.phase == &quot;Ready&quot; then
+    hs.status = &quot;Healthy&quot;
+  elseif obj.status.phase == &quot;Failed&quot; then
+    hs.status = &quot;Degraded&quot;
+    hs.message = obj.status.message
+  else
+    hs.status = &quot;Progressing&quot;
+  end
+else
+  hs.status = &quot;Progressing&quot;
+end
+return hs</code></pre>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Utiliser <strong>ArgoCD v2.12+</strong> (image pull policy configurable, ApplicationSet matrix generator stable).</li>
+<li>Activer le <strong>server-side apply</strong> (<code>ServerSideApply=true</code> dans syncOptions) pour éviter les conflits de field managers.</li>
+<li>Préférer <strong>Kustomize</strong> pour les overlays d'environnement et <strong>Helm</strong> pour les charts de librairies tierces.</li>
+<li>Brancher <strong>Argo Rollouts</strong> pour les déploiements progressifs (canary, blue-green) plutôt que les rolling updates natifs K8s.</li>
+<li>Versionner les <code>AppProject</code> et les <code>ApplicationSet</code> dans Git comme toute autre ressource ArgoCD.</li>
+<li>Activer <code>impersonation</code> (ArgoCD 2.10+) pour que chaque Application s'exécute avec un ServiceAccount dédié, limitant le blast radius.</li>
 </ul>
 </article>
 </main>

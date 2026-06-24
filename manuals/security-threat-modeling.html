@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>security-threat-modeling — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Modélisation des menaces pour applications et systèmes — identification des surfaces d'attaque, classification STRIDE, arbres d'attaque et stratégies de mitigation.">
+<meta name="description" content="Modélisation des menaces pour applications et systèmes — identification des surfaces d'attaque, classification STRIDE, arbres d'attaque, scoring DREAD/CVSS et stratégies de mitigation priorisées.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🔒 Sécurité</span>
 <h1 class="skill-title">security-threat-modeling</h1>
-<p class="lead">Modélisation des menaces pour applications et systèmes — identification des surfaces d'attaque, classification STRIDE, arbres d'attaque et stratégies de mitigation.</p>
+<p class="lead">Modélisation des menaces pour applications et systèmes — identification des surfaces d'attaque, classification STRIDE, arbres d'attaque, scoring DREAD/CVSS et stratégies de mitigation priorisées.</p>
 
 
 
@@ -96,67 +96,112 @@ cp -r claude-skills-collection/skills/security-threat-modeling ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Modélisation des Menaces</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Décomposer</strong> : identifier les composants, flux de données et points d'entrée.</li>
-<li><strong>Identifier</strong> : appliquer STRIDE pour trouver les menaces.</li>
-<li><strong>Évaluer</strong> : prioriser avec DREAD ou une matrice impact/probabilité.</li>
-<li><strong>Atténuer</strong> : définir les contrôles de sécurité pour chaque menace.</li>
-</ol>
-<h2>Méthodologie STRIDE</h2>
-<table><thead><tr><th>Menace</th><th>Description</th><th>Cible</th><th>Exemples</th></tr></thead><tbody><tr><td><strong>S</strong>poofing</td><td>Usurpation d'identité</td><td>Authentification</td><td>Faux tokens, session hijacking</td></tr><tr><td><strong>T</strong>ampering</td><td>Altération de données</td><td>Intégrité</td><td>Modification de requêtes, SQL injection</td></tr><tr><td><strong>R</strong>epudiation</td><td>Nier une action</td><td>Non-répudiation</td><td>Absence de logs, logs modifiables</td></tr><tr><td><strong>I</strong>nformation Disclosure</td><td>Fuite de données</td><td>Confidentialité</td><td>API exposant trop de champs, logs sensibles</td></tr><tr><td><strong>D</strong>enial of Service</td><td>Rendre indisponible</td><td>Disponibilité</td><td>DDoS, épuisement de ressources</td></tr><tr><td><strong>E</strong>levation of Privilege</td><td>Escalade de droits</td><td>Autorisation</td><td>IDOR, bypass d'autorisations</td></tr></tbody></table>
-<h2>Analyse par composant</h2>
-<h3>API REST</h3>
-<pre><code>Menace: Spoofing
-  → Contrôle: JWT avec rotation des clés, MFA
-
-Menace: Tampering
-  → Contrôle: Validation d'entrée, parameterized queries
-
-Menace: Information Disclosure
-  → Contrôle: DTO de réponse (pas d'entités directes), HTTPS
-
-Menace: Elevation of Privilege
-  → Contrôle: RBAC, vérification d'ownership sur chaque ressource</code></pre>
-<h3>Base de données</h3>
-<pre><code>Menace: Tampering
-  → Contrôle: Parameterized queries, principes de moindre privilège
-
-Menace: Information Disclosure
-  → Contrôle: Chiffrement au repos (TDE), connexions chiffrées
-
-Menace: Denial of Service
-  → Contrôle: Connection pooling, query timeouts, rate limiting</code></pre>
-<h3>File d'attente (RabbitMQ, Service Bus)</h3>
-<pre><code>Menace: Spoofing
-  → Contrôle: Authentification des publishers, signatures de messages
-
-Menace: Tampering
-  → Contrôle: Intégrité des messages (HMAC), chiffrement
-
-Menace: Repudiation
-  → Contrôle: Message IDs, audit trail, correlation IDs</code></pre>
-<h2>Évaluation DREAD</h2>
-<table><thead><tr><th>Critère</th><th>Description</th><th>Score (1-10)</th></tr></thead><tbody><tr><td><strong>D</strong>amage</td><td>Impact si exploité</td><td>?</td></tr><tr><td><strong>R</strong>eproducibility</td><td>Facilité de reproduction</td><td>?</td></tr><tr><td><strong>E</strong>xploitability</td><td>Facilité d'exploitation</td><td>?</td></tr><tr><td><strong>A</strong>ffected users</td><td>Nombre d'utilisateurs impactés</td><td>?</td></tr><tr><td><strong>D</strong>iscoverability</td><td>Facilité de découverte</td><td>?</td></tr></tbody></table>
-<p>Score total = moyenne → Priorité de correction</p>
-<h2>Template de rapport</h2>
-<pre><code class="lang-markdown">### Menace: [Nom]
-
-- **Type STRIDE**: [S/T/R/I/D/E]
-- **Composant affecté**: [...]
-- **Score DREAD**: [X/10]
-- **Description**: [...]
-- **Scénario d'attaque**: [...]
-- **Impact**: [...]
-- **Mitigation recommandée**: [...]
-- **Statut**: [Non traité / En cours / Résolu]</code></pre>
-<h2>Règles</h2>
+<h2>Workflow en 5 étapes</h2>
+<h3>1. Cartographier le système (DFD)</h3>
+<p>Décompose l'architecture en éléments atomiques avant tout classement.</p>
 <ul>
-<li>Chaque nouvelle fonctionnalité doit passer par une <strong>revue STRIDE</strong>.</li>
-<li>Les menaces identifiées doivent être <strong>trackées</strong> comme des tickets.</li>
-<li>Prioriser les menaces par <strong>impact métier</strong>, pas seulement par score technique.</li>
-<li>Revoir le modèle de menaces à chaque <strong>changement d'architecture</strong>.</li>
+<li><strong>Entités externes</strong> : acteurs humains, systèmes tiers, IoT</li>
+<li><strong>Processus</strong> : services, fonctions, microservices</li>
+<li><strong>Flux de données</strong> : API REST, queues, fichiers, DB</li>
+<li><strong>Stores</strong> : bases de données, caches, fichiers</li>
 </ul>
+<pre><code class="lang-text">[Utilisateur] --HTTPS--&gt; [API Gateway] --&gt; [Service Auth]
+                                      --&gt; [Service Métier] --&gt; [DB PostgreSQL]
+                                                           --&gt; [Queue RabbitMQ] --&gt; [Worker]
+Limite de confiance : Internet / DMZ / Réseau interne</code></pre>
+<p>Règle : <strong>toute flèche qui traverse une limite de confiance est une surface d'attaque</strong>.</p>
+<hr>
+<h3>2. Appliquer STRIDE par composant</h3>
+<p>Pour chaque flux/composant, passe en revue les 6 catégories.</p>
+<table><thead><tr><th>Menace</th><th>Propriété violée</th><th>Cible typique</th><th>Exemples concrets</th></tr></thead><tbody><tr><td><strong>S</strong>poofing</td><td>Authentification</td><td>Identity provider, tokens</td><td>JWT forgé, session fixation, SSRF via redirect</td></tr><tr><td><strong>T</strong>ampering</td><td>Intégrité</td><td>Requêtes, DB, fichiers</td><td>SQL injection, mass assignment, prototype pollution</td></tr><tr><td><strong>R</strong>epudiation</td><td>Non-répudiation</td><td>Logs, audit</td><td>Logs désactivables, absence de correlation ID</td></tr><tr><td><strong>I</strong>nformation Disclosure</td><td>Confidentialité</td><td>API, logs, erreurs</td><td>Stack trace en prod, over-fetching GraphQL, verbose errors</td></tr><tr><td><strong>D</strong>enial of Service</td><td>Disponibilité</td><td>Endpoints, DB, queues</td><td>Regex catastrophique, N+1 queries non bornées, XML bomb</td></tr><tr><td><strong>E</strong>levation of Privilege</td><td>Autorisation</td><td>RBAC, ressources</td><td>IDOR, JWT <code>alg:none</code>, path traversal, SSTI</td></tr></tbody></table>
+<p><strong>Mnémotechnique</strong> : Spoofing → qui es-tu ? / Tampering → est-ce intact ? / Repudiation → qui a fait quoi ? / Info Disclosure → qui voit quoi ? / DoS → est-ce disponible ? / EoP → que peux-tu faire ?</p>
+<hr>
+<h3>3. Scorer avec DREAD (+ CVSS si besoin)</h3>
+<p><strong>DREAD</strong> (score 1-10 par critère, moyenne finale) :</p>
+<table><thead><tr><th>Critère</th><th>Question clé</th><th>Bas (1-3)</th><th>Moyen (4-6)</th><th>Élevé (7-10)</th></tr></thead><tbody><tr><td><strong>D</strong>amage</td><td>Quel est l'impact si exploité ?</td><td>Log pollué</td><td>Données utilisateur</td><td>Accès root / fuite PII masse</td></tr><tr><td><strong>R</strong>eproducibility</td><td>Reproductible à chaque tentative ?</td><td>Rare/aléatoire</td><td>Conditions spécifiques</td><td>Systématique</td></tr><tr><td><strong>E</strong>xploitability</td><td>Niveau requis pour exploiter ?</td><td>Expert + accès physique</td><td>Dev moyen</td><td>Script kiddie</td></tr><tr><td><strong>A</strong>ffected users</td><td>Combien d'utilisateurs touchés ?</td><td>Un seul</td><td>Groupe restreint</td><td>Tous les utilisateurs</td></tr><tr><td><strong>D</strong>iscoverability</td><td>Facilité à trouver la faille ?</td><td>Code source requis</td><td>Test manuel</td><td>Visible sans auth</td></tr></tbody></table>
+<p>Score ≥ 7 → <strong>critique</strong>, corriger avant release. Score 4-6 → <strong>moyen</strong>, sprint suivant. Score &lt; 4 → <strong>faible</strong>, backlog.</p>
+<p><strong>Quand utiliser CVSS plutôt que DREAD</strong> : si tu dois communiquer avec des équipes sécurité externes, CVSSv3.1 est le standard. DREAD reste plus rapide pour les revues internes.</p>
+<hr>
+<h3>4. Construire l'arbre d'attaque (optionnel, pour menaces critiques)</h3>
+<pre><code class="lang-text">Objectif attaquant : Accéder aux données de paiement
+├── Via API (STRIDE: I + E)
+│   ├── Bypass authentification
+│   │   ├── JWT alg:none           [CRITIQUE]
+│   │   └── Brute-force refresh token [MOYEN]
+│   └── IDOR sur /api/payments/{id} [CRITIQUE]
+└── Via base de données
+    ├── SQL Injection dans filtre   [CRITIQUE]
+    └── Credentials exposés en env  [ÉLEVÉ]</code></pre>
+<hr>
+<h3>5. Définir les mitigations et les tracker</h3>
+<p>Pour chaque menace, une mitigation doit être <strong>spécifique, testable et assignée</strong>.</p>
+<pre><code class="lang-markdown">### Menace: IDOR sur /api/payments/{id}
+
+- **Type STRIDE**: Elevation of Privilege + Information Disclosure
+- **Composant**: Service Paiements — endpoint GET /api/payments/{id}
+- **Score DREAD**: D=9, R=9, E=7, A=8, D=8 → **8.2 / CRITIQUE**
+- **Scénario**: Un utilisateur authentifié incrémente l'ID pour accéder aux paiements d'un autre compte.
+- **Impact**: Fuite de données de paiement (RGPD), fraude potentielle.
+- **Mitigation**:
+  1. Vérifier `payment.userId == currentUser.id` avant chaque retour.
+  2. Utiliser des UUIDs non-séquentiels comme identifiants publics.
+  3. Ajouter un test automatisé avec deux comptes distincts.
+- **Ticket**: #SEC-42
+- **Statut**: Non traité</code></pre>
+<hr>
+<h2>Mitigations par type de composant</h2>
+<h3>API REST / GraphQL</h3>
+<pre><code class="lang-text">Spoofing         → JWT RS256 (pas HS256 avec secret partagé), rotation des clés, MFA
+Tampering        → Validation stricte (FluentValidation, Zod), parameterized queries
+Info Disclosure  → DTO de réponse (jamais d'entité directe), masquer stack traces en prod
+EoP              → RBAC + ownership check sur chaque ressource, pas de rôles admin implicites
+DoS              → Rate limiting par IP + par user, timeout sur toutes les requêtes externes</code></pre>
+<h3>Base de données</h3>
+<pre><code class="lang-sql">-- Moindre privilège : un compte par service, pas de compte DBO en prod
+GRANT SELECT, INSERT, UPDATE ON schema.table TO app_user;
+
+-- Toujours des paramètres nommés, jamais de concaténation
+-- .NET : new SqlCommand(&quot;SELECT * FROM users WHERE id = @id&quot;)
+-- Python : cursor.execute(&quot;SELECT * FROM users WHERE id = %s&quot;, (user_id,))</code></pre>
+<h3>File d'attente (RabbitMQ, Azure Service Bus, Kafka)</h3>
+<pre><code class="lang-text">Spoofing         → Authentification TLS mutuelle, tokens de publication
+Tampering        → HMAC sur le payload, validation du schéma à la consommation
+Repudiation      → Correlation ID obligatoire, dead-letter queue avec logs
+DoS              → Prefetch limité, consumer circuit-breaker, TTL sur les messages</code></pre>
+<h3>Authentification / Sessions</h3>
+<pre><code class="lang-text">- Utiliser des bibliothèques éprouvées (OAuth2 + OIDC), jamais de crypto maison
+- Tokens : expiry court (15 min access), refresh token rotation + révocation
+- Sessions : HttpOnly + Secure + SameSite=Strict, régénération après login
+- Mots de passe : Argon2id (préféré), bcrypt (cost ≥ 12), jamais MD5/SHA1</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td>&quot;On sécurisera après le MVP&quot;</td><td>Surface d'attaque figée dès la conception</td><td>Intégrer STRIDE dès la phase de design</td></tr><tr><td>Confiance implicite au réseau interne</td><td>Lateral movement si un service est compromis</td><td>Zero Trust : chaque service s'authentifie</td></tr><tr><td>IDs séquentiels (1, 2, 3…) dans les URLs</td><td>IDOR trivial</td><td>UUIDs v4 ou IDs opaques signés</td></tr><tr><td>Logs qui contiennent des tokens/PII</td><td>Exfiltration via logs</td><td>Masquer automatiquement les champs sensibles</td></tr><tr><td>Erreurs verboseuses en production</td><td>Information disclosure</td><td>Messages génériques + correlation ID loggué côté serveur</td></tr><tr><td>Dépendances non mises à jour</td><td>CVEs connues exploitables</td><td><code>dependabot</code> ou <code>renovate</code> + <code>npm audit</code> / <code>dotnet list package --vulnerable</code></td></tr><tr><td>RBAC sans ownership check</td><td>Un utilisateur accède aux ressources d'un autre</td><td>Toujours vérifier <code>resource.ownerId == currentUser.id</code></td></tr><tr><td>Secrets dans le code / .env commité</td><td>Fuite GitHub</td><td><code>git-secrets</code>, variables d'environnement injectées au runtime</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Shift-left</strong> : intégrer une revue STRIDE à chaque PR qui touche auth, données sensibles ou nouveaux endpoints.</li>
+<li><strong>Threat modeling continu</strong> : revoir le modèle à chaque changement d'architecture, pas seulement en audit annuel.</li>
+<li><strong>Automatiser</strong> : intégrer SAST (Semgrep, CodeQL), SCA (Dependabot), et secrets scanning (Gitleaks) dans la CI.</li>
+<li><strong>Supply chain</strong> : vérifier l'intégrité des dépendances (checksums, SBOM), appliquer le principe de moindre privilège aux packages.</li>
+<li><strong>LLM/IA</strong> : si le système intègre un LLM, ajouter les menaces spécifiques — prompt injection, data exfiltration via le modèle, model inversion.</li>
+<li><strong>Documentation vivante</strong> : le threat model doit vivre dans le repo (ex. <code>docs/threat-model.md</code>), pas dans un wiki orphelin.</li>
+</ul>
+<hr>
+<h2>Commandes utiles</h2>
+<pre><code class="lang-bash"># Détection de secrets dans le dépôt
+gitleaks detect --source . --report-format json --report-path gitleaks-report.json
+
+# Audit des dépendances npm
+npm audit --audit-level=high
+
+# Audit des dépendances .NET
+dotnet list package --vulnerable --include-transitive
+
+# Scan SAST avec Semgrep
+semgrep scan --config=auto --error
+
+# Générer un SBOM (Software Bill of Materials)
+syft . -o spdx-json &gt; sbom.json</code></pre>
 <blockquote>Ce skill est un outil d'analyse de sécurité défensif. Il ne fournit pas de techniques d'exploitation.</blockquote>
 </article>
 </main>

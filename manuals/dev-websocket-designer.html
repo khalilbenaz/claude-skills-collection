@@ -96,38 +96,166 @@ cp -r claude-skills-collection/skills/dev-websocket-designer ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>WebSocket Designer</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le besoin temps réel</strong> — Identifier le type d'interaction en temps réel requis (chat, notifications, collaboration live, streaming de données, dashboards) et évaluer les contraintes de latence, volume de messages et nombre de connexions simultanées.</li>
-</ol>
-<ol>
-<li><strong>Choisir la technologie</strong> — Sélectionner la solution adaptée au stack : SignalR pour .NET, Socket.io pour Node.js, ou WebSocket natif. Évaluer les alternatives (SSE, long polling) si le WebSocket bidirectionnel n'est pas nécessaire.</li>
-</ol>
-<ol>
-<li><strong>Concevoir le protocole de messages</strong> — Définir le format des messages (JSON structuré), les types d'événements (subscribe, unsubscribe, broadcast, direct), les canaux/groupes, et le contrat d'échange entre client et serveur.</li>
-</ol>
-<ol>
-<li><strong>Implémenter le serveur</strong> — Créer le hub/serveur WebSocket avec gestion des connexions, authentification (JWT via query string ou premier message), autorisation par canal, et handlers pour chaque type de message.</li>
-</ol>
-<ol>
-<li><strong>Implémenter le client</strong> — Développer le client avec connexion automatique, gestion des événements, sérialisation/désérialisation des messages, et file d'attente pour les messages envoyés pendant la déconnexion.</li>
-</ol>
-<ol>
-<li><strong>Gérer la reconnexion</strong> — Implémenter une stratégie de reconnexion robuste avec exponential backoff, jitter aléatoire, détection de déconnexion (heartbeat/ping-pong), et synchronisation de l'état après reconnexion (rattrapage des messages manqués).</li>
-</ol>
-<ol>
-<li><strong>Scaler horizontalement</strong> — Configurer un backplane pour la distribution des messages entre instances : Redis Pub/Sub pour SignalR, Redis adapter pour Socket.io, ou un message broker (RabbitMQ, Kafka) pour les architectures custom. Gérer les sticky sessions si nécessaire.</li>
-</ol>
-<ol>
-<li><strong>Monitorer et sécuriser</strong> — Mettre en place les métriques (connexions actives, messages/sec, latence), les alertes sur les anomalies, le rate limiting par connexion, et la protection contre les abus (taille max des messages, throttling).</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Choisir le bon protocole temps réel</h2>
+<table><thead><tr><th>Besoin</th><th>Solution recommandée</th><th>Raison</th></tr></thead><tbody><tr><td>Bidirectionnel, faible latence</td><td>WebSocket natif / SignalR / Socket.io</td><td>Full-duplex sur une seule connexion TCP</td></tr><tr><td>Serveur → client uniquement</td><td>SSE (Server-Sent Events)</td><td>Plus simple, traversée proxy meilleure</td></tr><tr><td>Polling toléré, contraintes infra</td><td>Long polling</td><td>Fonctionne partout sans port spécial</td></tr><tr><td>&lt; 1 000 connexions simultanées</td><td>WebSocket natif</td><td>Pas besoin de lib externe</td></tr><tr><td>Stack .NET</td><td>SignalR</td><td>Négociation automatique + fallback intégré</td></tr><tr><td>Stack Node.js</td><td>Socket.io</td><td>Rooms, namespaces, reconnexion built-in</td></tr></tbody></table>
+<p><strong>Règle décisive</strong> : si un proxy ou load balancer ne supporte pas l'upgrade HTTP→WS, préfère SSE ou assure-toi que le backplane est configuré avant de commencer.</p>
+<hr>
+<h2>2. Concevoir le protocole de messages</h2>
+<p>Définis un contrat JSON structuré avant d'écrire une ligne de code.</p>
+<pre><code class="lang-jsonc">// Enveloppe standard
+{
+  &quot;type&quot;: &quot;CHAT_MESSAGE&quot;,       // action discriminante
+  &quot;channel&quot;: &quot;room:42&quot;,         // scope / destinataire
+  &quot;payload&quot;: { &quot;text&quot;: &quot;...&quot; }, // données métier
+  &quot;correlationId&quot;: &quot;uuid-v4&quot;,   // pour ack / replay
+  &quot;ts&quot;: 1719230400000           // timestamp epoch ms
+}</code></pre>
+<p>Types d'événements minimum à définir :</p>
 <ul>
-<li>Prévois toujours un mécanisme de fallback (SSE ou long polling) pour les environnements où WebSocket est bloqué par des proxys ou firewalls.</li>
-<li>Implémente systématiquement la reconnexion automatique avec exponential backoff — ne laisse jamais une connexion coupée sans tentative de reprise.</li>
-<li>Authentifie chaque connexion WebSocket dès l'établissement et vérifie les autorisations à chaque message reçu.</li>
-<li>Limite la taille et la fréquence des messages côté serveur pour éviter les abus et protéger les ressources.</li>
-<li>Documente le protocole de messages (types, formats, exemples) comme un contrat d'API à part entière.</li>
+<li><code>SUBSCRIBE</code> / <code>UNSUBSCRIBE</code> — gestion des canaux</li>
+<li><code>ACK</code> — acquittement d'un message critique</li>
+<li><code>ERROR</code> — retour d'erreur structuré <code>{ code, message }</code></li>
+<li><code>PING</code> / <code>PONG</code> — heartbeat applicatif</li>
+</ul>
+<hr>
+<h2>3. Implémenter le serveur</h2>
+<h3>SignalR (.NET 8)</h3>
+<pre><code class="lang-csharp">// Program.cs
+builder.Services.AddSignalR(o =&gt; {
+    o.MaximumReceiveMessageSize = 32 * 1024; // 32 KB max
+    o.EnableDetailedErrors = app.Environment.IsDevelopment();
+});
+app.MapHub&lt;ChatHub&gt;(&quot;/hubs/chat&quot;);
+
+// ChatHub.cs
+[Authorize]
+public class ChatHub : Hub
+{
+    public async Task SendMessage(string channel, string text)
+    {
+        // Vérifier l'autorisation sur le canal
+        if (!await _authService.CanWriteAsync(Context.UserIdentifier, channel))
+            throw new HubException(&quot;Forbidden&quot;);
+
+        await Clients.Group(channel).SendAsync(&quot;ReceiveMessage&quot;, new {
+            From = Context.UserIdentifier,
+            Text = text,
+            Ts = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        });
+    }
+
+    public override async Task OnConnectedAsync()
+    {
+        // Rejoindre les canaux de l'utilisateur dès la connexion
+        var channels = await _channelService.GetUserChannelsAsync(Context.UserIdentifier);
+        foreach (var ch in channels)
+            await Groups.AddToGroupAsync(Context.ConnectionId, ch);
+
+        await base.OnConnectedAsync();
+    }
+}</code></pre>
+<h3>Socket.io (Node.js / TypeScript)</h3>
+<pre><code class="lang-typescript">import { Server } from &quot;socket.io&quot;;
+import { createAdapter } from &quot;@socket.io/redis-adapter&quot;;
+
+const io = new Server(httpServer, {
+  cors: { origin: process.env.ALLOWED_ORIGIN },
+  maxHttpBufferSize: 32 * 1024, // 32 KB
+  pingTimeout: 20_000,
+  pingInterval: 10_000,
+});
+
+io.use(async (socket, next) =&gt; {
+  const token = socket.handshake.auth.token;
+  const user = await verifyJwt(token); // lance une erreur si invalide
+  socket.data.user = user;
+  next();
+});
+
+io.on(&quot;connection&quot;, async (socket) =&gt; {
+  const { userId } = socket.data.user;
+  const channels = await getChannels(userId);
+  socket.join(channels);
+
+  socket.on(&quot;CHAT_MESSAGE&quot;, async ({ channel, text }) =&gt; {
+    if (!channels.includes(channel)) return socket.emit(&quot;ERROR&quot;, { code: 403 });
+    io.to(channel).emit(&quot;CHAT_MESSAGE&quot;, { from: userId, text, ts: Date.now() });
+  });
+});</code></pre>
+<hr>
+<h2>4. Implémenter le client avec reconnexion robuste</h2>
+<pre><code class="lang-typescript">// Reconnexion avec exponential backoff + jitter (vanilla WS)
+function createWebSocketClient(url: string) {
+  let ws: WebSocket;
+  let attempt = 0;
+  const MAX_DELAY = 30_000;
+
+  function connect() {
+    ws = new WebSocket(url);
+
+    ws.onopen = () =&gt; {
+      attempt = 0;
+      // Rejouer les messages en attente
+      drainQueue();
+    };
+
+    ws.onmessage = (e) =&gt; handleMessage(JSON.parse(e.data));
+
+    ws.onclose = (e) =&gt; {
+      if (e.code === 1000) return; // fermeture propre
+      const delay = Math.min(1_000 * 2 ** attempt + Math.random() * 500, MAX_DELAY);
+      attempt++;
+      setTimeout(connect, delay);
+    };
+  }
+
+  connect();
+  return { send: (msg: object) =&gt; ws.send(JSON.stringify(msg)) };
+}</code></pre>
+<p><strong>SignalR client</strong> : utilise <code>withAutomaticReconnect([0, 2000, 5000, 10000, 30000])</code> — les intervalles sont en ms.</p>
+<hr>
+<h2>5. Scaler horizontalement</h2>
+<h3>Redis backplane SignalR</h3>
+<pre><code class="lang-csharp">builder.Services.AddSignalR()
+    .AddStackExchangeRedis(&quot;redis:6379,abortConnect=false&quot;, o =&gt; {
+        o.Configuration.ChannelPrefix = RedisChannel.Literal(&quot;myapp&quot;);
+    });</code></pre>
+<h3>Redis adapter Socket.io</h3>
+<pre><code class="lang-typescript">import { createClient } from &quot;redis&quot;;
+import { createAdapter } from &quot;@socket.io/redis-adapter&quot;;
+
+const pub = createClient({ url: &quot;redis://redis:6379&quot; });
+const sub = pub.duplicate();
+await Promise.all([pub.connect(), sub.connect()]);
+io.adapter(createAdapter(pub, sub));</code></pre>
+<p><strong>Points clés</strong> :</p>
+<ul>
+<li>Active les <strong>sticky sessions</strong> sur le load balancer pendant la phase de handshake HTTP (upgrade WS). Après l'upgrade, la connexion TCP est persistante — les sticky sessions ne sont plus nécessaires si le backplane est en place.</li>
+<li>Si tu utilises Nginx : <code>proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection &quot;upgrade&quot;;</code></li>
+</ul>
+<hr>
+<h2>6. Sécurité</h2>
+<ul>
+<li><strong>Authentification</strong> : JWT via <code>Authorization: Bearer</code> header lors du handshake (query string acceptable mais éviter en prod — visible dans les logs).</li>
+<li><strong>Autorisation</strong> : vérifier les droits à chaque message, pas seulement à la connexion.</li>
+<li><strong>Rate limiting</strong> : limiter le nombre de messages par connexion/seconde côté serveur.</li>
+<li><strong>Taille des messages</strong> : impose un maximum (32 KB recommandé) pour éviter les attaques par saturation mémoire.</li>
+<li><strong>Validation</strong> : parse et valide le payload à chaque réception (zod, FluentValidation...).</li>
+</ul>
+<hr>
+<h2>7. Monitoring</h2>
+<p>Métriques essentielles à exposer (Prometheus / OpenTelemetry) :</p>
+<table><thead><tr><th>Métrique</th><th>Seuil d'alerte typique</th></tr></thead><tbody><tr><td><code>ws_connections_active</code></td><td>&gt; 80 % de la capacité max</td></tr><tr><td><code>ws_messages_per_second</code></td><td>pic anormal × 3</td></tr><tr><td><code>ws_reconnect_rate</code></td><td>&gt; 5 % des clients/min</td></tr><tr><td><code>ws_message_latency_p99</code></td><td>&gt; 500 ms</td></tr><tr><td><code>ws_errors_total</code></td><td>toute augmentation soudaine</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<ul>
+<li><strong>Broadcast global sans filtrage</strong> : envoyer un message à tous les clients connectés au lieu d'un groupe/canal = charge inutile et fuite de données.</li>
+<li><strong>Stocker l'état en mémoire du processus</strong> : si plusieurs instances, les clients sur des pods différents ne voient pas le même état. Utilise Redis ou une base partagée.</li>
+<li><strong>Oublier le heartbeat</strong> : les proxys et équilibreurs de charge coupent les connexions TCP inactives après 60-90 s par défaut. Implémente un ping/pong applicatif toutes les 30 s.</li>
+<li><strong>Authentification uniquement au handshake</strong> : un token peut expirer en cours de session. Vérifie périodiquement ou à chaque action sensible.</li>
+<li><strong>Omettre le fallback</strong> : certains réseaux d'entreprise bloquent les WebSockets. SignalR et Socket.io gèrent le fallback automatiquement — ne le désactive pas.</li>
+<li><strong>Ignorer la backpressure</strong> : si le client est lent à consommer, le buffer serveur grossit. Limite la file et déconnecte les clients trop lents.</li>
+<li><strong>Protocole non documenté</strong> : traite le contrat de messages comme une API — versionne-le, documente chaque type d'événement.</li>
 </ul>
 </article>
 </main>

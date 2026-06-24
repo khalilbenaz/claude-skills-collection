@@ -96,25 +96,99 @@ cp -r claude-skills-collection/skills/social-feedback-giver ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Feedback Giver</h1>
-<h2>Étape 1 — Contexte</h2>
-<p>Qui reçoit le feedback, quelle relation, quel sujet, quel objectif.</p>
-<h2>Étape 2 — Méthode SBI</h2>
+<p>Aide à formuler un retour constructif — critique, positif ou mixte — à destination d'un collègue, manager, proche ou prestataire, en face à face ou par écrit.</p>
+<hr>
+<h2>Étape 1 — Cadrage du contexte</h2>
+<p>Avant toute formulation, précise :</p>
+<table><thead><tr><th>Question</th><th>Pourquoi ça compte</th></tr></thead><tbody><tr><td>Qui reçoit le feedback ?</td><td>Pair, subordonné, supérieur, ami → registre différent</td></tr><tr><td>Quelle relation ?</td><td>Professionnelle, personnelle, nouvelle ou établie</td></tr><tr><td>Quel déclencheur ?</td><td>Incident ponctuel, pattern récurrent, demande explicite</td></tr><tr><td>Quel objectif ?</td><td>Corriger, renforcer, protéger la relation, clore un conflit</td></tr><tr><td>Quel canal ?</td><td>Oral (en privé), écrit asynchrone, réunion formelle</td></tr></tbody></table>
+<hr>
+<h2>Étape 2 — Choisir la méthode adaptée</h2>
+<h3>Méthode SBI (Situation → Behaviour → Impact)</h3>
+<p>La plus universelle. Convient à tout feedback professionnel ou personnel factuel.</p>
+<pre><code>S : &quot;Lors de la réunion client du 18 juin...&quot;
+B : &quot;...tu as pris la parole pour contredire mon estimation sans m'en avoir parlé avant.&quot;
+I : &quot;J'ai eu du mal à reprendre la main et le client a semblé perdu.&quot;</code></pre>
+<h3>Méthode COIN (Context → Observation → Impact → Next)</h3>
+<p>Ajoute une demande d'action claire. Idéale en management.</p>
+<pre><code>C : &quot;Dans le contexte du sprint en cours...&quot;
+O : &quot;...j'ai remarqué que les PR arrivent sans description ni lien vers le ticket.&quot;
+I : &quot;Ça ralentit la revue de code et génère des allers-retours évitables.&quot;
+N : &quot;À partir du prochain sprint, peux-tu ajouter au moins deux phrases de contexte ?&quot;</code></pre>
+<h3>Méthode &quot;sandwich&quot; (Positif → Critique → Positif)</h3>
+<p>Utile pour les personnalités fragiles ou les relations tendues. À ne pas surutiliser : le positif doit être sincère, pas rhétorique.</p>
+<pre><code>&quot;Ton rapport est très bien structuré — c'est vraiment agréable à lire.
+Je voudrais qu'on parle des chiffres de la section 3 : certains ne correspondent pas aux sources citées.
+Dans l'ensemble, le travail fourni montre beaucoup de rigueur.&quot;</code></pre>
+<hr>
+<h2>Étape 3 — Formuler selon le ton</h2>
+<h3>Ton direct (collègue proche, culture directe)</h3>
+<blockquote>&quot;Lors de notre appel de lundi, tu as raccroché sans qu'on ait conclu sur les prochaines étapes. Résultat, j'ai dû rappeler le client moi-même. J'aimerais qu'on s'assure toujours d'avoir un next step avant de raccrocher.&quot;</blockquote>
+<h3>Ton diplomate (hiérarchie, relation nouvelle)</h3>
+<blockquote>&quot;Je voulais partager une observation sur notre échange de lundi. Quand la conversation s'est terminée sans qu'on récapitule les prochaines étapes, j'ai eu du mal à faire le suivi. Est-ce qu'on pourrait convenir d'une mini-synthèse en fin d'appel ?&quot;</blockquote>
+<h3>Version écrite (email ou message)</h3>
+<blockquote><strong>Objet : Retour sur l'appel client du [date]</strong><br><br>Bonjour [Prénom],<br><br>Je voulais te partager une observation suite à notre appel de lundi.<br>[Situation + comportement + impact — 2-3 phrases max]<br>Ce que j'aimerais : [demande concrète, formulée positivement].<br>N'hésite pas si tu veux qu'on en discute.<br><br>[Signature]</blockquote>
+<hr>
+<h2>Étape 4 — Formuler la demande d'action</h2>
+<p>La demande doit être :</p>
 <ul>
-<li><strong>Situation</strong> : quand et où</li>
-<li><strong>Comportement</strong> (Behavior) : ce que la personne a fait (faits, pas jugements)</li>
-<li><strong>Impact</strong> : l'effet concret de ce comportement</li>
+<li><strong>Spécifique</strong> : &quot;m'envoyer le draft avant vendredi 12h&quot; plutôt que &quot;être plus rigoureux&quot;</li>
+<li><strong>Positive</strong> : ce que tu veux voir, pas ce que tu ne veux plus</li>
+<li><strong>Négociable</strong> : ouvrir une conversation, pas imposer</li>
 </ul>
-<h2>Étape 3 — Formulation</h2>
-<table><thead><tr><th>Version directe</th><th>Version douce</th><th>Version écrite</th></tr></thead><tbody></tbody></table>
-<h2>Étape 4 — Demande d'action</h2>
-<p>Ce que tu aimerais voir changer, formulé positivement.</p>
-<h2>Étape 5 — Anticipation</h2>
-<p>Comment réagir si la personne se défend, se braque ou est touchée.</p>
-<h2>Règles</h2>
+<p>Formules utiles :</p>
 <ul>
-<li>Faits, pas jugements. &quot;Tu as interrompu 3 fois&quot; vs &quot;Tu es irrespectueux&quot;.</li>
-<li>Toujours inclure du positif si authentique.</li>
+<li>&quot;Ce que j'aimerais pour la suite, c'est…&quot;</li>
+<li>&quot;Une chose qui m'aiderait beaucoup : …&quot;</li>
+<li>&quot;Est-ce que c'est faisable pour toi de… ?&quot;</li>
 </ul>
+<hr>
+<h2>Étape 5 — Anticiper les réactions et répondre</h2>
+<table><thead><tr><th>Réaction</th><th>Ce qui se passe</th><th>Réponse adaptée</th></tr></thead><tbody><tr><td>Déni (&quot;c'est faux&quot;)</td><td>Sentiment d'attaque</td><td>&quot;Je te parle de ce que j'ai vécu, pas de ton intention.&quot;</td></tr><tr><td>Contre-attaque (&quot;toi aussi tu…&quot;)</td><td>Changement de sujet</td><td>&quot;On peut en parler, mais là je voudrais terminer sur mon retour d'abord.&quot;</td></tr><tr><td>Silence / fermeture</td><td>Choc ou honte</td><td>Laisser un silence, ne pas combler, reformuler doucement</td></tr><tr><td>Accord immédiat mais sans conviction</td><td>Clôture défensive</td><td>&quot;Tu es sûr·e ? Je veux qu'on soit alignés vraiment.&quot;</td></tr><tr><td>Émotion forte (larmes, colère)</td><td>Débordement</td><td>Mettre pause. &quot;On peut reprendre quand tu veux.&quot; Ne pas insister.</td></tr></tbody></table>
+<hr>
+<h2>Étape 6 — Feedback positif : ne pas le négliger</h2>
+<p>Le renforcement positif est souvent sous-utilisé. Règles :</p>
+<ul>
+<li><strong>Immédiat</strong> : dans les 24h après le comportement observé</li>
+<li><strong>Spécifique</strong> : &quot;ta façon de recadrer la réunion quand ça partait en live&quot; &gt; &quot;super boulot&quot;</li>
+<li><strong>Sincère</strong> : jamais formulaire, jamais pour amortir une critique</li>
+</ul>
+<blockquote>&quot;Je voulais te dire : ta présentation de ce matin était claire et convaincante. La façon dont tu as géré la question piège du client m'a vraiment impressionné.&quot;</blockquote>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<h3>Ne jamais faire</h3>
+<ul>
+<li><strong>Jugement de personne</strong> : &quot;Tu es désorganisé&quot; → dire &quot;Le planning n'a pas été mis à jour&quot;</li>
+<li><strong>Généralisation</strong> : &quot;tu fais toujours ça&quot;, &quot;tu ne fais jamais&quot; → dater et citer des faits</li>
+<li><strong>Public</strong> : ne jamais donner un feedback négatif devant d'autres personnes</li>
+<li><strong>Par message rapide</strong> : WhatsApp/SMS pour une critique sérieuse = mauvaise idée</li>
+<li><strong>Dans l'émotion</strong> : attendre au moins quelques heures après un incident chaud</li>
+<li><strong>Double bind</strong> : &quot;Tu peux faire ce que tu veux, mais…&quot; — soit c'est un choix, soit c'est une demande</li>
+</ul>
+<h3>Signaux que le feedback est mal formulé</h3>
+<ul>
+<li>La phrase contient &quot;toujours&quot;, &quot;jamais&quot;, &quot;encore une fois&quot;</li>
+<li>Le sujet est &quot;tu es&quot; plutôt que &quot;tu as fait&quot;</li>
+<li>L'impact décrit est une hypothèse sur l'intention, pas un effet concret</li>
+<li>Il y a plus de 3 points de critique dans un seul feedback</li>
+</ul>
+<h3>Avant d'envoyer un feedback écrit</h3>
+<p>Relis avec cette checklist :</p>
+<ul>
+<li>[ ] Est-ce que je parle de faits ou de jugements ?</li>
+<li>[ ] Est-ce que mon impact est concret (pas &quot;ça m'énerve&quot;) ?</li>
+<li>[ ] Est-ce que ma demande d'action est claire et réaliste ?</li>
+<li>[ ] Est-ce que le ton est celui que je voudrais recevoir ?</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Feedback continu &gt; feedback annuel</strong> : ne pas stocker les retours, les donner proches des événements</li>
+<li><strong>Demande de permission</strong> : &quot;J'ai un retour à te partager, c'est un bon moment ?&quot; réduit la défensivité</li>
+<li><strong>Feedback sur le travail, pas sur la personne</strong> : toujours</li>
+<li><strong>Cultures différentes</strong> : en contexte interculturel ou avec une personne qui vient d'arriver, adapter le niveau de directivité et vérifier la compréhension</li>
+<li><strong>Feedback à distance</strong> : préférer l'audio/vidéo à l'écrit pour les sujets sensibles ; l'écrit amplifie les malentendus</li>
+</ul>
+<blockquote>Si la situation implique un conflit sérieux, une relation de harcèlement, ou un impact sur la santé mentale, il vaut mieux faire appel à un médiateur professionnel ou un responsable RH plutôt que de gérer seul.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

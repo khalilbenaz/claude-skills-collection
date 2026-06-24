@@ -96,77 +96,136 @@ cp -r claude-skills-collection/skills/dev-feature-flag-system ~/.claude/skills/<
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Système de Feature Flags</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Comprendre le besoin</strong> : identifier le type de flag nécessaire (rollout, A/B, kill switch, beta).</li>
-<li><strong>Concevoir la configuration</strong> :</li>
-<ul>
-<li>Définir les règles de ciblage (utilisateur, pourcentage, attribut, date)</li>
-<li>Définir les variantes si nécessaire (A/B testing)</li>
-</ul>
-<li><strong>Implémenter</strong> : proposer le code adapté au framework utilisé.</li>
-<li><strong>Vérifier</strong> : s'assurer que les deux chemins (activé/désactivé) sont testés.</li>
-</ol>
-<h2>Types de feature flags</h2>
-<table><thead><tr><th>Type</th><th>Usage</th><th>Durée de vie</th></tr></thead><tbody><tr><td><strong>Release flag</strong></td><td>Déploiement progressif</td><td>Court terme</td></tr><tr><td><strong>Experiment flag</strong></td><td>A/B testing</td><td>Moyen terme</td></tr><tr><td><strong>Ops flag</strong></td><td>Mode maintenance, kill switch</td><td>Permanent</td></tr><tr><td><strong>Permission flag</strong></td><td>Fonctionnalités par rôle/plan</td><td>Permanent</td></tr></tbody></table>
-<h2>Structure de base</h2>
-<pre><code class="lang-typescript">interface FlagConfig {
-  key: string;
-  enabled: boolean;
-  description: string;
-  rules?: FlagRule[];
-  variants?: FlagVariant[];
+<h2>Workflow en 6 étapes</h2>
+<h3>1. Qualifier le besoin</h3>
+<p>Poser les 3 questions avant d'écrire une ligne de code :</p>
+<table><thead><tr><th>Question</th><th>Réponse attendue</th></tr></thead><tbody><tr><td>Pourquoi ce flag ?</td><td>Risque déploiement / expérimentation / accès conditionnel</td></tr><tr><td>Durée de vie prévue ?</td><td>&lt; 2 semaines (release), 1-3 mois (expériment), permanent (ops/permission)</td></tr><tr><td>Qui décide du kill switch ?</td><td>Ops, PM, automatique sur metric</td></tr></tbody></table>
+<h3>2. Choisir le type</h3>
+<table><thead><tr><th>Type</th><th>Exemple concret</th><th>Durée de vie</th></tr></thead><tbody><tr><td><strong>Release flag</strong></td><td>Nouvelle page checkout</td><td>&lt; 2 semaines</td></tr><tr><td><strong>Experiment flag</strong></td><td>CTA rouge vs bleu</td><td>1-3 mois</td></tr><tr><td><strong>Ops flag</strong></td><td>Mode maintenance, circuit breaker</td><td>Permanent</td></tr><tr><td><strong>Permission flag</strong></td><td>Feature plan Pro uniquement</td><td>Permanent</td></tr></tbody></table>
+<h3>3. Concevoir le flag (YAML de référence)</h3>
+<pre><code class="lang-yaml"># flags/checkout-v2.yaml
+key: checkout_v2
+description: &quot;Nouvelle page checkout avec paiement 1-clic&quot;
+owner: team-payments
+expires: 2026-08-01          # obligatoire sauf ops/permission
+default: false
+rules:
+  - type: user_ids            # whitelist interne d'abord
+    values: [user_123, user_456]
+  - type: percentage
+    value: 10                 # 10 % des utilisateurs
+    sticky: true              # hash stable userId+flagKey
+variants:                     # optionnel, A/B uniquement
+  - key: control
+    weight: 50
+  - key: treatment
+    weight: 50</code></pre>
+<h3>4. Implémenter l'évaluation</h3>
+<p><strong>TypeScript (SDK maison ou OpenFeature)</strong></p>
+<pre><code class="lang-typescript">import { OpenFeature } from &quot;@openfeature/server-sdk&quot;;
+
+const client = OpenFeature.getClient();
+
+// Évaluation simple (release flag)
+const isEnabled = await client.getBooleanValue(
+  &quot;checkout_v2&quot;,
+  false,                          // valeur par défaut si flag absent
+  { targetingKey: user.id, plan: user.plan }
+);
+
+if (isEnabled) {
+  return newCheckout(cart);
+} else {
+  return legacyCheckout(cart);
 }
 
-interface FlagRule {
-  type: &quot;user&quot; | &quot;percentage&quot; | &quot;attribute&quot; | &quot;datetime&quot;;
-  operator: &quot;in&quot; | &quot;equals&quot; | &quot;contains&quot; | &quot;gt&quot; | &quot;lt&quot; | &quot;between&quot;;
-  attribute?: string;
-  values: any[];
+// Évaluation avec variante (A/B)
+const variant = await client.getStringValue(
+  &quot;checkout_v2_variant&quot;,
+  &quot;control&quot;,
+  { targetingKey: user.id }
+);
+trackExposure(&quot;checkout_v2&quot;, variant, user.id);</code></pre>
+<p><strong>Hash déterministe pour sticky bucketing (sans dépendance externe)</strong></p>
+<pre><code class="lang-typescript">function bucket(userId: string, flagKey: string): number {
+  // FNV-1a 32 bits — rapide, pas de crypto
+  let hash = 2166136261;
+  for (const char of `${flagKey}:${userId}`) {
+    hash ^= char.charCodeAt(0);
+    hash = (hash * 16777619) &gt;&gt;&gt; 0;
+  }
+  return (hash % 100); // 0-99 → pourcentage
 }
 
-interface FlagVariant {
-  key: string;
-  weight: number;  // Pourcentage de trafic
-  value: any;
-}</code></pre>
-<h2>Stratégies de rollout</h2>
-<h3>Déploiement progressif</h3>
-<ol>
-<li><strong>1%</strong> — Équipe interne uniquement</li>
-<li><strong>5%</strong> — Beta testeurs</li>
-<li><strong>25%</strong> — Premier quart d'utilisateurs</li>
-<li><strong>50%</strong> → <strong>100%</strong> — Montée progressive avec monitoring</li>
-</ol>
-<h3>A/B Testing</h3>
+const enabled = bucket(user.id, &quot;checkout_v2&quot;) &lt; rolloutPercent;</code></pre>
+<p><strong>Kill switch React (état global)</strong></p>
+<pre><code class="lang-tsx">// hooks/useFlag.ts
+export function useFlag(key: string): boolean {
+  return useContext(FlagContext)[key] ?? false;
+}
+
+// usage dans un composant
+const showNewDashboard = useFlag(&quot;new_dashboard&quot;);
+if (!showNewDashboard) return &lt;LegacyDashboard /&gt;;</code></pre>
+<h3>5. Déploiement progressif</h3>
+<pre><code>Jour 0 :  0 % → team interne (user_ids whitelist)
+Jour 1 :  1 % → canary  — surveiller error rate 30 min
+Jour 2 :  10 % — surveiller p99 latence + conversions
+Jour 4 :  25 %
+Jour 7 :  50 %
+Jour 10 : 100 % → planifier suppression du flag sous 2 semaines</code></pre>
+<p>Alertes minimales à brancher avant chaque palier :</p>
 <ul>
-<li>Utiliser un hash stable (userId + flagKey) pour des résultats cohérents</li>
-<li>Toujours tracker les évaluations pour l'analyse</li>
-<li>Définir les métriques de succès avant le lancement</li>
+<li>Error rate &gt; baseline + 0.5 % → rollback automatique</li>
+<li>p99 &gt; seuil SLA → pause</li>
 </ul>
-<h2>Bonnes pratiques</h2>
-<h3>À faire</h3>
+<h3>6. Nettoyage et cycle de vie</h3>
+<pre><code class="lang-bash"># Lister les flags expirés (exemple avec Unleash CLI)
+unleash flags list --expired-before 2026-06-01
+
+# Supprimer un flag archivé
+unleash flags archive --key checkout_v2</code></pre>
+<p>Checklist de suppression d'un flag :</p>
 <ul>
-<li>Nommer les flags de manière descriptive</li>
-<li>Documenter le but et le cycle de vie de chaque flag</li>
-<li>Tracker les évaluations pour l'analytique</li>
-<li>Nettoyer régulièrement les anciens flags</li>
-<li>Tester les deux états (activé/désactivé)</li>
-<li>Utiliser un hashing cohérent pour la stabilité</li>
+<li>[ ] Flag à 100 % depuis &gt; 2 semaines</li>
+<li>[ ] Aucune référence au fallback dans les logs</li>
+<li>[ ] Code des deux branches revu, branche inactive supprimée</li>
+<li>[ ] Flag archivé dans le gestionnaire (pas supprimé — garder l'historique)</li>
 </ul>
-<h3>À éviter</h3>
+<hr>
+<h2>Critères de décision : self-hosted vs SaaS</h2>
+<table><thead><tr><th>Critère</th><th>Self-hosted (Unleash, Flagsmith)</th><th>SaaS (LaunchDarkly, GrowthBook)</th></tr></thead><tbody><tr><td>Data sovereignty requise</td><td>✅</td><td>❌</td></tr><tr><td>Budget &lt; 500 $/mois</td><td>✅</td><td>❌</td></tr><tr><td>Streaming temps réel critique</td><td>❌ (polling)</td><td>✅ (SSE/WebSocket)</td></tr><tr><td>Équipe &lt; 5 devs</td><td>❌ (overhead ops)</td><td>✅</td></tr><tr><td>A/B stats intégrées</td><td>❌</td><td>✅ GrowthBook open source</td></tr></tbody></table>
+<hr>
+<h2>Pièges et anti-patterns</h2>
+<p><strong>Flag spaghetti</strong> — plus de 3 niveaux de conditions imbriqués = refactoriser en permission flag ou configuration.</p>
+<pre><code class="lang-typescript">// ❌ anti-pattern
+if (flagA &amp;&amp; flagB &amp;&amp; !flagC &amp;&amp; user.plan === &quot;pro&quot;) { ... }
+
+// ✅ encapsuler
+const canAccessFeature = await featurePolicy.canAccess(&quot;new_report&quot;, user);</code></pre>
+<p><strong>Boolean prolifération</strong> — ne pas créer un flag par micro-variation. Préférer une variante multi-valeur.</p>
+<pre><code class="lang-typescript">// ❌ 3 flags booléens
+flag_sidebar_color_blue / flag_sidebar_color_red / flag_sidebar_color_green
+
+// ✅ 1 flag string
+getStringValue(&quot;sidebar_color&quot;, &quot;blue&quot;) // → &quot;blue&quot; | &quot;red&quot; | &quot;green&quot;</code></pre>
+<p><strong>Flag sans owner</strong> — chaque flag doit avoir un owner dans les métadonnées, sinon il devient orphelin.</p>
+<p><strong>Évaluation côté client non cachée</strong> — appeler le SDK à chaque render React sans cache = latence et surcoût réseau. Hydrater les flags au bootstrap de la session, pas à chaque composant.</p>
+<p><strong>Tests qui ne couvrent pas les deux états</strong> — tout flag doit avoir un test <code>enabled=true</code> ET <code>enabled=false</code>.</p>
+<pre><code class="lang-typescript">// Jest
+it.each([true, false])(&quot;checkout works when flag=%s&quot;, async (enabled) =&gt; {
+  mockFlag(&quot;checkout_v2&quot;, enabled);
+  const result = await checkout(cart);
+  expect(result.status).toBe(&quot;ok&quot;);
+});</code></pre>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Utiliser des flags pour de la configuration permanente</li>
-<li>Accumuler de la dette technique avec des flags obsolètes</li>
-<li>Rendre les flags trop granulaires</li>
-<li>Hard-coder les vérifications de flags partout</li>
-<li>Ignorer le monitoring</li>
-</ul>
-<h2>Règles</h2>
-<ul>
-<li>Toujours proposer une stratégie de nettoyage des flags.</li>
-<li>Chaque flag doit avoir une date d'expiration prévue (sauf ops flags).</li>
-<li>Ne jamais déployer un flag sans monitoring associé.</li>
+<li><strong>OpenFeature</strong> comme standard d'abstraction — évite le lock-in SDK propriétaire.</li>
+<li><strong>Flag as code</strong> — stocker les définitions YAML en git, PR + review avant activation.</li>
+<li><strong>Targeting contextuel</strong> — préférer les attributs métier (plan, région, cohort) aux user_id bruts : plus maintenable.</li>
+<li><strong>Observabilité</strong> — chaque évaluation expose un attribut <code>feature_flag.key</code> et <code>feature_flag.variant</code> dans les traces OpenTelemetry.</li>
+<li><strong>Date d'expiration obligatoire</strong> sur release et experiment flags — un pipeline CI doit échouer si un flag est évalué après sa date d'expiration.</li>
 </ul>
 </article>
 </main>

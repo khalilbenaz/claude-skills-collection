@@ -96,38 +96,144 @@ cp -r claude-skills-collection/skills/marketing-analytics-interpreter ~/.claude/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Analytics Interpreter</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Configurer le tracking correctement</strong> — vérifier l'installation du tag Google Analytics 4 (via Google Tag Manager ou gtag.js) ou Matomo, s'assurer que toutes les pages sont trackées, configurer les flux de données (web, app), et valider en temps réel que les événements remontent correctement.</li>
-</ol>
-<ol>
-<li><strong>Définir les objectifs et conversions</strong> — identifier les actions clés du site (achat, inscription, téléchargement, soumission de formulaire), les configurer comme événements de conversion dans GA4 ou objectifs dans Matomo, et attribuer une valeur monétaire quand c'est pertinent pour mesurer le ROI.</li>
-</ol>
-<ol>
-<li><strong>Analyser les métriques d'acquisition</strong> — examiner les sources de trafic (organique, payant, social, referral, direct, email), comparer les volumes et la qualité par canal (sessions, taux de rebond, pages/session, durée moyenne), et identifier les canaux les plus performants en termes de conversions.</li>
-</ol>
-<ol>
-<li><strong>Analyser le comportement des utilisateurs</strong> — étudier les pages les plus visitées, les parcours de navigation (exploration du chemin dans GA4), les pages de sortie, le taux d'engagement, les événements déclenchés, et utiliser les rapports de flux pour identifier les points de friction dans le tunnel de conversion.</li>
-</ol>
-<ol>
-<li><strong>Créer des segments avancés</strong> — segmenter l'audience par critères démographiques (âge, localisation, appareil), comportementaux (nouveaux vs. récurrents, pages visitées, événements), et de source (canal, campagne, mot-clé) pour comparer les performances et identifier les audiences les plus rentables.</li>
-</ol>
-<ol>
-<li><strong>Construire des rapports et dashboards</strong> — créer des rapports personnalisés dans GA4 Explorations ou Matomo, construire des dashboards dans Looker Studio (Data Studio) avec les KPIs prioritaires, automatiser l'envoi par email, et inclure des annotations pour contextualiser les variations.</li>
-</ol>
-<ol>
-<li><strong>Interpréter les données et recommander</strong> — transformer les chiffres en insights actionnables : identifier les tendances (saisonnalité, croissance), expliquer les anomalies (pic ou chute de trafic), quantifier les opportunités d'amélioration, et formuler des recommandations concrètes avec impact estimé.</li>
-</ol>
-<ol>
-<li><strong>Optimiser en continu</strong> — mettre en place des tests A/B basés sur les données analytics, suivre les micro-conversions comme indicateurs avancés, comparer les cohortes dans le temps, et itérer sur les recommandations en mesurant l'impact de chaque changement.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Vérifier la fiabilité du tracking avant tout</h2>
+<p>Avant d'analyser quoi que ce soit, valider l'intégrité des données :</p>
+<p><strong>GA4 — Debug View en temps réel :</strong></p>
+<pre><code>GA4 Admin → DebugView → déclencher les événements manuellement sur le site</code></pre>
+<p><strong>Vérifier la déduplication des pages vues (gtag.js vs GTM doublon fréquent) :</strong></p>
+<pre><code class="lang-js">// Ouvrir la console navigateur sur le site et chercher :
+window.dataLayer.filter(e =&gt; e.event === 'gtm.pageview')
+// Si count &gt; 1 par page → doublon à corriger dans GTM</code></pre>
+<p><strong>Filtrer le trafic interne dans GA4 :</strong></p>
+<pre><code>Admin → Flux de données → Définir des filtres IP internes</code></pre>
+<p><strong>Matomo — vérifier le tracking tag :</strong></p>
+<pre><code class="lang-js">// Console navigateur → Network → filtrer &quot;matomo.php&quot; ou &quot;piwik.php&quot;
+// Réponse 204 = OK ; 0 hit = tag absent ou bloqué</code></pre>
+<p>Critères de validation minimaux avant analyse :</p>
 <ul>
-<li>Toujours vérifier la fiabilité des données avant d'analyser — un tracking mal configuré ou des filtres manquants (trafic interne, bots) faussent toutes les conclusions.</li>
-<li>Ne jamais tirer de conclusions sur des échantillons trop petits — attendre un volume statistiquement significatif avant de valider une tendance ou un résultat de test A/B.</li>
-<li>Corréler les données analytics avec le contexte business (campagnes lancées, changements de prix, saisonnalité, actualités) pour expliquer les variations.</li>
-<li>Présenter les données avec des visualisations claires et des recommandations actionnables — les stakeholders n'ont pas besoin de chiffres bruts mais de décisions à prendre.</li>
-<li>Respecter le RGPD et la vie privée des utilisateurs — configurer le consentement cookies, anonymiser les IP, et ne collecter que les données nécessaires.</li>
+<li>Taux de rebond GA4 cohérent (&lt; 80 % pour la plupart des sites e-commerce)</li>
+<li>Pas de pics de sessions à heure ronde (signe de bot)</li>
+<li>Les événements de conversion remontent dans les 24 h suivant le déploiement</li>
+</ul>
+<hr>
+<h2>2. Définir les conversions et leur valeur</h2>
+<p>Configurer les événements clés dans GA4 (anciennement &quot;objectifs&quot;) :</p>
+<pre><code>Admin → Événements → Cocher &quot;Marquer comme conversion&quot;</code></pre>
+<p>Exemples d'événements standards à activer :</p>
+<table><thead><tr><th>Événement GA4</th><th>Déclencheur recommandé</th></tr></thead><tbody><tr><td><code>purchase</code></td><td>Page de confirmation commande</td></tr><tr><td><code>generate_lead</code></td><td>Soumission formulaire contact</td></tr><tr><td><code>sign_up</code></td><td>Création de compte réussie</td></tr><tr><td><code>file_download</code></td><td>Clic sur lien PDF/ZIP</td></tr></tbody></table>
+<p><strong>Matomo — objectifs :</strong></p>
+<pre><code>Matomo Admin → Objectifs → Ajouter → URL de destination / Événement / Durée</code></pre>
+<p>Attribuer une valeur monétaire systématiquement pour calculer le ROI canal par canal.</p>
+<hr>
+<h2>3. Analyser l'acquisition par canal</h2>
+<p>Rapport GA4 : <strong>Acquisition → Acquisition de trafic</strong></p>
+<p>Métriques à comparer par canal (Source / Support) :</p>
+<ul>
+<li>Sessions, Utilisateurs</li>
+<li>Taux d'engagement (≠ bounce rate GA4 = sessions avec interaction &gt; 10 s ou 2 pages)</li>
+<li>Taux de conversion par canal</li>
+<li>Revenus / valeur de conversion</li>
+</ul>
+<p><strong>Query Looker Studio pour comparer canaux :</strong></p>
+<pre><code class="lang-sql">-- Dimension : Session default channel group
+-- Métriques : Sessions, Conversions, Revenue
+-- Filtre : Date range = 30 derniers jours
+-- Tri : Revenue DESC</code></pre>
+<p>Critère de décision : un canal avec un taux de conversion &gt; 2× la moyenne mérite un budget supplémentaire. Un canal &lt; 0,5× la moyenne mérite une analyse de qualité d'audience.</p>
+<hr>
+<h2>4. Analyser le comportement et les funnels</h2>
+<p><strong>Rapport de chemin GA4 :</strong></p>
+<pre><code>Explorer → Exploration de chemin → Point de départ = Page d'entrée</code></pre>
+<p><strong>Funnel de conversion GA4 :</strong></p>
+<pre><code>Explorer → Exploration d'entonnoir → Définir les étapes (ex. : page produit → panier → checkout → purchase)</code></pre>
+<p>Métriques comportementales prioritaires :</p>
+<ul>
+<li><strong>Scroll depth</strong> (événement <code>scroll</code> avec paramètre <code>percent_scrolled</code>) → indique si le contenu est lu</li>
+<li><strong>Temps avant conversion</strong> (cohorte J0, J1–J7, J7+) → pilote les séquences de retargeting</li>
+<li><strong>Exit rate sur pages critiques</strong> → une exit rate &gt; 60 % sur le checkout = friction à corriger</li>
+</ul>
+<hr>
+<h2>5. Segmentation avancée</h2>
+<p><strong>GA4 — Créer un segment &quot;Acheteurs récurrents&quot; :</strong></p>
+<pre><code>Explorer → Segments → Nouveau → Critère : purchase count &gt; 1</code></pre>
+<p><strong>Matomo — Segment API :</strong></p>
+<pre><code>URL Matomo API :
+?module=API&amp;method=SegmentEditor.add
+&amp;name=Acheteurs&amp;definition=visitConvertedGoalId==1
+&amp;token_auth=VOTRE_TOKEN</code></pre>
+<p>Segments prioritaires à créer :</p>
+<ol>
+<li>Nouveaux visiteurs vs. récurrents — comparer les taux de conversion</li>
+<li>Mobile vs. Desktop — détecter les écarts de performance UI</li>
+<li>Par géographie — prioriser les marchés à fort taux de conversion</li>
+<li>Campagne UTM spécifique — isoler une campagne pour mesurer son impact réel</li>
+</ol>
+<hr>
+<h2>6. Construire des dashboards actionnables</h2>
+<p><strong>Looker Studio — connexion GA4 :</strong></p>
+<pre><code>Créer rapport → Ajouter source → Google Analytics 4 → Sélectionner propriété</code></pre>
+<p>Structure recommandée pour un dashboard e-commerce :</p>
+<ol>
+<li><strong>Vue exécutive</strong> : Revenus, Transactions, ROAS — tendance 30 j vs. 30 j précédents</li>
+<li><strong>Acquisition</strong> : Top 5 canaux par revenu avec sparklines</li>
+<li><strong>Comportement</strong> : Top 10 pages, taux d'engagement, scroll depth moyen</li>
+<li><strong>Conversion</strong> : Funnel visuel, taux d'abandon par étape, valeur panier moyen</li>
+</ol>
+<p>Automatiser l'envoi hebdomadaire :</p>
+<pre><code>Looker Studio → Planifier une livraison → Email → Chaque lundi 08h00</code></pre>
+<hr>
+<h2>7. Interpréter les anomalies</h2>
+<p>Checklist face à un pic ou une chute de trafic :</p>
+<ul>
+<li>[ ] Vérifier les annotations GA4 (campagnes, déploiements)</li>
+<li>[ ] Comparer avec Google Search Console (pénalité ou gain SEO ?)</li>
+<li>[ ] Contrôler les alertes intelligentes GA4 : <strong>Rapports → Insights</strong></li>
+<li>[ ] Croiser avec le calendrier promotionnel / saisonnalité</li>
+<li>[ ] Vérifier si le changement touche UN canal spécifique → problème de source vs. problème site</li>
+</ul>
+<p><strong>Détecter une pénalité Google dans Search Console :</strong></p>
+<pre><code>Performance → Comparer → Sélectionner date de chute → Filtrer par requête / page</code></pre>
+<hr>
+<h2>8. Tests A/B et itération</h2>
+<p>Règle statistique minimale avant de conclure un test :</p>
+<ul>
+<li><strong>Significativité ≥ 95 %</strong> (p-value &lt; 0,05)</li>
+<li><strong>Volume minimum</strong> : 500 conversions par variante (règle pratique)</li>
+<li><strong>Durée minimum</strong> : 2 semaines pour capturer les cycles hebdomadaires</li>
+</ul>
+<p><strong>Outils recommandés :</strong></p>
+<ul>
+<li>Google Optimize est arrêté — utiliser <strong>VWO</strong>, <strong>AB Tasty</strong>, ou <strong>Statsig</strong></li>
+<li>Matomo intègre A/B Testing natif (plugin disponible)</li>
+</ul>
+<p>Calculateur de significativité rapide (Python) :</p>
+<pre><code class="lang-python">from scipy import stats
+control = (500, 25)   # (visiteurs, conversions)
+variant = (480, 35)
+chi2, p, dof, _ = stats.chi2_contingency([
+    [control[1], control[0]-control[1]],
+    [variant[1], variant[0]-variant[1]]
+])
+print(f&quot;p-value: {p:.4f} — {'Significatif' if p &lt; 0.05 else 'Non significatif'}&quot;)</code></pre>
+<hr>
+<h2>Anti-patterns et pièges fréquents</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Analyser sans filtrer le trafic interne</td><td>KPIs gonflés artificiellement</td><td>Filtre IP dans GA4 Admin</td></tr><tr><td>Conclure sur &lt; 100 conversions</td><td>Faux positifs en A/B test</td><td>Attendre volume suffisant</td></tr><tr><td>Comparer des périodes avec différents jours fériés</td><td>Tendances biaisées</td><td>Toujours comparer semaine vs. semaine</td></tr><tr><td>Ignorer le samplage GA4 sur grandes plages</td><td>Données approximatives</td><td>Réduire la fenêtre ou utiliser BigQuery Export</td></tr><tr><td>Fusionner sessions cross-device sans User ID</td><td>Parcours fragmentés</td><td>Activer le reporting &quot;Identity Space&quot; (User-ID + Device)</td></tr><tr><td>Oublier le consentement RGPD</td><td>Données manquantes + risque légal</td><td>Configurer Consent Mode v2 dans GTM</td></tr></tbody></table>
+<p><strong>GA4 Consent Mode v2 (obligatoire depuis mars 2024) :</strong></p>
+<pre><code class="lang-js">gtag('consent', 'default', {
+  analytics_storage: 'denied',
+  ad_storage: 'denied',
+  wait_for_update: 500
+});
+// Après acceptation CMP :
+gtag('consent', 'update', { analytics_storage: 'granted' });</code></pre>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>BigQuery Export GA4</strong> : activer l'export gratuit vers BigQuery pour toutes les propriétés — permet les analyses SQL sur données brutes non samplées</li>
+<li><strong>Server-side tagging</strong> (GTM SS) : contourne les bloqueurs de pubs, améliore la précision des données first-party</li>
+<li><strong>Modélisation de conversion GA4</strong> : depuis 2024, GA4 modélise les conversions non consenties — vérifier que ce paramètre est cohérent avec votre politique RGPD</li>
+<li><strong>Matomo Cloud vs. On-premise</strong> : préférer on-premise pour les données sensibles ou les secteurs régulés (santé, finance)</li>
+<li>Documenter chaque changement de tracking avec une annotation dans GA4 et dans un changelog partagé (Notion, Confluence)</li>
 </ul>
 </article>
 </main>

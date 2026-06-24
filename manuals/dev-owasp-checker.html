@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-owasp-checker — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Vérifie un projet contre le OWASP Top 10 et propose des remédiations.">
+<meta name="description" content="Vérifie un projet contre le OWASP Top 10 (2021) et propose des remédiations concrètes avec exemples de code.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-owasp-checker</h1>
-<p class="lead">Vérifie un projet contre le OWASP Top 10 et propose des remédiations.</p>
+<p class="lead">Vérifie un projet contre le OWASP Top 10 (2021) et propose des remédiations concrètes avec exemples de code.</p>
 
 
 
@@ -97,89 +97,138 @@ cp -r claude-skills-collection/skills/dev-owasp-checker ~/.claude/skills/</div><
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>OWASP Checker</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Identification du type d'application</strong></li>
+<h3>Étape 1 — Cadrage initial</h3>
+<p>Avant d'auditer, demande (ou infère du contexte) :</p>
 <ul>
-<li>Déterminer le contexte : application web, API REST/GraphQL, application mobile, microservices</li>
-<li>Identifier la stack technique pour adapter les vérifications</li>
-<li>Recenser les fonctionnalités critiques (authentification, paiement, données personnelles)</li>
+<li><strong>Stack</strong> : langage, framework, ORM, moteur de template</li>
+<li><strong>Type</strong> : web MPA, SPA+API, API REST/GraphQL, microservices, mobile backend</li>
+<li><strong>Scope</strong> : toute l'app ou un composant précis (auth, paiement, upload…)</li>
+<li><strong>Profondeur</strong> : revue de code statique / checklist / test dynamique (pentest)</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Vérification A01 - Broken Access Control</strong></li>
+<p>Adapte les catégories à auditer : une API sans UI n'a pas de XSS stocké, un monolithe sans Docker n'a pas de misconfiguration container.</p>
+<hr>
+<h3>Étape 2 — A01 Broken Access Control <em>(criticité : critique)</em></h3>
+<p><strong>Vérifications clés :</strong></p>
 <ul>
-<li>Tester les contrôles d'accès sur chaque endpoint (authentifié vs non authentifié)</li>
-<li>Identifier les risques IDOR (manipulation d'identifiants dans les URLs ou paramètres)</li>
-<li>Vérifier l'absence de force browsing (accès direct à des URLs protégées)</li>
-<li>Contrôler que les règles d'accès sont enforced côté serveur</li>
-<li>Tester la séparation des privilèges entre rôles (admin, user, guest)</li>
+<li>Chaque endpoint applique l'autorisation côté serveur (jamais côté client)</li>
+<li>Pas d'IDOR : les IDs en URL/paramètres sont vérifiés contre l'utilisateur courant</li>
+<li>Pas de force browsing : les routes protégées retournent 401/403, pas 200</li>
+<li>Séparation des rôles testée (admin, user, guest)</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Vérification A02 - Cryptographic Failures</strong></li>
+<p><strong>Exemple de faille IDOR — Node.js Express :</strong></p>
+<pre><code class="lang-js">// ❌ Vulnérable
+app.get('/orders/:id', auth, (req, res) =&gt; {
+  db.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+});
+
+// ✅ Corrigé
+app.get('/orders/:id', auth, (req, res) =&gt; {
+  db.query('SELECT * FROM orders WHERE id = ? AND user_id = ?',
+    [req.params.id, req.user.id]);
+});</code></pre>
+<p><strong>Commande de test rapide :</strong></p>
+<pre><code class="lang-bash"># Tester l'accès cross-user avec curl
+curl -H &quot;Authorization: Bearer &lt;token_user_A&gt;&quot; https://api.example.com/orders/42
+# 42 appartient à user B → doit retourner 403, pas les données</code></pre>
+<hr>
+<h3>Étape 3 — A02 Cryptographic Failures <em>(criticité : critique)</em></h3>
+<p><strong>Checklist :</strong></p>
 <ul>
-<li>Vérifier que les données sensibles ne transitent pas en clair (HTTP, logs, URLs)</li>
-<li>Contrôler les algorithmes de hashing (bcrypt/argon2 pour passwords, jamais MD5/SHA1)</li>
-<li>Auditer la configuration TLS (TLS 1.2+ obligatoire, désactiver TLS 1.0/1.1)</li>
-<li>Vérifier l'absence de secrets hardcodés dans le code source</li>
-<li>Contrôler le chiffrement des données au repos (BDD, backups, fichiers)</li>
+<li>[ ] TLS 1.2+ obligatoire, TLS 1.0/1.1 désactivés (<code>testssl.sh</code> ou SSLLabs)</li>
+<li>[ ] Passwords : bcrypt (cost ≥ 12) ou Argon2id — jamais MD5/SHA1/SHA256 plain</li>
+<li>[ ] Secrets absents du code source (scan avec <code>trufflehog</code> ou <code>gitleaks</code>)</li>
+<li>[ ] Données sensibles absentes des logs, URLs, et réponses d'erreur</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Vérification A03 - Injection</strong></li>
+<p><strong>Scan de secrets dans git :</strong></p>
+<pre><code class="lang-bash"># Installer gitleaks et scanner le repo complet
+docker run -v $(pwd):/path zricethezav/gitleaks:latest detect --source /path --verbose</code></pre>
+<p><strong>Hashing correct en Node.js :</strong></p>
+<pre><code class="lang-js">import bcrypt from 'bcrypt';
+// ✅ cost factor 12, résistant aux GPU
+const hash = await bcrypt.hash(password, 12);
+const ok   = await bcrypt.compare(input, hash);</code></pre>
+<hr>
+<h3>Étape 4 — A03 Injection <em>(criticité : critique)</em></h3>
+<p><strong>Vecteurs à couvrir :</strong></p>
 <ul>
-<li>Tester les injections SQL (requêtes dynamiques, ORM mal utilisés, procédures stockées)</li>
-<li>Vérifier les injections NoSQL (MongoDB operators, filtres non validés)</li>
-<li>Contrôler les injections de commandes OS (exec, shell, subprocess)</li>
-<li>Tester les injections LDAP, XPath, Template (SSTI)</li>
-<li>Vérifier les protections XSS (stored, reflected, DOM-based)</li>
+<li>SQL (raw queries, ORM mal utilisés, stored procedures)</li>
+<li>NoSQL (MongoDB <code>$where</code>, opérateurs injectés dans le body JSON)</li>
+<li>OS Command (<code>exec</code>, <code>shell_exec</code>, <code>subprocess</code>)</li>
+<li>SSTI (templates Jinja2/Twig avec input utilisateur non échappé)</li>
+<li>XSS stocké/réfléchi/DOM</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Vérification A04 - Insecure Design</strong></li>
+<p><strong>SQL injection — Python SQLAlchemy :</strong></p>
+<pre><code class="lang-python"># ❌ Injection directe
+query = f&quot;SELECT * FROM users WHERE email = '{email}'&quot;
+
+# ✅ Paramétré
+result = db.execute(text(&quot;SELECT * FROM users WHERE email = :e&quot;), {&quot;e&quot;: email})</code></pre>
+<p><strong>Test NoSQL injection (MongoDB) :</strong></p>
+<pre><code class="lang-bash"># Tester un login — envoyer un objet au lieu d'une string
+curl -X POST https://api.example.com/login \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;username&quot;: {&quot;$gt&quot;: &quot;&quot;}, &quot;password&quot;: {&quot;$gt&quot;: &quot;&quot;}}'
+# Si 200 → injection confirmée</code></pre>
+<hr>
+<h3>Étape 5 — A04 Insecure Design <em>(criticité : haute)</em></h3>
+<p><strong>Points de contrôle :</strong></p>
 <ul>
-<li>Évaluer si un threat modeling a été réalisé sur les fonctionnalités critiques</li>
-<li>Vérifier l'application de patterns sécurisés (defense in depth, fail-safe defaults)</li>
-<li>Contrôler la présence de rate limiting, anti-brute-force, et anti-automation</li>
-<li>Identifier les failles logiques métier (contournement de workflow, manipulation de prix)</li>
+<li>Threat modeling réalisé sur les flux critiques (paiement, reset password, upload)</li>
+<li>Rate limiting présent sur login, SMS/email OTP, reset password</li>
+<li>Anti-automation (CAPTCHA, device fingerprint) sur les formulaires publics</li>
+<li>Failles logiques métier : contournement de prix, abus de promotions, skip d'étapes workflow</li>
 </ul>
-</ol>
+<p><strong>Rate limiting — Express (exemple) :</strong></p>
+<pre><code class="lang-js">import rateLimit from 'express-rate-limit';
+app.use('/auth/login', rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 10,
+  message: { error: 'Trop de tentatives, réessayez plus tard.' }
+}));</code></pre>
+<hr>
+<h3>Étape 6 — A05 à A10 (synthèse actionnable)</h3>
+<table><thead><tr><th>ID</th><th>Nom</th><th>Vérifications prioritaires</th><th>Outil/commande rapide</th></tr></thead><tbody><tr><td>A05</td><td>Security Misconfiguration</td><td>Headers de sécurité, comptes par défaut, stack trace exposée, permissions fichiers</td><td><code>curl -I https://site.com</code> ; <code>securityheaders.com</code></td></tr><tr><td>A06</td><td>Vulnerable Components</td><td>Dépendances avec CVE connues, packages abandonnés</td><td><code>npm audit --audit-level=high</code> / <code>pip-audit</code> / <code>trivy fs .</code></td></tr><tr><td>A07</td><td>Auth Failures</td><td>Brute force, credential stuffing, tokens prévisibles, session fixation, MFA absent</td><td>Vérifier logs de tentatives échouées ; tester reset password flow</td></tr><tr><td>A08</td><td>Data Integrity Failures</td><td>Désérialisation non sécurisée, vérification de signature des updates, CI/CD pipeline poisoning</td><td>Éviter <code>pickle.loads(user_data)</code> ; vérifier checksums des assets</td></tr><tr><td>A09</td><td>Logging Failures</td><td>Logs insuffisants sur auth/accès, absence d'alertes sur anomalies, PII dans les logs</td><td>Vérifier que login fail / 403 / 500 sont logués avec contexte</td></tr><tr><td>A10</td><td>SSRF</td><td>Validation stricte des URLs distantes, metadata cloud accessible, rebind DNS</td><td>Tester <code>http://169.254.169.254/latest/meta-data/</code> depuis un champ URL</td></tr></tbody></table>
+<p><strong>Headers de sécurité — configuration Nginx minimale :</strong></p>
+<pre><code class="lang-nginx">add_header Strict-Transport-Security &quot;max-age=63072000; includeSubDomains&quot; always;
+add_header X-Content-Type-Options &quot;nosniff&quot; always;
+add_header X-Frame-Options &quot;DENY&quot; always;
+add_header Content-Security-Policy &quot;default-src 'self'&quot; always;
+add_header Permissions-Policy &quot;geolocation=(), microphone=()&quot; always;</code></pre>
+<p><strong>Audit dépendances NPM/Python :</strong></p>
+<pre><code class="lang-bash">npm audit --audit-level=high
+pip-audit --requirement requirements.txt
+trivy fs . --severity HIGH,CRITICAL</code></pre>
+<hr>
+<h3>Étape 7 — Matrice de conformité</h3>
+<p>Produis un tableau récapitulatif :</p>
+<table><thead><tr><th>Catégorie</th><th>Statut</th><th>Criticité</th><th>Effort remédiation</th></tr></thead><tbody><tr><td>A01 Broken Access Control</td><td>✅ Conforme</td><td>—</td><td>—</td></tr><tr><td>A02 Cryptographic Failures</td><td>⚠️ Partiel</td><td>Critique</td><td>Moyen</td></tr><tr><td>A03 Injection</td><td>❌ Non conforme</td><td>Critique</td><td>Faible</td></tr><tr><td>…</td><td>…</td><td>…</td><td>…</td></tr></tbody></table>
+<p><strong>Score global</strong> : X/10 catégories conformes. Catégories bloquantes (critiques non conformes) à traiter avant mise en production.</p>
+<hr>
+<h3>Étape 8 — Plan de remédiation priorisé</h3>
+<p>Classe les actions selon la matrice <strong>Impact × Effort</strong> :</p>
 <ol>
-<li><strong>Vérification A05 à A10</strong></li>
-<ul>
-<li><strong>A05 Security Misconfiguration</strong> : headers de sécurité, permissions, comptes par défaut, erreurs exposées</li>
-<li><strong>A06 Vulnerable Components</strong> : dépendances avec CVE connues, packages non maintenus</li>
-<li><strong>A07 Auth Failures</strong> : brute force, credential stuffing, tokens prévisibles, session fixation</li>
-<li><strong>A08 Data Integrity Failures</strong> : vérification des signatures, intégrité des mises à jour, désérialisation non sécurisée</li>
-<li><strong>A09 Logging Failures</strong> : logs insuffisants, absence de monitoring, pas d'alerte sur anomalie</li>
-<li><strong>A10 SSRF</strong> : validation des URLs distantes, metadata cloud exposé, rebind DNS</li>
-</ul>
+<li><strong>Immédiat (&lt; 1 semaine)</strong> : failles critiques exploitables (injection, IDOR, secrets exposés)</li>
+<li><strong>Court terme (1–4 semaines)</strong> : misconfiguration, composants vulnérables, headers manquants</li>
+<li><strong>Long terme (1–3 mois)</strong> : refonte design (rate limiting, threat modeling, logging structuré)</li>
 </ol>
-<ol>
-<li><strong>Matrice de conformité par catégorie</strong></li>
+<p>Pour chaque item : fournir l'extrait de code avant/après + la référence OWASP officielle (ex : <a href="https://owasp.org/Top10/A03_2021-Injection/" target="_blank" rel="noopener">A03:2021</a>).</p>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
 <ul>
-<li>Attribuer un statut pour chaque catégorie : Conforme / Partiellement conforme / Non conforme</li>
-<li>Calculer un score global de conformité OWASP (ex : 7/10 catégories conformes)</li>
-<li>Mettre en évidence les catégories critiques non conformes</li>
-<li>Comparer avec les standards industry (PCI-DSS, ISO 27001 si applicable)</li>
+<li><strong>Ne jamais fournir d'exploit fonctionnel</strong> sans mandat de pentest explicite — donner des PoC conceptuels uniquement</li>
+<li><strong>Ne pas cocher &quot;conforme&quot; par défaut</strong> si l'information est insuffisante — signaler le manque d'info</li>
+<li><strong>ORM ≠ immunité SQL</strong> : Hibernate, Prisma, SQLAlchemy peuvent être contournés avec <code>raw()</code> ou <code>text()</code> mal utilisés</li>
+<li><strong>HTTPS ≠ chiffrement complet</strong> : valider aussi le chiffrement au repos et dans les logs</li>
+<li><strong>Dépendances transitives</strong> : <code>npm audit</code> ne couvre pas toujours les sous-dépendances — utiliser <code>trivy</code> ou <code>snyk</code></li>
+<li><strong>A04 Insecure Design</strong> ne se corrige pas avec du code : nécessite une revue d'architecture</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Plan de remédiation priorisé avec exemples de code</strong></li>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Prioriser selon l'impact combiné (criticité OWASP × exposition réelle)</li>
-<li>Fournir des exemples de code correctif pour chaque non-conformité</li>
-<li>Proposer des bibliothèques et middlewares de sécurité adaptés au stack</li>
-<li>Définir un calendrier de remédiation (immédiat / court terme / long terme)</li>
-</ul>
-</ol>
-<h2>Règles</h2>
-<ul>
-<li>Adapte les vérifications au stack technique : les injections SQL ne s'appliquent pas de la même façon en Prisma ORM qu'en raw SQL</li>
-<li>Reste éthique : ne fournis pas d'exploits offensifs sans contexte de pentest autorisé explicitement</li>
-<li>Priorise toujours par criticité — un A01 critique vaut mieux que dix A09 mineurs</li>
-<li>Fournis des exemples de code concrets pour chaque remédiation (avant/après)</li>
-<li>Référence toujours la documentation officielle OWASP pour chaque catégorie</li>
+<li>Utiliser <strong>OWASP ASVS</strong> (Application Security Verification Standard) pour un audit structuré par niveau (L1/L2/L3)</li>
+<li>Intégrer <strong>SAST</strong> (Semgrep, Sonarqube) et <strong>SCA</strong> (Trivy, Snyk) dans la CI pour détecter les régressions</li>
+<li>Adopter <strong>OpenID Connect / OAuth 2.1</strong> pour l'authentification plutôt que les sessions custom</li>
+<li>Préférer <strong>Passkeys (WebAuthn)</strong> au mot de passe pour éliminer structurellement A07</li>
+<li>Pour les APIs, appliquer les vérifications <strong>OWASP API Security Top 10 2023</strong> en complément</li>
 </ul>
 </article>
 </main>

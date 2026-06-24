@@ -96,20 +96,81 @@ cp -r claude-skills-collection/skills/parenting-screen-time-planner ~/.claude/sk
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Screen Time Planner</h1>
-<h2>Étape 1 — Situation</h2>
-<p>Âge de l'enfant, usage actuel (durée, type de contenu), ce qui inquiète le parent.</p>
-<h2>Étape 2 — Repères par âge</h2>
-<p>Recommandations générales adaptées à la tranche d'âge (OMS/AAP).</p>
-<h2>Étape 3 — Plan personnalisé</h2>
-<table><thead><tr><th>Jour</th><th>Durée max</th><th>Type d'écran autorisé</th><th>Moments sans écran</th></tr></thead><tbody></tbody></table>
-<h2>Étape 4 — Règles familiales</h2>
-<p>5 règles simples à afficher (pas d'écran à table, pas avant le coucher…).</p>
-<h2>Étape 5 — Alternatives</h2>
-<p>Activités de remplacement adaptées à l'âge.</p>
-<h2>Règles</h2>
+<blockquote>Outil d'aide à la réflexion familiale. Chaque enfant est différent ; en cas d'inquiétude persistante (comportement, développement, santé), consulte un pédiatre ou un professionnel de la santé.</blockquote>
+<hr>
+<h2>Étape 1 — Collecter la situation</h2>
+<p>Demander (si non fourni) :</p>
 <ul>
-<li>Pas de culpabilisation des parents.</li>
-<li>Approche progressive et réaliste.</li>
+<li><strong>Âge de l'enfant</strong> (en années, voire mois pour les moins de 3 ans)</li>
+<li><strong>Usage actuel estimé</strong> : durée quotidienne totale, type de contenu (YouTube, jeux, devoirs, réseaux sociaux, vidéo passive)</li>
+<li><strong>Contexte</strong> : semaine vs week-end, école à la maison, fratrie, situation monoparentale</li>
+<li><strong>Ce qui inquiète</strong> : conflits au moment de couper, manque de sommeil, notes scolaires, isolement social</li>
+</ul>
+<p>Ne pas demander tous ces éléments d'un coup ; prioriser âge + durée actuelle + motif principal.</p>
+<hr>
+<h2>Étape 2 — Repères par âge (OMS / AAP 2025)</h2>
+<table><thead><tr><th>Tranche d'âge</th><th>Recommandation maximale/jour</th><th>Notes clés</th></tr></thead><tbody><tr><td>&lt; 18 mois</td><td>Aucun écran récréatif</td><td>Appels vidéo famille OK</td></tr><tr><td>18–24 mois</td><td>Très limité, parents présents</td><td>Contenu de qualité uniquement</td></tr><tr><td>2–5 ans</td><td>1 h max</td><td>Contenu éducatif, co-visionnage recommandé</td></tr><tr><td>6–12 ans</td><td>1 h–2 h</td><td>Selon activités physiques et scolaires</td></tr><tr><td>13–17 ans</td><td>Pas de limite chiffrée unique</td><td>Qualité, type de contenu et équilibres clés</td></tr></tbody></table>
+<blockquote>Ces repères sont des guides, pas des règles absolues. Un enfant qui fait 2 h de sport, dort bien et a une vie sociale active tolère mieux 2 h d'écran qu'un enfant sédentaire avec 1 h.</blockquote>
+<hr>
+<h2>Étape 3 — Construire le plan hebdomadaire</h2>
+<p>Générer un tableau adapté à la situation. Exemple pour un enfant de 8 ans :</p>
+<table><thead><tr><th>Moment</th><th>Semaine</th><th>Week-end</th></tr></thead><tbody><tr><td>Matin avant école</td><td>✗ (interdit)</td><td>30 min max</td></tr><tr><td>Après école (devoirs faits)</td><td>45 min</td><td>1 h 30</td></tr><tr><td>Dîner / repas</td><td>✗</td><td>✗</td></tr><tr><td>1 h avant coucher</td><td>✗</td><td>✗</td></tr><tr><td><strong>Total max</strong></td><td><strong>45 min/j</strong></td><td><strong>2 h/j</strong></td></tr></tbody></table>
+<p><strong>Critères de décision pour ajuster les durées :</strong></p>
+<ul>
+<li>Devoirs non faits → pas d'écran ce soir</li>
+<li>Activité physique &lt; 1 h → réduire de 15 min</li>
+<li>Coucher après 21 h → supprimer la session du soir</li>
+</ul>
+<hr>
+<h2>Étape 4 — Règles familiales (à afficher)</h2>
+<p>Proposer 5 règles concrètes, simples, non négociables :</p>
+<ol>
+<li><strong>Pas d'écran pendant les repas</strong> (table = moment de famille)</li>
+<li><strong>Les écrans s'éteignent 1 h avant le coucher</strong> (mélatonine et sommeil)</li>
+<li><strong>Pas d'écran dans la chambre la nuit</strong> (les appareils chargent dans le salon)</li>
+<li><strong>Les devoirs et les tâches ménagères d'abord</strong></li>
+<li><strong>Le parent peut vérifier le contenu à tout moment, sans justification</strong></li>
+</ol>
+<p>Adapter selon l'âge : pour un ado, remplacer &quot;le parent vérifie&quot; par &quot;transparence volontaire&quot; pour préserver la confiance.</p>
+<hr>
+<h2>Étape 5 — Alternatives par âge</h2>
+<p>Proposer des activités de remplacement concrètes quand l'enfant réclame un écran :</p>
+<ul>
+<li><strong>2–5 ans</strong> : dessin libre, pâte à modeler, lecture à voix haute, jeux d'imitation</li>
+<li><strong>6–10 ans</strong> : LEGO, lecture seul, vélo, jeux de société, cuisine simple</li>
+<li><strong>11–14 ans</strong> : musique (instrument ou écoute), sport, BD/manga, atelier créatif</li>
+<li><strong>15–17 ans</strong> : activité physique, projet perso (photo, code, dessin), sorties avec amis</li>
+</ul>
+<blockquote>Astuce : créer une &quot;boîte des idées ennui&quot; avec l'enfant (morceaux de papier à tirer au sort) fonctionne mieux que des suggestions imposées par le parent.</blockquote>
+<hr>
+<h2>Étape 6 — Mise en place progressive</h2>
+<p>Ne pas imposer un changement brutal du jour au lendemain. Plan de transition recommandé :</p>
+<p><strong>Semaine 1</strong> : observer et mesurer le temps réel (app Temps d'écran iOS / Digital Wellbeing Android) <strong>Semaine 2</strong> : annoncer les nouvelles règles, les expliquer sans punition <strong>Semaine 3</strong> : appliquer progressivement, tolérer quelques dépassements <strong>Semaine 4+</strong> : tenir les règles, ajuster si nécessaire en famille</p>
+<hr>
+<h2>Anti-patterns / Pièges à éviter</h2>
+<ul>
+<li><strong>Interdiction totale brutale</strong> : crée de l'obsession et des conflits, pas d'apprentissage de l'autorégulation</li>
+<li><strong>Écran comme récompense systématique</strong> : renforce la valeur perçue et rend la limite encore plus difficile</li>
+<li><strong>Règles différentes selon les parents</strong> : incohérence = règles non respectées ; aligner les adultes du foyer d'abord</li>
+<li><strong>Écran pour calmer une crise</strong> : soulage à court terme, aggrave à long terme</li>
+<li><strong>Ne pas appliquer les règles à soi-même</strong> : les enfants imitent les adultes ; le parent sur son téléphone toute la soirée invalide les règles</li>
+<li><strong>Culpabiliser après un dépassement</strong> : mieux vaut nommer et reprendre que punir</li>
+</ul>
+<hr>
+<h2>Garde-fous spécifiques ados</h2>
+<ul>
+<li>Surveiller les <strong>signes de dépendance</strong> : irritabilité sans écran, perte d'intérêt pour autres activités, mensonges sur l'usage</li>
+<li>Les <strong>réseaux sociaux et jeux en ligne</strong> ont des mécaniques de rétention intentionnelles (notifications, streaks) : expliquer ces mécanismes à l'ado</li>
+<li>Préférer la <strong>transparence et la confiance</strong> à la surveillance cachée (logiciels espions) : quand découvert, détruit la relation</li>
+<li>En cas de cyberharcèlement ou contenu problématique, <strong>ne pas retirer le téléphone en punition</strong> : l'enfant ne signalera plus rien</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Contrôle parental natif</strong> : iOS Screen Time, Android Digital Wellbeing, ou Google Family Link — gratuits, suffisants dans la majorité des cas</li>
+<li><strong>Contrats écrits</strong> : rédiger ensemble un &quot;contrat écrans&quot; signé par l'enfant et le parent (fonctionner par accord, pas par diktat)</li>
+<li><strong>Revue mensuelle</strong> : réévaluer les règles avec l'enfant au fur et à mesure qu'il grandit</li>
+<li><strong>Qualité &gt; quantité</strong> : 1 h de contenu éducatif interactif vaut mieux que 30 min de vidéo passive</li>
 </ul>
 </article>
 </main>

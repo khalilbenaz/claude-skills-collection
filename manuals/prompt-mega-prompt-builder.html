@@ -96,27 +96,110 @@ cp -r claude-skills-collection/skills/prompt-mega-prompt-builder ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Mega-Prompt Builder</h1>
-<h2>Étape 1 — Objectif</h2>
-<p>Que doit faire le LLM, pour qui, quel format, quel ton, quelles contraintes.</p>
-<h2>Étape 2 — Architecture</h2>
-<p>Construis avec ces blocs (selon pertinence) :</p>
-<pre><code>[RÔLE] — Qui est le LLM
-[CONTEXTE] — Infos de fond
-[OBJECTIF] — Tâche principale
-[INSTRUCTIONS] — Étapes numérotées
-[FORMAT] — Structure de sortie exacte
-[EXEMPLES] — 1-3 few-shot input → output
-[CONTRAINTES] — Ce qu'il ne faut PAS faire
-[QUALITÉ] — Critères à respecter
-[VARIABLES] — {{placeholders}} réutilisables</code></pre>
-<h2>Étape 3 — Rédaction</h2>
-<p>Mega-prompt complet, prêt à copier-coller.</p>
-<h2>Étape 4 — Guide d'utilisation</h2>
-<p>Variables à remplir, adaptation, pièges à éviter.</p>
-<h2>Étape 5 — Versions</h2>
+<h2>Workflow</h2>
+<h3>Étape 1 — Recueil des paramètres</h3>
+<p>Avant d'écrire quoi que ce soit, extraire :</p>
+<table><thead><tr><th>Paramètre</th><th>Question clé</th></tr></thead><tbody><tr><td><strong>LLM cible</strong></td><td>GPT-4o, Claude 3.x, Gemini, local ?</td></tr><tr><td><strong>Objectif principal</strong></td><td>Une seule phrase : &quot;Le LLM doit…&quot;</td></tr><tr><td><strong>Audience finale</strong></td><td>Qui lit la sortie (dev, client, outil automatisé) ?</td></tr><tr><td><strong>Format de sortie</strong></td><td>JSON, Markdown, texte libre, bullet list…</td></tr><tr><td><strong>Ton</strong></td><td>Expert, pédagogique, neutre, concis ?</td></tr><tr><td><strong>Contraintes dures</strong></td><td>Longueur max, langue, ce qui est interdit</td></tr><tr><td><strong>Réutilisabilité</strong></td><td>Prompt one-shot ou template avec variables ?</td></tr></tbody></table>
+<p>Si plusieurs paramètres sont ambigus, poser les questions groupées en une seule fois.</p>
+<hr>
+<h3>Étape 2 — Choix de l'architecture</h3>
+<p>Sélectionner les blocs selon le besoin :</p>
+<pre><code>[RÔLE]        — Persona du LLM (expert, outil, agent…)
+[CONTEXTE]    — Background nécessaire à la tâche
+[OBJECTIF]    — Tâche principale en 1-2 phrases
+[INSTRUCTIONS]— Étapes numérotées, ordre chronologique
+[FORMAT]      — Structure exacte de la sortie
+[EXEMPLES]    — Few-shot : 1-3 paires input → output
+[CONTRAINTES] — Ce qu'il ne faut PAS faire (liste)
+[QUALITÉ]     — Critères de succès mesurables
+[VARIABLES]   — {{placeholders}} pour la réutilisation</code></pre>
+<p><strong>Critères de décision — quand inclure chaque bloc :</strong></p>
 <ul>
-<li><strong>Standard</strong> : prompt complet</li>
-<li><strong>Template</strong> : avec {{placeholders}}</li>
+<li><code>[RÔLE]</code> : toujours, sauf prompts ultra-courts (&lt; 3 lignes)</li>
+<li><code>[EXEMPLES]</code> : dès que le format attendu est non trivial ou que le ton est très précis</li>
+<li><code>[CONTRAINTES]</code> : dès qu'il y a un risque de dérive (hallucinations, hors-sujet, verbosité)</li>
+<li><code>[VARIABLES]</code> : si le prompt sera utilisé &gt; 1 fois avec des inputs variables</li>
+<li><code>[QUALITÉ]</code> : si le prompt sera évalué automatiquement (CI, eval harness)</li>
+</ul>
+<hr>
+<h3>Étape 3 — Rédaction du mega-prompt</h3>
+<p>Rédiger le prompt complet, prêt à copier-coller. Exemple de structure :</p>
+<pre><code class="lang-markdown"># [RÔLE]
+Tu es un expert en analyse de code Python spécialisé en performance et sécurité.
+
+# [CONTEXTE]
+L'utilisateur te soumet un extrait de code Python issu d'une API REST.
+Les environnements cibles sont Python 3.11+ et déploiement serverless.
+
+# [OBJECTIF]
+Analyser le code soumis et produire un rapport de revue structuré.
+
+# [INSTRUCTIONS]
+1. Identifier les problèmes de performance (O(n²), I/O bloquant, etc.)
+2. Signaler les vulnérabilités OWASP Top 10 pertinentes
+3. Proposer une version corrigée du code avec commentaires inline
+4. Donner un score de qualité global sur 10 avec justification
+
+# [FORMAT]
+## Problèmes détectés
+- [PERF|SEC|STYLE] Description — ligne X
+
+## Code corrigé</code></pre>
+<p>...code...</p>
+<pre><code>
+## Score qualité : X/10
+Justification : ...
+
+# [CONTRAINTES]
+- Ne pas réécrire intégralement si le code est fonctionnel à &gt; 80%
+- Ne pas mentionner de bibliothèques non disponibles en serverless standard
+- Répondre uniquement en français
+
+# [QUALITÉ]
+- Chaque problème cite le numéro de ligne
+- Le code corrigé est exécutable sans modification
+- Le score est justifié en 2-3 phrases
+
+# [VARIABLES]
+CODE = {{code_python}}</code></pre>
+<hr>
+<h3>Étape 4 — Version template avec placeholders</h3>
+<p>Fournir systématiquement une version avec <code>{{variables}}</code> pour la réutilisation :</p>
+<pre><code class="lang-python"># Exemple d'usage programmatique (Python)
+template = open(&quot;prompt.md&quot;).read()
+prompt = template.replace(&quot;{{code_python}}&quot;, code_to_review)
+response = client.messages.create(model=&quot;claude-opus-4-5&quot;, messages=[{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: prompt}])</code></pre>
+<pre><code class="lang-bash"># Substitution simple en shell
+sed 's/{{code_python}}/'&quot;$(cat myfile.py)&quot;'/g' prompt.md | pbcopy</code></pre>
+<hr>
+<h3>Étape 5 — Guide d'utilisation</h3>
+<p>Livrer systématiquement avec le prompt :</p>
+<ol>
+<li><strong>Variables à remplir</strong> : liste avec format attendu pour chaque <code>{{placeholder}}</code></li>
+<li><strong>Paramètres LLM recommandés</strong> : temperature (0.0–0.3 pour tâches factuelles, 0.7–1.0 pour créatif), max_tokens</li>
+<li><strong>Test rapide</strong> : un exemple d'input minimal pour vérifier que le prompt fonctionne</li>
+<li><strong>Points d'adaptation</strong> : quelles sections modifier selon le contexte</li>
+</ol>
+<hr>
+<h2>Anti-patterns et garde-fous</h2>
+<h3>Ce qu'il ne faut PAS faire</h3>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td>Instructions contradictoires</td><td>Le LLM choisit arbitrairement</td><td>Revoir la logique, une seule règle par cas</td></tr><tr><td>Surcontraindre sans exemples</td><td>Résultat trop rigide ou mauvais</td><td>Ajouter 1-2 few-shot examples</td></tr><tr><td>Prompt &gt; 4 000 tokens sans nécessité</td><td>Coût élevé, distraction du modèle</td><td>Découper en prompts chaînés</td></tr><tr><td><code>[RÔLE]</code> vague (&quot;Tu es un assistant utile&quot;)</td><td>Aucun guidage de comportement</td><td>Préciser domaine + niveau d'expertise</td></tr><tr><td>Instructions en langage naturel flou</td><td>Interprétations variables</td><td>Utiliser des listes numérotées + mots-clés</td></tr><tr><td>Mélanger langue FR/EN dans les instructions</td><td>Confusion du modèle</td><td>Choisir une langue, termes techniques EN OK</td></tr><tr><td>Pas de <code>[CONTRAINTES]</code></td><td>Dérives, hallucinations, verbosité</td><td>Toujours lister 3-5 interdits explicites</td></tr></tbody></table>
+<h3>Pièges spécifiques 2025-2026</h3>
+<ul>
+<li><strong>Context window</strong> : Claude 3.x / GPT-4o supportent 128k–200k tokens, mais la précision décline au-delà de 50k tokens d'input ; éviter de coller des fichiers entiers si non nécessaire.</li>
+<li><strong>System vs User prompt</strong> : les instructions de comportement stables vont dans le <code>system prompt</code>, le contenu variable dans le <code>user prompt</code>.</li>
+<li><strong>Few-shot ordering</strong> : placer les exemples les plus représentatifs en dernier (effet de récence).</li>
+<li><strong>JSON mode</strong> : si la sortie doit être du JSON strict, activer le mode <code>response_format: {type: &quot;json_object&quot;}</code> côté API plutôt que de l'imposer via le prompt seul.</li>
+<li><strong>Prompt injection</strong> : si des données externes (fichiers, web) sont injectées, isoler avec des balises claires : <code>&lt;user_data&gt;...&lt;/user_data&gt;</code>.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Versionner les prompts</strong> comme du code : fichier <code>.md</code> ou <code>.txt</code> dans le repo, changelog.</li>
+<li><strong>Eval avant déploiement</strong> : tester sur ≥ 10 exemples représentatifs avant usage en production.</li>
+<li><strong>Prompt court + RAG &gt; prompt long</strong> : injecter uniquement le contexte pertinent via retrieval plutôt que tout coller.</li>
+<li><strong>Séparation des responsabilités</strong> : un prompt = une tâche. Chaîner pour les pipelines complexes.</li>
+<li><strong>Commentaires dans le prompt</strong> : les LLM modernes ignorent les commentaires HTML <code>&lt;!-- --&gt;</code> ; utiliser pour documenter sans affecter la sortie.</li>
 </ul>
 </article>
 </main>

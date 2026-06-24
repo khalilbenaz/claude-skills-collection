@@ -96,49 +96,105 @@ cp -r claude-skills-collection/skills/health-pain-journal ~/.claude/skills/</div
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Pain Journal</h1>
-<p>Quand l'utilisateur décrit des douleurs chroniques ou récurrentes, suis ce workflow.</p>
-<h2>Étape 1 — Caractérisation de la douleur</h2>
-<p>Pour chaque douleur, identifie :</p>
+<p>Ce skill aide à structurer le suivi de douleurs chroniques ou récurrentes pour mieux les comprendre, les communiquer à un professionnel de santé, et repérer les patterns dans le temps.</p>
+<blockquote><strong>Rappel important</strong> : Ce journal est un outil de suivi personnel. Il ne remplace pas une consultation médicale. Toute douleur persistante, inhabituelle, soudaine et intense, ou qui s'aggrave doit être évaluée par un professionnel de santé qualifié.</blockquote>
+<hr>
+<h2>Étape 1 — Accueil et écoute</h2>
+<p>Commence par accueillir ce que la personne décrit, sans minimiser ni interpréter. Pose des questions ouvertes pour laisser la personne décrire à sa façon avant de structurer.</p>
+<p>Exemple d'ouverture :</p>
+<blockquote>&quot;Décris-moi cette douleur comme tu la ressens — depuis quand, où, comment elle se manifeste.&quot;</blockquote>
+<hr>
+<h2>Étape 2 — Caractérisation de chaque douleur</h2>
+<p>Pour chaque douleur identifiée, recueille :</p>
+<table><thead><tr><th>Dimension</th><th>Ce que tu cherches à savoir</th></tr></thead><tbody><tr><td><strong>Localisation</strong></td><td>Où exactement ? Diffuse ou ponctuelle ? Uni/bilatéral ?</td></tr><tr><td><strong>Type</strong></td><td>Brûlure, pression, élancement, crampe, pulsation, décharge électrique…</td></tr><tr><td><strong>Intensité</strong></td><td>Échelle 0-10 (0 = absente, 10 = insupportable)</td></tr><tr><td><strong>Durée</strong></td><td>Quelques secondes, minutes, heures, en continu ?</td></tr><tr><td><strong>Fréquence</strong></td><td>Quotidienne, hebdomadaire, épisodique, imprévisible ?</td></tr><tr><td><strong>Irradiation</strong></td><td>Se propage-t-elle ? Vers où ?</td></tr><tr><td><strong>Moment</strong></td><td>Matin au réveil, la nuit, après effort, en position assise, aléatoire ?</td></tr><tr><td><strong>Ancienneté</strong></td><td>Depuis quand exactement ? Début brutal ou progressif ?</td></tr></tbody></table>
+<hr>
+<h2>Étape 3 — Facteurs modulants</h2>
+<h3>Facteurs aggravants</h3>
 <ul>
-<li><strong>Localisation</strong> précise (où exactement)</li>
-<li><strong>Type</strong> (brûlure, pression, élancement, crampe, pulsation…)</li>
-<li><strong>Intensité</strong> (échelle 0-10)</li>
-<li><strong>Durée</strong> de chaque épisode</li>
-<li><strong>Fréquence</strong> (quotidienne, hebdomadaire, épisodique)</li>
-<li><strong>Irradiation</strong> (la douleur se propage-t-elle ?)</li>
-<li><strong>Moment d'apparition</strong> (matin, nuit, après effort…)</li>
+<li>Mouvements ou postures spécifiques</li>
+<li>Alimentation ou boissons</li>
+<li>Stress, émotions, fatigue</li>
+<li>Température, météo (froid, humidité)</li>
+<li>Effort physique ou son absence prolongée</li>
 </ul>
-<h2>Étape 2 — Facteurs modulants</h2>
-<p>Identifie :</p>
+<h3>Facteurs soulageants</h3>
 <ul>
-<li><strong>Facteurs aggravants</strong> : mouvement, position, alimentation, stress, météo, fatigue…</li>
-<li><strong>Facteurs soulageants</strong> : repos, chaleur, froid, médicament, position…</li>
-<li><strong>Traitements déjà essayés</strong> et leur efficacité perçue</li>
+<li>Repos, chaleur, froid, massage</li>
+<li>Position particulière</li>
+<li>Médicaments pris (nom, dosage, efficacité perçue en %)</li>
+<li>Autres approches : kiné, ostéo, relaxation, sport léger…</li>
 </ul>
-<h2>Étape 3 — Tableau de suivi</h2>
-<table><thead><tr><th>Date</th><th>Localisation</th><th>Type</th><th>Intensité (0-10)</th><th>Durée</th><th>Déclencheur</th><th>Ce qui soulage</th><th>Médicament pris</th><th>Notes</th></tr></thead><tbody></tbody></table>
-<h2>Étape 4 — Évolution dans le temps</h2>
-<p>Si plusieurs épisodes sont décrits :</p>
+<hr>
+<h2>Étape 4 — Tableau de suivi (à remplir sur la durée)</h2>
+<p>Propose ce modèle à copier dans un fichier texte, une note, ou un tableur :</p>
+<pre><code>Date       | Localisation | Type       | Intensité | Durée   | Déclencheur     | Ce qui soulage | Médicament | Notes
+-----------|-------------|------------|-----------|---------|-----------------|----------------|------------|------
+2026-06-20 | Bas du dos D | élancement | 6/10      | 2h      | Station debout  | Chaleur locale | Ibuprofène | après travail
+2026-06-22 | Nuque + tête | pulsation  | 7/10      | 4h      | Mauvais sommeil | Obscurité/repos | Paracétamol | migraine ?</code></pre>
+<p>Conseil : remplir le tableau <strong>dans les 30 minutes</strong> suivant un épisode pour ne pas perdre les détails.</p>
+<hr>
+<h2>Étape 5 — Analyse des patterns (si plusieurs épisodes)</h2>
+<p>Quand plusieurs entrées sont disponibles, cherche :</p>
+<ol>
+<li><strong>Tendance générale</strong> : la douleur augmente-t-elle, diminue-t-elle ou stagne-t-elle sur les dernières semaines ?</li>
+<li><strong>Cycles</strong> : y a-t-il des jours de la semaine, des périodes du mois, des saisons plus touchées ?</li>
+<li><strong>Corrélations</strong> : un déclencheur revient-il systématiquement avant les pics ?</li>
+<li><strong>Efficacité des traitements</strong> : quel soulagement en % pour chaque approche ?</li>
+<li><strong>Changements de nature</strong> : la douleur a-t-elle changé de type, de localisation ou d'intensité maximale ?</li>
+</ol>
+<hr>
+<h2>Étape 6 — Synthèse pour la consultation médicale</h2>
+<p>Produis un résumé court et factuel à apporter au médecin :</p>
+<pre><code>SYNTHÈSE DOULEUR — [Prénom] — [Date de la synthèse]
+
+Douleur principale : [localisation + type]
+Durée du suivi : [X semaines/mois]
+Fréquence observée : [X épisodes sur la période]
+Intensité moyenne / maximale : [Y / Z sur 10]
+Déclencheurs les plus fréquents : [liste]
+Ce qui soulage le mieux : [liste + efficacité %]
+Traitements actuels : [nom, posologie, efficacité]
+Évolution : [stable / s'aggrave / s'améliore]
+Points inhabituels : [ex. irradiation nouvelle, douleur nocturne, perte de sensibilité]</code></pre>
+<h3>5 questions personnalisées à poser au médecin</h3>
+<p>Génère des questions adaptées au profil, par exemple :</p>
 <ul>
-<li>Note si la douleur <strong>augmente</strong>, <strong>diminue</strong> ou <strong>stagne</strong></li>
-<li>Repère les schémas cycliques éventuels</li>
-<li>Signale les changements de nature ou de localisation</li>
+<li>&quot;Faut-il réaliser un examen complémentaire (imagerie, bilan sanguin) ?&quot;</li>
+<li>&quot;Y a-t-il un lien possible avec [facteur identifié] ?&quot;</li>
+<li>&quot;Quel est le délai raisonnable avant de réévaluer le traitement actuel ?&quot;</li>
+<li>&quot;Quand faut-il aller aux urgences pour cette douleur ?&quot;</li>
+<li>&quot;Existe-t-il une prise en charge spécialisée douleur (centre antidouleur) ?&quot;</li>
 </ul>
-<h2>Étape 5 — Conclusion</h2>
-<h3>Points importants pour le médecin</h3>
-<p>Les éléments les plus significatifs à communiquer en consultation.</p>
-<h3>Informations manquantes</h3>
-<p>Ce qui manque pour un suivi plus précis.</p>
-<h3>5 questions pour le médecin</h3>
-<p>Questions personnalisées sur le diagnostic, les examens et le traitement de la douleur.</p>
-<h2>Règles</h2>
+<hr>
+<h2>Signaux d'alarme — consulter rapidement ou appeler le 15</h2>
+<p>Signale ces situations sans attendre :</p>
 <ul>
-<li>Ne pose jamais de diagnostic sur l'origine de la douleur.</li>
-<li>Ne recommande jamais de médicament antidouleur spécifique.</li>
-<li>Valide la réalité de la douleur — ne minimise jamais.</li>
+<li>Douleur thoracique intense (surtout avec essoufflement ou bras gauche)</li>
+<li>Douleur abdominale brutale et intense</li>
+<li>Douleur de tête &quot;en coup de tonnerre&quot; (la pire jamais ressentie)</li>
+<li>Douleur avec fièvre élevée et raideur de nuque</li>
+<li>Douleur accompagnée de perte de sensibilité, de paralysie ou troubles urinaires/intestinaux</li>
+<li>Douleur après traumatisme (chute, accident)</li>
+<li>Aggravation très rapide sans cause identifiable</li>
 </ul>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce journal est un outil de suivi. Toute douleur persistante, inhabituelle ou invalidante doit être évaluée par un professionnel de santé.</blockquote>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Régularité &gt; exhaustivité</strong> : mieux vaut noter brièvement chaque jour que faire un long bilan une fois par semaine.</li>
+<li><strong>Données objectives + subjectives</strong> : l'intensité ressentie est valide ; note aussi les éléments mesurables (durée exacte, heure de prise médicament).</li>
+<li><strong>Ne pas normaliser une douleur</strong> : &quot;j'ai toujours eu ça&quot; n'est pas une raison de ne pas consulter.</li>
+<li><strong>Partager le journal</strong> : apporter le tableau au médecin ou le envoyer en amont par messagerie sécurisée améliore la qualité de la consultation.</li>
+<li><strong>Suivi longitudinal</strong> : un journal sur 4 à 6 semaines a plus de valeur diagnostique qu'une description orale lors d'une consultation unique.</li>
+</ul>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<ul>
+<li>Ne jamais <strong>minimiser ou invalider</strong> la douleur (&quot;c'est peut-être psychologique&quot;, &quot;ce n'est pas si grave&quot;).</li>
+<li>Ne jamais <strong>suggérer un diagnostic</strong> médical même probable.</li>
+<li>Ne jamais <strong>recommander un médicament spécifique</strong> ni ajuster un dosage.</li>
+<li>Ne pas <strong>surcharger</strong> de questions en une seule fois — procéder par étapes selon l'état de la personne.</li>
+<li>Ne pas présenter le journal comme un substitut à la prise en charge médicale.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

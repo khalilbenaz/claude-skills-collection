@@ -96,24 +96,84 @@ cp -r claude-skills-collection/skills/writing-proofreader-fr ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Proofreader FR</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Correction</strong> en 3 passes :</li>
+<h2>Workflow en 4 étapes</h2>
+<h3>1. Diagnostic initial (avant de corriger)</h3>
+<p>Identifie le contexte avant toute correction :</p>
 <ul>
-<li><strong>Orthographe &amp; grammaire</strong> : accords, conjugaisons, coquilles</li>
-<li><strong>Syntaxe &amp; style</strong> : phrases trop longues, répétitions, lourdeurs</li>
-<li><strong>Clarté &amp; cohérence</strong> : logique, transitions, ton consistent</li>
+<li><strong>Registre</strong> : formel (rapport, email pro, administratif) / informel (message, blog) / technique (doc, code commentaire) / littéraire</li>
+<li><strong>Destinataire</strong> : client, collègue, grand public, expert métier</li>
+<li><strong>Longueur</strong> : &lt; 100 mots → tout corriger en une passe ; &gt; 500 mots → annoter les passages clés + version corrigée complète</li>
 </ul>
-<li><strong>Annotations</strong> : pour chaque correction, explique brièvement pourquoi.</li>
-<li><strong>Version corrigée</strong> : texte propre intégral.</li>
-<li><strong>Résumé</strong> : types d'erreurs récurrentes + conseil d'amélioration principal.</li>
-</ol>
-<h2>Règles</h2>
+<p>Si le contexte n'est pas clair, pose UNE seule question avant de commencer.</p>
+<hr>
+<h3>2. Correction en 3 passes</h3>
+<h4>Passe 1 — Orthographe &amp; grammaire</h4>
+<p>Corrections non-négociables :</p>
+<table><thead><tr><th>Erreur fréquente</th><th>Exemple fautif</th><th>Correction</th></tr></thead><tbody><tr><td>Accord adjectif</td><td>&quot;des résultats positif&quot;</td><td>&quot;des résultats positifs&quot;</td></tr><tr><td>Accord participe passé avec avoir</td><td>&quot;les fichiers qu'il a envoyé&quot;</td><td>&quot;les fichiers qu'il a envoyés&quot;</td></tr><tr><td>Confusion homophones</td><td>&quot;il ce trompe&quot;</td><td>&quot;il se trompe&quot;</td></tr><tr><td>Ponctuation espace</td><td>&quot;bonjour , merci&quot;</td><td>&quot;bonjour, merci&quot;</td></tr><tr><td>Tiret vs apostrophe</td><td>&quot;aujourd'hui&quot; mal encodé</td><td>vérifier les guillemets et apostrophes typographiques</td></tr></tbody></table>
+<h4>Passe 2 — Syntaxe &amp; style</h4>
+<p>Critères de décision — intervenir si :</p>
 <ul>
-<li>Respecte le style et la voix de l'auteur.</li>
-<li>Distingue erreur (à corriger) vs choix stylistique (à signaler sans imposer).</li>
-<li>Adapte au registre (formel, informel, littéraire, technique).</li>
-<li>Ne réécris pas tout — corrige ce qui doit l'être.</li>
+<li>Phrase &gt; 40 mots sans ponctuation intermédiaire → couper</li>
+<li>Même mot répété dans la même phrase ou paragraphe adjacent → synonyme ou reformulation</li>
+<li>Forme passive systématique quand le sujet est connu → préférer l'actif</li>
+<li>Nominalisation inutile : &quot;faire l'analyse de&quot; → &quot;analyser&quot;</li>
+<li>Faux ami ou calque anglais : &quot;suite&quot; (bureau) au lieu de &quot;logiciel&quot;, &quot;implémentation&quot; quand &quot;mise en œuvre&quot; est plus naturel</li>
+</ul>
+<h4>Passe 3 — Clarté &amp; cohérence</h4>
+<ul>
+<li>Logique : chaque paragraphe a une idée principale, les transitions sont explicites</li>
+<li>Ton consistent : pas de tutoiement/vouvoiement mélangés, pas de mélange registres</li>
+<li>Acronymes : définis à la première occurrence</li>
+<li>Temps verbaux : cohérence dans l'ensemble du texte</li>
+</ul>
+<hr>
+<h3>3. Format de sortie</h3>
+<p>Utilise ce format systématiquement :</p>
+<pre><code>### Corrections annotées
+
+[ORTHO] &quot;mot fautif&quot; → &quot;mot corrigé&quot; — raison brève
+[STYLE] &quot;phrase lourde&quot; → &quot;phrase allégée&quot; — raison brève
+[CLARTÉ] &quot;passage ambigu&quot; → &quot;passage reformulé&quot; — raison brève
+
+---
+
+### Texte corrigé
+
+[Version intégrale propre]
+
+---
+
+### Résumé
+
+- Erreurs récurrentes : [liste courte]
+- Point d'amélioration principal : [un conseil actionnable]</code></pre>
+<p>Pour les textes courts (&lt; 80 mots), les annotations peuvent être inline en gras.</p>
+<hr>
+<h3>4. Livraison</h3>
+<ul>
+<li>Toujours livrer la <strong>version corrigée intégrale</strong> en dernier — jamais uniquement les annotations.</li>
+<li>Si des choix stylistiques discutables ont été conservés, les signaler en fin de section &quot;Résumé&quot; sous <code>Choix conservés (style auteur)</code>.</li>
+</ul>
+<hr>
+<h2>Critères de décision : corriger vs. signaler vs. laisser</h2>
+<table><thead><tr><th>Situation</th><th>Action</th></tr></thead><tbody><tr><td>Faute de grammaire objective</td><td>Corriger sans demander</td></tr><tr><td>Rupture de registre (ex. soudain tutoiement)</td><td>Corriger + signaler</td></tr><tr><td>Répétition que l'auteur semble vouloir (anaphore)</td><td>Signaler, ne pas toucher</td></tr><tr><td>Anglicisme intégré dans l'usage courant (ex. &quot;email&quot;, &quot;burnout&quot;)</td><td>Laisser</td></tr><tr><td>Anglicisme évitable (ex. &quot;brainstorming&quot; → &quot;remue-méninges&quot; possible)</td><td>Proposer l'alternative, ne pas imposer</td></tr><tr><td>Phrase longue qui reste claire</td><td>Laisser</td></tr><tr><td>Phrase longue + ambiguë</td><td>Couper + expliquer</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns / pièges</h2>
+<ul>
+<li><strong>Ne pas tout réécrire</strong> : si le texte est globalement bon, ne pas inventer des reformulations. Corriger = chirurgie, pas remplacement.</li>
+<li><strong>Ne pas uniformiser le vocabulaire métier</strong> : &quot;wallet&quot; et &quot;portefeuille&quot; peuvent coexister si l'auteur l'a choisi ; signaler, ne pas trancher.</li>
+<li><strong>Ne pas imposer le style académique</strong> à un texte conversationnel, ni inversement.</li>
+<li><strong>Guillemets</strong> : en français, guillemets « typographiques » et non &quot;anglais&quot; — corriger silencieusement.</li>
+<li><strong>Espace insécable</strong> : avant <code>?</code>, <code>!</code>, <code>:</code>, <code>;</code>, <code>»</code> et après <code>«</code> — signaler si absent, ne pas bloquer sur ça si le rendu final est HTML/Markdown (espace ordinaire acceptée).</li>
+<li><strong>Éviter la sur-annotation</strong> : &gt; 10 annotations pour un court texte = bruit. Regrouper les erreurs du même type.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Pour les textes techniques (documentation, README, commentaires de code) : corriger la langue sans toucher aux noms de variables, commandes, chemins ou identifiants entre backticks ou guillemets de code.</li>
+<li>Pour les emails/communications pro : signaler si le ton est trop familier ou trop froid selon le contexte déclaré.</li>
+<li>Pour les textes IA-générés soumis à relecture : indiquer si le texte a des marqueurs typiques (répétitions de structures, transitions mécaniques) et proposer une reformulation naturelle.</li>
+<li>Réforme de l'orthographe 1990 : accepter les deux graphies (ex. &quot;évènement&quot; / &quot;événement&quot;) ; ne pas corriger une graphie 1990 comme si c'était une faute.</li>
 </ul>
 </article>
 </main>

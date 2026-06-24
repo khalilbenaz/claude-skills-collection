@@ -97,23 +97,165 @@ cp -r claude-skills-collection/skills/iot-mqtt-architect ~/.claude/skills/</div>
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>MQTT Architect</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyse de l'architecture IoT</strong> — Identifier les appareils, les flux de données, les contraintes de bande passante et les exigences de fiabilité du système</li>
-<li><strong>Conception de la hiérarchie de topics</strong> — Définir une structure de topics claire et extensible (ex: site/zone/device/metric) avec des conventions de nommage cohérentes</li>
-<li><strong>Configuration du broker</strong> — Installer et configurer le broker MQTT (Mosquitto, EMQX, HiveMQ) avec les paramètres de performance, persistance et clustering</li>
-<li><strong>Définition des niveaux QoS</strong> — Attribuer le niveau de qualité de service approprié (QoS 0, 1 ou 2) à chaque flux selon la criticité des données</li>
-<li><strong>Sécurisation des communications</strong> — Mettre en place TLS/SSL pour le chiffrement, configurer l'authentification (utilisateur/mot de passe, certificats) et les ACL par topic</li>
-<li><strong>Implémentation des clients</strong> — Développer les clients MQTT (publish/subscribe) avec gestion de la reconnexion, du last will testament et des messages retenus</li>
-<li><strong>Patterns avancés</strong> — Implémenter les patterns adaptés (request/response, fan-out, bridge entre brokers, messages partagés) selon les besoins métier</li>
-<li><strong>Monitoring et supervision</strong> — Configurer la surveillance du broker ($SYS topics), les alertes de déconnexion et les métriques de performance</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Cadrage du système IoT</h3>
+<p>Recueillir avant toute conception :</p>
 <ul>
-<li>Toujours sécuriser le broker avec TLS et une authentification forte, ne jamais exposer un broker MQTT sans protection</li>
-<li>Concevoir la hiérarchie de topics dès le départ pour supporter la montée en charge sans restructuration</li>
-<li>Utiliser QoS 0 par défaut et ne monter en QoS que pour les messages critiques afin de préserver la bande passante</li>
-<li>Implémenter systématiquement le Last Will Testament pour détecter les déconnexions inattendues des appareils</li>
-<li>Documenter la structure des topics et le format des payloads (JSON recommandé) dans un contrat d'interface partagé</li>
+<li>Nombre d'appareils connectés (maintenant et à 2 ans)</li>
+<li>Volume de messages/seconde par appareil et total</li>
+<li>Contraintes réseau : bande passante, intermittence, mobile vs filaire</li>
+<li>Criticité des données : perte acceptable ou non ?</li>
+<li>Cloud vs on-premise vs hybride</li>
+</ul>
+<p><strong>Critère de décision broker</strong> :</p>
+<table><thead><tr><th>Contexte</th><th>Broker recommandé</th></tr></thead><tbody><tr><td>Dev/petit projet (&lt;1000 appareils)</td><td>Mosquitto</td></tr><tr><td>Production scalable (&gt;10k appareils)</td><td>EMQX ou HiveMQ</td></tr><tr><td>Cloud managé sans ops</td><td>AWS IoT Core, Azure IoT Hub</td></tr><tr><td>Edge gateway local</td><td>Mosquitto ou NanoMQ</td></tr></tbody></table>
+<h3>2. Conception de la hiérarchie de topics</h3>
+<p>Schéma canonique recommandé :</p>
+<pre><code>{organisation}/{site}/{zone}/{device_id}/{metric}</code></pre>
+<p>Exemples concrets :</p>
+<pre><code>acme/tunis/atelier-a/machine-42/temperature
+acme/tunis/atelier-a/machine-42/status
+acme/paris/entrepot/capteur-07/humidity
+acme/+/+/+/status          # wildcard single-level
+acme/#                     # wildcard multi-level (usage monitoring)</code></pre>
+<p>Règles de nommage :</p>
+<ul>
+<li>Minuscules, tirets, pas de caractères spéciaux ni espaces</li>
+<li>Device ID unique global (ex: MAC address ou UUID)</li>
+<li>Séparer les topics de commande des topics de télémétrie :</li>
+</ul>
+<p>  ```   cmd/{device_id}/restart    # commande → appareil   tel/{device_id}/uptime     # télémétrie → broker   ```</p>
+<ul>
+<li>Ne jamais utiliser <code>#</code> en production pour un subscriber unique — volume incontrôlé</li>
+</ul>
+<h3>3. Choix du niveau QoS</h3>
+<table><thead><tr><th>QoS</th><th>Garantie</th><th>Cas d'usage</th><th>Coût réseau</th></tr></thead><tbody><tr><td>0</td><td>Au plus une fois (fire &amp; forget)</td><td>Télémetrie haute fréquence, température</td><td>Minimal</td></tr><tr><td>1</td><td>Au moins une fois (avec ack)</td><td>Alertes, événements métier</td><td>Moyen</td></tr><tr><td>2</td><td>Exactement une fois (4-way handshake)</td><td>Facturation, ordres critiques, actionneurs</td><td>Élevé</td></tr></tbody></table>
+<p>Règle pratique : 80 % des topics → QoS 0 ; monter uniquement si la perte est inacceptable.</p>
+<h3>4. Configuration du broker (Mosquitto)</h3>
+<p>Installation Debian/Ubuntu :</p>
+<pre><code class="lang-bash">apt install mosquitto mosquitto-clients</code></pre>
+<p>Fichier <code>/etc/mosquitto/mosquitto.conf</code> minimal sécurisé :</p>
+<pre><code class="lang-conf">listener 8883
+cafile   /etc/mosquitto/certs/ca.crt
+certfile /etc/mosquitto/certs/server.crt
+keyfile  /etc/mosquitto/certs/server.key
+require_certificate true
+tls_version tlsv1.3
+
+allow_anonymous false
+password_file /etc/mosquitto/passwd
+acl_file      /etc/mosquitto/acl
+
+persistence true
+persistence_location /var/lib/mosquitto/
+log_dest file /var/log/mosquitto/mosquitto.log
+log_type all</code></pre>
+<p>Créer un utilisateur :</p>
+<pre><code class="lang-bash">mosquitto_passwd -c /etc/mosquitto/passwd device01</code></pre>
+<p>Fichier ACL (<code>/etc/mosquitto/acl</code>) :</p>
+<pre><code># device01 ne publie que sur ses propres topics
+user device01
+topic write tel/device01/#
+topic read  cmd/device01/#</code></pre>
+<p>Tester la connexion TLS :</p>
+<pre><code class="lang-bash">mosquitto_pub -h broker.example.com -p 8883 \
+  --cafile ca.crt --cert client.crt --key client.key \
+  -u device01 -P secret \
+  -t &quot;tel/device01/temperature&quot; -m '{&quot;v&quot;:22.5,&quot;ts&quot;:1719220000}'</code></pre>
+<h3>5. Sécurité</h3>
+<p>Checklist obligatoire en production :</p>
+<ul>
+<li>[ ] TLS 1.3 activé, port 8883 uniquement (bannir le port 1883 non chiffré)</li>
+<li>[ ] Authentification par certificats clients (x.509) pour les appareils embarqués</li>
+<li>[ ] ACL par device_id : chaque appareil ne peut publier que sur ses propres topics</li>
+<li>[ ] Rotation des certificats automatisée (Let's Encrypt ou PKI interne)</li>
+<li>[ ] Rate-limiting côté broker (EMQX : <code>max_publish_rate</code>, Mosquitto : plugin externe)</li>
+<li>[ ] Isolation réseau : broker non exposé directement sur Internet (reverse proxy ou VPN)</li>
+</ul>
+<p>Rotation de mot de passe sans redémarrage Mosquitto :</p>
+<pre><code class="lang-bash">mosquitto_passwd /etc/mosquitto/passwd device01
+kill -HUP $(pidof mosquitto)</code></pre>
+<h3>6. Implémentation client (Python — paho-mqtt)</h3>
+<pre><code class="lang-python">import paho.mqtt.client as mqtt
+import ssl, json, time
+
+BROKER = &quot;broker.example.com&quot;
+PORT   = 8883
+TOPIC  = &quot;tel/device01/temperature&quot;
+
+def on_connect(client, userdata, flags, rc, props=None):
+    if rc == 0:
+        print(&quot;Connecté&quot;)
+        client.subscribe(&quot;cmd/device01/#&quot;, qos=1)
+    else:
+        print(f&quot;Erreur connexion : {rc}&quot;)
+
+def on_disconnect(client, userdata, rc, props=None):
+    print(f&quot;Déconnecté ({rc}), reconnexion auto...&quot;)
+
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=&quot;device01&quot;)
+client.tls_set(ca_certs=&quot;ca.crt&quot;, certfile=&quot;client.crt&quot;, keyfile=&quot;client.key&quot;,
+               tls_version=ssl.PROTOCOL_TLS_CLIENT)
+client.username_pw_set(&quot;device01&quot;, &quot;secret&quot;)
+
+# Last Will Testament — détection déconnexion inattendue
+client.will_set(&quot;tel/device01/status&quot;, payload='{&quot;online&quot;:false}', qos=1, retain=True)
+
+client.on_connect    = on_connect
+client.on_disconnect = on_disconnect
+client.connect(BROKER, PORT, keepalive=60)
+client.loop_start()
+
+# Publication périodique
+while True:
+    payload = json.dumps({&quot;v&quot;: 22.5, &quot;ts&quot;: int(time.time())})
+    client.publish(TOPIC, payload, qos=0)
+    time.sleep(5)</code></pre>
+<h3>7. Patterns avancés</h3>
+<p><strong>Request / Response</strong> (MQTT 5 <code>response_topic</code>) :</p>
+<pre><code class="lang-python"># Publisher envoie avec response_topic
+props = mqtt.Properties(mqtt.PacketTypes.PUBLISH)
+props.ResponseTopic = &quot;response/device01/restart&quot;
+client.publish(&quot;cmd/device01/restart&quot;, &quot;{}&quot;, qos=1, properties=props)</code></pre>
+<p><strong>Shared Subscriptions</strong> (consommateurs multiples, EMQX/HiveMQ) :</p>
+<pre><code>$share/groupe-workers/tel/+/temperature</code></pre>
+<p>Charge répartie entre tous les subscribers du groupe — équivalent Kafka consumer group.</p>
+<p><strong>Bridge entre brokers</strong> (site → cloud) dans <code>mosquitto.conf</code> :</p>
+<pre><code class="lang-conf">connection cloud-bridge
+address cloud.example.com:8883
+topic tel/# out 1
+topic cmd/# in  1
+remote_username bridge_user
+remote_password secret
+bridge_cafile /etc/mosquitto/certs/ca.crt</code></pre>
+<p><strong>Retained messages</strong> — état courant accessible aux nouveaux subscribers :</p>
+<pre><code class="lang-bash">mosquitto_pub -r -t &quot;tel/device01/status&quot; -m '{&quot;online&quot;:true}' -q 1</code></pre>
+<h3>8. Monitoring</h3>
+<p>Topics <code>$SYS</code> natifs Mosquitto :</p>
+<pre><code class="lang-bash">mosquitto_sub -t '$SYS/#' -v
+# $SYS/broker/clients/connected
+# $SYS/broker/messages/received
+# $SYS/broker/publish/messages/dropped</code></pre>
+<p>Intégration Prometheus via <code>mqtt_exporter</code> :</p>
+<pre><code class="lang-bash">docker run -d -p 9234:9234 \
+  -e MQTT_BROKER_HOST=broker.example.com \
+  -e MQTT_BROKER_PORT=8883 \
+  hikhvar/mqtt2prometheus:latest</code></pre>
+<p>Alertes critiques à configurer :</p>
+<ul>
+<li><code>clients/connected</code> chute brutale → déconnexion en masse</li>
+<li><code>messages/dropped</code> &gt; 0 → subscriber trop lent ou réseau saturé</li>
+<li>Latence publish → ack &gt; 500 ms → problème broker ou réseau</li>
+</ul>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Port 1883 exposé sans TLS</td><td>Interception de tous les messages</td><td>Forcer 8883 + TLS dès le départ</td></tr><tr><td>Topic unique pour tout (ex: <code>data/all</code>)</td><td>Impossibilité de filtrer, surcharge subscribers</td><td>Granularité topic = 1 métrique</td></tr><tr><td>QoS 2 partout</td><td>Latence x4, congestion en masse</td><td>QoS 2 uniquement pour actionneurs critiques</td></tr><tr><td>Client ID dupliqué</td><td>Déconnexions en boucle des deux clients</td><td>UUID ou MAC par appareil</td></tr><tr><td><code>allow_anonymous true</code> en prod</td><td>N'importe qui peut publier/souscrire</td><td>Authentification obligatoire</td></tr><tr><td>Payload non structuré (valeur brute)</td><td>Évolution impossible</td><td>JSON <code>{&quot;v&quot;: 22.5, &quot;ts&quot;: 1719220000, &quot;unit&quot;: &quot;C&quot;}</code></td></tr><tr><td>Absence de Last Will</td><td>Déconnexions silencieuses non détectées</td><td><code>will_set</code> systématique sur topic <code>status</code></td></tr><tr><td>Topics avec espaces ou majuscules</td><td>Inconsistances, bugs clients</td><td>Convention : snake_case ou kebab-case</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>MQTT 5 en priorité</strong> : utilisez les propriétés <code>User Properties</code>, <code>Message Expiry Interval</code> et <code>Response Topic</code> pour les nouveaux projets.</li>
+<li><strong>Payload : JSON + Timestamp</strong> : inclure toujours <code>ts</code> (epoch Unix) dans chaque message pour la traçabilité et la déduplication.</li>
+<li><strong>Schema registry</strong> : documenter le format de chaque topic dans un fichier <code>topics.yaml</code> versionné dans le dépôt.</li>
+<li><strong>Edge buffering</strong> : sur appareils avec connectivité intermittente, utiliser une file locale (SQLite ou LevelDB) et vider vers MQTT à la reconnexion.</li>
+<li><strong>Compression</strong> : activer la compression Zstandard côté broker (EMQX 5.x natif) pour les payloads &gt; 512 octets sur réseau contraint.</li>
+<li><strong>MQTT over WebSocket</strong> : port 9001/9443 pour les clients navigateur — sécuriser avec les mêmes ACL que le port 8883.</li>
 </ul>
 </article>
 </main>

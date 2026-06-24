@@ -7,27 +7,242 @@ description: Optimisation SEO on-page et technique — meta tags, structured dat
 
 ## Workflow
 
-1. **Audit SEO technique** — analyser le site avec des outils comme Screaming Frog, Google Search Console ou Lighthouse pour identifier les problèmes techniques : erreurs de crawl (4xx, 5xx), pages orphelines, redirections en chaîne, temps de chargement excessif, et problèmes d'indexation (`robots.txt`, `noindex`).
+### 1. Audit SEO technique
 
-2. **Optimisation des Core Web Vitals** — mesurer et améliorer les trois métriques clés : LCP (Largest Contentful Paint < 2.5s) en optimisant images et CSS critique, INP (Interaction to Next Paint < 200ms) en réduisant le JavaScript bloquant, et CLS (Cumulative Layout Shift < 0.1) en dimensionnant explicitement les éléments visuels.
+Commence par un crawl complet avant toute optimisation.
 
-3. **Recherche et stratégie de mots-clés** — identifier les mots-clés cibles avec Google Keyword Planner, Ahrefs ou SEMrush, analyser l'intention de recherche (informationnelle, navigationnelle, transactionnelle), évaluer la difficulté et le volume, et regrouper les mots-clés par clusters thématiques pour structurer le contenu.
+```bash
+# Screaming Frog CLI (licence requise)
+screamingfrogseospider --crawl https://example.com --headless \
+  --output-folder ./seo-audit --export-tabs "Response Codes,Page Titles,Meta Description,H1"
 
-4. **Optimisation on-page** — optimiser chaque page : titre (`<title>`) unique et accrocheur (50-60 caractères), meta description engageante (150-160 caractères), hiérarchie Hn correcte (un seul H1), URLs courtes et descriptives, maillage interne pertinent, et attributs alt sur les images.
+# Lighthouse CLI via Node
+npx lighthouse https://example.com \
+  --output json --output-path ./lighthouse-report.json \
+  --only-categories performance,seo,best-practices
+```
 
-5. **Données structurées (Schema.org)** — implémenter les balises JSON-LD pour enrichir les résultats de recherche : Article, Product, FAQ, HowTo, BreadcrumbList, Organization, LocalBusiness, et valider avec le Rich Results Test de Google pour obtenir les rich snippets.
+Critères de priorisation des problèmes :
+| Priorité | Type | Action |
+|----------|------|---------|
+| P0 | Pages 4xx/5xx indexées | Redirection 301 ou noindex immédiat |
+| P0 | `noindex` en production | Retirer l'attribut |
+| P1 | Redirections en chaîne (>2 sauts) | Raccourcir vers la destination finale |
+| P1 | Contenu dupliqué | Canonical ou consolidation |
+| P2 | Pages orphelines (aucun lien entrant) | Maillage interne |
+| P2 | `robots.txt` bloquant des assets CSS/JS | Débloquer |
 
-6. **Optimisation du sitemap et du crawl** — générer un sitemap XML à jour listant toutes les pages indexables, soumettre via Google Search Console, configurer le `robots.txt` pour guider les crawlers, et utiliser les balises `canonical` pour éviter le contenu dupliqué.
+Vérifier `robots.txt` et sitemap via Search Console :
+- **Coverage > Excluded** : pages exclues involontairement
+- **Core Web Vitals** : pages Failed vs Good sur mobile/desktop
 
-7. **Suivi et analyse des résultats** — configurer Google Search Console pour suivre les impressions, clics, CTR et positions moyennes, analyser les tendances par page et par requête, identifier les opportunités de quick wins (pages en position 5-15), et ajuster la stratégie en fonction des données.
+---
 
-## Règles
+### 2. Core Web Vitals — diagnostiquer et corriger
 
-- Toujours prioriser l'expérience utilisateur sur l'optimisation pour les moteurs — Google récompense les sites qui satisfont réellement l'intention de recherche de l'utilisateur.
-- Ne jamais utiliser de techniques black hat (keyword stuffing, cloaking, liens artificiels) — les pénalités algorithmiques ou manuelles de Google peuvent détruire le trafic organique.
-- Valider systématiquement les données structurées avec le Rich Results Test avant déploiement — un schema.org malformé est ignoré par Google.
-- Considérer le SEO dès la conception du site (architecture, URLs, performance) et non comme une couche ajoutée après coup — la dette technique SEO est coûteuse à corriger.
-- Mesurer les résultats sur des périodes de 3 à 6 mois minimum — le SEO est une stratégie à long terme, les résultats ne sont pas immédiats.
+Seuils 2026 (inchangés depuis CWV update 2024) :
+
+| Métrique | Good | Needs Improvement | Poor |
+|----------|------|-------------------|------|
+| LCP | < 2.5 s | 2.5–4.0 s | > 4.0 s |
+| INP | < 200 ms | 200–500 ms | > 500 ms |
+| CLS | < 0.1 | 0.1–0.25 | > 0.25 |
+
+**LCP — images et CSS critique**
+```html
+<!-- Précharger l'image LCP candidate -->
+<link rel="preload" as="image" href="/hero.webp"
+      imagesrcset="/hero-400.webp 400w, /hero-800.webp 800w"
+      imagesizes="100vw" fetchpriority="high">
+<!-- Jamais lazy-load sur l'image above-the-fold -->
+<img src="/hero.webp" alt="..." width="1200" height="600" fetchpriority="high">
+```
+
+**INP — réduire le JS bloquant**
+```js
+// Diviser les tâches longues (> 50 ms) avec scheduler.yield()
+async function heavyTask() {
+  for (const chunk of chunks) {
+    processChunk(chunk);
+    await scheduler.yield(); // libère le thread principal
+  }
+}
+```
+
+**CLS — dimensions explicites**
+```css
+/* Réserver l'espace pour les polices web */
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter.woff2') format('woff2');
+  font-display: optional; /* évite le FOUT/CLS */
+}
+/* Ratio fixe pour images responsive */
+.hero-image { aspect-ratio: 16 / 9; width: 100%; }
+```
+
+---
+
+### 3. Recherche de mots-clés et clusters thématiques
+
+**Processus en 4 étapes :**
+
+1. **Seed keywords** — partir du domaine métier, des requêtes Search Console existantes, et de l'analyse des concurrents (Ahrefs : "Top Pages" du concurrent principal).
+2. **Expansion** — Google Keyword Planner, "Searches related to", "People also ask", AnswerThePublic.
+3. **Scoring** — pour chaque mot-clé : Volume mensuel × (1 / Difficulté KD) = score de priorité. Cibler KD < 40 en phase de lancement.
+4. **Clusters** — regrouper les mots-clés par intention :
+   - Informationnelle → articles de blog, guides
+   - Commerciale → pages catégorie, comparatifs
+   - Transactionnelle → pages produit/service, landing pages
+
+```
+Exemple de cluster "logiciel comptabilité PME" :
+- Pillar page : /logiciel-comptabilite-pme/  (volume élevé, KD fort)
+- Cluster 1 : /logiciel-comptabilite-auto-entrepreneur/  (longue traîne)
+- Cluster 2 : /comparatif-logiciel-comptabilite/  (intention commerciale)
+- Cluster 3 : /comment-choisir-logiciel-comptabilite/  (informationnelle)
+```
+
+---
+
+### 4. Optimisation on-page
+
+Checklist par page :
+
+```html
+<!-- Title : 50-60 caractères, mot-clé principal en tête -->
+<title>Logiciel comptabilité PME — Essai gratuit 30 jours | NomDuSite</title>
+
+<!-- Meta description : 150-160 caractères, CTA implicite -->
+<meta name="description"
+  content="Gérez votre comptabilité PME en ligne simplement. Facturation, TVA, bilan : tout-en-un. Essai gratuit, sans carte bancaire.">
+
+<!-- Open Graph pour partage social -->
+<meta property="og:title" content="...">
+<meta property="og:description" content="...">
+<meta property="og:image" content="https://example.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<!-- Canonical explicite sur chaque page -->
+<link rel="canonical" href="https://example.com/logiciel-comptabilite-pme/">
+```
+
+Règle H1-Hn : **un seul H1 par page**, contenant le mot-clé principal exact ou proche. Les H2 structurent les sections, les H3 les sous-sections.
+
+**Densité de mots-clés** : viser 1–2 % d'occurrences naturelles ; l'over-optimisation (> 4 %) est pénalisante depuis Helpful Content Update.
+
+---
+
+### 5. Données structurées (Schema.org / JSON-LD)
+
+```json
+// Article de blog
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Titre de l'article",
+  "author": { "@type": "Person", "name": "Prénom Nom" },
+  "datePublished": "2026-01-15",
+  "dateModified": "2026-06-01",
+  "image": "https://example.com/image.jpg",
+  "publisher": {
+    "@type": "Organization",
+    "name": "NomDuSite",
+    "logo": { "@type": "ImageObject", "url": "https://example.com/logo.png" }
+  }
+}
+```
+
+```json
+// FAQ — génère les rich snippets accordéon dans SERP
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Quel logiciel comptabilité pour PME ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "..." }
+    }
+  ]
+}
+```
+
+Valider avant déploiement : `https://search.google.com/test/rich-results`
+
+---
+
+### 6. Sitemap et crawl budget
+
+```xml
+<!-- sitemap.xml minimal valide -->
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://example.com/logiciel-comptabilite-pme/</loc>
+    <lastmod>2026-06-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+</urlset>
+```
+
+- Soumettre via Search Console > Sitemaps
+- Exclure les pages noindex, paginées après page 2, filtres e-commerce
+- `robots.txt` : ne bloquer que les ressources admin/staging — ne jamais bloquer CSS/JS
+
+```
+# robots.txt exemple
+User-agent: *
+Disallow: /admin/
+Disallow: /staging/
+Disallow: /*?sort=
+Allow: /
+
+Sitemap: https://example.com/sitemap.xml
+```
+
+---
+
+### 7. Suivi et quick wins
+
+**Tableau de bord Search Console — requêtes prioritaires :**
+- Filtrer Position 5–15 + Impressions > 500/mois → pages à optimiser en priorité
+- CTR < 3 % malgré une bonne position → réécrire le title/meta description
+- Pages avec clics mais sans conversions → problème d'adéquation contenu/intention
+
+**Cycle d'optimisation recommandé :**
+```
+Semaine 1 : Audit + priorisation
+Semaine 2-4 : Corrections P0/P1 (technique + on-page)
+Mois 2-3 : Contenu (clusters), structured data
+Mois 3+ : Suivi positions, ajustements, link building
+Résultats visibles : 3–6 mois minimum
+```
+
+---
+
+## Anti-patterns et pièges
+
+- **Keyword stuffing** : répéter le mot-clé > 4 % déclenche une pénalité Helpful Content. Écrire pour l'humain.
+- **Cloaking / contenu masqué** : afficher du texte aux bots mais pas aux users → pénalité manuelle.
+- **Noindex en staging non retiré en prod** : vérifier `<meta name="robots" content="noindex">` et `X-Robots-Tag` à chaque déploiement.
+- **Redirections 302 au lieu de 301** : le 302 ne transfère pas le "link equity" — utiliser 301 pour les redirections permanentes.
+- **Ignorer le mobile** : Google utilise le mobile-first indexing depuis 2024 ; tester systématiquement sur mobile.
+- **Pages AMP orphelines** : AMP n'est plus un critère de ranking depuis 2021 ; migrer vers des pages standard performantes.
+- **Liens brisés internes** : chaque 404 interne gaspille le crawl budget et dégrade l'UX.
+- **Contenu généré en masse par LLM non révisé** : flaggé par Helpful Content Update ; toujours ajouter une expertise humaine identifiable.
+
+---
+
+## Bonnes pratiques 2026
+
+- **Helpful Content** : prioriser la valeur unique (données propriétaires, expertise terrain, cas réels) — le contenu générique est systématiquement déclassé.
+- **E-E-A-T** (Experience, Expertise, Authoritativeness, Trustworthiness) : signer les contenus avec des auteurs réels et crédibles, ajouter des pages About/Contact complètes.
+- **SGE / AI Overviews** : optimiser pour les featured snippets et les réponses concises en début d'article pour apparaître dans les résumés IA de Google.
+- **Signaux locaux** : pour un SEO local, Google Business Profile complet + citations NAP cohérentes + avis > tout le reste.
+- **Core Web Vitals sur field data** : Google utilise le CrUX (données réelles) et non Lighthouse (lab) pour le ranking — mesurer avec PageSpeed Insights API.
 
 
 ## Communication Rules — MANDATORY

@@ -96,38 +96,199 @@ cp -r claude-skills-collection/skills/dev-django-guide ~/.claude/skills/</div><b
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide Django</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le besoin</strong> — Identifier le type de projet (API REST, application web monolithique, back-office) et déterminer l'architecture adaptée : Django classique avec templates, Django REST Framework pour les APIs, ou une approche hybride.</li>
-</ol>
-<ol>
-<li><strong>Structurer le projet</strong> — Organiser en applications Django découplées (<code>django-admin startapp</code>), chaque app ayant ses models, views, serializers, urls et tests. Séparer la configuration dans <code>settings/</code> (base, dev, prod) et centraliser les URLs dans le projet principal.</li>
-</ol>
-<ol>
-<li><strong>Concevoir les models</strong> — Définir les models avec les champs Django typés, les relations (<code>ForeignKey</code>, <code>ManyToManyField</code>, <code>OneToOneField</code>), les contraintes (<code>unique_together</code>, <code>CheckConstraint</code>), les managers custom et les méthodes <code>__str__</code>, <code>get_absolute_url</code>, et <code>clean()</code>.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les vues et serializers</strong> — Utiliser les class-based views (<code>APIView</code>, <code>ViewSet</code>, <code>ModelViewSet</code>) pour DRF ou les generic views Django. Créer les serializers avec validation, les permissions custom, et les filtres avec <code>django-filter</code>.</li>
-</ol>
-<ol>
-<li><strong>Configurer l'ORM et les migrations</strong> — Écrire des querysets optimisés avec <code>select_related()</code>, <code>prefetch_related()</code>, les annotations et agrégations (<code>annotate</code>, <code>aggregate</code>). Créer les migrations avec <code>makemigrations</code> et gérer les data migrations pour les transformations de données.</li>
-</ol>
-<ol>
-<li><strong>Personnaliser l'admin</strong> — Configurer le <code>ModelAdmin</code> avec <code>list_display</code>, <code>list_filter</code>, <code>search_fields</code>, les inlines, les actions custom et les fieldsets. Créer des admin views custom pour les tableaux de bord et les rapports.</li>
-</ol>
-<ol>
-<li><strong>Sécuriser et authentifier</strong> — Implémenter l'authentification avec le système intégré Django ou JWT pour DRF, configurer les permissions par vue, activer CSRF, gérer les CORS, et utiliser <code>django-allauth</code> pour l'authentification sociale.</li>
-</ol>
-<ol>
-<li><strong>Tester et déployer</strong> — Écrire des tests avec <code>TestCase</code> et <code>APITestCase</code>, utiliser les fixtures et factories (<code>factory_boy</code>), configurer Gunicorn + Nginx, les variables d'environnement avec <code>django-environ</code>, et les tâches asynchrones avec Celery.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Choisir l'architecture</h2>
+<table><thead><tr><th>Besoin</th><th>Architecture recommandée</th></tr></thead><tbody><tr><td>API consommée par SPA/mobile</td><td>Django + DRF uniquement (<code>rest_framework</code>)</td></tr><tr><td>Back-office interne</td><td>Django + admin personnalisé</td></tr><tr><td>Application web rendue côté serveur</td><td>Django + templates + HTMX</td></tr><tr><td>Hybride API + pages publiques</td><td>Django + DRF + templates pour les pages non-auth</td></tr></tbody></table>
+<h2>2. Initialiser le projet</h2>
+<pre><code class="lang-bash">pip install django djangorestframework django-environ
+django-admin startproject config .   # config = dossier settings
+python manage.py startapp orders     # une app par domaine métier</code></pre>
+<p>Structure recommandée :</p>
+<pre><code>project/
+  config/
+    settings/
+      base.py      # commun
+      dev.py       # DEBUG=True, SQLite
+      prod.py      # ALLOWED_HOSTS, DATABASES Postgres, STATIC_ROOT
+    urls.py
+    wsgi.py
+  orders/
+    models.py
+    views.py
+    serializers.py
+    urls.py
+    admin.py
+    tests/
+  manage.py
+  .env</code></pre>
+<p><code>config/settings/base.py</code> :</p>
+<pre><code class="lang-python">from environ import Env
+env = Env()
+Env.read_env()
+
+SECRET_KEY = env(&quot;SECRET_KEY&quot;)
+DATABASES = {&quot;default&quot;: env.db()}  # DATABASE_URL=postgres://...</code></pre>
+<h2>3. Concevoir les models</h2>
+<pre><code class="lang-python">from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+class Order(models.Model):
+    class Status(models.TextChoices):
+        PENDING  = &quot;pending&quot;,  _(&quot;En attente&quot;)
+        SHIPPED  = &quot;shipped&quot;,  _(&quot;Expédié&quot;)
+
+    reference   = models.CharField(max_length=32, unique=True)
+    customer    = models.ForeignKey(&quot;users.User&quot;, on_delete=models.PROTECT,
+                                    related_name=&quot;orders&quot;)
+    status      = models.CharField(max_length=16, choices=Status.choices,
+                                    default=Status.PENDING)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = [&quot;-created_at&quot;]
+        indexes  = [models.Index(fields=[&quot;status&quot;, &quot;created_at&quot;])]
+
+    def __str__(self):
+        return f&quot;Order {self.reference}&quot;
+
+    def clean(self):
+        # Validation métier centralisée ici, pas dans la vue
+        if self.status == self.Status.SHIPPED and not self.reference:
+            raise ValidationError(&quot;Reference requise avant expédition.&quot;)</code></pre>
+<p>Migrations :</p>
+<pre><code class="lang-bash">python manage.py makemigrations orders
+python manage.py migrate
+# Data migration
+python manage.py makemigrations orders --empty --name backfill_reference</code></pre>
+<p>Data migration réversible :</p>
+<pre><code class="lang-python">def forwards(apps, schema_editor):
+    Order = apps.get_model(&quot;orders&quot;, &quot;Order&quot;)
+    Order.objects.filter(reference=&quot;&quot;).update(reference=&quot;LEGACY&quot;)
+
+def backwards(apps, schema_editor):
+    pass  # irréversible acceptable si documenté
+
+class Migration(migrations.Migration):
+    operations = [migrations.RunPython(forwards, backwards)]</code></pre>
+<h2>4. ORM — éviter le N+1</h2>
+<pre><code class="lang-python"># MAL — N+1
+orders = Order.objects.all()
+for o in orders:
+    print(o.customer.email)  # 1 requête par ligne
+
+# BIEN
+orders = Order.objects.select_related(&quot;customer&quot;).all()
+
+# Relations M2M
+orders = Order.objects.prefetch_related(&quot;items__product&quot;).all()
+
+# Annoter en base plutôt que Python
+from django.db.models import Count, Sum
+Order.objects.annotate(total=Sum(&quot;items__price&quot;)).filter(total__gt=100)</code></pre>
+<h2>5. DRF — sérializers et ViewSets</h2>
+<pre><code class="lang-python"># serializers.py
+class OrderSerializer(serializers.ModelSerializer):
+    customer_email = serializers.EmailField(source=&quot;customer.email&quot;, read_only=True)
+
+    class Meta:
+        model  = Order
+        fields = [&quot;id&quot;, &quot;reference&quot;, &quot;status&quot;, &quot;customer_email&quot;, &quot;created_at&quot;]
+        read_only_fields = [&quot;created_at&quot;]
+
+    def validate_status(self, value):
+        allowed = [&quot;pending&quot;, &quot;shipped&quot;]
+        if value not in allowed:
+            raise serializers.ValidationError(f&quot;Statut invalide. Valeurs : {allowed}&quot;)
+        return value
+
+# views.py
+from rest_framework import viewsets, permissions, filters
+from django_filters.rest_framework import DjangoFilterBackend
+
+class OrderViewSet(viewsets.ModelViewSet):
+    serializer_class   = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends    = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields   = [&quot;status&quot;]
+    ordering_fields    = [&quot;created_at&quot;]
+
+    def get_queryset(self):
+        return Order.objects.select_related(&quot;customer&quot;)\
+                            .filter(customer=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(customer=self.request.user)</code></pre>
+<pre><code class="lang-python"># urls.py (app)
+from rest_framework.routers import DefaultRouter
+router = DefaultRouter()
+router.register(&quot;orders&quot;, OrderViewSet, basename=&quot;order&quot;)
+urlpatterns = router.urls</code></pre>
+<h2>6. Admin utile</h2>
+<pre><code class="lang-python">@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display  = [&quot;reference&quot;, &quot;customer&quot;, &quot;status&quot;, &quot;created_at&quot;]
+    list_filter   = [&quot;status&quot;, &quot;created_at&quot;]
+    search_fields = [&quot;reference&quot;, &quot;customer__email&quot;]
+    raw_id_fields = [&quot;customer&quot;]     # évite le &lt;select&gt; avec milliers d'entrées
+    actions       = [&quot;mark_shipped&quot;]
+
+    @admin.action(description=&quot;Marquer comme expédié&quot;)
+    def mark_shipped(self, request, queryset):
+        updated = queryset.update(status=Order.Status.SHIPPED)
+        self.message_user(request, f&quot;{updated} commande(s) expédiée(s).&quot;)</code></pre>
+<h2>7. Authentification JWT (DRF)</h2>
+<pre><code class="lang-bash">pip install djangorestframework-simplejwt</code></pre>
+<pre><code class="lang-python"># settings/base.py
+REST_FRAMEWORK = {
+    &quot;DEFAULT_AUTHENTICATION_CLASSES&quot;: [
+        &quot;rest_framework_simplejwt.authentication.JWTAuthentication&quot;,
+    ],
+    &quot;DEFAULT_PERMISSION_CLASSES&quot;: [&quot;rest_framework.permissions.IsAuthenticated&quot;],
+}
+
+SIMPLE_JWT = {&quot;ACCESS_TOKEN_LIFETIME&quot;: timedelta(minutes=15),
+              &quot;REFRESH_TOKEN_LIFETIME&quot;: timedelta(days=7)}</code></pre>
+<pre><code class="lang-python"># urls.py racine
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+path(&quot;api/token/&quot;,         TokenObtainPairView.as_view()),
+path(&quot;api/token/refresh/&quot;, TokenRefreshView.as_view()),</code></pre>
+<h2>8. Tests</h2>
+<pre><code class="lang-python">from rest_framework.test import APITestCase
+from rest_framework import status
+
+class OrderAPITest(APITestCase):
+    def setUp(self):
+        self.user  = UserFactory()
+        self.order = OrderFactory(customer=self.user)
+        self.client.force_authenticate(user=self.user)
+
+    def test_list_returns_own_orders_only(self):
+        OrderFactory()  # commande d'un autre user
+        r = self.client.get(&quot;/api/orders/&quot;)
+        self.assertEqual(r.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(r.data[&quot;results&quot;]), 1)</code></pre>
+<pre><code class="lang-bash">pip install factory-boy pytest-django
+pytest --reuse-db   # réutilise la DB entre runs pour la vitesse</code></pre>
+<h2>9. Déploiement production</h2>
+<pre><code class="lang-bash">pip install gunicorn whitenoise
+# settings/prod.py
+STATICFILES_STORAGE = &quot;whitenoise.storage.CompressedManifestStaticFilesStorage&quot;</code></pre>
+<pre><code class="lang-bash">python manage.py collectstatic --no-input
+gunicorn config.wsgi:application --workers 4 --bind 0.0.0.0:8000</code></pre>
+<p>Variables d'environnement obligatoires en prod :</p>
+<pre><code>SECRET_KEY=...
+DATABASE_URL=postgres://user:pass@host:5432/db
+DJANGO_SETTINGS_MODULE=config.settings.prod
+ALLOWED_HOSTS=mondomaine.com</code></pre>
+<h2>Garde-fous / anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td>Logique métier dans la vue</td><td>Couplage, non-testable</td><td>Service layer ou méthode model</td></tr><tr><td><code>objects.all()</code> sans filtre en vue liste</td><td>Full table scan</td><td>Toujours filtrer + paginer</td></tr><tr><td><code>get_or_create</code> sans <code>defaults=</code></td><td>Race condition</td><td>Utiliser <code>update_or_create</code> ou transaction atomique</td></tr><tr><td>Migration avec <code>RunPython</code> non réversible non documentée</td><td>Rollback impossible</td><td>Ajouter <code>reverse_code</code> ou commenter l'intention</td></tr><tr><td><code>DEBUG=True</code> en prod</td><td>Exposition des stacktraces</td><td>Variable d'env + vérification au démarrage</td></tr><tr><td>Secrets dans <code>settings.py</code></td><td>Fuite via repo</td><td><code>django-environ</code> ou vault</td></tr><tr><td><code>null=True</code> sur <code>CharField</code></td><td>Deux valeurs &quot;vide&quot; (<code>&quot;&quot;</code> et <code>None</code>)</td><td><code>blank=True</code> uniquement sauf FK</td></tr><tr><td>Serializer <code>depth=2</code> en API publique</td><td>Sur-exposition de données imbriquées</td><td>Champs explicites + <code>read_only</code></td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Utilise toujours <code>select_related()</code> et <code>prefetch_related()</code> pour éviter le problème N+1 queries dans les vues et serializers.</li>
-<li>Ne place jamais de logique métier dans les vues — encapsule-la dans les models, les managers ou des services dédiés.</li>
-<li>Valide systématiquement les données au niveau du serializer ou du formulaire avant toute opération en base de données.</li>
-<li>Écris les migrations de manière idempotente et réversible — utilise <code>RunPython</code> avec une fonction <code>reverse_code</code> pour les data migrations.</li>
-<li>Ne stocke jamais les secrets (clés API, mots de passe) dans <code>settings.py</code> — utilise les variables d'environnement avec <code>django-environ</code> ou <code>python-decouple</code>.</li>
+<li><strong>Django 5.x</strong> : utiliser <code>GeneratedField</code> pour colonnes calculées en base, <code>LoginRequiredMiddleware</code> au lieu de décorateurs partout.</li>
+<li>Tâches asynchrones : Celery + Redis ou <strong>Django Q2</strong> pour les projets légers.</li>
+<li>Cache : <code>django.core.cache</code> + Redis ; décorer les vues coûteuses avec <code>@cache_page</code>.</li>
+<li>Observabilité : intégrer <code>django-silk</code> en dev pour profiler les requêtes SQL.</li>
+<li>Sécurité headers : <code>django-csp</code> + <code>django-permissions-policy</code> avant mise en production.</li>
+<li><code>django-storages</code> + S3/Cloudflare R2 pour les fichiers media en production (ne jamais servir les uploads via Django en prod).</li>
 </ul>
 </article>
 </main>

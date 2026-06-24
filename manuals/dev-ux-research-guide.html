@@ -96,24 +96,106 @@ cp -r claude-skills-collection/skills/dev-ux-research-guide ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>UX Research Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définir l'objectif de recherche</strong> : clarifier les questions auxquelles répondre, les hypothèses à valider ou invalider, et les décisions que les résultats devront éclairer. Formuler des research questions précises et mesurables.</li>
-<li><strong>Choix de la méthode</strong> : sélectionner la méthode adaptée selon l'objectif — interviews qualitatives, surveys quantitatifs, usability tests (modérés ou non), card sorting, tree testing, A/B tests, ou analyse des analytics existants.</li>
-<li><strong>Recrutement des participants</strong> : définir le profil cible (démographie, comportements, expériences), déterminer le nombre optimal (5-8 pour qualitatif, 50+ pour quantitatif), rédiger un screener rigoureux et prévoir des incentives appropriés.</li>
-<li><strong>Création du protocole</strong> : élaborer un guide d'interview structuré (questions ouvertes, neutres, sans biais), des scénarios de test réalistes, des tâches claires et mesurables, et des critères de succès objectifs.</li>
-<li><strong>Conduite de la recherche</strong> : appliquer les techniques de modération (écoute active, silence, relances), assurer la prise de notes structurée, enregistrer avec consentement, et éviter les biais de confirmation pendant les sessions.</li>
-<li><strong>Analyse et synthèse</strong> : transcrire et coder les données, utiliser l'affinity mapping pour regrouper les observations, identifier les patterns récurrents par thematic analysis, quantifier les occurrences de problèmes.</li>
-<li><strong>Création des livrables</strong> : produire des personas basés sur des données réelles (non fictives), des journey maps annotées des pain points, un insights deck structuré, et des recommandations priorisées par impact/effort.</li>
-<li><strong>Communication des résultats</strong> : présenter aux stakeholders via storytelling (problème → contexte → insight → recommandation), adapter le niveau de détail selon l'audience, et définir un plan d'action avec responsables et échéances.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Définir l'objectif de recherche</h2>
+<p>Avant toute chose, formuler une <strong>research question</strong> précise et testable :</p>
+<pre><code>❌ &quot;Améliorer l'expérience de checkout&quot;
+✅ &quot;Pourquoi les utilisateurs abandonnent-ils leur panier à l'étape paiement ?&quot;</code></pre>
+<p>Critères de décision — utiliser un framework <strong>SMART</strong> :</p>
 <ul>
-<li>Base-toi sur des principes de design éprouvés et des méthodes de recherche validées scientifiquement.</li>
-<li>Sois constructif : chaque insight doit être accompagné d'une recommandation actionnable.</li>
-<li>Fournis des exemples visuels de référence (journey maps, templates de personas) quand possible.</li>
-<li>Adapte la méthode au contexte et à la plateforme cible (web, mobile, desktop, B2B, B2C).</li>
-<li>Reste neutre et factuel : distingue les observations objectives des interprétations subjectives.</li>
+<li>Spécifique : une seule question par étude</li>
+<li>Mesurable : succès/échec quantifiable</li>
+<li>Atteignable : réaliste avec les ressources disponibles</li>
+<li>Relevant : directement liée à une décision produit</li>
+<li>Temporel : résultat attendu dans quel délai</li>
+</ul>
+<h2>2. Choisir la méthode adaptée</h2>
+<table><thead><tr><th>Objectif</th><th>Méthode recommandée</th><th>Participants</th><th>Durée</th></tr></thead><tbody><tr><td>Comprendre motivations/contexte</td><td>Entretiens semi-directifs</td><td>5–8</td><td>45–60 min</td></tr><tr><td>Valider une interface</td><td>Usability test modéré</td><td>5–8</td><td>30–60 min</td></tr><tr><td>Tester à grande échelle</td><td>Test non-modéré (Maze, Lookback)</td><td>20–50</td><td>10–20 min</td></tr><tr><td>Valider une arborescence</td><td>Tree testing (Treejack)</td><td>50+</td><td>10 min</td></tr><tr><td>Organiser le contenu</td><td>Card sorting (ouvert/fermé)</td><td>15–30</td><td>20–30 min</td></tr><tr><td>Mesurer un changement</td><td>A/B test</td><td>1000+/variante</td><td>selon trafic</td></tr><tr><td>Détecter des signaux faibles</td><td>Analytics + heatmaps (Hotjar)</td><td>—</td><td>continu</td></tr></tbody></table>
+<p><strong>Règle des 5 participants</strong> : pour les tests de facilité d'usage, 5 utilisateurs détectent ~85 % des problèmes. Augmenter l'échantillon si plusieurs segments cibles distincts.</p>
+<h2>3. Recruter les participants</h2>
+<p>Screener minimaliste (exemple pour une app fintech mobile) :</p>
+<pre><code>1. Avez-vous effectué un virement bancaire en ligne au cours des 3 derniers mois ? [oui/non]
+2. Quel appareil utilisez-vous principalement ? [iOS / Android / Desktop]
+3. Tranche d'âge ? [18-24 / 25-34 / 35-49 / 50+]
+4. Avez-vous déjà utilisé [Produit X] ? [jamais / 1-5 fois / régulièrement]</code></pre>
+<ul>
+<li>Recruter <strong>20 % de plus</strong> que nécessaire (no-shows, disqualifications tardives)</li>
+<li>Incentive : 15–30 € pour 30 min, 40–60 € pour 1h (B2C) ; cartes cadeaux ou rapport personnalisé (B2B)</li>
+<li>Canaux : UserTesting, Respondent.io, réseau LinkedIn, panel interne clients</li>
+</ul>
+<h2>4. Construire le protocole</h2>
+<h3>Guide d'entretien semi-directif</h3>
+<pre><code class="lang-markdown">## Introduction (5 min)
+- &quot;Je ne teste pas vos compétences, je teste le produit.&quot;
+- Rappel : enregistrement audio, consentement, droit de stopper.
+
+## Questions contextuelles (15 min)
+- &quot;Racontez-moi la dernière fois que vous avez fait [action clé].&quot;
+- &quot;Qu'est-ce qui vous a amené à utiliser [solution actuelle] ?&quot;
+- &quot;Quels problèmes rencontrez-vous avec votre solution actuelle ?&quot;
+
+## Questions exploratoires (20 min)
+- &quot;Montrez-moi comment vous faites habituellement [tâche].&quot;
+- &quot;Qu'est-ce qui vous faciliterait la vie ici ?&quot;
+
+## Clôture (5 min)
+- &quot;Y a-t-il quelque chose que je n'ai pas abordé et qui vous semble important ?&quot;</code></pre>
+<h3>Scénario de test d'utilisabilité</h3>
+<pre><code>Contexte : &quot;Vous venez de recevoir une facture de 250 € à régler.&quot;
+Tâche : &quot;Effectuez un paiement depuis votre compte principal.&quot;
+Critère de succès : tâche réussie sans aide en &lt; 3 min, ≤ 2 erreurs.</code></pre>
+<h2>5. Conduire la session</h2>
+<p>Techniques de modération :</p>
+<ul>
+<li><strong>Thinking aloud</strong> : &quot;Dites ce que vous voyez / pensez à voix haute.&quot;</li>
+<li><strong>Relance neutre</strong> : &quot;Pouvez-vous m'en dire plus ?&quot; / &quot;Qu'est-ce que vous attendiez ?&quot;</li>
+<li><strong>Silence volontaire</strong> : attendre 5–7 secondes avant de relancer — les utilisateurs comblent eux-mêmes.</li>
+<li><strong>5 whys</strong> : creuser les causes profondes, pas les symptômes.</li>
+</ul>
+<p>Prise de notes structurée (template) :</p>
+<pre><code>Timestamp | Observation factuelle | Citation exacte | Émotion observée | Hypothèse
+00:04:32  | Hésite sur le bouton  | &quot;C'est où le paiement ?&quot; | Frustration | Label ambigu</code></pre>
+<h2>6. Analyser les données</h2>
+<h3>Affinity mapping (Miro/FigJam)</h3>
+<pre><code>1. Une observation = un post-it
+2. Regrouper par similarité (bottom-up)
+3. Nommer les clusters (≠ les titres prédéfinis)
+4. Compter les occurrences : n=X/Y participants (ex : n=6/8)
+5. Prioriser par fréquence × sévérité</code></pre>
+<h3>Sévérité des problèmes (échelle Nielsen)</h3>
+<table><thead><tr><th>Score</th><th>Signification</th><th>Priorité</th></tr></thead><tbody><tr><td>0</td><td>Pas un problème</td><td>Ignorer</td></tr><tr><td>1</td><td>Cosmétique</td><td>Backlog</td></tr><tr><td>2</td><td>Mineur, contournable</td><td>Sprint futur</td></tr><tr><td>3</td><td>Majeur, ralentit</td><td>Sprint suivant</td></tr><tr><td>4</td><td>Bloquant, empêche la tâche</td><td>Urgent</td></tr></tbody></table>
+<h2>7. Créer les livrables</h2>
+<h3>Persona (basé sur données, pas sur intuitions)</h3>
+<pre><code class="lang-markdown">## Alex, 32 ans — Responsable comptable PME
+**Citation réelle** : &quot;Je perds 2h par semaine à réconcilier manuellement.&quot;
+**Comportements** : vérifie ses comptes le matin sur mobile, Excel pour les exports
+**Frustrations** : formats d'export incompatibles, pas de notifications en temps réel
+**Objectifs** : clôture mensuelle rapide, zéro erreur de saisie
+**Source** : composé de 6 participants sur 8 interrogés</code></pre>
+<h3>Journey map — colonnes minimales</h3>
+<pre><code>Étape | Actions | Pensées | Émotions | Pain points | Opportunités</code></pre>
+<h3>Insight deck — structure par insight</h3>
+<pre><code>Insight #3 : Les utilisateurs ne comprennent pas la distinction compte courant / compte épargne
+Preuve : 5/8 participants ont cliqué sur le mauvais compte (tâche T2)
+Impact : erreurs de virement, frustration (sévérité 3)
+Recommandation : ajouter un libellé secondaire + solde visible dès la liste
+Effort estimé : M (1 sprint)</code></pre>
+<h2>8. Communiquer les résultats</h2>
+<p>Structure de présentation stakeholders :</p>
+<pre><code>1. Rappel objectif (1 slide)
+2. Méthode + participants (1 slide)
+3. Top 3 insights avec preuves (3 slides)
+4. Recommandations priorisées (matrice impact/effort)
+5. Prochaines étapes + responsables + dates</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Biais de confirmation</td><td>On retient les observations qui valident la solution prévue</td><td>Coder en aveugle, faire coder par 2 personnes</td></tr><tr><td>Questions suggestives</td><td>&quot;N'est-ce pas que ce bouton est confus ?&quot;</td><td>Reformuler en neutre : &quot;Que pensez-vous de ce bouton ?&quot;</td></tr><tr><td>Sur-représentation de la UX</td><td>Designer dans la session = participants performent mieux</td><td>Modérateur ≠ designer du produit testé</td></tr><tr><td>Personas fictifs</td><td>Personas créés sans données (&quot;Marie, 35 ans, aime la simplicité&quot;)</td><td>Chaque attribut doit être tracé à une source</td></tr><tr><td>Insights sans décision</td><td>Rapport lu puis ignoré</td><td>Chaque insight = 1 décision produit associée dans le backlog</td></tr><tr><td>Trop de participants qualitatif</td><td>20 entretiens pour une question simple</td><td>S'arrêter à saturation (généralement 6–8)</td></tr><tr><td>Tester trop tôt</td><td>Test sur wireframes non finalisés = feedback sur l'esthétique</td><td>Tester le flow, masquer les éléments décoratifs</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Recherche continue</strong> : sessions hebdomadaires courtes (20 min, non-modérées) en parallèle du développement plutôt que de grosses études ponctuelles.</li>
+<li><strong>Repository centralisé</strong> : stocker tous les insights dans un outil dédié (Dovetail, Notion, Condens) pour réutilisabilité cross-équipe.</li>
+<li><strong>Triangulation</strong> : croiser au minimum 2 sources (entretiens + analytics, ou tests + survey) avant de conclure.</li>
+<li><strong>Accessibilité dans les tests</strong> : inclure systématiquement des participants avec handicaps (moteur, visuel, cognitif) pour détecter les barrières tôt.</li>
+<li><strong>Ethics by default</strong> : anonymiser les données dès la collecte, consentement explicite, RGPD — ne stocker que ce qui est nécessaire.</li>
 </ul>
 </article>
 </main>

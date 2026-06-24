@@ -96,23 +96,181 @@ cp -r claude-skills-collection/skills/dev-monitoring-setup ~/.claude/skills/</di
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Monitoring Setup</h1>
-<h2>Workflow</h2>
+<h2>1. Choix de la stack — critères de décision</h2>
+<table><thead><tr><th>Contexte</th><th>Stack recommandée</th></tr></thead><tbody><tr><td>Azure (App Service / AKS / Functions)</td><td>Application Insights + Azure Monitor + Log Analytics</td></tr><tr><td>AWS</td><td>CloudWatch + X-Ray + OpenSearch</td></tr><tr><td>On-premise / multi-cloud</td><td>Prometheus + Grafana + Loki + Tempo (stack LGTM)</td></tr><tr><td>Kubernetes toutes plateformes</td><td>kube-prometheus-stack (Helm)</td></tr><tr><td>Budget zéro, startup</td><td>Grafana Cloud free tier (10k metrics, 50 GB logs)</td></tr></tbody></table>
+<hr>
+<h2>2. Workflow en étapes</h2>
+<h3>Étape 1 — Définir les SLI/SLO avant d'instrumenter</h3>
+<p>Avant tout code, fixez les objectifs :</p>
+<pre><code class="lang-yaml"># slo.yaml — documenter dans le repo
+service: payment-api
+slo:
+  availability: 99.9%        # 43 min/mois max d'indispo
+  latency_p99: 500ms
+  error_rate: &lt; 0.1%
+window: 30d</code></pre>
+<p>Règle : un SLO non documenté ne sera jamais respecté.</p>
+<h3>Étape 2 — Instrumenter avec OpenTelemetry (2026 : standard universel)</h3>
+<pre><code class="lang-bash"># .NET
+dotnet add package OpenTelemetry.Extensions.Hosting
+dotnet add package OpenTelemetry.Exporter.Prometheus.AspNetCore
+
+# Node.js
+npm install @opentelemetry/sdk-node @opentelemetry/auto-instrumentations-node</code></pre>
+<pre><code class="lang-csharp">// Program.cs — ASP.NET Core
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(m =&gt; m
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddPrometheusExporter())
+    .WithTracing(t =&gt; t
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddOtlpExporter()); // vers Grafana Tempo ou Jaeger</code></pre>
+<pre><code class="lang-python"># Python (FastAPI)
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+FastAPIInstrumentor.instrument_app(app, excluded_urls=&quot;health,ready&quot;)</code></pre>
+<h3>Étape 3 — Déployer Prometheus + Grafana sur Kubernetes</h3>
+<pre><code class="lang-bash">helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace \
+  --set grafana.adminPassword=changeme \
+  --set prometheus.prometheusSpec.retention=15d \
+  --set prometheus.prometheusSpec.retentionSize=10GB</code></pre>
+<p>Vérifier que les targets sont up :</p>
+<pre><code class="lang-bash">kubectl port-forward svc/kube-prometheus-stack-prometheus 9090 -n monitoring
+# http://localhost:9090/targets</code></pre>
+<h3>Étape 4 — Logging structuré JSON (obligatoire)</h3>
+<pre><code class="lang-csharp">// Serilog — .NET
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty(&quot;Service&quot;, &quot;payment-api&quot;)
+    .WriteTo.Console(new JsonFormatter())
+    .CreateLogger();
+
+// Toujours inclure : TraceId, UserId, RequestId
+using (LogContext.PushProperty(&quot;TraceId&quot;, Activity.Current?.TraceId))
+{
+    _logger.LogInformation(&quot;Payment processed {Amount} for {UserId}&quot;, amount, userId);
+}</code></pre>
+<pre><code class="lang-yaml"># Promtail config pour Loki — scrape les pods K8s
+scrape_configs:
+  - job_name: kubernetes-pods
+    kubernetes_sd_configs:
+      - role: pod
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            traceId: traceId
+      - labels:
+          level:
+          traceId:</code></pre>
+<h3>Étape 5 — Règles d'alerte Prometheus — Golden Signals</h3>
+<pre><code class="lang-yaml"># alerts.yaml
+groups:
+  - name: golden-signals
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~&quot;5..&quot;}[5m]))
+          / sum(rate(http_requests_total[5m])) &gt; 0.01
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: &quot;Error rate {{ $value | humanizePercentage }} on {{ $labels.service }}&quot;
+          runbook: &quot;https://wiki/runbooks/high-error-rate&quot;
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) &gt; 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;p99 latency {{ $value }}s&quot;
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical</code></pre>
+<h3>Étape 6 — Application Insights (Azure)</h3>
+<pre><code class="lang-csharp">// Program.cs
+builder.Services.AddApplicationInsightsTelemetry(
+    options =&gt; options.ConnectionString = builder.Configuration[&quot;APPLICATIONINSIGHTS_CONNECTION_STRING&quot;]);
+
+// Custom metric métier
+private readonly TelemetryClient _telemetry;
+_telemetry.TrackMetric(&quot;Payment.Amount&quot;, amount, new Dictionary&lt;string, string&gt; {
+    { &quot;Currency&quot;, currency }, { &quot;Channel&quot;, channel }
+});</code></pre>
+<pre><code class="lang-kusto">// Requête Log Analytics — taux d'erreur par endpoint (dernière heure)
+requests
+| where timestamp &gt; ago(1h)
+| summarize total=count(), errors=countif(resultCode &gt;= 500) by name
+| extend errorRate = round(100.0 * errors / total, 2)
+| order by errorRate desc</code></pre>
+<h3>Étape 7 — Dashboards Grafana — structure recommandée</h3>
 <ol>
-<li>Définition des SLI/SLO/SLA : identification des indicateurs clés (latence p95/p99, taux de disponibilité, error rate, throughput) et définition des objectifs par service</li>
-<li>Architecture des 3 piliers de l'observabilité : metrics pour l'état du système, logs pour le détail des événements, traces pour le suivi des requêtes distribuées</li>
-<li>Setup des métriques : instrumentation avec Prometheus (exporters, custom metrics), Azure Monitor ou CloudWatch, intégration des KPIs métier</li>
-<li>Setup du logging centralisé : collecte et indexation avec la stack ELK (Elasticsearch/Logstash/Kibana) ou Loki/Grafana, structured logging JSON, corrélation avec les traces</li>
-<li>Setup du distributed tracing : instrumentation des services avec OpenTelemetry, déploiement de Jaeger ou Zipkin, propagation du contexte entre microservices</li>
-<li>Création des dashboards : tableaux de bord Grafana ou Azure Dashboards avec vues par service, golden signals (latence, traffic, errors, saturation) et KPIs métier</li>
-<li>Configuration des alertes : définition des seuils critiques, détection d'anomalies, routing on-call (PagerDuty, OpsGenie), escalade et silencing des alertes non-actionnables</li>
-<li>Rédaction des runbooks : playbooks de réponse aux incidents courants, procédures de diagnostic, arbres de décision pour les alertes récurrentes</li>
+<li><strong>Overview</strong> : SLO burn rate, error budget restant, golden signals globaux</li>
+<li><strong>Service</strong> : latence p50/p95/p99, RPS, error rate, saturation CPU/mémoire</li>
+<li><strong>Infrastructure</strong> : nodes K8s, pods restarts, PVC usage</li>
+<li><strong>Business</strong> : KPIs métier (commandes/min, revenus, conversions)</li>
 </ol>
-<h2>Règles</h2>
+<p>Importer le dashboard ID <code>1860</code> (Node Exporter Full) et <code>15661</code> (Kubernetes) comme base.</p>
+<h3>Étape 8 — Routing des alertes (Alertmanager)</h3>
+<pre><code class="lang-yaml"># alertmanager.yml
+route:
+  group_by: ['alertname', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: slack-default
+  routes:
+    - match:
+        severity: critical
+      receiver: pagerduty-oncall
+
+receivers:
+  - name: slack-default
+    slack_configs:
+      - api_url: $SLACK_WEBHOOK
+        channel: '#alerts'
+        text: &quot;{{ .CommonAnnotations.summary }}\nRunbook: {{ .CommonAnnotations.runbook }}&quot;
+
+  - name: pagerduty-oncall
+    pagerduty_configs:
+      - routing_key: $PD_KEY</code></pre>
+<hr>
+<h2>3. Garde-fous / Anti-patterns</h2>
+<p><strong>Ne PAS faire :</strong></p>
 <ul>
-<li>Adapte la stack de monitoring à la plateforme de l'utilisateur (Azure Monitor + Application Insights, AWS CloudWatch + X-Ray, stack open-source Prometheus/Grafana)</li>
-<li>Fournis des configurations complètes et commentées (dashboards JSON, règles d'alerte Prometheus, pipelines de logs)</li>
-<li>Priorise l'actionnabilité des alertes : chaque alerte doit avoir un runbook associé et être liée à un impact utilisateur mesurable</li>
-<li>Propose des solutions progressives : monitoring basique des golden signals d'abord, puis observabilité avancée avec tracing et anomaly detection</li>
+<li>Alerter sur la cause technique (CPU &gt; 80%) sans lier à un impact utilisateur — génère du bruit</li>
+<li>Logs non structurés (<code>Console.WriteLine(&quot;error: &quot; + ex)</code>) — non requêtables, non corrélables</li>
+<li>Un dashboard par développeur — gouvernance zéro, duplication, dépend de données locales</li>
+<li>Seuils d'alerte fixes sans tenir compte de la saisonnalité (trafic nuit vs jour)</li>
+<li>Stocker des données sensibles (PII, tokens) dans les logs ou spans</li>
+</ul>
+<p><strong>Faire attention à :</strong></p>
+<ul>
+<li>Cardinalité des labels Prometheus : jamais <code>userId</code> ou <code>requestId</code> comme label (explosion de séries)</li>
+<li>Rétention : Prometheus par défaut 15 jours — prévoir remote_write vers Thanos ou Mimir pour long terme</li>
+<li>Alertes en <code>for: 0m</code> — faux positifs sur spike court ; minimum <code>for: 2m</code> pour critical</li>
+<li>OpenTelemetry sampling : 100% en dev, 10-20% en prod (coût et volume)</li>
+</ul>
+<hr>
+<h2>4. Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>OpenTelemetry est le standard</strong> : éviter les SDK propriétaires (Datadog agent, New Relic APM) comme seule instrumentation ; préférer OTLP + backend swappable</li>
+<li><strong>Erreur budgets</strong> : tracker le burn rate SLO en temps réel, pas juste le SLO instantané</li>
+<li><strong>Health endpoints standard</strong> :</li>
+</ul>
+<p>  ```   GET /health/live   → 200 si le process tourne   GET /health/ready  → 200 si le service peut accepter du trafic (DB, dépendances OK)   ```</p>
+<ul>
+<li><strong>Corrélation logs-traces</strong> : injecter <code>TraceId</code> et <code>SpanId</code> dans chaque log — permet de passer d'une alerte Grafana à la trace Tempo en un clic</li>
+<li><strong>Runbook obligatoire</strong> : chaque alerte doit avoir un lien <code>runbook</code> dans ses annotations avant d'être activée en production</li>
+<li><strong>Review mensuelle</strong> : supprimer les alertes qui n'ont pas déclenché d'action depuis 30 jours (bruit ou obsolètes)</li>
 </ul>
 </article>
 </main>

@@ -96,23 +96,107 @@ cp -r claude-skills-collection/skills/productivity-project-kickstart ~/.claude/s
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Project Kickstart</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Vision</strong> : quel est l'objectif du projet en 1 phrase ?</li>
-<li><strong>Périmètre</strong> : ce qui est inclus ET ce qui est exclu (scope).</li>
-<li><strong>Livrables</strong> : liste concrète de ce qui sera produit.</li>
-<li><strong>Étapes clés</strong> : roadmap avec milestones et dates cibles.</li>
-<li><strong>Ressources</strong> : personnes, outils, budget nécessaires.</li>
-<li><strong>Risques</strong> : 3-5 risques identifiés avec plan de mitigation.</li>
-<li><strong>Critères de succès</strong> : comment savoir que le projet est réussi ?</li>
-<li>Produit un document &quot;Project Brief&quot; d'1 page.</li>
-</ol>
-<h2>Règles</h2>
+<p>Produit un <strong>Project Brief</strong> d'une page, actionnable, adapté au type de projet (perso, side project, pro, tech, client).</p>
+<hr>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Collecter le contexte minimal</h3>
+<p>Avant tout, poser ces 3 questions (en une seule fois) :</p>
+<pre><code>1. Quel est l'objectif principal en 1 phrase ?
+2. Qui sont les parties prenantes clés (décideur, équipe, client) ?
+3. Y a-t-il une date butoir ou contrainte critique ?</code></pre>
+<p>Ne pas structurer avant d'avoir ces réponses.</p>
+<hr>
+<h3>2. Formuler la Vision (Problem Statement)</h3>
+<p>Format : <code>[Pour] &lt;utilisateur&gt; [qui] &lt;problème&gt;, &lt;nom du projet&gt; est un &lt;type de solution&gt; [qui] &lt;bénéfice principal&gt;.</code></p>
+<p>Exemple concret :</p>
+<pre><code>Pour l'équipe support qui perd du temps sur les tickets redondants,
+BacklogBot est un agent IA qui classe et répond automatiquement
+aux tickets de niveau 1 — réduisant le temps de traitement de 60 %.</code></pre>
+<p>Critère de validation : si la phrase contient &quot;nous&quot;, elle est trop floue. Reformuler.</p>
+<hr>
+<h3>3. Délimiter le Périmètre (Scope)</h3>
+<p>Toujours produire un tableau IN / OUT :</p>
+<table><thead><tr><th>IN (inclus dans v1)</th><th>OUT (hors périmètre)</th></tr></thead><tbody><tr><td>Authentification utilisateur</td><td>SSO / OAuth tiers</td></tr><tr><td>Dashboard lecture seule</td><td>Export PDF</td></tr><tr><td>API REST JSON</td><td>SDK mobile</td></tr></tbody></table>
+<p>Règle : tout ce qui n'est pas explicitement IN est OUT par défaut.</p>
+<hr>
+<h3>4. Définir les Livrables</h3>
+<p>Liste numérotée, chaque livrable doit être <strong>vérifiable</strong> (pas &quot;une bonne appli&quot;, mais &quot;API déployée sur staging avec 95 % uptime mesuré&quot;).</p>
+<p>Exemple :</p>
+<pre><code>1. Spécification fonctionnelle signée (J+5)
+2. Prototype cliquable Figma validé par le client (J+15)
+3. API v1 déployée en staging (J+30)
+4. Documentation technique OpenAPI (J+35)
+5. Recette utilisateur passée à 0 bug bloquant (J+45)</code></pre>
+<hr>
+<h3>5. Roadmap avec Milestones</h3>
+<p>Utiliser des phases plutôt que des semaines flottantes :</p>
+<pre><code>Phase 0 — Cadrage      : J0  → J+5   (brief validé, stack choisie)
+Phase 1 — Foundation   : J+5  → J+20  (setup infra, auth, CI/CD)
+Phase 2 — Core MVP     : J+20 → J+40  (features critiques)
+Phase 3 — Stabilisation: J+40 → J+50  (tests, perf, sécurité)
+Phase 4 — Go-live      : J+50          (déploiement prod, monitoring)</code></pre>
+<p>Pour les projets tech : créer les milestones directement dans le repo si demandé :</p>
+<pre><code class="lang-bash">gh milestone create &quot;Phase 1 — Foundation&quot; --due-date 2026-07-15
+gh milestone create &quot;MVP Go-live&quot; --due-date 2026-08-30</code></pre>
+<hr>
+<h3>6. Ressources et Stack</h3>
+<p>Matrice minimale :</p>
+<table><thead><tr><th>Ressource</th><th>Qui / Quoi</th><th>Disponibilité</th></tr></thead><tbody><tr><td>Tech Lead</td><td>Khalil</td><td>100 %</td></tr><tr><td>Dev backend</td><td>À recruter</td><td>80 % dès J+5</td></tr><tr><td>Infrastructure</td><td>Cloudflare Workers + D1</td><td>immédiat</td></tr><tr><td>Budget CI/CD</td><td>50 $/mois</td><td>validé</td></tr></tbody></table>
+<p>Pour les projets solo : indiquer les outils et le temps hebdo disponible.</p>
+<hr>
+<h3>7. Risques et Mitigations</h3>
+<p>Format : 3 à 5 risques maximum, classés par probabilité × impact.</p>
+<table><thead><tr><th>#</th><th>Risque</th><th>Prob.</th><th>Impact</th><th>Mitigation</th></tr></thead><tbody><tr><td>R1</td><td>Dépendance API tierce instable</td><td>Haute</td><td>Critique</td><td>Circuit breaker + mock local</td></tr><tr><td>R2</td><td>Glissement de périmètre client</td><td>Moyenne</td><td>Haute</td><td>Clause de change request dans le contrat</td></tr><tr><td>R3</td><td>Équipe réduite en août</td><td>Haute</td><td>Moyenne</td><td>Anticiper la phase stabilisation en juillet</td></tr></tbody></table>
+<hr>
+<h3>8. Critères de Succès (DoD Projet)</h3>
+<p>Définir des métriques mesurables, pas des intentions :</p>
+<pre><code>- Temps de réponse API P95 &lt; 200 ms en prod
+- Couverture de tests &gt;= 80 %
+- 0 vulnérabilité critique (OWASP Top 10) au go-live
+- NPS client &gt;= 7/10 à 30 jours post-lancement
+- Coût infra mensuel &lt;= budget validé ± 15 %</code></pre>
+<hr>
+<h2>Output : Project Brief (template)</h2>
+<pre><code class="lang-markdown"># Project Brief — [Nom du projet]
+**Date :** YYYY-MM-DD | **Owner :** [nom] | **Version :** 1.0
+
+## Vision
+[1 phrase Problem Statement]
+
+## Périmètre
+**IN :** [liste]
+**OUT :** [liste]
+
+## Livrables &amp; Dates
+[liste numérotée avec dates]
+
+## Roadmap
+[phases avec jalons]
+
+## Ressources
+[matrice]
+
+## Top 3 Risques
+[tableau]
+
+## Critères de succès
+[liste mesurable]
+
+## Prochaine action immédiate
+&gt; [1 seule action concrète à faire dans les 24h]</code></pre>
+<hr>
+<h2>Anti-patterns / Pièges à éviter</h2>
 <ul>
-<li>Adapte la complexité au type de projet (perso, pro, side project).</li>
-<li>Demande le contexte avant de structurer.</li>
-<li>Garde le brief actionnable, pas théorique.</li>
+<li><strong>Big Bang scope</strong> : tout mettre en v1. Couper sans pitié — une feature non livrée vaut mieux qu'une feature boguée.</li>
+<li><strong>Dates sans buffer</strong> : prévoir systématiquement 20 % de marge sur chaque phase.</li>
+<li><strong>Livrables vagues</strong> : &quot;application fonctionnelle&quot; n'est pas un livrable. Toujours une condition de vérification observable.</li>
+<li><strong>Risques sans owner</strong> : chaque risque doit avoir une personne responsable de la mitigation.</li>
+<li><strong>Brief non signé</strong> : pour un projet client, pas de démarrage sans validation écrite du brief (email suffit).</li>
+<li><strong>Stack choisie avant le périmètre</strong> : la technologie découle du besoin, jamais l'inverse.</li>
 </ul>
+<hr>
+<h2>Critères d'adaptation selon le contexte</h2>
+<table><thead><tr><th>Type de projet</th><th>Ajustements</th></tr></thead><tbody><tr><td>Side project solo</td><td>Supprimer colonnes &quot;qui&quot;, simplifier risques, ajouter section &quot;motivation / pourquoi maintenant&quot;</td></tr><tr><td>Projet client facturable</td><td>Ajouter clause de change request, budget détaillé, jalons de facturation</td></tr><tr><td>Projet open-source</td><td>Ajouter section CONTRIBUTING, licence, roadmap publique (GitHub Projects)</td></tr><tr><td>Migration technique</td><td>Ajouter plan de rollback, fenêtre de maintenance, critères go/no-go</td></tr></tbody></table>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

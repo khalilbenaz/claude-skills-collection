@@ -97,23 +97,132 @@ cp -r claude-skills-collection/skills/dev-log-analyzer ~/.claude/skills/</div><b
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Log Analyzer</h1>
 <h2>Workflow</h2>
-<ol>
-<li>Collecter et identifier le format des logs : distinguer les formats structured JSON (préféré), plain text avec regex parsing, syslog (RFC 5424), ou propriétaires (IIS, Apache, Nginx) ; identifier les champs clés disponibles (timestamp, level, message, correlation ID, user, service).</li>
-<li>Filtrer et rechercher efficacement : utiliser les outils adaptés au contexte (grep/awk en CLI, KQL dans Application Insights, Lucene dans Kibana, LogQL dans Grafana Loki) ; filtrer par plage temporelle, niveau de log, correlation ID, utilisateur ou endpoint concerné.</li>
-<li>Identifier les patterns d'erreurs : repérer les exceptions récurrentes (top N par count), les error spikes (pics soudains sur la timeline), les cascading failures (une erreur qui en déclenche d'autres), et distinguer les erreurs fonctionnelles des erreurs d'infrastructure.</li>
-<li>Corréler entre services : reconstituer la chaîne de requête complète via les correlation IDs (W3C TraceContext, B3 headers), utiliser le distributed tracing (OpenTelemetry, Jaeger, Zipkin, Application Insights) pour suivre une transaction à travers les microservices.</li>
-<li>Analyser les performances via les logs : extraire les slow queries (duration &gt; seuil), identifier les requêtes HTTP à haute latence, calculer les percentiles (P50, P95, P99) sur les temps de réponse loggés, détecter les timeouts et les retry storms.</li>
-<li>Appliquer les best practices de structured logging : configurer Serilog (.NET), NLog, Winston (Node.js) ou Logback (Java) avec enrichissement contextuel automatique (user ID, tenant, version, environment), choisir les niveaux de log appropriés (Debug/Info/Warning/Error/Fatal), éviter le log flooding.</li>
-<li>Mettre en place la centralisation des logs : configurer ELK Stack (Elasticsearch + Logstash/Filebeat + Kibana), Grafana Loki (plus léger, stockage par labels), Application Insights (Azure), CloudWatch Logs Insights (AWS) ou Datadog selon l'infrastructure existante.</li>
-<li>Créer des alertes basées sur les logs : définir des seuils sur les error rates (ex: &gt; 1% d'erreurs 5xx), configurer l'anomaly detection sur les patterns inhabituels, créer des custom queries pour les KPIs métier critiques (paiements échoués, authentifications bloquées).</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Identifier le format et la source</h3>
+<p>Avant tout filtrage, qualifier le format :</p>
+<table><thead><tr><th>Format</th><th>Outil natif</th><th>Champ clé à valider</th></tr></thead><tbody><tr><td>JSON structuré</td><td><code>jq</code>, Kibana, Loki</td><td><code>timestamp</code>, <code>level</code>, <code>traceId</code></td></tr><tr><td>Plain text (Apache/Nginx/IIS)</td><td><code>grep</code>, <code>awk</code>, <code>goaccess</code></td><td>pattern de date, status code</td></tr><tr><td>Syslog RFC 5424</td><td><code>journalctl</code>, ELK Filebeat</td><td><code>PRI</code>, <code>HOSTNAME</code>, <code>MSGID</code></td></tr><tr><td>Windows Event Log</td><td><code>Get-WinEvent</code>, Winlogbeat</td><td><code>EventID</code>, <code>Provider</code></td></tr><tr><td>Application Insights / Datadog</td><td>KQL, SDK query</td><td><code>operation_Id</code>, <code>customDimensions</code></td></tr></tbody></table>
+<pre><code class="lang-bash"># Détecter rapidement le format
+head -5 app.log | python3 -m json.tool 2&gt;/dev/null || echo &quot;plain text&quot;</code></pre>
+<h3>2. Filtrer par fenêtre temporelle et correlation ID</h3>
+<p><strong>Règle d'or : isoler avant d'analyser.</strong></p>
+<pre><code class="lang-bash"># Plage horaire + niveau ERROR dans un fichier plain text
+awk '/2026-06-24T10:[23][0-9]/ &amp;&amp; /ERROR/' app.log
+
+# JSON structuré avec jq
+jq 'select(.level==&quot;Error&quot; and .timestamp &gt;= &quot;2026-06-24T10:20:00Z&quot;)' app.log
+
+# journalctl (systemd)
+journalctl -u myservice --since &quot;2026-06-24 10:00&quot; --until &quot;2026-06-24 11:00&quot; -p err
+
+# grep avec correlation ID (format UUID)
+grep &quot;traceId=3fa85f64&quot; app.log | sort -t' ' -k1</code></pre>
+<pre><code class="lang-kql">// Application Insights — top 10 exceptions sur 1h
+exceptions
+| where timestamp &gt; ago(1h)
+| summarize count() by type, outerMessage
+| order by count_ desc
+| take 10</code></pre>
+<pre><code class="lang-logql"># Grafana Loki — error rate par service
+sum(rate({app=&quot;api&quot;} |= &quot;ERROR&quot; [5m])) by (service)</code></pre>
+<h3>3. Identifier les patterns d'erreurs</h3>
+<p>Objectifs : top exceptions, spikes, cascading failures.</p>
+<pre><code class="lang-bash"># Top 10 messages d'erreur (plain text)
+grep &quot;ERROR&quot; app.log | sed 's/.*ERROR //' | sort | uniq -c | sort -rn | head 10
+
+# Fréquence d'erreurs par minute (détecter les spikes)
+grep &quot;ERROR&quot; app.log | awk '{print $1}' | cut -c1-16 | uniq -c
+
+# Détecter une exception Java/C# récurrente
+grep -A 5 &quot;Unhandled exception&quot; app.log | grep &quot;at &quot; | sort | uniq -c | sort -rn</code></pre>
+<p><strong>Critères de sévérité :</strong></p>
 <ul>
-<li>Adapter les requêtes et outils au système de logs de l'utilisateur (ELK, Loki, CloudWatch, Application Insights, etc.).</li>
-<li>Commencer par le filtrage temporel et le correlation ID pour isoler rapidement le problème en production.</li>
-<li>Fournir des commandes et requêtes prêtes à l'emploi, pas seulement des explications conceptuelles.</li>
-<li>Proposer la centralisation et le structured logging comme amélioration durable après le diagnostic immédiat.</li>
-<li>Respecter la confidentialité : ne jamais suggérer de logger des données personnelles, mots de passe ou tokens sensibles.</li>
+<li>Spike soudain (×5 erreurs en 2 min) → incident actif, vérifier les dépendances.</li>
+<li>Erreur unique répétée &gt; 100×/min → bug code ou config, pas infra.</li>
+<li>Erreurs croissantes en escalier → memory leak ou pool exhaustion.</li>
+<li>Erreurs aléatoires faible fréquence → instabilité réseau ou 3rd party.</li>
+</ul>
+<h3>4. Corréler entre services (distributed tracing)</h3>
+<pre><code class="lang-bash"># Suivre un traceId à travers plusieurs fichiers de services
+grep &quot;traceId=abc123&quot; service-a.log service-b.log service-c.log | sort -k1
+
+# Reconstituer la timeline d'une transaction
+grep &quot;abc123&quot; *.log | awk '{print $1, $2, $NF}' | sort</code></pre>
+<pre><code class="lang-kql">// Application Insights — trace complète d'une opération
+union requests, dependencies, exceptions, traces
+| where operation_Id == &quot;abc123def456&quot;
+| order by timestamp asc
+| project timestamp, itemType, name, duration, success, message</code></pre>
+<p><strong>Si pas de traceId :</strong> corréler par userId + fenêtre de ±500 ms, ou par sessionId.</p>
+<h3>5. Analyser les performances</h3>
+<pre><code class="lang-bash"># Extraire les durées (format &quot;duration=NNNms&quot;) et calculer P95
+grep &quot;duration=&quot; app.log | grep -oP 'duration=\K[0-9]+' | sort -n | \
+  awk 'BEGIN{c=0} {a[c++]=$1} END{print &quot;P50=&quot; a[int(c*0.5)] &quot; P95=&quot; a[int(c*0.95)] &quot; P99=&quot; a[int(c*0.99)]}'
+
+# Identifier les slow SQL queries (EF Core / SqlClient)
+grep &quot;Executed DbCommand&quot; app.log | grep -oP '\(\K[0-9]+(?=ms\))' | awk '$1&gt;1000' | wc -l</code></pre>
+<pre><code class="lang-kql">// Application Insights — P95 latence par endpoint
+requests
+| where timestamp &gt; ago(1h)
+| summarize percentile(duration, 95) by name
+| order by percentile_duration_95 desc</code></pre>
+<h3>6. Structured logging — configuration minimale</h3>
+<p><strong>Serilog (.NET) :</strong></p>
+<pre><code class="lang-csharp">Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty(&quot;Service&quot;, &quot;MyApi&quot;)
+    .Enrich.WithProperty(&quot;Version&quot;, &quot;1.4.2&quot;)
+    .WriteTo.Console(new JsonFormatter())
+    .WriteTo.Seq(&quot;http://seq:5341&quot;)
+    .MinimumLevel.Override(&quot;Microsoft&quot;, LogEventLevel.Warning)
+    .CreateLogger();
+
+// Usage — toujours des propriétés structurées, jamais de string interpolation
+Log.Warning(&quot;Paiement échoué {TransactionId} pour {UserId}&quot;, txId, userId);</code></pre>
+<p><strong>Winston (Node.js) :</strong></p>
+<pre><code class="lang-js">const logger = winston.createLogger({
+  format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+  defaultMeta: { service: 'payment-api', version: '2.1.0' },
+  transports: [new winston.transports.Console()]
+});
+logger.error('Payment failed', { transactionId: txId, userId, amount });</code></pre>
+<h3>7. Centralisation — choix d'infrastructure</h3>
+<table><thead><tr><th>Stack</th><th>Quand choisir</th><th>Complexité</th></tr></thead><tbody><tr><td><strong>ELK</strong> (Elasticsearch + Filebeat + Kibana)</td><td>Volume &gt; 10 GB/jour, full-text search</td><td>Haute</td></tr><tr><td><strong>Grafana Loki + Promtail</strong></td><td>Déjà sur Grafana/Prometheus, volume modéré</td><td>Moyenne</td></tr><tr><td><strong>Application Insights</strong> (Azure)</td><td>App Azure, SDK .NET/Node/Python</td><td>Faible</td></tr><tr><td><strong>CloudWatch Logs Insights</strong></td><td>Infra AWS Lambda/ECS/EC2</td><td>Faible</td></tr><tr><td><strong>Seq</strong></td><td>Dev/staging .NET, budget limité</td><td>Très faible</td></tr></tbody></table>
+<h3>8. Alertes sur les logs</h3>
+<pre><code class="lang-kql">// Application Insights — alerter si error rate &gt; 1% sur 5 min
+requests
+| where timestamp &gt; ago(5m)
+| summarize failed=countif(success==false), total=count()
+| where (failed * 100 / total) &gt; 1</code></pre>
+<pre><code class="lang-yaml"># Grafana Loki alert rule
+- alert: HighErrorRate
+  expr: sum(rate({app=&quot;api&quot;} |= &quot;ERROR&quot; [5m])) &gt; 10
+  for: 2m
+  annotations:
+    summary: &quot;Plus de 10 erreurs/s depuis 2 min&quot;</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne jamais faire :</strong></p>
+<ul>
+<li>Logger des mots de passe, tokens, numéros de carte, PII — même en debug.</li>
+<li>Utiliser <code>string.Format</code> ou interpolation dans les messages Serilog (perd la structure).</li>
+<li>Logger chaque itération d'une boucle sans rate limiting → log flooding → I/O saturation.</li>
+<li>Ignorer les <code>WARN</code> : ils signalent souvent les prémices d'une panne.</li>
+<li>Comparer des logs sur des fuseaux horaires différents sans normaliser en UTC.</li>
+</ul>
+<p><strong>Pièges courants :</strong></p>
+<ul>
+<li><strong>Log rotation silencieuse</strong> : le fichier actif est <code>/app.log</code>, mais l'erreur cherchée est dans <code>/app.log.1</code> de la veille.</li>
+<li><strong>Buffering async</strong> : Serilog/NLog avec sink asynchrone peut perdre les derniers logs avant un crash — toujours configurer <code>flushToDiskInterval</code> ou <code>bufferedBatching: false</code> en prod critique.</li>
+<li><strong>Correlation ID absent</strong> : sans traceId, la corrélation multi-service est impossible a posteriori. L'ajouter en middleware dès le début.</li>
+<li><strong>Timestamps locaux</strong> : toujours écrire en UTC (<code>DateTimeOffset.UtcNow</code>), afficher en local uniquement dans l'UI.</li>
+<li><strong>Over-logging en INFO</strong> : noie les vrais signaux ; réserver INFO aux events métier significatifs, pas aux HTTP 200 routiniers.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>OpenTelemetry Logs</strong> est désormais GA : privilégier <code>OTLP</code> comme protocole d'export pour unifier traces, métriques et logs dans un seul pipeline.</li>
+<li><strong>Log sampling</strong> : en haute fréquence (&gt; 10k req/s), logger 100% des ERROR/WARN, échantillonner les INFO à 10%.</li>
+<li><strong>Structured query first</strong> : toujours préférer une requête KQL/LogQL/Lucene à un <code>grep</code> sur des fichiers bruts en production — plus rapide et moins risqué pour la charge I/O.</li>
+<li><strong>Retention tiered</strong> : ERROR → 90 jours, INFO → 30 jours, DEBUG → 7 jours max. Réduire les coûts de stockage ELK/Loki de 60–70%.</li>
+<li><strong>Masking automatique</strong> : intégrer un enrichisseur Serilog ou un Logstash filter qui masque les patterns PAN (cartes), IBAN, emails avant l'indexation.</li>
 </ul>
 </article>
 </main>

@@ -96,38 +96,162 @@ cp -r claude-skills-collection/skills/linux-linux-admin-guide ~/.claude/skills/<
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Linux Admin Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identifier le contexte système</strong> — déterminer la distribution (Debian/Ubuntu, RHEL/CentOS, Arch), la version du noyau (<code>uname -r</code>), et l'architecture pour adapter les commandes et le gestionnaire de paquets approprié.</li>
-</ol>
-<ol>
-<li><strong>Gestion des utilisateurs et groupes</strong> — créer, modifier et supprimer des utilisateurs avec <code>useradd</code>, <code>usermod</code>, <code>userdel</code>, gérer les groupes avec <code>groupadd</code>/<code>groupmod</code>, configurer les mots de passe avec <code>passwd</code>, et vérifier les fichiers <code>/etc/passwd</code>, <code>/etc/shadow</code> et <code>/etc/group</code>.</li>
-</ol>
-<ol>
-<li><strong>Configuration des permissions</strong> — appliquer les permissions avec <code>chmod</code> (notation octale et symbolique), changer la propriété avec <code>chown</code> et <code>chgrp</code>, configurer les permissions spéciales (SUID, SGID, sticky bit), et utiliser les ACL (<code>setfacl</code>/<code>getfacl</code>) pour un contrôle fin.</li>
-</ol>
-<ol>
-<li><strong>Gestion des services</strong> — démarrer, arrêter et redémarrer les services avec <code>systemctl</code>, vérifier leur statut, activer ou désactiver le démarrage automatique avec <code>enable</code>/<code>disable</code>, et consulter les logs associés avec <code>journalctl -u &lt;service&gt;</code>.</li>
-</ol>
-<ol>
-<li><strong>Planification des tâches</strong> — configurer les tâches cron avec <code>crontab -e</code>, utiliser la syntaxe cron (minute, heure, jour, mois, jour de semaine), placer les scripts dans <code>/etc/cron.d/</code>, <code>/etc/cron.daily/</code>, et vérifier l'exécution avec les logs <code>/var/log/cron</code>.</li>
-</ol>
-<ol>
-<li><strong>Gestion des paquets</strong> — installer, mettre à jour et supprimer des paquets avec <code>apt</code>/<code>apt-get</code> (Debian) ou <code>yum</code>/<code>dnf</code> (RHEL), gérer les dépôts avec <code>add-apt-repository</code> ou les fichiers <code>.repo</code>, et nettoyer le cache avec <code>apt autoremove</code> ou <code>yum clean all</code>.</li>
-</ol>
-<ol>
-<li><strong>Analyse des logs système</strong> — consulter les logs avec <code>journalctl</code>, examiner <code>/var/log/syslog</code>, <code>/var/log/auth.log</code>, <code>/var/log/messages</code>, utiliser <code>tail -f</code> pour le suivi en temps réel, et configurer la rotation des logs avec <code>logrotate</code>.</li>
-</ol>
-<ol>
-<li><strong>Gestion du stockage</strong> — vérifier l'espace disque avec <code>df -h</code>, analyser l'utilisation avec <code>du -sh</code>, gérer les partitions avec <code>fdisk</code>/<code>parted</code>, monter les systèmes de fichiers avec <code>mount</code>/<code>fstab</code>, et surveiller la santé des disques avec <code>smartctl</code>.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Identifier le contexte système</h2>
+<pre><code class="lang-bash">uname -r                      # version noyau
+cat /etc/os-release           # distro + version
+lscpu | grep -E 'Arch|CPU'    # architecture et nb de coeurs
+hostnamectl                   # résumé complet (distro, kernel, arch)</code></pre>
+<p><strong>Critère de décision</strong> — gestionnaire de paquets à utiliser :</p>
+<table><thead><tr><th>Distro</th><th>Package manager</th><th>Dépôts config</th></tr></thead><tbody><tr><td>Debian / Ubuntu</td><td><code>apt</code></td><td><code>/etc/apt/sources.list.d/</code></td></tr><tr><td>RHEL / CentOS / Rocky</td><td><code>dnf</code> (ou <code>yum</code>)</td><td><code>/etc/yum.repos.d/*.repo</code></td></tr><tr><td>Arch / Manjaro</td><td><code>pacman</code></td><td><code>/etc/pacman.conf</code></td></tr><tr><td>Alpine</td><td><code>apk</code></td><td><code>/etc/apk/repositories</code></td></tr></tbody></table>
+<hr>
+<h2>2. Gestion des utilisateurs et groupes</h2>
+<pre><code class="lang-bash"># Créer un utilisateur avec home + shell + groupe primaire
+useradd -m -s /bin/bash -G sudo khalil
+passwd khalil
+
+# Modifier un utilisateur existant (ajouter un groupe secondaire)
+usermod -aG docker khalil          # -a crucial : append, pas remplace
+
+# Supprimer sans effacer le home (safer)
+userdel khalil
+# Supprimer avec home
+userdel -r khalil
+
+# Inspecter
+id khalil                          # uid, gid, groupes
+getent passwd khalil               # entrée dans /etc/passwd
+chage -l khalil                    # expiration du mot de passe</code></pre>
+<p><strong>Piège</strong> : <code>usermod -G docker khalil</code> SANS <code>-a</code> remplace tous les groupes secondaires — préférer toujours <code>-aG</code>.</p>
+<hr>
+<h2>3. Permissions et ACL</h2>
+<pre><code class="lang-bash"># Notation octale — mnémonique : owner/group/others
+chmod 750 script.sh    # rwxr-x---
+chmod 644 config.cfg   # rw-r--r--
+
+# Notation symbolique
+chmod u+x,g-w fichier
+chmod o= fichier       # retire tout accès aux autres
+
+# Changement de propriétaire
+chown khalil:devteam fichier
+chown -R www-data:www-data /var/www/   # récursif
+
+# Bits spéciaux
+chmod u+s /usr/bin/monprog   # SUID  → s'exécute comme owner
+chmod g+s /srv/shared/       # SGID  → fichiers héritent du groupe
+chmod +t /tmp/shared/        # Sticky → seul owner peut supprimer
+
+# ACL fine (quand chmod ne suffit pas)
+setfacl -m u:jenkins:rwx /deploy/
+setfacl -m g:ci:rx /deploy/
+getfacl /deploy/</code></pre>
+<p><strong>Anti-pattern</strong> : <code>chmod -R 777</code> — n'est jamais la bonne réponse. Diagnostiquer d'abord avec <code>namei -l /chemin/complet</code>.</p>
+<hr>
+<h2>4. Gestion des services (systemd)</h2>
+<pre><code class="lang-bash">systemctl status nginx
+systemctl start | stop | restart | reload nginx
+
+# Activer au démarrage
+systemctl enable nginx
+systemctl enable --now nginx   # enable + start en une commande
+
+# Lire les logs du service
+journalctl -u nginx -n 100 --no-pager
+journalctl -u nginx -f          # follow (temps réel)
+journalctl -u nginx --since &quot;1 hour ago&quot;
+
+# Créer ou modifier un service
+systemctl edit nginx            # override sans écraser /lib/systemd/
+systemctl daemon-reload         # après tout changement de unit file</code></pre>
+<p><strong>Critère de décision</strong> : <code>reload</code> vs <code>restart</code> — <code>reload</code> fait un SIGHUP (rechargement de config sans coupure) ; <code>restart</code> tue et relance le processus. Préférer <code>reload</code> en production pour nginx/apache.</p>
+<hr>
+<h2>5. Planification des tâches (cron + systemd timers)</h2>
+<pre><code class="lang-bash"># Éditer la crontab de l'utilisateur courant
+crontab -e
+# Syntaxe : min heure jour_mois mois jour_semaine commande
+0 2 * * *  /opt/scripts/backup.sh &gt;&gt; /var/log/backup.log 2&gt;&amp;1
+*/5 * * * * /usr/bin/check-health.sh   # toutes les 5 min
+
+# Cron système
+ls /etc/cron.{d,daily,weekly,monthly}/
+
+# Vérifier les logs cron
+grep CRON /var/log/syslog | tail -20
+journalctl -t CRON -n 50</code></pre>
+<p><strong>Alternative moderne</strong> — systemd timer (plus flexible, logs dans journald) :</p>
+<pre><code class="lang-ini"># /etc/systemd/system/backup.timer
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target</code></pre>
+<pre><code class="lang-bash">systemctl enable --now backup.timer
+systemctl list-timers --all</code></pre>
+<hr>
+<h2>6. Gestion des paquets</h2>
+<pre><code class="lang-bash"># Debian/Ubuntu
+apt update &amp;&amp; apt upgrade -y
+apt install -y curl git htop
+apt remove --purge nginx             # supprime + config
+apt autoremove                       # orphelins
+apt-cache show nginx                 # infos paquet
+apt list --installed | grep nginx
+
+# RHEL/Rocky/CentOS (dnf)
+dnf update -y
+dnf install -y curl git htop
+dnf remove nginx
+dnf autoremove
+dnf info nginx
+
+# Simuler avant d'agir
+apt-get --simulate remove nginx
+dnf --assumeno remove nginx</code></pre>
+<hr>
+<h2>7. Analyse des logs</h2>
+<pre><code class="lang-bash"># Logs systemd
+journalctl -p err -n 50             # erreurs uniquement
+journalctl --since &quot;2026-06-24 08:00&quot;
+journalctl -k                        # messages kernel (dmesg via journald)
+
+# Logs fichiers classiques
+tail -f /var/log/syslog
+tail -f /var/log/auth.log            # tentatives SSH, sudo
+grep &quot;Failed password&quot; /var/log/auth.log | awk '{print $11}' | sort | uniq -c | sort -rn
+
+# Rotation des logs — forcer un cycle
+logrotate -f /etc/logrotate.d/nginx</code></pre>
+<hr>
+<h2>8. Stockage et systèmes de fichiers</h2>
+<pre><code class="lang-bash">df -hT                              # espace + type FS
+du -sh /var/log/* | sort -rh | head -10   # top gros répertoires
+lsblk -f                            # disques, partitions, FS, UUID
+
+# Monter un disque
+blkid /dev/sdb1                     # obtenir UUID
+echo &quot;UUID=xxxx /data ext4 defaults,nofail 0 2&quot; &gt;&gt; /etc/fstab
+mount -a                            # tester le fstab
+
+# Créer un FS et monter
+mkfs.ext4 /dev/sdb1
+mkdir /data &amp;&amp; mount /dev/sdb1 /data
+
+# Santé disque
+smartctl -a /dev/sda                # SMART complet
+smartctl -t short /dev/sda          # lancer un test rapide</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Risque</th><th>Ce qu'il ne faut PAS faire</th><th>Bonne pratique</th></tr></thead><tbody><tr><td>Destruction de permissions</td><td><code>chmod -R 777 /</code></td><td>Tester sur un sous-dossier, vérifier avec <code>namei</code></td></tr><tr><td>Perte de groupes secondaires</td><td><code>usermod -G groupe user</code></td><td>Toujours <code>usermod -aG groupe user</code></td></tr><tr><td>Coupure SSH</td><td>Modifier <code>/etc/ssh/sshd_config</code> sans <code>sshd -t</code></td><td><code>sshd -t &amp;&amp; systemctl reload sshd</code></td></tr><tr><td>Fstab cassé au reboot</td><td>Ajouter une entrée sans tester</td><td><code>mount -a</code> avant de rebooter</td></tr><tr><td>Suppression paquet système</td><td><code>apt remove --purge systemd</code></td><td><code>apt-get --simulate remove paquet</code> d'abord</td></tr><tr><td>Root direct</td><td><code>su -</code> en routine</td><td><code>sudo -i</code> ou <code>sudo commande</code> — auditabilité</td></tr><tr><td>Cron silencieux</td><td>Pas de redirection de sortie</td><td><code>cmd &gt;&gt; /var/log/job.log 2&gt;&amp;1</code></td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Toujours tester les commandes critiques sur un environnement de staging avant la production — une erreur de <code>chmod -R</code> ou <code>chown -R</code> peut être désastreuse.</li>
-<li>Privilégier <code>sudo</code> pour les opérations root plutôt que de se connecter en root directement — tracer chaque action avec un utilisateur nommé.</li>
-<li>Documenter chaque modification système dans un fichier de changelog ou un outil de gestion de configuration (Ansible, Puppet).</li>
-<li>Vérifier les impacts avant de supprimer un paquet — utiliser <code>apt-get --simulate remove</code> ou <code>rpm -e --test</code> pour prévisualiser les dépendances affectées.</li>
-<li>Sauvegarder les fichiers de configuration avant toute modification avec un suffixe <code>.bak</code> ou via un système de versioning.</li>
+<li><strong>Sauvegarde avant modif</strong> : <code>cp /etc/nginx/nginx.conf{,.bak-$(date +%F)}</code> — pattern idempotent.</li>
+<li><strong>Sudo minimal</strong> : configurer <code>/etc/sudoers.d/khalil</code> avec <code>NOPASSWD</code> uniquement sur les commandes explicites, pas <code>ALL</code>.</li>
+<li><strong>Auditd</strong> : activer <code>auditd</code> sur les serveurs de production (<code>apt install auditd</code>), écrire des règles sur <code>/etc/shadow</code>, <code>/etc/passwd</code>, exécutions <code>sudo</code>.</li>
+<li><strong>Gestion de configuration</strong> : toute modification manuelle doit être rejouable via Ansible/Puppet — traiter le serveur comme immutable.</li>
+<li><strong>Mises à jour de sécurité automatiques</strong> : activer <code>unattended-upgrades</code> (Debian) ou <code>dnf-automatic</code> (RHEL) en mode security-only.</li>
+<li><strong>Journaux centralisés</strong> : rediriger <code>journald</code> vers un syslog centralisé (Loki, Graylog) en production pour ne pas perdre les logs après un crash.</li>
 </ul>
 </article>
 </main>

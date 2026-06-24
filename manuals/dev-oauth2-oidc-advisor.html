@@ -96,123 +96,146 @@ cp -r claude-skills-collection/skills/dev-oauth2-oidc-advisor ~/.claude/skills/<
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Conseiller OAuth2 / OIDC</h1>
-<h2>Workflow</h2>
+<h2>Workflow en 5 étapes</h2>
 <ol>
-<li><strong>Identifier le flow</strong> : Authorization Code, Client Credentials, Device Code, etc.</li>
-<li><strong>Configurer l'IdP</strong> : clients, scopes, claims.</li>
-<li><strong>Implémenter</strong> : middleware d'authentification, validation de tokens.</li>
-<li><strong>Sécuriser</strong> : rotation des secrets, expiration, révocation.</li>
+<li><strong>Qualifier le contexte</strong> : type de client (SPA, mobile, service, CLI), confidentialité du secret, présence d'un utilisateur humain ou non.</li>
+<li><strong>Choisir le flow</strong> : voir tableau ci-dessous — la mauvaise sélection est la source d'erreur #1.</li>
+<li><strong>Configurer l'IdP</strong> : clients, redirect URIs, scopes, claims mapping.</li>
+<li><strong>Implémenter côté serveur</strong> : middleware de validation JWT, politiques d'autorisation.</li>
+<li><strong>Durcir</strong> : rotation des secrets, expiration courte, révocation, PKCE obligatoire.</li>
 </ol>
-<h2>Choisir le bon flow OAuth2</h2>
-<table><thead><tr><th>Flow</th><th>Usage</th><th>Client</th></tr></thead><tbody><tr><td><strong>Authorization Code + PKCE</strong></td><td>Apps web, SPA, mobile</td><td>Public</td></tr><tr><td><strong>Client Credentials</strong></td><td>Service-to-service, APIs</td><td>Confidentiel</td></tr><tr><td><strong>Device Code</strong></td><td>IoT, CLI, TV</td><td>Public</td></tr><tr><td><strong>Refresh Token</strong></td><td>Renouvellement silencieux</td><td>Tous</td></tr></tbody></table>
-<h3>Ne plus utiliser</h3>
+<hr>
+<h2>Choisir le bon flow</h2>
+<table><thead><tr><th>Flow</th><th>Quand l'utiliser</th><th>Type client</th></tr></thead><tbody><tr><td><strong>Authorization Code + PKCE</strong></td><td>App web, SPA, mobile — utilisateur présent</td><td>Public ou confidentiel</td></tr><tr><td><strong>Client Credentials</strong></td><td>Service-to-service, daemon, batch</td><td>Confidentiel uniquement</td></tr><tr><td><strong>Device Code</strong></td><td>IoT, CLI, smart TV — pas de navigateur</td><td>Public</td></tr><tr><td><strong>Refresh Token</strong></td><td>Renouvellement silencieux de l'access token</td><td>Tous</td></tr></tbody></table>
+<p><strong>Règle décisive</strong> : y a-t-il un utilisateur humain qui s'authentifie ?</p>
+<ul>
+<li>Oui → Authorization Code + PKCE (toujours)</li>
+<li>Non → Client Credentials</li>
+</ul>
+<p><strong>Flows à bannir définitivement</strong></p>
 <ul>
 <li>~~Implicit Flow~~ → remplacé par Authorization Code + PKCE</li>
-<li>~~Resource Owner Password~~ → anti-pattern de sécurité</li>
+<li>~~Resource Owner Password Credentials~~ → expose le mot de passe au client, impossible à MFA</li>
 </ul>
+<hr>
 <h2>Implémentation ASP.NET Core</h2>
-<h3>API protégée par JWT</h3>
+<h3>API protégée par JWT Bearer</h3>
 <pre><code class="lang-csharp">// Program.cs
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =&gt;
     {
-        options.Authority = &quot;https://auth.company.com&quot;;
-        options.Audience = &quot;payment-api&quot;;
+        options.Authority = &quot;https://auth.company.com&quot;;      // Auto-découverte OIDC
+        options.Audience  = &quot;payment-api&quot;;
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromSeconds(30),
-            ValidIssuers = new[] { &quot;https://auth.company.com&quot; }
+            ValidateIssuer    = true,
+            ValidateAudience  = true,
+            ValidateLifetime  = true,
+            ClockSkew         = TimeSpan.FromSeconds(30),    // Tolérance horaire minimale
+            ValidIssuers      = [&quot;https://auth.company.com&quot;] // Whitelist explicite
+        };
+        // Événement de débogage pratique
+        options.Events = new JwtBearerEvents
+        {
+            OnAuthenticationFailed = ctx =&gt;
+            {
+                ctx.Response.Headers.Append(&quot;WWW-Authenticate-Detail&quot;, ctx.Exception.Message);
+                return Task.CompletedTask;
+            }
         };
     });
 
 builder.Services.AddAuthorization(options =&gt;
 {
-    options.AddPolicy(&quot;PaymentAdmin&quot;, policy =&gt;
-        policy.RequireClaim(&quot;role&quot;, &quot;payment-admin&quot;));
-
-    options.AddPolicy(&quot;ReadPayments&quot;, policy =&gt;
-        policy.RequireClaim(&quot;scope&quot;, &quot;payments:read&quot;));
+    options.AddPolicy(&quot;PaymentAdmin&quot;, p =&gt; p.RequireClaim(&quot;role&quot;, &quot;payment-admin&quot;));
+    options.AddPolicy(&quot;ReadPayments&quot;,  p =&gt; p.RequireClaim(&quot;scope&quot;, &quot;payments:read&quot;));
 });</code></pre>
-<h3>Client Credentials (service-to-service)</h3>
-<pre><code class="lang-csharp">// Appel entre services avec token machine-to-machine
-builder.Services.AddHttpClient(&quot;PaymentApi&quot;, client =&gt;
-{
-    client.BaseAddress = new Uri(&quot;https://api.company.com&quot;);
-})
-.AddClientCredentialsTokenHandler(options =&gt;
-{
-    options.Authority = &quot;https://auth.company.com&quot;;
-    options.ClientId = &quot;order-service&quot;;
-    options.ClientSecret = configuration[&quot;Auth:ClientSecret&quot;];
-    options.Scope = &quot;payments:write&quot;;
-});</code></pre>
-<h3>Extraction de claims</h3>
-<pre><code class="lang-csharp">[Authorize]
-[ApiController]
-public class PaymentController : ControllerBase
-{
-    [HttpPost]
-    [Authorize(Policy = &quot;PaymentAdmin&quot;)]
-    public async Task&lt;IActionResult&gt; CreatePayment(CreatePaymentRequest request)
+<h3>Client Credentials — appel service-to-service</h3>
+<pre><code class="lang-csharp">// Avec Duende.AccessTokenManagement ou Microsoft.Extensions.Http.OAuth2
+builder.Services.AddClientCredentialsTokenManagement()
+    .AddClient(&quot;payment-api&quot;, client =&gt;
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var roles = User.FindAll(ClaimTypes.Role).Select(c =&gt; c.Value);
-        var tenantId = User.FindFirst(&quot;tenant_id&quot;)?.Value;
+        client.TokenEndpoint = &quot;https://auth.company.com/connect/token&quot;;
+        client.ClientId      = &quot;order-service&quot;;
+        client.ClientSecret  = config[&quot;Auth:ClientSecret&quot;]; // Depuis Key Vault, pas appsettings
+        client.Scope         = &quot;payments:write&quot;;
+    });
 
-        // ...
-    }
-}</code></pre>
-<h2>Structure d'un JWT</h2>
-<pre><code>Header.Payload.Signature
-
+builder.Services.AddHttpClient&lt;IPaymentClient, PaymentClient&gt;()
+    .AddClientCredentialsTokenHandler(&quot;payment-api&quot;);</code></pre>
+<h3>Extraction de claims dans un controller</h3>
+<pre><code class="lang-csharp">[Authorize(Policy = &quot;PaymentAdmin&quot;)]
+[HttpPost(&quot;payments&quot;)]
+public IActionResult CreatePayment(CreatePaymentRequest request)
 {
-  &quot;alg&quot;: &quot;RS256&quot;,         // Algorithme de signature
-  &quot;typ&quot;: &quot;JWT&quot;,
-  &quot;kid&quot;: &quot;key-id-123&quot;     // Key ID pour la rotation
-}
-.
-{
-  &quot;iss&quot;: &quot;https://auth.company.com&quot;,   // Issuer
-  &quot;sub&quot;: &quot;user-123&quot;,                    // Subject (user ID)
-  &quot;aud&quot;: &quot;payment-api&quot;,                 // Audience
-  &quot;exp&quot;: 1700000000,                    // Expiration
-  &quot;iat&quot;: 1699996400,                    // Issued at
-  &quot;scope&quot;: &quot;payments:read payments:write&quot;,
-  &quot;role&quot;: &quot;payment-admin&quot;,
-  &quot;tenant_id&quot;: &quot;tenant-abc&quot;
+    var sub      = User.FindFirstValue(ClaimTypes.NameIdentifier); // &quot;sub&quot;
+    var roles    = User.FindAll(ClaimTypes.Role).Select(c =&gt; c.Value);
+    var tenantId = User.FindFirstValue(&quot;tenant_id&quot;);               // Claim custom
+    var scopes   = User.FindFirstValue(&quot;scope&quot;)?.Split(' ') ?? [];
+    // ...
 }</code></pre>
+<hr>
+<h2>Structure d'un JWT — anatomie rapide</h2>
+<pre><code>eyJhbGciOiJSUzI1NiIsImtpZCI6ImtleS0xMjMifQ   ← Header (Base64url)
+.eyJpc3MiOiJodHRwczovL2F1dGguY29tcGFueS5jb20iLCAic3ViIjoidXNlci0xMjMiLCAiYXVkIjoicGF5bWVudC1hcGkiLCAiZXhwIjoxNzAwMDAwMDAwLCAiaWF0IjoxNjk5OTk2NDAwLCAic2NvcGUiOiJwYXltZW50czpyZWFkIiwicm9sZSI6InBheW1lbnQtYWRtaW4iLCJ0ZW5hbnRfaWQiOiJ0ZW5hbnQtYWJjIn0=   ← Payload
+.SIGNATURE   ← Signature RS256 (vérifiée avec la clé publique de l'IdP via JWKS)</code></pre>
+<p>Claims obligatoires à valider : <code>iss</code>, <code>aud</code>, <code>exp</code>, <code>iat</code>, <code>nbf</code> (si présent). <code>kid</code> permet la rotation de clés sans downtime (JWKS endpoint).</p>
+<hr>
 <h2>Gestion des tokens</h2>
-<table><thead><tr><th>Token</th><th>Durée de vie</th><th>Stockage</th></tr></thead><tbody><tr><td><strong>Access Token</strong></td><td>5-15 minutes</td><td>Mémoire (SPA), cookie HttpOnly (web)</td></tr><tr><td><strong>Refresh Token</strong></td><td>7-30 jours</td><td>Cookie HttpOnly secure, rotation obligatoire</td></tr><tr><td><strong>ID Token</strong></td><td>5-15 minutes</td><td>Mémoire, jamais envoyé à une API</td></tr></tbody></table>
-<h3>Rotation des refresh tokens</h3>
-<pre><code class="lang-csharp">// Chaque utilisation d'un refresh token en génère un nouveau
-// L'ancien est invalidé → détection de vol si réutilisé</code></pre>
-<h2>Bonnes pratiques</h2>
-<h3>À faire</h3>
+<table><thead><tr><th>Token</th><th>Durée recommandée</th><th>Stockage côté client</th></tr></thead><tbody><tr><td><strong>Access Token</strong></td><td>5–15 min</td><td>Mémoire JS (SPA) ou cookie HttpOnly Secure SameSite=Strict</td></tr><tr><td><strong>Refresh Token</strong></td><td>7–30 jours</td><td>Cookie HttpOnly Secure SameSite=Strict <strong>uniquement</strong></td></tr><tr><td><strong>ID Token</strong></td><td>5–15 min</td><td>Mémoire — jamais envoyé à une API tierce</td></tr></tbody></table>
+<h3>Rotation des refresh tokens (Keycloak / Auth0 / Entra)</h3>
+<pre><code>Flux : Client → POST /token (grant_type=refresh_token, token=RT1)
+               ← { access_token, refresh_token: RT2, expires_in }
+
+RT1 est immédiatement invalidé.
+Si RT1 est réutilisé → détection de vol → révocation de toute la famille de tokens.</code></pre>
+<p>Activer dans Keycloak : <em>Realm Settings → Tokens → Revoke Refresh Token = ON</em>.</p>
+<hr>
+<h2>Intégration Identity Providers</h2>
+<h3>Keycloak — déclarer un client confidentiel (CLI)</h3>
+<pre><code class="lang-bash">kcadm.sh create clients -r myrealm \
+  -s clientId=order-service \
+  -s 'protocol=openid-connect' \
+  -s 'publicClient=false' \
+  -s 'serviceAccountsEnabled=true' \
+  -s 'standardFlowEnabled=false' \
+  -s 'directAccessGrantsEnabled=false'</code></pre>
+<h3>Azure Entra ID — token via Client Credentials</h3>
+<pre><code class="lang-bash">curl -X POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token \
+  -d &quot;grant_type=client_credentials&quot; \
+  -d &quot;client_id={clientId}&quot; \
+  -d &quot;client_secret={secret}&quot; \
+  -d &quot;scope=https://api.company.com/.default&quot;</code></pre>
+<h3>Déboguer un JWT immédiatement</h3>
+<pre><code class="lang-bash"># Décoder sans vérifier la signature (debug uniquement)
+echo &quot;{JWT}&quot; | cut -d. -f2 | base64 -d 2&gt;/dev/null | jq .
+
+# Vérifier la signature via JWKS
+jwt decode --jwks https://auth.company.com/.well-known/jwks.json {JWT}</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
+<h3>Pièges courants</h3>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td><code>ClockSkew</code> trop large (&gt; 5 min)</td><td>Tokens expirés acceptés</td><td>Garder ≤ 30 secondes</td></tr><tr><td>Audience non validée</td><td>N'importe quelle API accepte le token</td><td><code>ValidateAudience = true</code> + <code>Audience</code> explicite</td></tr><tr><td>Secret partagé entre envs</td><td>Compromis prod via dev</td><td>Secrets distincts par environnement, rotation trimestrielle</td></tr><tr><td>Token dans localStorage</td><td>Exfiltrable via XSS</td><td>Cookie HttpOnly obligatoire</td></tr><tr><td>Données sensibles dans le payload</td><td>PII exposée (Base64 ≠ chiffrement)</td><td>Ne mettre que des identifiants opaques dans le JWT</td></tr><tr><td>RS256 → HS256 downgrade</td><td>Validation contournée si secret devinable</td><td>Forcer l'algorithme côté serveur, refuser <code>alg:none</code></td></tr><tr><td>Access token de longue durée</td><td>Surface d'attaque élevée</td><td>Max 15 min, refresh token pour la durée de session</td></tr><tr><td>Pas de révocation</td><td>Token volé valide jusqu'à expiration</td><td>Implémenter token introspection ou liste de révocation</td></tr></tbody></table>
+<h3>Checklist sécurité avant mise en production</h3>
 <ul>
-<li>Toujours utiliser <strong>HTTPS</strong> pour les échanges de tokens</li>
-<li>Valider <strong>tous</strong> les champs du JWT (issuer, audience, expiration)</li>
-<li>Utiliser des <strong>scopes granulaires</strong> (<code>payments:read</code>, <code>payments:write</code>)</li>
-<li>Implémenter la <strong>rotation des refresh tokens</strong></li>
-<li>Stocker les tokens côté client dans des <strong>cookies HttpOnly Secure SameSite</strong></li>
-<li>Utiliser <strong>RS256</strong> (asymétrique) plutôt que HS256 pour les APIs publiques</li>
+<li>[ ] HTTPS strict sur toutes les redirect URIs</li>
+<li>[ ] PKCE activé pour tous les clients publics</li>
+<li>[ ] <code>state</code> et <code>nonce</code> validés (protection CSRF/replay)</li>
+<li>[ ] Rotation refresh tokens activée</li>
+<li>[ ] Scopes granulaires (principe du moindre privilège)</li>
+<li>[ ] RS256 ou ES256 — jamais HS256 pour APIs multi-services</li>
+<li>[ ] JWKS endpoint utilisé (rotation de clés sans redéploiement)</li>
+<li>[ ] Secrets stockés en Key Vault (pas en appsettings.json)</li>
+<li>[ ] Logging des événements d'authentification (échecs inclus)</li>
 </ul>
-<h3>À éviter</h3>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Stocker des tokens dans le localStorage (vulnérable au XSS)</li>
-<li>Des access tokens de longue durée (&gt; 15 min)</li>
-<li>Mettre des données sensibles dans le payload JWT (pas chiffré)</li>
-<li>Faire confiance au token sans vérifier la signature</li>
-<li>Utiliser le même secret pour tous les environnements</li>
-</ul>
-<h2>Règles</h2>
-<ul>
-<li>Le flow Implicit est obsolète — toujours utiliser Authorization Code + PKCE.</li>
-<li>Les access tokens doivent expirer en moins de 15 minutes.</li>
-<li>Les refresh tokens doivent avoir une rotation activée.</li>
-<li>Valider issuer, audience et signature sur chaque requête.</li>
+<li><strong>DPoP (Demonstrating Proof of Possession)</strong> : lier l'access token à une clé privée côté client — standard RFC 9449, supporté par Entra ID et Keycloak 24+. Protège contre le vol de token Bearer.</li>
+<li><strong>PAR (Pushed Authorization Requests)</strong> : envoyer les paramètres d'autorisation via POST avant la redirection — protège contre la falsification d'URL (RFC 9126).</li>
+<li><strong>FAPI 2.0</strong> : profil de sécurité renforcé pour open banking / fintech — impose PAR + DPoP + MTLS.</li>
+<li><strong>Token Exchange (RFC 8693)</strong> : impersonation ou délégation entre services sans exposer le token original.</li>
+<li>Préférer <strong>opaque tokens + introspection</strong> si révocation immédiate requise ; préférer <strong>JWT</strong> si performance critique et révocation tolérée.</li>
 </ul>
 </article>
 </main>

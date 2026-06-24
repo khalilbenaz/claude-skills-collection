@@ -97,21 +97,99 @@ cp -r claude-skills-collection/skills/management-team-velocity-tracker ~/.claude
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Team Velocity Tracker</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Identification des métriques</strong> — Définir les métriques clés à suivre : vélocité (story points livrés/sprint), throughput (nombre de stories livrées), lead time, cycle time, WIP.</li>
-<li><strong>Collecte des données</strong> — Extraire les données depuis l'outil de gestion (Jira, Azure DevOps, Linear) sur les 6-10 derniers sprints pour avoir une base statistique fiable.</li>
-<li><strong>Calcul de la vélocité</strong> — Calculer la vélocité moyenne, médiane et l'écart-type pour évaluer la stabilité et la prévisibilité de l'équipe.</li>
-<li><strong>Construction des graphiques</strong> — Générer les graphiques essentiels : burndown chart du sprint, velocity chart historique, cumulative flow diagram, lead time distribution.</li>
-<li><strong>Analyse des tendances</strong> — Identifier les tendances (amélioration, dégradation, plateaux), les anomalies et les corrélations avec des événements (changement d'équipe, dette technique).</li>
-<li><strong>Prévisions</strong> — Utiliser la vélocité pour estimer les dates de livraison avec des intervalles de confiance (optimiste/pessimiste/réaliste) via simulation Monte Carlo si possible.</li>
-<li><strong>Recommandations</strong> — Proposer des actions concrètes pour améliorer les métriques identifiées comme problématiques.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Définir le périmètre de mesure</h3>
 <ul>
-<li>Ne jamais utiliser la vélocité pour comparer deux équipes entre elles.</li>
-<li>La vélocité n'est pas un objectif à maximiser mais un outil de planification et de prévisibilité.</li>
-<li>Prendre en compte au minimum 3 sprints pour toute moyenne significative.</li>
-<li>Signaler les sprints atypiques (vacances, incidents majeurs) pour ne pas fausser les statistiques.</li>
+<li>Confirmer la durée du sprint (1, 2 ou 3 semaines) — elle doit rester constante.</li>
+<li>Identifier la source de données : Jira, Azure DevOps, Linear, Shortcut.</li>
+<li>Décider de l'unité : <strong>story points</strong> (estimation relative) ou <strong>nombre de stories</strong> (throughput). Les deux métriques sont complémentaires.</li>
+</ul>
+<h3>2. Extraire les données brutes (6–10 sprints minimum)</h3>
+<p><strong>Azure DevOps — requête WIQL pour extraire les stories complétées par sprint :</strong></p>
+<pre><code class="lang-wiql">SELECT [System.Id], [System.Title], [Story Points], [System.IterationPath], [Microsoft.VSTS.Common.ClosedDate]
+FROM WorkItems
+WHERE [System.WorkItemType] = 'User Story'
+  AND [System.State] = 'Done'
+  AND [System.IterationPath] UNDER 'MonProjet\Sprint 1'
+ORDER BY [Microsoft.VSTS.Common.ClosedDate] DESC</code></pre>
+<p><strong>Jira — JQL équivalent :</strong></p>
+<pre><code class="lang-jql">project = MONPROJET AND issuetype = Story AND status = Done
+AND sprint in closedSprints() ORDER BY sprint ASC</code></pre>
+<p><strong>Export CSV via Azure DevOps CLI :</strong></p>
+<pre><code class="lang-bash">az boards query --wiql &quot;SELECT [System.Id],[Story Points],[System.IterationPath] FROM WorkItems WHERE ...&quot; --output table</code></pre>
+<h3>3. Calculer les métriques fondamentales</h3>
+<table><thead><tr><th>Métrique</th><th>Formule</th><th>Signal</th></tr></thead><tbody><tr><td>Vélocité moyenne</td><td>Σ SP livrés / N sprints</td><td>Planification de release</td></tr><tr><td>Médiane</td><td>Valeur centrale des N sprints</td><td>Robuste aux outliers</td></tr><tr><td>Écart-type (σ)</td><td>√(Σ(x-μ)²/N)</td><td>Prévisibilité</td></tr><tr><td>Throughput</td><td>Nbre stories/sprint</td><td>Indépendant des estimations</td></tr><tr><td>Lead time</td><td>Date Done − Date Création</td><td>Réactivité end-to-end</td></tr><tr><td>Cycle time</td><td>Date Done − Date &quot;In Progress&quot;</td><td>Efficacité d'exécution</td></tr></tbody></table>
+<p><strong>Règle de décision sur la stabilité :</strong></p>
+<ul>
+<li>σ &lt; 20 % de la moyenne → équipe <strong>prévisible</strong>, planification fiable.</li>
+<li>σ entre 20–40 % → équipe <strong>instable</strong>, investiguer les causes.</li>
+<li>σ &gt; 40 % → mesure non fiable, priorité à stabiliser avant de prévoir.</li>
+</ul>
+<h3>4. Construire les graphiques essentiels</h3>
+<p><strong>Velocity chart (Python/pandas) :</strong></p>
+<pre><code class="lang-python">import pandas as pd, matplotlib.pyplot as plt
+
+df = pd.DataFrame({
+    'sprint': ['S1','S2','S3','S4','S5','S6'],
+    'sp':     [32, 28, 35, 30, 33, 31]
+})
+mean_vel = df['sp'].mean()
+df.plot(x='sprint', y='sp', kind='bar', title='Vélocité par sprint')
+plt.axhline(mean_vel, color='red', linestyle='--', label=f'Moyenne {mean_vel:.0f} SP')
+plt.legend(); plt.tight_layout(); plt.savefig('velocity.png')</code></pre>
+<p><strong>Graphiques clés à produire :</strong></p>
+<ul>
+<li><strong>Burndown</strong> du sprint courant (SP restants vs. idéal).</li>
+<li><strong>Velocity chart</strong> historique avec bande σ.</li>
+<li><strong>Cumulative Flow Diagram</strong> (CFD) — détecter l'accumulation dans un état.</li>
+<li><strong>Lead time distribution</strong> (histogramme + percentile 85).</li>
+</ul>
+<h3>5. Produire des prévisions par simulation Monte Carlo</h3>
+<p>Quand on a ≥ 10 sprints de throughput historique :</p>
+<pre><code class="lang-python">import random, statistics
+
+throughput_history = [6, 7, 5, 8, 6, 7, 9, 6, 7, 8]  # stories/sprint
+backlog_remaining = 40  # stories à livrer
+simulations = 10_000
+results = []
+
+for _ in range(simulations):
+    sprints, done = 0, 0
+    while done &lt; backlog_remaining:
+        done += random.choice(throughput_history)
+        sprints += 1
+    results.append(sprints)
+
+p50 = statistics.median(results)
+p85 = sorted(results)[int(0.85 * simulations)]
+p95 = sorted(results)[int(0.95 * simulations)]
+print(f&quot;50 % → {p50} sprints | 85 % → {p85} | 95 % → {p95}&quot;)</code></pre>
+<p><strong>Lecture :</strong> présenter trois dates de livraison (optimiste P50, réaliste P85, pessimiste P95) plutôt qu'une date unique.</p>
+<h3>6. Analyser les tendances et anomalies</h3>
+<p>Checklist d'analyse :</p>
+<ul>
+<li>[ ] Sprints atypiques identifiés (congés, incidents, onboarding) → les <strong>exclure ou annoter</strong>, ne pas les corriger.</li>
+<li>[ ] CFD montre-t-il un goulot ? (largeur d'une colonne qui s'élargit = blocage).</li>
+<li>[ ] Cycle time en hausse → dette technique, WIP trop élevé, ou dépendances externes.</li>
+<li>[ ] Lead time &gt; 3× cycle time → tickets restent trop longtemps en backlog.</li>
+<li>[ ] Vélocité en baisse progressive → signal d'alerte burnout ou dette.</li>
+</ul>
+<h3>7. Formuler des recommandations actionnables</h3>
+<p>Structurer chaque recommandation ainsi :</p>
+<pre><code>Problème observé : cycle time médian passé de 3 à 6 jours sur les 4 derniers sprints.
+Hypothèse : revues de code bloquantes (&gt; 48 h d'attente en moyenne).
+Action : limiter WIP à N/2 (N = taille d'équipe), définir SLA review ≤ 1 jour ouvré.
+Mesure du succès : cycle time &lt; 4 jours d'ici 3 sprints.</code></pre>
+<hr>
+<h2>Garde-fous &amp; anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correctif</th></tr></thead><tbody><tr><td>Comparer la vélocité de deux équipes</td><td>Story points non comparables entre équipes</td><td>Utiliser le throughput si comparaison nécessaire</td></tr><tr><td>Augmenter la vélocité comme objectif</td><td>Inflation des estimations, qualité dégradée</td><td>La vélocité sert à <strong>prévoir</strong>, pas à évaluer la performance</td></tr><tr><td>Moyenne sur &lt; 3 sprints</td><td>Statistiquement non significatif</td><td>Attendre 5+ sprints avant toute décision</td></tr><tr><td>Inclure les sprints 0 / perturbés</td><td>Fausse les projections</td><td>Annoter et exclure des calculs de base</td></tr><tr><td>Ignorer le WIP</td><td>Cache la vraie cause de lenteur</td><td>Afficher le WIP en temps réel sur le board</td></tr><tr><td>Prédire une date unique</td><td>Fausse confiance</td><td>Toujours présenter intervalles de confiance</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Flow metrics &gt; story points</strong> : les équipes matures privilégient le cycle time et le throughput (pas d'estimation biaisée). Les story points restent utiles pour le capacity planning.</li>
+<li><strong>Percentile 85 comme engagement</strong> : c'est le standard industry (Kanban Guide 2020+) pour les SLAs de livraison.</li>
+<li><strong>CFD automatisé</strong> : configurer le CFD directement dans Azure DevOps (Analytics → Cumulative Flow) plutôt que de le construire manuellement.</li>
+<li><strong>Sprint Review comme point de collecte</strong> : enregistrer la vélocité immédiatement après la review, avant tout ajustement.</li>
+<li><strong>DORA metrics complémentaires</strong> : associer les métriques agile aux DORA metrics (deployment frequency, change failure rate) pour relier livraison agile et qualité opérationnelle.</li>
 </ul>
 </article>
 </main>

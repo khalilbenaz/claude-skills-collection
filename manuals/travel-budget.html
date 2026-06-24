@@ -96,16 +96,74 @@ cp -r claude-skills-collection/skills/travel-budget ~/.claude/skills/</div><butt
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Travel Budget</h1>
-<h2>Étape 1 — Paramètres</h2>
-<p>Destination, durée, nombre de personnes, niveau de confort (budget/moyen/confort), devise.</p>
-<h2>Étape 2 — Estimation par poste</h2>
-<table><thead><tr><th>Poste</th><th>Coût/jour/personne</th><th>Total</th><th>Notes</th></tr></thead><tbody><tr><td>Hébergement</td><td></td><td></td><td></td></tr><tr><td>Nourriture</td><td></td><td></td><td></td></tr><tr><td>Transport local</td><td></td><td></td><td></td></tr><tr><td>Activités/entrées</td><td></td><td></td><td></td></tr><tr><td>Shopping/souvenirs</td><td></td><td></td><td></td></tr><tr><td>Communication (SIM)</td><td></td><td></td><td></td></tr><tr><td>Assurance</td><td></td><td></td><td></td></tr></tbody></table>
-<h2>Étape 3 — Coûts fixes</h2>
-<p>Vol/train aller-retour, visa, vaccins si nécessaires.</p>
-<h2>Étape 4 — Budget total</h2>
-<p>Budget journalier × jours + coûts fixes + marge 10-15%.</p>
-<h2>Étape 5 — Astuces économies</h2>
-<p>3-5 conseils spécifiques à la destination pour réduire les coûts.</p>
+<h2>Étape 1 — Collecte des paramètres</h2>
+<p>Demander (ou déduire du contexte) :</p>
+<ul>
+<li><strong>Destination</strong> (pays + ville principale)</li>
+<li><strong>Durée</strong> (ex : 10 jours)</li>
+<li><strong>Nb personnes</strong> (solo / couple / groupe)</li>
+<li><strong>Niveau de confort</strong> : <code>budget</code> | <code>moyen</code> | <code>confort</code> | <code>luxe</code></li>
+<li><strong>Devise de référence</strong> (EUR / USD / MAD…)</li>
+<li><strong>Période</strong> (haute / basse saison — écart pouvant aller jusqu'à ×2 sur l'hébergement)</li>
+<li><strong>Flexibilité dates</strong> ? (décalage de 3–7 jours = économie fréquente de 20–40 % sur les vols)</li>
+</ul>
+<hr>
+<h2>Étape 2 — Benchmarks par niveau de confort</h2>
+<p>Fourchettes indicatives <strong>par personne/jour</strong> (hors vols, hors visa) :</p>
+<table><thead><tr><th>Destination type</th><th>Budget</th><th>Moyen</th><th>Confort</th></tr></thead><tbody><tr><td>Europe Ouest</td><td>60–90 €</td><td>120–180 €</td><td>200–350 €</td></tr><tr><td>Europe Est / Balkans</td><td>35–55 €</td><td>70–110 €</td><td>140–220 €</td></tr><tr><td>Asie du Sud-Est</td><td>20–35 €</td><td>50–80 €</td><td>100–160 €</td></tr><tr><td>Amérique du Nord</td><td>80–120 $</td><td>160–250 $</td><td>280–450 $</td></tr><tr><td>Afrique du Nord</td><td>25–40 €</td><td>55–90 €</td><td>120–200 €</td></tr><tr><td>Amérique Latine</td><td>30–55 $</td><td>70–110 $</td><td>150–250 $</td></tr></tbody></table>
+<blockquote>Ajuster selon la ville (capitale ≈ +30 %) et la saison (haute ≈ +25–40 %).</blockquote>
+<hr>
+<h2>Étape 3 — Décomposition par poste</h2>
+<p>Remplir ce tableau pour la destination demandée :</p>
+<table><thead><tr><th>Poste</th><th>€/j/pers</th><th>Total (N jours)</th><th>Notes</th></tr></thead><tbody><tr><td><strong>Hébergement</strong></td><td></td><td></td><td>Diviser par 2 si chambre partagée / couple</td></tr><tr><td><strong>Alimentation</strong></td><td></td><td></td><td>Resto local vs tourist trap : écart ×2–3</td></tr><tr><td><strong>Transport local</strong></td><td></td><td></td><td>Métro/bus vs Uber/taxi : préciser</td></tr><tr><td><strong>Activités / entrées</strong></td><td></td><td></td><td>Musées, excursions, guides</td></tr><tr><td><strong>Shopping / souvenirs</strong></td><td></td><td></td><td>Plafond à fixer explicitement</td></tr><tr><td><strong>Communication</strong> (SIM local)</td><td></td><td></td><td>Forfait data 10–30 j</td></tr><tr><td><strong>Assurance voyage</strong></td><td></td><td></td><td>~2–5 % du budget total</td></tr></tbody></table>
+<p><strong>Coûts fixes</strong> (hors budget journalier) :</p>
+<table><thead><tr><th>Poste</th><th>Montant estimé</th><th>Source / remarque</th></tr></thead><tbody><tr><td>Vol A/R (ou train)</td><td></td><td>Chercher via Google Flights / Skyscanner</td></tr><tr><td>Visa</td><td></td><td>Vérifier ambassade officielle</td></tr><tr><td>Vaccins / médicaments</td><td></td><td>Rubrique santé du MAE : <a href="https://www.diplomatie.gouv.fr/fr/conseils-aux-voyageurs/" target="_blank" rel="noopener">france.diplomatie.fr</a></td></tr><tr><td>Réservations prépayées</td><td></td><td>Hôtels non-remboursables, tours, passes</td></tr></tbody></table>
+<hr>
+<h2>Étape 4 — Calcul du budget total</h2>
+<pre><code>Budget journalier × durée (jours) + coûts fixes + marge sécurité
+
+Marge recommandée :
+  - Voyage structuré / tout inclus : +10 %
+  - Voyage semi-libre               : +15 %
+  - Backpacking / aventure          : +20–25 %</code></pre>
+<p><strong>Formule rapide (markdown copiable)</strong> :</p>
+<pre><code>Total = (Hébgt + Alim + Transport + Activités + Shopping + SIM) × N_jours
+      + Vol_AR + Visa + Assurance
+      + Total × 0.15   ← marge 15 %</code></pre>
+<hr>
+<h2>Étape 5 — Outils de recherche de prix réels (2026)</h2>
+<table><thead><tr><th>Besoin</th><th>Outil recommandé</th></tr></thead><tbody><tr><td>Vols flexibles</td><td>Google Flights → onglet &quot;Calendrier des prix&quot;</td></tr><tr><td>Vols low-cost Europe</td><td>Ryanair / Vueling / Transavia directs</td></tr><tr><td>Hébergement</td><td>Booking.com (filtre prix), Hostelworld (dortoirs)</td></tr><tr><td>Hébergement alternatif</td><td>Airbnb, Couchsurfing, Workaway</td></tr><tr><td>Budget communautaire</td><td><a href="https://www.budgetyourtrip.com" target="_blank" rel="noopener">budgetyourtrip.com</a> — données réelles par ville/niveau</td></tr><tr><td>Taux de change live</td><td><code>xe.com</code> ou <code>revolut.com/currency-exchange</code></td></tr><tr><td>Carte sans frais FX</td><td>Revolut, Wise, N26 — évite les frais 1–3 %</td></tr></tbody></table>
+<hr>
+<h2>Étape 6 — Astuces d'économie (spécifiques à la destination)</h2>
+<p>Générer <strong>3 à 5 conseils concrets</strong> adaptés à la destination donnée. Exemples de pattern :</p>
+<ul>
+<li><strong>Hébergement</strong> : réserver 6–8 semaines à l'avance en haute saison ; choisir quartiers hors-centre (-20–30 %)</li>
+<li><strong>Vols</strong> : alertes prix Google Flights ; éviter vendredi/dimanche ; mardi/mercredi matin = moins cher</li>
+<li><strong>Alimentation</strong> : déjeuner au restaurant vs dîner (même adresse, prix souvent -30 %) ; marchés locaux</li>
+<li><strong>Activités</strong> : city pass si &gt;3 musées/j ; visites libres le dimanche (gratuit dans beaucoup de villes EU)</li>
+<li><strong>Transport local</strong> : pass semaine vs ticket unitaire ; vélo/trottinette en ville compacte</li>
+</ul>
+<hr>
+<h2>Étape 7 — Présentation du résultat</h2>
+<p>Toujours conclure avec :</p>
+<ol>
+<li><strong>Tableau récapitulatif</strong> avec totaux par poste</li>
+<li><strong>Budget total estimé</strong> (fourchette basse / haute)</li>
+<li><strong>Budget/jour moyen</strong> résultant</li>
+<li><strong>1 phrase de mise en garde</strong> sur les imprévus (annulation vol, soins médicaux)</li>
+</ol>
+<hr>
+<h2>Garde-fous &amp; anti-patterns</h2>
+<ul>
+<li><strong>Ne pas oublier le retour à l'aéroport</strong> — coût souvent ignoré (taxi/shuttle = 20–80 €)</li>
+<li><strong>Assurance sous-estimée</strong> : couvrir annulation + rapatriement médical, pas seulement bagages</li>
+<li><strong>Taux de change à l'aéroport</strong> : pire taux possible — utiliser carte Wise/Revolut ou retrait DAB local</li>
+<li><strong>Hébergement non-remboursable</strong> : indiquer le risque si dates incertaines</li>
+<li><strong>Budget souvenirs réaliste</strong> : poste le plus sous-estimé des voyageurs ; fixer un plafond ferme</li>
+<li><strong>Visa électronique</strong> : délai de traitement parfois 72 h — ne pas attendre J-2 du départ</li>
+<li><strong>Haute saison = réservation obligatoire</strong> : Barcelone/Amsterdam/Paris juillet–août — sans réservation préalable le budget explose ×2</li>
+<li><strong>Conversion mentale approximative</strong> : indiquer le taux du jour pour aider à se repérer localement</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>testing-chaos-engineering-guide — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Principes et outils de chaos engineering pour tester la résilience des systèmes distribués, incluant fault injection et game days.">
+<meta name="description" content="Principes et outils de chaos engineering pour tester la résilience des systèmes distribués, incluant fault injection, game days, blast radius, et intégration CI/CD.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🧪 Tests</span>
 <h1 class="skill-title">testing-chaos-engineering-guide</h1>
-<p class="lead">Principes et outils de chaos engineering pour tester la résilience des systèmes distribués, incluant fault injection et game days.</p>
+<p class="lead">Principes et outils de chaos engineering pour tester la résilience des systèmes distribués, incluant fault injection, game days, blast radius, et intégration CI/CD.</p>
 
 
 
@@ -97,22 +97,162 @@ cp -r claude-skills-collection/skills/testing-chaos-engineering-guide ~/.claude/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Chaos Engineering Guide</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Définir l'état stable du système</strong> — Identifier les métriques clés qui caractérisent le fonctionnement normal du système (latence, taux d'erreur, throughput, disponibilité). Établir les seuils de base (baseline) à partir des données de monitoring existantes.</li>
-<li><strong>Formuler des hypothèses</strong> — Énoncer des hypothèses sur le comportement attendu du système face à des perturbations spécifiques. Exemple : &quot;Si un noeud tombe, le load balancer redirige le trafic en moins de 30 secondes sans erreur utilisateur.&quot;</li>
-<li><strong>Sélectionner les outils de chaos</strong> — Choisir les outils adaptés à l'infrastructure : Chaos Monkey (Netflix/AWS), Litmus (Kubernetes), Gremlin (plateforme managée), Toxiproxy (réseau). Installer et configurer l'outil dans l'environnement cible.</li>
-<li><strong>Concevoir les expériences de chaos</strong> — Définir les types de pannes à injecter : arrêt de processus, latence réseau, saturation CPU/mémoire, perte de paquets, indisponibilité de dépendance. Commencer par des perturbations limitées en scope (blast radius).</li>
-<li><strong>Exécuter en environnement contrôlé</strong> — Lancer les expériences d'abord en staging, puis progressivement en production. Mettre en place un bouton d'arrêt d'urgence (kill switch). Surveiller les métriques en temps réel pendant l'expérience.</li>
-<li><strong>Organiser des game days</strong> — Planifier des sessions de chaos en équipe avec des scénarios de panne réalistes. Impliquer les équipes Dev, Ops et SRE. Documenter les observations, les temps de détection et de récupération.</li>
-<li><strong>Analyser les résultats et corriger</strong> — Comparer le comportement observé aux hypothèses. Identifier les points de défaillance, les cascades d'erreurs et les gaps dans le monitoring. Créer des tickets de correction priorisés.</li>
-<li><strong>Automatiser et itérer</strong> — Intégrer les expériences de chaos validées dans le pipeline CI/CD. Augmenter progressivement la complexité et le blast radius. Construire un catalogue d'expériences reproductibles.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Définir l'état stable (baseline)</h3>
+<p>Avant toute expérience, établir les métriques qui définissent le &quot;normal&quot; :</p>
+<table><thead><tr><th>Métrique</th><th>Source</th><th>Seuil d'alerte</th></tr></thead><tbody><tr><td>p99 latency</td><td>Prometheus/Grafana</td><td>&lt; 500 ms</td></tr><tr><td>Error rate</td><td>APM (Datadog/New Relic)</td><td>&lt; 0.1 %</td></tr><tr><td>Throughput (req/s)</td><td>Load balancer logs</td><td>&gt; 1 000 req/s</td></tr><tr><td>Availability</td><td>Healthcheck endpoint</td><td>&gt; 99.9 %</td></tr></tbody></table>
+<p>Documenter la baseline avec des captures Grafana datées avant l'expérience.</p>
+<hr>
+<h3>2. Formuler une hypothèse testable</h3>
+<p>Format : <strong>&quot;Si [condition de chaos], alors [comportement attendu] en [délai max], sans [impact inacceptable].&quot;</strong></p>
+<p>Exemples :</p>
 <ul>
-<li>Toujours commencer par des expériences à faible impact (blast radius minimal) et augmenter progressivement ; ne jamais injecter de pannes majeures sans expérience préalable.</li>
-<li>Ne jamais lancer d'expérience de chaos sans monitoring actif et sans mécanisme d'arrêt d'urgence (kill switch) testé et fonctionnel.</li>
-<li>Obtenir l'accord explicite des parties prenantes (management, équipe ops) avant toute expérience en production ; documenter le périmètre et les risques.</li>
-<li>Traiter chaque découverte comme une opportunité d'amélioration : créer systématiquement des actions correctives avec un responsable et une échéance.</li>
+<li>&quot;Si un pod API tombe, Kubernetes le remplace en &lt; 30 s sans erreur 5xx côté client.&quot;</li>
+<li>&quot;Si la base de données principale devient indisponible, le failover vers le réplica se fait en &lt; 60 s.&quot;</li>
+<li>&quot;Si la latence réseau dépasse 500 ms sur le service de paiement, le circuit breaker s'ouvre et renvoie une réponse dégradée (cache).&quot;</li>
+</ul>
+<hr>
+<h3>3. Choisir l'outil adapté</h3>
+<table><thead><tr><th>Contexte</th><th>Outil</th><th>Installation</th></tr></thead><tbody><tr><td>Kubernetes</td><td>Litmus Chaos</td><td><code>helm install litmuschaos litmuschaos/litmus</code></td></tr><tr><td>AWS EC2/ECS</td><td>AWS Fault Injection Simulator (FIS)</td><td>Console AWS ou CLI</td></tr><tr><td>Réseau (latence/perte)</td><td>Toxiproxy</td><td><code>docker run -d -p 8474:8474 shopify/toxiproxy</code></td></tr><tr><td>Microservices génériques</td><td>Gremlin</td><td>SaaS, agent installé sur le host</td></tr><tr><td>Process kill (Linux)</td><td><code>kill</code> / <code>stress-ng</code></td><td>Natif</td></tr><tr><td>Service mesh</td><td>Istio fault injection</td><td>Config YAML sur VirtualService</td></tr></tbody></table>
+<p><strong>Critère de choix</strong> : Kubernetes → Litmus ; AWS managed → FIS ; test réseau isolé → Toxiproxy ; budget SaaS → Gremlin.</p>
+<hr>
+<h3>4. Concevoir l'expérience</h3>
+<p><strong>Composants d'une expérience :</strong></p>
+<ul>
+<li><strong>Cible</strong> : pod, nœud, service, dépendance externe</li>
+<li><strong>Type de fault</strong> : kill, latency, CPU stress, network loss, disk fill</li>
+<li><strong>Durée</strong> : commencer à 30–60 s, jamais &gt; 10 min en première itération</li>
+<li><strong>Blast radius</strong> : 1 instance → 25 % des instances → 50 % (montée progressive)</li>
+<li><strong>Kill switch</strong> : rollback identifié et testé avant l'expérience</li>
+</ul>
+<p>Exemple Litmus (pod kill) :</p>
+<pre><code class="lang-yaml">apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: pod-kill-test
+  namespace: default
+spec:
+  appinfo:
+    appns: production
+    applabel: &quot;app=payment-service&quot;
+    appkind: deployment
+  chaosServiceAccount: litmus-admin
+  experiments:
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: &quot;30&quot;
+            - name: CHAOS_INTERVAL
+              value: &quot;10&quot;
+            - name: FORCE
+              value: &quot;false&quot;</code></pre>
+<p>Exemple Toxiproxy (latence réseau) :</p>
+<pre><code class="lang-bash"># Créer un proxy vers la DB
+toxiproxy-cli create --listen 0.0.0.0:5433 --upstream db:5432 db-proxy
+
+# Ajouter 300 ms de latence
+toxiproxy-cli toxic add db-proxy -t latency -a latency=300 -a jitter=50
+
+# Supprimer après le test
+toxiproxy-cli toxic remove db-proxy -n latency_downstream</code></pre>
+<p>Exemple Istio (fault injection HTTP) :</p>
+<pre><code class="lang-yaml">apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: payment-fault
+spec:
+  hosts:
+    - payment-service
+  http:
+    - fault:
+        delay:
+          percentage:
+            value: 20
+          fixedDelay: 2s
+      route:
+        - destination:
+            host: payment-service</code></pre>
+<hr>
+<h3>5. Exécuter en environnement contrôlé</h3>
+<p><strong>Ordre d'exécution :</strong></p>
+<ol>
+<li>Staging d'abord — valider que l'expérience est reproductible</li>
+<li>Production hors heures de pointe — avec monitoring actif</li>
+<li>Jamais pendant une release ou un incident actif</li>
+</ol>
+<p><strong>Checklist pré-lancement :</strong></p>
+<ul>
+<li>[ ] Monitoring ouvert (Grafana, Datadog)</li>
+<li>[ ] Kill switch testé (<code>kubectl delete chaosengine pod-kill-test -n default</code>)</li>
+<li>[ ] On-call alerté et disponible</li>
+<li>[ ] Périmètre communiqué à l'équipe Slack/Teams</li>
+</ul>
+<hr>
+<h3>6. Organiser des Game Days</h3>
+<p>Structure d'un game day efficace (3 h) :</p>
+<table><thead><tr><th>Phase</th><th>Durée</th><th>Activité</th></tr></thead><tbody><tr><td>Brief</td><td>15 min</td><td>Hypothèses, règles, rôles</td></tr><tr><td>Scénario 1</td><td>45 min</td><td>Chaos + observation + correction</td></tr><tr><td>Scénario 2</td><td>45 min</td><td>Chaos + observation + correction</td></tr><tr><td>Debriefing</td><td>45 min</td><td>Blameless postmortem, actions</td></tr><tr><td>Rapport</td><td>30 min</td><td>Documentation et tickets</td></tr></tbody></table>
+<p>Rôles : <strong>Chaos Master</strong> (pilote les injections), <strong>Observer</strong> (note les métriques), <strong>On-call</strong> (répond comme en production).</p>
+<hr>
+<h3>7. Analyser les résultats</h3>
+<p>Comparer hypothèse vs réalité :</p>
+<pre><code>Hypothèse : failover DB &lt; 60 s
+Observé    : 142 s + 23 erreurs 500 pendant la transition
+Delta      : FAIL — circuit breaker non configuré sur le service Orders
+Action     : Ajouter Resilience4j circuit breaker + retry avec backoff exponentiel
+Owner      : @sre-team | Sprint N+1</code></pre>
+<p>Métriques à capturer impérativement :</p>
+<ul>
+<li><strong>MTTR</strong> (Mean Time To Recovery)</li>
+<li><strong>MTTD</strong> (Mean Time To Detect) — si &gt; 5 min, réviser les alertes</li>
+<li>Nombre d'erreurs utilisateur pendant la panne</li>
+<li>Comportement du circuit breaker / retry</li>
+</ul>
+<hr>
+<h3>8. Automatiser dans le pipeline CI/CD</h3>
+<p>Intégrer les expériences validées en CI (ex. GitHub Actions) :</p>
+<pre><code class="lang-yaml">jobs:
+  chaos-tests:
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    steps:
+      - name: Run Litmus chaos experiment
+        run: |
+          kubectl apply -f chaos/pod-kill-test.yaml
+          sleep 60
+          kubectl get chaosresult pod-kill-test-pod-delete \
+            -o jsonpath='{.status.experimentStatus.verdict}'
+      - name: Assert SLO not breached
+        run: |
+          ERROR_RATE=$(curl -s &quot;http://prometheus/api/v1/query&quot; \
+            --data 'query=rate(http_requests_total{status=~&quot;5..&quot;}[1m])' \
+            | jq '.data.result[0].value[1]')
+          [ $(echo &quot;$ERROR_RATE &lt; 0.01&quot; | bc) -eq 1 ]</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<h3>Ne jamais faire</h3>
+<ul>
+<li><strong>Lancer sans kill switch testé</strong> — le rollback doit prendre &lt; 30 s.</li>
+<li><strong>Cibler 100 % des instances</strong> pour la première expérience — blast radius 1 instance max.</li>
+<li><strong>Chaos en production pendant une release</strong> — risque de confusion cause/effet.</li>
+<li><strong>Injecter sans baseline documentée</strong> — impossible de savoir si le système a régressé.</li>
+<li><strong>Utiliser le chaos comme punition</strong> ou exercice surprise — blameless culture obligatoire.</li>
+</ul>
+<h3>Pièges courants</h3>
+<ul>
+<li><strong>Circuit breaker mal calibré</strong> : timeout trop long → cascade d'erreurs avant ouverture.</li>
+<li><strong>Healthcheck trop optimiste</strong> : le pod répond 200 mais la DB interne est KO.</li>
+<li><strong>Retry sans backoff</strong> : amplifie la charge sur un service déjà dégradé (retry storm).</li>
+<li><strong>Monitoring manquant sur les dépendances externes</strong> : la panne est invisible jusqu'au SLA.</li>
+<li><strong>Expérience non reproductible</strong> : toujours versionner les manifestes de chaos dans Git.</li>
+</ul>
+<h3>Bonnes pratiques 2026</h3>
+<ul>
+<li>Adopter <strong>eBPF</strong> (Tetragon, Cilium) pour observer l'impact réseau sans modifier le code.</li>
+<li>Intégrer les résultats de chaos dans le <strong>DORA scorecard</strong> de l'équipe (MTTR notamment).</li>
+<li>Utiliser <strong>OpenTelemetry</strong> pour corréler les traces pendant l'expérience.</li>
+<li>Maintenir un <strong>catalogue d'expériences</strong> (YAML versionnés) avec résultats historiques.</li>
+<li>Préférer les <strong>Steady-State Hypotheses</strong> du standard Chaos Toolkit pour la portabilité entre outils.</li>
 </ul>
 </article>
 </main>

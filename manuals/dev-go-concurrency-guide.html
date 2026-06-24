@@ -96,39 +96,167 @@ cp -r claude-skills-collection/skills/dev-go-concurrency-guide ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Go Concurrency Guide</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Fondamentaux Go</strong> : Structurer le code avec des structs et méthodes (value vs pointer receivers), définir des comportements avec des interfaces implicites (duck typing), gérer les erreurs comme des valeurs de retour (<code>func f() (T, error)</code>), utiliser <code>defer</code> pour le cleanup garanti (close, unlock, log), comprendre les <code>init()</code> functions et leur ordre d'exécution dans les packages.</li>
-</ol>
-<ol>
-<li><strong>Goroutines et channels</strong> : Lancer des goroutines légères avec <code>go func()</code>, créer des channels typés unbuffered (synchrone) ou buffered (<code>make(chan T, n)</code>), utiliser <code>select</code> pour multiplexer plusieurs channels, implémenter le done pattern avec <code>chan struct{}</code> pour signaler l'arrêt, appliquer fan-in (merge de plusieurs channels) et fan-out (distribution vers plusieurs workers).</li>
-</ol>
-<ol>
-<li><strong>Patterns de concurrence</strong> : Implémenter le worker pool (N goroutines lisant depuis un channel de jobs), le pipeline (chaîne de stages transformant des données via channels), le semaphore avec un buffered channel (<code>make(chan struct{}, n)</code>) pour limiter la concurrence, le rate limiting avec <code>time.Ticker</code>, propager l'annulation et les deadlines avec <code>context.Context</code>.</li>
-</ol>
-<ol>
-<li><strong>Sync primitives</strong> : Protéger les données partagées avec <code>sync.Mutex</code> (exclusion mutuelle) et <code>sync.RWMutex</code> (lecture concurrente), synchroniser la fin de goroutines avec <code>sync.WaitGroup</code>, exécuter une initialisation unique avec <code>sync.Once</code>, utiliser <code>sync.Map</code> pour les maps concurrentes, les opérations atomiques avec <code>sync/atomic</code> pour les compteurs haute performance.</li>
-</ol>
-<ol>
-<li><strong>Error handling Go</strong> : Propager les erreurs avec wrapping (<code>fmt.Errorf(&quot;context: %w&quot;, err)</code>), définir des sentinel errors avec <code>var ErrNotFound = errors.New(&quot;not found&quot;)</code>, créer des erreurs custom en implémentant l'interface <code>error</code>, tester le type avec <code>errors.Is</code> (valeur) et <code>errors.As</code> (type), toujours handler les erreurs sans <code>_</code> dans le code de production.</li>
-</ol>
-<ol>
-<li><strong>Testing Go</strong> : Structurer les tests table-driven (<code>testCases := []struct{...}{{...}}</code>), benchmarker avec <code>func BenchmarkXxx(b <em>testing.B)</code> et <code>b.ResetTimer()</code>, utiliser le fuzzing (<code>func FuzzXxx(f </em>testing.F)</code>) pour les parseurs et fonctions critiques, tester les handlers HTTP avec <code>net/http/httptest</code>, utiliser <code>testify</code> (<code>assert</code>, <code>require</code>, <code>mock</code>) pour des assertions expressives.</li>
-</ol>
-<ol>
-<li><strong>Packages et modules</strong> : Initialiser avec <code>go mod init module/path</code>, organiser en packages cohésifs (éviter les packages <code>utils</code>/<code>common</code>), utiliser <code>internal/</code> pour le code non-exporté hors du module, gérer les versions avec <code>go get module@v1.2.3</code>, utiliser <code>go.work</code> pour le développement multi-modules en local, respecter les conventions de nommage des packages (court, sans underscore).</li>
-</ol>
-<ol>
-<li><strong>Production Go</strong> : Logger structuré avec <code>log/slog</code> (Go 1.21+) ou <code>zap</code>/<code>zerolog</code>, exposer les métriques avec <code>prometheus/client_golang</code>, profiler avec <code>net/http/pprof</code> (CPU, mémoire, goroutines), linter avec <code>golangci-lint</code> (configuration <code>.golangci.yml</code>), automatiser avec un <code>Makefile</code> (<code>build</code>, <code>test</code>, <code>lint</code>, <code>docker</code>), structurer les binaires avec <code>cmd/</code> et <code>internal/</code>.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Fondamentaux Go — critères de décision</h2>
+<table><thead><tr><th>Situation</th><th>Choix</th></tr></thead><tbody><tr><td>Méthode modifie le receiver</td><td>Pointer receiver <code>*T</code></td></tr><tr><td>Méthode lit seulement</td><td>Value receiver <code>T</code> (sauf struct &gt; ~64 bytes)</td></tr><tr><td>Comportement partagé</td><td>Interface implicite (duck typing)</td></tr><tr><td>Cleanup garanti</td><td><code>defer f.Close()</code> / <code>defer mu.Unlock()</code></td></tr><tr><td>Erreur attendue</td><td>Retour <code>(T, error)</code>, jamais panic</td></tr></tbody></table>
+<pre><code class="lang-go">type Store struct{ db *sql.DB }
+
+func (s *Store) Get(ctx context.Context, id int) (User, error) {
+    var u User
+    err := s.db.QueryRowContext(ctx, &quot;SELECT ...&quot;).Scan(&amp;u.Name)
+    return u, fmt.Errorf(&quot;store.Get %d: %w&quot;, id, err)
+}</code></pre>
+<h2>2. Goroutines et channels</h2>
+<p><strong>Unbuffered</strong> = synchrone (handshake). <strong>Buffered</strong> = découplage, ne pas abuser.</p>
+<pre><code class="lang-go">// Done pattern — arrêt propre
+done := make(chan struct{})
+go func() {
+    defer close(done)
+    for {
+        select {
+        case &lt;-ctx.Done():
+            return
+        case job := &lt;-jobs:
+            process(job)
+        }
+    }
+}()
+
+// Fan-out vers N workers
+jobs := make(chan Task, 100)
+var wg sync.WaitGroup
+for range N {                          // Go 1.22+
+    wg.Add(1)
+    go func() {
+        defer wg.Done()
+        for t := range jobs { handle(t) }
+    }()
+}
+close(jobs)
+wg.Wait()</code></pre>
+<p><strong>Règle d'or</strong> : le producteur ferme le channel, jamais le consommateur.</p>
+<h2>3. Patterns de concurrence — quand utiliser quoi</h2>
+<table><thead><tr><th>Pattern</th><th>Usage</th><th>Snippet</th></tr></thead><tbody><tr><td>Worker pool</td><td>CPU-bound, N fixe</td><td><code>make(chan Job, buf)</code> + N goroutines</td></tr><tr><td>Pipeline</td><td>Transformations en chaîne</td><td>channels en entrée/sortie de chaque stage</td></tr><tr><td>Semaphore</td><td>Limiter I/O concurrent</td><td><code>sem := make(chan struct{}, max)</code></td></tr><tr><td>errgroup</td><td>Goroutines avec erreur remontée</td><td><code>golang.org/x/sync/errgroup</code></td></tr></tbody></table>
+<pre><code class="lang-go">// Semaphore — max 10 requêtes HTTP parallèles
+sem := make(chan struct{}, 10)
+for _, url := range urls {
+    sem &lt;- struct{}{}
+    go func(u string) {
+        defer func() { &lt;-sem }()
+        fetch(u)
+    }(url)
+}
+
+// errgroup — propagation d'erreur
+g, ctx := errgroup.WithContext(ctx)
+for _, item := range items {
+    item := item
+    g.Go(func() error { return process(ctx, item) })
+}
+if err := g.Wait(); err != nil { ... }</code></pre>
+<h2>4. Sync primitives — choix raisonné</h2>
+<pre><code class="lang-go">// Mutex : protéger un état partagé simple
+type Cache struct {
+    mu    sync.RWMutex
+    store map[string]string
+}
+func (c *Cache) Get(k string) (string, bool) {
+    c.mu.RLock()
+    defer c.mu.RUnlock()
+    v, ok := c.store[k]
+    return v, ok
+}
+
+// Once : init lazy thread-safe
+var once sync.Once
+var client *http.Client
+func getClient() *http.Client {
+    once.Do(func() { client = &amp;http.Client{Timeout: 5 * time.Second} })
+    return client
+}
+
+// Atomic : compteur haute fréquence
+var hits atomic.Int64
+hits.Add(1)
+fmt.Println(hits.Load())</code></pre>
+<p><strong>sync.Map</strong> : seulement si le profiler le justifie (overhead élevé vs <code>map + RWMutex</code>).</p>
+<h2>5. Context — règles non négociables</h2>
+<pre><code class="lang-go">// Timeout sur appel externe
+ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+defer cancel()                          // toujours defer cancel
+
+resp, err := http.NewRequestWithContext(ctx, &quot;GET&quot;, url, nil)
+
+// Propager sans créer de goroutine leak
+func worker(ctx context.Context, ch &lt;-chan Work) {
+    for {
+        select {
+        case &lt;-ctx.Done():
+            return                      // nettoyage immédiat
+        case w, ok := &lt;-ch:
+            if !ok { return }
+            handle(ctx, w)
+        }
+    }
+}</code></pre>
+<p>Ne jamais stocker <code>context.Context</code> dans une struct ; le passer en premier paramètre.</p>
+<h2>6. Error handling</h2>
+<pre><code class="lang-go">// Sentinel error
+var ErrNotFound = errors.New(&quot;not found&quot;)
+
+// Error custom avec données
+type ValidationError struct{ Field, Msg string }
+func (e *ValidationError) Error() string {
+    return fmt.Sprintf(&quot;validation %s: %s&quot;, e.Field, e.Msg)
+}
+
+// Wrapping + unwrapping
+if err := repo.Get(id); err != nil {
+    return fmt.Errorf(&quot;service.GetUser %d: %w&quot;, id, err)
+}
+if errors.Is(err, ErrNotFound) { ... }
+var ve *ValidationError
+if errors.As(err, &amp;ve) { ... }</code></pre>
+<h2>7. Testing</h2>
+<pre><code class="lang-go">// Table-driven
+func TestAdd(t *testing.T) {
+    cases := []struct{ a, b, want int }{
+        {1, 2, 3}, {0, 0, 0}, {-1, 1, 0},
+    }
+    for _, tc := range cases {
+        t.Run(fmt.Sprintf(&quot;%d+%d&quot;, tc.a, tc.b), func(t *testing.T) {
+            got := Add(tc.a, tc.b)
+            assert.Equal(t, tc.want, got)
+        })
+    }
+}
+
+// Race detector — toujours en CI
+// go test -race ./...
+
+// Benchmark
+func BenchmarkWorkerPool(b *testing.B) {
+    b.ResetTimer()
+    for b.Loop() { runPool() }     // Go 1.24+ b.Loop()
+}</code></pre>
+<h2>8. Production checklist</h2>
+<pre><code class="lang-bash"># Lint
+golangci-lint run ./...
+
+# Profil CPU (30s)
+go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
+
+# Build reproductible
+go build -trimpath -ldflags=&quot;-s -w&quot; ./cmd/myapp
+
+# Vulnérabilités
+govulncheck ./...</code></pre>
 <ul>
-<li>Écrire du Go idiomatique : interfaces petites (1-2 méthodes), composition plutôt qu'héritage, nommage court en contexte local (<code>i</code> pas <code>index</code> dans une boucle courte).</li>
-<li>Ne jamais ignorer une erreur ; si une erreur est vraiment ignorable, commenter pourquoi avec <code>//nolint:errcheck // reason</code>.</li>
-<li>Respecter la règle &quot;Don't communicate by sharing memory; share memory by communicating&quot; : préférer les channels aux mutexes pour la coordination, les mutexes pour la protection de state.</li>
-<li>Utiliser <code>context.Context</code> systématiquement pour la propagation des deadlines, timeouts et annulations dans toutes les fonctions I/O-bound.</li>
-<li>Expliquer les invariants de concurrence : documenter quel goroutine possède quelle donnée, quels channels communiquent quoi, et pourquoi le design évite les race conditions.</li>
+<li>Logger structuré : <code>log/slog</code> (stdlib Go 1.21+) ou <code>zap</code> si perf critique.</li>
+<li>Métriques : <code>prometheus/client_golang</code> + exposition sur <code>/metrics</code>.</li>
+<li>Layout : <code>cmd/myapp/main.go</code>, <code>internal/</code>, <code>pkg/</code> (si API publique), pas de <code>utils/</code>.</li>
 </ul>
+<h2>Anti-patterns / pièges</h2>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Goroutine leak</td><td>Goroutines qui ne se terminent jamais</td><td>Toujours <code>ctx.Done()</code> ou fermeture du channel</td></tr><tr><td>Race condition</td><td><code>go test -race</code> détecte des accès concurrents</td><td><code>sync.Mutex</code> ou ownership clair</td></tr><tr><td>Channel blocking</td><td>Deadlock au runtime</td><td>Buffered channel ou goroutine séparée pour envoyer</td></tr><tr><td>Capturer variable de loop</td><td><code>go func() { use(i) }()</code> prend la dernière valeur</td><td><code>i := i</code> avant le <code>go</code>, ou Go 1.22+ (loop var par itération)</td></tr><tr><td>Panic non récupéré</td><td>Crash du process entier</td><td><code>defer func() { recover() }()</code> dans chaque goroutine long-lived</td></tr><tr><td>Context dans struct</td><td>API difficile à annuler</td><td>Toujours passer <code>ctx</code> en paramètre</td></tr><tr><td><code>sync.Map</code> par défaut</td><td>Perf dégradée</td><td>N'utiliser que pour des maps avec insertions rares et lectures très fréquentes</td></tr></tbody></table>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

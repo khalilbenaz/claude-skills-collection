@@ -96,28 +96,158 @@ cp -r claude-skills-collection/skills/dev-database-query-optimizer ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Database Query Optimizer</h1>
-<h2>Étape 1 — Analyse</h2>
+<h2>Étape 1 — Collecte d'informations</h2>
+<p>Demande systématiquement (ne suppose rien) :</p>
 <ul>
-<li>Type de base (PostgreSQL, MySQL, MongoDB, SQLite…)</li>
-<li>La requête complète</li>
-<li>Schéma des tables (colonnes, types, index existants)</li>
-<li>Volume de données approximatif</li>
-<li>Temps d'exécution actuel</li>
+<li><strong>SGBD et version</strong> : PostgreSQL 16, MySQL 8, SQL Server 2022, MongoDB 7, SQLite…</li>
+<li><strong>Requête complète</strong> (pas un résumé, le SQL brut)</li>
+<li><strong>Schéma</strong> : colonnes, types, index existants (<code>\d table</code> PG, <code>SHOW CREATE TABLE</code> MySQL)</li>
+<li><strong>Volume</strong> : lignes dans les tables concernées (ordre de grandeur suffit)</li>
+<li><strong>Temps mesuré</strong> : durée actuelle, cible souhaitée, outil de mesure</li>
+<li><strong>Contexte d'exécution</strong> : fréquence, OLTP vs OLAP, connexions concurrentes</li>
 </ul>
-<h2>Étape 2 — Diagnostic</h2>
-<p>Identifie : full table scans, index manquants, jointures coûteuses, sous-requêtes évitables, SELECT * inutile, problèmes N+1.</p>
-<h2>Étape 3 — Optimisations</h2>
-<p>Pour chaque optimisation :</p>
+<hr>
+<h2>Étape 2 — Diagnostic avec EXPLAIN</h2>
+<h3>PostgreSQL / MySQL / SQLite</h3>
+<pre><code class="lang-sql">-- PostgreSQL : plan + exécution réelle
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) &lt;requête&gt;;
+
+-- MySQL
+EXPLAIN FORMAT=JSON &lt;requête&gt;;
+SHOW STATUS LIKE 'Last_Query_Cost';
+
+-- SQL Server
+SET STATISTICS IO, TIME ON;
+&lt;requête&gt;;
+-- ou via SSMS : Query &gt; Include Actual Execution Plan</code></pre>
+<h3>Signaux d'alarme dans le plan</h3>
+<table><thead><tr><th>Signal</th><th>Signification</th><th>Priorité</th></tr></thead><tbody><tr><td><code>Seq Scan</code> sur grande table</td><td>Pas d'index utilisable</td><td>Critique</td></tr><tr><td><code>Hash Join</code> + rows estimés très faux</td><td>Statistiques obsolètes</td><td>Élevée</td></tr><tr><td><code>Nested Loop</code> × millions de rows</td><td>Potentiel N+1 ou jointure cartésienne</td><td>Critique</td></tr><tr><td><code>Sort</code> sans <code>Index Scan</code></td><td>Manque d'index sur ORDER BY</td><td>Modérée</td></tr><tr><td><code>cost=...</code> très élevé vs actual rows faibles</td><td>Mauvaise estimation selectivité</td><td>Élevée</td></tr><tr><td><code>rows=1</code> partout mais slow</td><td>Problème réseau / lock / cache miss</td><td>Variable</td></tr></tbody></table>
+<h3>Mettre à jour les statistiques</h3>
+<pre><code class="lang-sql">-- PostgreSQL
+ANALYZE table_name;
+-- MySQL
+ANALYZE TABLE table_name;
+-- SQL Server
+UPDATE STATISTICS table_name;</code></pre>
+<hr>
+<h2>Étape 3 — Optimisations concrètes</h2>
+<h3>3.1 Index manquants</h3>
+<pre><code class="lang-sql">-- Créer un index couvrant (covering index) : évite un table lookup
+CREATE INDEX CONCURRENTLY idx_orders_user_status
+  ON orders (user_id, status)
+  INCLUDE (created_at, total_amount);  -- PostgreSQL 11+
+
+-- Index partiel : si requête filtre toujours sur une valeur
+CREATE INDEX idx_orders_pending
+  ON orders (created_at)
+  WHERE status = 'pending';
+
+-- Index composite : ordre des colonnes = sélectivité décroissante
+-- Bon : (user_id, status)   -- user_id très sélectif
+-- Mauvais : (status, user_id) -- status peu sélectif en tête</code></pre>
+<h3>3.2 Réécriture de requêtes</h3>
+<pre><code class="lang-sql">-- Eviter SELECT * (ramène des colonnes inutiles, bloque les covering index)
+-- AVANT
+SELECT * FROM orders WHERE user_id = 42;
+-- APRÈS
+SELECT id, status, total_amount, created_at FROM orders WHERE user_id = 42;
+
+-- Remplacer NOT IN par NOT EXISTS (NULL-safe + souvent plus rapide)
+-- AVANT
+SELECT id FROM users WHERE id NOT IN (SELECT user_id FROM orders);
+-- APRÈS
+SELECT u.id FROM users u
+WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id);
+
+-- Pagination efficace : OFFSET lent sur grandes tables
+-- AVANT (O(offset) : parcourt toutes les lignes)
+SELECT * FROM orders ORDER BY id LIMIT 20 OFFSET 100000;
+-- APRÈS (keyset pagination : O(1))
+SELECT * FROM orders WHERE id &gt; :last_seen_id ORDER BY id LIMIT 20;
+
+-- Eviter les fonctions sur colonnes indexées en prédicat
+-- AVANT (casse l'index)
+WHERE LOWER(email) = 'foo@bar.com'
+-- APRÈS (index fonctionnel ou normalisation à l'insertion)
+WHERE email = 'foo@bar.com'   -- si données stockées en minuscules</code></pre>
+<h3>3.3 Problème N+1</h3>
+<pre><code class="lang-sql">-- Symptôme : N requêtes SELECT user WHERE id=X lancées en boucle
+-- Fix ORM : eager loading
+-- Django
+orders = Order.objects.select_related('user').prefetch_related('items').all()
+-- Rails
+Order.includes(:user, :items)
+-- Prisma
+prisma.order.findMany({ include: { user: true, items: true } })
+
+-- Fix SQL pur : une seule requête avec jointure
+SELECT o.id, u.name, i.product_id
+FROM orders o
+JOIN users u ON u.id = o.user_id
+JOIN order_items i ON i.order_id = o.id
+WHERE o.status = 'pending';</code></pre>
+<h3>3.4 Agrégations et CTEs</h3>
+<pre><code class="lang-sql">-- Pré-filtrer avant d'agréger
+-- AVANT
+SELECT user_id, COUNT(*) FROM orders GROUP BY user_id HAVING status = 'done';
+-- APRÈS
+SELECT user_id, COUNT(*) FROM orders WHERE status = 'done' GROUP BY user_id;
+
+-- CTE vs sous-requête : en PostgreSQL, CTE est une &quot;optimization fence&quot; (&lt; PG 12)
+-- Préférer subquery si pas besoin de réutiliser, ou MATERIALIZED/NOT MATERIALIZED
+WITH recent AS NOT MATERIALIZED (
+  SELECT * FROM orders WHERE created_at &gt; NOW() - INTERVAL '7 days'
+)
+SELECT user_id, COUNT(*) FROM recent GROUP BY user_id;</code></pre>
+<hr>
+<h2>Étape 4 — Stratégies avancées</h2>
+<h3>Caching</h3>
 <ul>
-<li>Requête optimisée avec code</li>
-<li>Explication du gain</li>
-<li>Index à créer (avec CREATE INDEX)</li>
-<li>Impact estimé (significatif/modéré/mineur)</li>
+<li><strong>Query cache</strong> : déconseillé MySQL 8+ (supprimé), utiliser Redis/Memcached applicatif</li>
+<li><strong>Materialized views</strong> : requêtes OLAP lourdes exécutées en tâche de fond</li>
 </ul>
-<h2>Étape 4 — Bonnes pratiques</h2>
-<p>Pagination efficace, dénormalisation si justifiée, caching, partitioning.</p>
-<h2>Étape 5 — Vérification</h2>
-<p>EXPLAIN ANALYZE avant/après, métriques à comparer, tests de charge.</p>
+<p>  ```sql   CREATE MATERIALIZED VIEW daily_revenue AS     SELECT DATE(created_at), SUM(total_amount) FROM orders GROUP BY 1;   -- Rafraîchir périodiquement   REFRESH MATERIALIZED VIEW CONCURRENTLY daily_revenue;   ```</p>
+<h3>Partitioning (tables &gt; 50M lignes)</h3>
+<pre><code class="lang-sql">-- PostgreSQL : partition par range sur date
+CREATE TABLE orders (created_at DATE, ...) PARTITION BY RANGE (created_at);
+CREATE TABLE orders_2025 PARTITION OF orders
+  FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');</code></pre>
+<h3>Connection pooling</h3>
+<ul>
+<li>PgBouncer (PostgreSQL), ProxySQL (MySQL) : éviter l'overhead de connexion</li>
+<li>Configurer <code>pool_mode = transaction</code> pour OLTP</li>
+</ul>
+<hr>
+<h2>Étape 5 — Vérification et mesure</h2>
+<pre><code class="lang-sql">-- Mesurer avant/après avec le même jeu de données
+-- PostgreSQL : pg_stat_statements
+SELECT query, mean_exec_time, calls, total_exec_time
+FROM pg_stat_statements
+ORDER BY mean_exec_time DESC LIMIT 20;
+
+-- Comparer les plans
+EXPLAIN (ANALYZE, BUFFERS) &lt;requête_avant&gt;;
+EXPLAIN (ANALYZE, BUFFERS) &lt;requête_après&gt;;</code></pre>
+<p><strong>Métriques à comparer</strong> :</p>
+<ul>
+<li>Temps d'exécution moyen (p50 / p95 / p99)</li>
+<li><code>shared_hit</code> vs <code>shared_read</code> (cache disque vs RAM)</li>
+<li>Nombre de rows scannées vs retournées</li>
+<li>Nombre de lock waits</li>
+</ul>
+<hr>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
+<ul>
+<li><strong>Ne pas créer d'index en masse</strong> : chaque index ralentit INSERT/UPDATE/DELETE. Cibler les requêtes &gt; 100ms ou fréquence élevée.</li>
+<li><strong>EXPLAIN sans ANALYZE</strong> : montre le plan estimé, pas réel. Toujours utiliser <code>EXPLAIN ANALYZE</code> pour diagnostiquer.</li>
+<li><strong>Optimiser sans mesurer</strong> : noter le temps baseline avant toute modification.</li>
+<li><strong>Index sur colonne de faible cardinalité</strong> (booléen, statut 3 valeurs) : inefficace sauf index partiel.</li>
+<li><strong>OR dans WHERE</strong> : peut empêcher l'usage d'index. Réécrire en UNION ALL si possible.</li>
+<li><strong>DISTINCT comme palliatif</strong> : souvent masque un problème de jointure qui produit des doublons.</li>
+<li><strong>Dénormalisation prématurée</strong> : mesurer d'abord, dénormaliser seulement si le gain est prouvé.</li>
+<li><strong><code>SELECT 1</code> dans EXISTS</strong> : équivalent à <code>SELECT *</code> côté optimiseur depuis PG 9+, mais rester explicite par convention.</li>
+<li><strong>Ne jamais tuner en production sans rollback plan</strong> : <code>DROP INDEX CONCURRENTLY</code> si régression.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

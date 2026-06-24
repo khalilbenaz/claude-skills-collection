@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>testing-api-testing-expert — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Tests d'API REST et GraphQL avec les outils majeurs du marché, incluant le contract testing et l'automatisation.">
+<meta name="description" content="Tests d'API REST et GraphQL avec les outils majeurs du marché, incluant le contract testing, l'automatisation CI/CD et les tests de performance.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🧪 Tests</span>
 <h1 class="skill-title">testing-api-testing-expert</h1>
-<p class="lead">Tests d'API REST et GraphQL avec les outils majeurs du marché, incluant le contract testing et l'automatisation.</p>
+<p class="lead">Tests d'API REST et GraphQL avec les outils majeurs du marché, incluant le contract testing, l'automatisation CI/CD et les tests de performance.</p>
 
 
 
@@ -97,23 +97,148 @@ cp -r claude-skills-collection/skills/testing-api-testing-expert ~/.claude/skill
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>API Testing Expert</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser la spécification de l'API</strong> — Examiner la documentation OpenAPI/Swagger ou le schéma GraphQL. Identifier les endpoints, méthodes HTTP, paramètres, formats de réponse et codes de statut attendus. Repérer les règles de validation et les contraintes métier.</li>
-<li><strong>Configurer l'environnement de test</strong> — Mettre en place l'outil de test choisi : Postman pour l'exploration et les collections, REST Assured pour les tests Java, SuperTest pour Node.js, ou pytest + requests pour Python. Configurer les environnements (dev, staging, prod).</li>
-<li><strong>Concevoir les cas de test fonctionnels</strong> — Couvrir les scénarios positifs (happy path) et négatifs (erreurs 400, 401, 403, 404, 422). Tester les validations d'entrée, les limites de pagination, les filtres et le tri. Vérifier les headers de réponse et le format des données.</li>
-<li><strong>Implémenter les tests d'authentification et d'autorisation</strong> — Valider les mécanismes d'authentification (JWT, OAuth2, API keys). Tester les niveaux d'autorisation : accès refusé pour les rôles insuffisants, accès autorisé pour les rôles appropriés.</li>
-<li><strong>Mettre en place le contract testing</strong> — Utiliser Pact ou Spring Cloud Contract pour vérifier les contrats entre consommateurs et producteurs d'API. Générer les contrats côté consommateur et les vérifier côté producteur. Publier les contrats dans un Pact Broker.</li>
-<li><strong>Automatiser avec Newman ou le framework CI</strong> — Exporter les collections Postman et les exécuter via Newman en ligne de commande. Intégrer REST Assured ou l'outil choisi dans le pipeline CI/CD. Configurer les rapports HTML/JUnit.</li>
-<li><strong>Tester les performances de l'API</strong> — Mesurer les temps de réponse sous charge avec k6, Artillery ou JMeter. Définir les SLO (latence P95, P99) et vérifier leur respect. Identifier les endpoints lents et les goulots d'étranglement.</li>
-<li><strong>Valider la rétrocompatibilité</strong> — Vérifier que les nouvelles versions de l'API ne cassent pas les clients existants. Tester les stratégies de versioning (URL, header). S'assurer que les champs dépréciés restent fonctionnels pendant la période de transition.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Analyser la spécification</h3>
 <ul>
-<li>Toujours valider le schéma de réponse (structure JSON, types de champs, champs obligatoires) en plus des valeurs métier pour détecter les régressions structurelles.</li>
-<li>Ne jamais coder les tokens ou credentials en dur dans les tests ; utiliser des variables d'environnement ou un vault de secrets.</li>
-<li>Rendre chaque test idempotent : le test doit pouvoir s'exécuter plusieurs fois de suite sans effet de bord, en nettoyant les données créées via setup/teardown.</li>
-<li>Couvrir systématiquement les codes d'erreur HTTP et les messages d'erreur associés ; les scénarios d'erreur sont aussi importants que les scénarios de succès.</li>
-<li>Maintenir les collections Postman et les contrats Pact versionnés dans le dépôt Git au même titre que le code source.</li>
+<li>Parser l'OpenAPI/Swagger : identifier endpoints, méthodes, paramètres, codes HTTP attendus, format des erreurs.</li>
+<li>GraphQL : introspection schema (<code>npx get-graphql-schema http://api/graphql &gt; schema.graphql</code>).</li>
+<li>Repérer les règles métier critiques (validation, contraintes, side-effects).</li>
+</ul>
+<h3>2. Choisir l'outil selon le contexte</h3>
+<table><thead><tr><th>Contexte</th><th>Outil recommandé</th></tr></thead><tbody><tr><td>Exploration rapide / équipe non-dev</td><td>Postman + Newman</td></tr><tr><td>Backend Java/Kotlin</td><td>REST Assured</td></tr><tr><td>Backend Node.js</td><td>SuperTest ou Axios + Jest</td></tr><tr><td>Backend Python</td><td>pytest + httpx</td></tr><tr><td>Contract testing microservices</td><td>Pact (consumer-driven)</td></tr><tr><td>Performance / charge</td><td>k6 ou Artillery</td></tr><tr><td>Fuzzing / sécurité</td><td>OWASP ZAP API Scan ou Schemathesis</td></tr></tbody></table>
+<h3>3. Configurer les environnements</h3>
+<pre><code class="lang-bash"># Newman — run collection avec env staging
+newman run collection.json \
+  -e staging.env.json \
+  --reporters cli,htmlextra,junit \
+  --reporter-junit-export results/junit.xml \
+  --bail</code></pre>
+<p>Variables d'environnement Postman — JAMAIS de valeur en dur :</p>
+<pre><code class="lang-json">{ &quot;BASE_URL&quot;: &quot;https://api.staging.example.com&quot;, &quot;API_KEY&quot;: &quot;{{$env.API_KEY}}&quot; }</code></pre>
+<h3>4. Concevoir les cas de test</h3>
+<p>Matrice minimale par endpoint :</p>
+<ul>
+<li><strong>Happy path</strong> : payload valide → 200/201 + valider le schéma de réponse complet.</li>
+<li><strong>Validation</strong> : champ manquant, type incorrect, valeur hors plage → 400/422 + message d'erreur exploitable.</li>
+<li><strong>Auth</strong> : sans token → 401, token expiré → 401, mauvais scope → 403.</li>
+<li><strong>Not found</strong> : ressource inexistante → 404.</li>
+<li><strong>Conflits</strong> : doublon → 409.</li>
+</ul>
+<pre><code class="lang-python"># pytest + httpx — exemple endpoint POST /users
+import httpx, pytest
+
+BASE = &quot;https://api.staging.example.com&quot;
+
+def test_create_user_happy_path(auth_headers):
+    r = httpx.post(f&quot;{BASE}/users&quot;, json={&quot;email&quot;: &quot;x@test.com&quot;, &quot;role&quot;: &quot;viewer&quot;}, headers=auth_headers)
+    assert r.status_code == 201
+    body = r.json()
+    assert &quot;id&quot; in body and isinstance(body[&quot;id&quot;], str)
+    assert body[&quot;email&quot;] == &quot;x@test.com&quot;
+
+def test_create_user_missing_email(auth_headers):
+    r = httpx.post(f&quot;{BASE}/users&quot;, json={&quot;role&quot;: &quot;viewer&quot;}, headers=auth_headers)
+    assert r.status_code == 422
+    assert &quot;email&quot; in r.json()[&quot;detail&quot;][0][&quot;loc&quot;]
+
+def test_create_user_unauthorized():
+    r = httpx.post(f&quot;{BASE}/users&quot;, json={&quot;email&quot;: &quot;x@test.com&quot;, &quot;role&quot;: &quot;viewer&quot;})
+    assert r.status_code == 401</code></pre>
+<h3>5. Valider les schémas de réponse</h3>
+<pre><code class="lang-python"># Validation JSON Schema avec jsonschema
+from jsonschema import validate
+
+USER_SCHEMA = {
+    &quot;type&quot;: &quot;object&quot;,
+    &quot;required&quot;: [&quot;id&quot;, &quot;email&quot;, &quot;createdAt&quot;],
+    &quot;properties&quot;: {
+        &quot;id&quot;:        {&quot;type&quot;: &quot;string&quot;, &quot;format&quot;: &quot;uuid&quot;},
+        &quot;email&quot;:     {&quot;type&quot;: &quot;string&quot;, &quot;format&quot;: &quot;email&quot;},
+        &quot;createdAt&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;format&quot;: &quot;date-time&quot;},
+    },
+    &quot;additionalProperties&quot;: False,
+}
+
+def test_user_schema(auth_headers):
+    r = httpx.get(f&quot;{BASE}/users/some-uuid&quot;, headers=auth_headers)
+    validate(instance=r.json(), schema=USER_SCHEMA)</code></pre>
+<h3>6. Contract testing avec Pact</h3>
+<pre><code class="lang-python"># Consumer side — Python pact-python
+from pact import Consumer, Provider
+
+pact = Consumer(&quot;frontend&quot;).has_pact_with(Provider(&quot;users-api&quot;))
+
+pact.given(&quot;user abc123 exists&quot;).upon_receiving(&quot;a request for user&quot;).with_request(
+    method=&quot;GET&quot;, path=&quot;/users/abc123&quot;
+).will_respond_with(200, body={&quot;id&quot;: &quot;abc123&quot;, &quot;email&quot;: like(&quot;user@example.com&quot;)})</code></pre>
+<pre><code class="lang-bash"># Vérification côté Provider
+pact-verifier \
+  --provider-base-url http://localhost:8080 \
+  --pact-broker-url https://pact-broker.internal \
+  --provider users-api \
+  --publish-verification-results \
+  --provider-app-version $(git rev-parse --short HEAD)</code></pre>
+<h3>7. Tests de performance</h3>
+<pre><code class="lang-javascript">// k6 — SLO : P95 &lt; 500ms, error rate &lt; 1%
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export const options = {
+  stages: [
+    { duration: '30s', target: 50 },
+    { duration: '1m',  target: 50 },
+    { duration: '15s', target: 0  },
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)&lt;500'],
+    http_req_failed:   ['rate&lt;0.01'],
+  },
+};
+
+export default function () {
+  const r = http.get('https://api.staging.example.com/users', {
+    headers: { Authorization: `Bearer ${__ENV.TOKEN}` },
+  });
+  check(r, { 'status 200': (r) =&gt; r.status === 200 });
+  sleep(1);
+}</code></pre>
+<pre><code class="lang-bash">k6 run --env TOKEN=$API_TOKEN perf/users.js</code></pre>
+<h3>8. Intégration CI/CD</h3>
+<pre><code class="lang-yaml"># GitHub Actions
+- name: Run API tests
+  run: |
+    newman run tests/collection.json \
+      -e tests/env/${{ env.STAGE }}.json \
+      --reporters junit \
+      --reporter-junit-export results/junit.xml
+  env:
+    API_KEY: ${{ secrets.API_KEY }}
+
+- name: Upload test results
+  uses: actions/upload-artifact@v4
+  if: always()
+  with:
+    name: api-test-results
+    path: results/</code></pre>
+<hr>
+<h2>Critères de décision — quel outil choisir</h2>
+<ul>
+<li><strong>Postman/Newman</strong> si l'équipe est mixte (dev + QA non-codeurs) ou si les tests servent aussi de démo.</li>
+<li><strong>REST Assured</strong> si le projet est Java et que les tests doivent vivre dans le même repo Maven/Gradle.</li>
+<li><strong>pytest + httpx</strong> si le projet est Python ou si les tests ont besoin de logique Python complexe (fixtures, parametrize).</li>
+<li><strong>Pact</strong> dès qu'il y a plus de 2 services qui communiquent — évite les faux contrats testés uniquement en intégration.</li>
+<li><strong>k6</strong> si les SLO sont formalisés ; Artillery si la config YAML est préférée ; JMeter si l'organisation impose un outil GUI legacy.</li>
+</ul>
+<hr>
+<h2>Garde-fous / anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td>Token en dur dans le code</td><td>Fuite dans Git</td><td>Toujours <code>os.environ[&quot;TOKEN&quot;]</code> ou vault</td></tr><tr><td>Test non idempotent (données non nettoyées)</td><td>Flaky en CI</td><td><code>setup</code> crée, <code>teardown</code> supprime via API ou DB</td></tr><tr><td>Tester uniquement le status code</td><td>Régression silencieuse sur le body</td><td>Valider le schéma JSON <strong>et</strong> les valeurs métier</td></tr><tr><td>Pas de test 4xx/5xx</td><td>Faux sentiment de couverture</td><td>Matrice erreurs obligatoire par endpoint</td></tr><tr><td>Collection Postman hors Git</td><td>Dérive entre devs</td><td>Committer <code>collection.json</code> + <code>env.*.json</code> (sans secrets)</td></tr><tr><td>Pact consumer publié sans vérification provider</td><td>Contrat jamais vérifié</td><td>Bloquer le merge si <code>can-i-deploy</code> échoue</td></tr><tr><td>Test de perfs pointant sur prod</td><td>Incident en production</td><td>Toujours utiliser staging ou un environment dédié</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Schemathesis</strong> pour le fuzzing automatique à partir de l'OpenAPI spec : <code>schemathesis run openapi.yaml --checks all --base-url https://api.staging.example.com</code>.</li>
+<li><strong>Wiremock / Prism</strong> comme mock server pendant le développement avant que le backend soit disponible.</li>
+<li>Utiliser <strong><code>can-i-deploy</code></strong> (Pact Broker CLI) comme gate CI : bloque le déploiement si le contrat n'est pas vérifié.</li>
+<li>Versionner les fichiers <code>.env.*.json</code> Postman <strong>sans valeur sensible</strong> (placeholder <code>{{SECRET}}</code>), injecter les vraies valeurs via CI secrets.</li>
+<li>Stocker les SLO de performance dans le code (<code>options.thresholds</code> k6) pour que la CI régresse automatiquement si une régression de latence est introduite.</li>
 </ul>
 </article>
 </main>

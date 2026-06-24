@@ -5,128 +5,236 @@ description: Vérification de conformité pour applications fintech — PCI-DSS,
 
 # Vérificateur de Conformité Fintech
 
-## Workflow
+## Workflow en 5 étapes
 
-1. **Identifier** : déterminer les réglementations applicables selon le service.
-2. **Auditer** : vérifier la conformité technique point par point.
-3. **Corriger** : implémenter les contrôles manquants.
-4. **Documenter** : maintenir la preuve de conformité.
+1. **Cartographier le périmètre** : identifier les flux de données financières (carte, virement, wallet, crypto) et les marchés cibles (UE, US, MENA…).
+2. **Sélectionner les référentiels** : croiser type de service × géographie → liste des normes applicables (tableau ci-dessous).
+3. **Auditer point par point** : pour chaque norme, dérouler la checklist correspondante ; noter les gaps avec niveau de risque (critique / élevé / moyen).
+4. **Corriger et prioriser** : implémenter les contrôles manquants critiques en premier ; documenter chaque décision (ADR ou ticket).
+5. **Maintenir la preuve** : logs d'audit, scans périodiques, enregistrement des consentements — tout doit être traçable et exportable.
 
-## Réglementations par type de service
+---
+
+## 1. Sélection des référentiels applicables
 
 | Service | Réglementations applicables |
 |---------|---------------------------|
-| **Paiement par carte** | PCI-DSS, PSD2, RGPD |
-| **Wallet / compte** | KYC/AML, PSD2, RGPD |
-| **Transfert d'argent** | KYC/AML, directive transferts de fonds |
-| **Prêt / crédit** | Directive crédit consommation, RGPD |
-| **Crypto** | MiCA, KYC/AML, RGPD |
+| Paiement par carte | PCI-DSS v4, PSD2, RGPD |
+| Wallet / compte de paiement | KYC/AML (DLTF/5AMLD), PSD2, RGPD |
+| Transfert d'argent (remittance) | Règlement UE 2015/847, KYC/AML, RGPD |
+| Prêt / crédit consommation | Directive 2023/2225, RGPD |
+| Crypto-actifs | MiCA (applicable depuis déc. 2024), KYC/AML, RGPD |
+| Open Banking / AISP-PISP | PSD2, Berlin Group API, RGPD |
 
-## PCI-DSS — Checklist développeur
+---
 
-### Données de carte
+## 2. PCI-DSS v4 — Checklist développeur
 
-```
-❌ NE JAMAIS :
-- Stocker le CVV/CVC (même chiffré)
-- Logger des numéros de carte complets
-- Stocker le contenu de la bande magnétique
-- Envoyer des données de carte en clair par email/chat
-
-✅ TOUJOURS :
-- Utiliser un prestataire PCI-DSS certifié (Stripe, Adyen)
-- Tokeniser les données de carte
-- Masquer le PAN : afficher uniquement les 4 derniers chiffres
-- Chiffrer les données en transit (TLS 1.2+) et au repos
-```
-
-### Niveaux PCI-DSS
-
-| Niveau | Critère | Exigence |
-|--------|---------|----------|
-| **1** | > 6M transactions/an | Audit sur site par QSA |
-| **2** | 1-6M transactions/an | SAQ + scan trimestriel |
-| **3** | 20K-1M transactions e-commerce | SAQ |
-| **4** | < 20K transactions e-commerce | SAQ |
-
-### Tokenisation (recommandé)
+### Données de carte : ce qui est interdit
 
 ```
-Client → Stripe.js/Elements → Token
-         ↓
-Serveur reçoit le token (tok_xxx), JAMAIS le numéro de carte
-         ↓
-Appel API Stripe avec le token → Paiement
+INTERDIT (même chiffré) :
+  - Stocker le CVV/CVC après autorisation
+  - Stocker le contenu de la piste magnétique
+  - Logger le PAN complet dans les fichiers de log
+
+INTERDIT :
+  - Envoyer des données de carte par email, chat, SMS
+  - Recevoir le numéro de carte sur vos propres serveurs si scope SAQ A possible
 ```
 
-## KYC/AML — Know Your Customer
+### Tokenisation — flux recommandé
 
-### Niveaux de vérification
+```
+# Stripe / Adyen / Braintree
+Client (browser/app)
+  └─► Stripe.js / Hosted Fields
+        └─► PSP (hors scope PCI)
+              └─► token  tok_live_xxxxx  → votre backend
+                          ↓
+              api.stripe.com/v1/charges { source: tok_live_xxxxx }
+```
 
-| Niveau | Seuil indicatif | Vérifications |
-|--------|----------------|---------------|
-| **Simplifié** | < 150 €/mois | Email + téléphone |
-| **Standard** | < 2 500 €/mois | Pièce d'identité + preuve d'adresse |
-| **Renforcé** | > 2 500 €/mois ou PEP | Identité + source des fonds + screening |
+Votre backend ne voit jamais le PAN. Scope réduit à SAQ A ou SAQ A-EP.
+
+### Niveaux PCI-DSS et obligations
+
+| Niveau | Volume annuel | Exigence minimale |
+|--------|--------------|-------------------|
+| 1 | > 6 M transactions | Audit QSA sur site + ASV scan trimestriel |
+| 2 | 1–6 M | SAQ + ASV scan trimestriel |
+| 3 | 20 K–1 M (e-commerce) | SAQ A-EP ou SAQ D |
+| 4 | < 20 K (e-commerce) | SAQ A (si full-redirect PSP) |
+
+### Exigences techniques PCI-DSS v4 nouvelles (2025+)
+
+- Exigence 6.4.3 : gestion d'inventaire et intégrité de tous les scripts de page de paiement (CSP + SRI).
+- Exigence 11.6.1 : détection des modifications non autorisées des pages de paiement (script tamper detection).
+- TLS 1.0 et 1.1 définitivement interdits ; TLS 1.2 minimum, TLS 1.3 recommandé.
+
+```bash
+# Vérifier TLS d'un endpoint
+openssl s_client -connect api.monservice.com:443 -tls1_2 </dev/null 2>&1 | grep "Protocol"
+# Ou avec testssl.sh (outil open source)
+./testssl.sh --protocols api.monservice.com
+```
+
+---
+
+## 3. KYC/AML — Approche basée sur le risque
+
+### Niveaux de due diligence (5AMLD / DLTF)
+
+| Niveau | Seuil indicatif UE | Vérifications requises |
+|--------|-------------------|----------------------|
+| Simplifié (SDD) | < 150 €/mois, produit à faible risque listé | Email + téléphone (profil limité) |
+| Standard (CDD) | Usage courant | Pièce d'identité + preuve d'adresse + screening sanctions |
+| Renforcé (EDD) | > 2 500 €/mois, PEP, pays à haut risque FATF | Identité + source des fonds + justificatif patrimoine + revue périodique |
+
+### Screening sanctions — intégration code
+
+```python
+# Exemple avec l'API Comply Advantage / ComplyLaunch
+import requests
+
+def screen_customer(name: str, dob: str) -> dict:
+    resp = requests.post(
+        "https://api.complyadvantage.com/searches",
+        headers={"Authorization": f"Token {API_KEY}"},
+        json={
+            "search_term": name,
+            "filters": {"birth_year": dob[:4]},
+            "share_url": False,
+            "types": ["sanction", "pep", "warning", "adverse-media"],
+        },
+        timeout=10,
+    )
+    resp.raise_for_status()
+    hits = resp.json()["content"]["data"]["hits"]
+    return {"clear": len(hits) == 0, "hits": hits}
+```
+
+Alternatives : Refinitiv World-Check, Dow Jones Risk & Compliance, listes publiques OFAC/EU/ONU (CSV téléchargeables).
 
 ### Checklist AML
 
-- [ ] Screening contre les listes de sanctions (UE, OFAC, ONU)
-- [ ] Détection des Personnes Politiquement Exposées (PEP)
-- [ ] Monitoring des transactions suspectes
-- [ ] Seuil de déclaration de soupçon (Tracfin en France)
-- [ ] Conservation des données KYC (5 ans après fin de relation)
+- [ ] Screening initial à l'onboarding + re-screening périodique (min. annuel)
+- [ ] Détection PEP (Personne Politiquement Exposée) et membres de famille
+- [ ] Monitoring transactionnel : règles de seuil + modèle comportemental
+- [ ] Déclaration de soupçon automatisée vers Tracfin (FR) / CRF (TN) / FinCEN (US)
+- [ ] Conservation des données KYC : 5 ans après fin de relation (obligation légale)
+- [ ] Gel des avoirs : blocage immédiat si match sanctions confirmé
 
-### Signaux d'alerte (Red Flags)
-
-- Transactions juste en dessous des seuils de déclaration (structuring)
-- Changements fréquents de bénéficiaire
-- Transactions sans logique économique apparente
-- Utilisation excessive de pays à haut risque
-
-## PSD2 — Directive Services de Paiement
-
-### Authentification Forte (SCA)
+### Red flags à coder comme règles de détection
 
 ```
-Règle : Toute transaction > 30 € nécessite 2 facteurs parmi :
-- Connaissance (mot de passe, PIN)
-- Possession (téléphone, carte)
-- Inhérence (biométrie)
-
-Exemptions :
-- Transactions < 30 € (jusqu'à 100 € cumulés)
-- Bénéficiaires de confiance (whitelist)
-- Transactions récurrentes (même montant, même bénéficiaire)
-- Transactions à faible risque (TRA)
+STRUCTURING : montant < seuil déclaration sur N transactions proches dans le temps
+VELOCITY    : > X transactions en 24 h sur un même compte
+GEOGRAPHY   : destination dans pays FATF liste grise/noire
+ROUND_TRIP  : dépôt → retrait immédiat sans utilisation intermédiaire
+NEW_ACCOUNT : volume élevé les 48 h suivant la création du compte
 ```
 
-## RGPD — Données financières
+---
 
-### Données sensibles
+## 4. PSD2 / SCA — Authentification Forte
 
-| Donnée | Durée de conservation | Base légale |
-|--------|----------------------|-------------|
-| Transactions | 10 ans (obligation comptable) | Obligation légale |
-| KYC documents | 5 ans après fin de relation | Obligation légale (AML) |
-| Données de carte tokenisées | Durée du mandat + 13 mois | Consentement / Contrat |
-| Logs de connexion | 1 an | Intérêt légitime |
+### Règle SCA
 
-### Droits des utilisateurs
+```
+Transaction > 30 € → 2 facteurs obligatoires parmi :
+  - Connaissance  : mot de passe, PIN
+  - Possession    : téléphone (OTP SMS/TOTP), carte physique
+  - Inhérence     : biométrie (empreinte, face ID)
+```
 
-- **Portabilité** : export des transactions en format standard
-- **Effacement** : impossible pour les données soumises à obligation légale
-- **Accès** : fournir l'ensemble des données dans les 30 jours
-- **Rectification** : permettre la correction des données personnelles
+### Exemptions applicables (à documenter)
 
-## Règles
-- Ne **jamais** stocker les données de carte sur vos serveurs — utiliser la tokenisation.
-- Le KYC doit être **proportionnel** au risque (approche basée sur le risque).
-- Les transactions suspectes doivent être **signalées** (Tracfin/autorité compétente).
-- La conservation des données doit respecter les durées **légales minimales ET maximales**.
-- Documenter chaque décision de conformité pour les **audits**.
+| Exemption | Condition | Responsabilité du risque |
+|-----------|-----------|--------------------------|
+| Low-value | < 30 € (cumul < 100 € ou < 5 tx) | Émetteur |
+| Trusted beneficiary | Bénéficiaire whitelisté par le payeur | Émetteur |
+| Recurring | Même montant + même bénéficiaire | Émetteur |
+| TRA (Transaction Risk Analysis) | Taux fraude < seuil EBA + scoring bas | Acquéreur ou émetteur |
+| Corporate / B2B | Comptes d'entreprise dédiés | Émetteur |
 
-> Ce skill fournit des orientations générales. Pour des décisions de conformité spécifiques, consulter un juriste spécialisé en droit financier.
+### Implémentation 3DS2 (Stripe exemple)
+
+```javascript
+// Côté client — gérer le défi SCA
+const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+  payment_method: { card: cardElement },
+});
+if (error?.code === "authentication_required") {
+  // Redemander la SCA via stripe.handleNextAction(clientSecret)
+}
+```
+
+---
+
+## 5. RGPD — Données financières
+
+### Durées de conservation légales
+
+| Donnée | Durée | Base légale |
+|--------|-------|-------------|
+| Transactions / pièces comptables | 10 ans | Obligation légale (Code commerce) |
+| Dossiers KYC | 5 ans après fin de relation | LCB-FT / 5AMLD |
+| Données de carte tokenisées | Durée mandat + 13 mois | Contrat / Consentement |
+| Logs d'accès et connexion | 12 mois | Intérêt légitime / LCEN |
+| Consentements marketing | Jusqu'au retrait + 3 ans | Consentement |
+
+### Droits des utilisateurs — implémentation minimale
+
+- **Portabilité** : endpoint `/api/user/export` → JSON/CSV des transactions (format Account Statement ISO 20022 recommandé).
+- **Effacement** : pseudonymiser (ne pas supprimer) les données soumises à conservation légale ; effacer les données hors obligations.
+- **Accès** : réponse sous 30 jours ; authentification forte avant divulgation.
+- **Rectification** : formulaire avec audit trail de la modification.
+
+```python
+# Pseudonymisation irréversible pour données hors conservation légale
+import hashlib, os
+
+def pseudonymize(value: str, salt: bytes = None) -> str:
+    salt = salt or os.urandom(16)
+    return hashlib.blake2b(value.encode(), key=salt, digest_size=32).hexdigest()
+```
+
+---
+
+## 6. Garde-fous et anti-patterns fréquents
+
+| Anti-pattern | Risque | Correction |
+|---|---|---|
+| Logger `request.body` sur un endpoint de paiement | PCI-DSS violation, amende + perte certification | Filtrer les champs sensibles avant log (`pan`, `cvv`, `card_number`) |
+| KYC "one-shot" sans re-screening | Passer à côté d'une sanction ajoutée après onboarding | Cron de re-screening hebdomadaire sur la base clients active |
+| SCA contournée côté backend pour "améliorer l'UX" | Fraude, responsabilité acquéreur, amende ABE | Utiliser les exemptions officielles PSD2, documenter le choix |
+| Conservation infinie des données "au cas où" | RGPD — amende CNIL jusqu'à 4 % du CA mondial | Mettre en place une politique de purge automatique par type de donnée |
+| Secrets d'API PSP dans le code source | Compromission PSP, fraude directe | Vault (HashiCorp / AWS Secrets Manager) + rotation automatique |
+| Validation KYC uniquement côté client | Contournement trivial | Toujours re-valider côté serveur, renvoyer le statut KYC depuis le backend |
+
+---
+
+## 7. Commandes d'audit utiles
+
+```bash
+# Scanner les secrets dans le code (clés API, PANs…)
+trufflehog git file://. --only-verified
+
+# Vérifier les headers de sécurité d'un endpoint
+curl -I https://api.monservice.com/v1/payments | grep -E "Strict-Transport|Content-Security|X-Frame"
+
+# Tester les ciphers TLS (rejeter TLS < 1.2)
+nmap --script ssl-enum-ciphers -p 443 api.monservice.com
+
+# Vérifier l'inventaire des scripts de paiement (PCI v4 req. 6.4.3)
+# Générer les SRI hashes pour les scripts tiers
+curl -s https://cdn.js.stripe.com/v3/ | openssl dgst -sha384 -binary | openssl base64 -A
+```
+
+---
+
+> Ce skill fournit des orientations techniques et opérationnelles. Pour des décisions de conformité engageant la responsabilité légale de l'entreprise, consulter un juriste spécialisé en droit financier et/ou un QSA PCI certifié.
 
 
 ## Communication Rules — MANDATORY

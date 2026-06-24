@@ -97,23 +97,153 @@ cp -r claude-skills-collection/skills/dev-caching-strategy ~/.claude/skills/</di
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Caching Strategy</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Identifier les données à cacher</strong> : Cibler les hot data (accédées très fréquemment), les données read-heavy (ratio lecture &gt;&gt; écriture), et les résultats de calculs coûteux (agrégations, appels API tiers, requêtes DB complexes) ; éviter de cacher les données qui changent trop souvent ou qui nécessitent une cohérence stricte.</li>
-<li><strong>Choix du type de cache</strong> : In-process/in-memory (<code>MemoryCache</code>, dictionnaire) pour la latence minimale sur instance unique ; distributed cache (Redis, Memcached) pour le partage multi-instance et la persistance optionnelle ; CDN (Cloudflare, Azure CDN) pour les assets statiques et réponses HTTP ; database query cache pour les requêtes répétitives ; browser cache (<code>Cache-Control</code>, <code>ETag</code>) pour réduire les allers-retours.</li>
-<li><strong>Pattern de caching</strong> : Cache-aside (lazy loading, l'application gère le cache manuellement) pour le contrôle maximal ; read-through (le cache charge depuis la DB automatiquement) pour simplifier le code applicatif ; write-through (écriture synchrone en DB et cache) pour la cohérence forte ; write-behind/write-back (écriture asynchrone en DB) pour la performance maximale en écriture.</li>
-<li><strong>Politique d'expiration</strong> : Définir un TTL adapté au taux de changement des données (court pour les données volatiles, long pour les données stables) ; utiliser LRU (Least Recently Used) pour l'éviction mémoire par défaut ; LFU (Least Frequently Used) pour les données avec popularité stable ; envisager l'invalidation event-based (purge ciblée sur événement métier) pour les données critiques.</li>
-<li><strong>Cache key design</strong> : Adopter une convention claire (<code>{service}:{entity}:{id}</code>, ex. <code>users:profile:42</code>) ; versionner les keys si le format des données change (<code>v2:users:profile:42</code>) ; utiliser le namespacing pour faciliter l'invalidation groupée (<code>SCAN users:*</code>) ; éviter les keys trop longues ou contenant des données sensibles.</li>
-<li><strong>Gestion de la cohérence</strong> : Définir la stratégie d'invalidation (TTL passif, invalidation active sur mutation, cache-busting) ; prévenir le cache stampede (thundering herd) avec le mutex/lock sur le premier chargement ou le probabilistic early expiration ; gérer le stale-while-revalidate pour servir du cache périmé pendant le rechargement en arrière-plan.</li>
-<li><strong>Implémentation</strong> : Redis (structures de données riches : strings, hashes, sets, sorted sets, streams) pour les cas d'usage avancés ; <code>IDistributedCache</code> (.NET) ou Spring Cache (Java) pour l'abstraction framework ; output caching pour les réponses HTTP complètes ; function memoization pour les calculs purs.</li>
-<li><strong>Monitoring</strong> : Surveiller le hit rate (objectif &gt; 80-90% selon le cas), le miss rate, l'éviction rate (signal de mémoire insuffisante), l'utilisation mémoire et la latence ; configurer des alertes sur la dégradation du hit rate ; analyser les patterns d'accès pour affiner les TTL et la politique d'éviction.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Qualifier le besoin</h3>
+<p>Avant de cacher quoi que ce soit, répondre à ces trois questions :</p>
+<table><thead><tr><th>Question</th><th>Cache pertinent si…</th></tr></thead><tbody><tr><td>Ratio lecture/écriture ?</td><td>Lectures &gt;&gt; écritures (≥ 10:1)</td></tr><tr><td>Données partagées entre instances ?</td><td>Oui → distributed cache obligatoire</td></tr><tr><td>Tolérance à la stale data ?</td><td>Si cohérence stricte requise, invalidation event-based obligatoire</td></tr></tbody></table>
+<p>Cibles prioritaires : résultats de requêtes DB coûteuses, appels API tiers (limités en rate), calculs d'agrégation, sessions utilisateur.</p>
+<h3>2. Choisir le bon niveau de cache</h3>
+<pre><code>Requête utilisateur
+      │
+      ▼
+[Browser cache]          ← Cache-Control, ETag, Last-Modified
+      │
+      ▼
+[CDN / Edge cache]       ← Cloudflare, Azure CDN, AWS CloudFront
+      │
+      ▼
+[Application cache]      ← In-process (MemoryCache) ou distributed (Redis)
+      │
+      ▼
+[Database query cache]   ← pg_bouncer result cache, MySQL query cache (désactivé &gt; MySQL 8)
+      │
+      ▼
+[Source of truth]        ← Base de données / API tierce</code></pre>
+<p><strong>Règle de décision</strong> :</p>
 <ul>
-<li>Fournis des exemples de code concrets (configuration Redis, snippets de mise en cache) dans le langage/framework de l'utilisateur</li>
-<li>Adapte les recommandations à l'infrastructure (cloud managé vs on-prem, mono-instance vs cluster)</li>
-<li>Toujours mentionner les trade-offs (ex. write-through = cohérence forte mais latence d'écriture plus haute)</li>
-<li>Commence par la solution simple avant la complexe (MemoryCache avant Redis distribué)</li>
-<li>Rappelle que l'invalidation de cache est l'un des deux problèmes difficiles en informatique : prévoir la stratégie dès le départ</li>
+<li>Instance unique, faible volume → <code>MemoryCache</code> (.NET) / <code>caffeine</code> (Java) / dict Python</li>
+<li>Multi-instances / scalabilité → Redis ou Memcached</li>
+<li>Assets statiques / réponses HTTP entières → CDN</li>
+<li>API REST publique → HTTP <code>Cache-Control</code> + ETag</li>
+</ul>
+<h3>3. Sélectionner le pattern</h3>
+<table><thead><tr><th>Pattern</th><th>Quand l'utiliser</th><th>Trade-off</th></tr></thead><tbody><tr><td><strong>Cache-aside</strong> (lazy)</td><td>Contrôle maximal, données hétérogènes</td><td>Double aller DB au premier miss</td></tr><tr><td><strong>Read-through</strong></td><td>Simplification du code applicatif</td><td>Complexité déportée vers le cache</td></tr><tr><td><strong>Write-through</strong></td><td>Cohérence forte (lecture après écriture)</td><td>Latence d'écriture augmentée</td></tr><tr><td><strong>Write-behind</strong></td><td>Throughput d'écriture maximal</td><td>Risque de perte de données si crash</td></tr><tr><td><strong>Refresh-ahead</strong></td><td>Données populaires avec TTL court</td><td>Prématuré si prédiction inexacte</td></tr></tbody></table>
+<p>Pattern le plus courant en production : <strong>cache-aside + invalidation active</strong> sur mutation.</p>
+<h3>4. Concevoir les cache keys</h3>
+<p>Convention recommandée : <code>{service}:{entité}:{id}</code> ou <code>{service}:{entité}:{id}:{variant}</code></p>
+<pre><code>users:profile:42
+users:profile:42:fr          # variante locale
+catalog:product:SKU-9901
+catalog:search:hash(query)   # hash si la clé est longue</code></pre>
+<ul>
+<li>Versionner si le format change : <code>v2:users:profile:42</code></li>
+<li>Namespace explicite pour l'invalidation groupée : <code>SCAN &quot;catalog:*&quot;</code> (Redis)</li>
+<li>Éviter les données sensibles dans la clé (PII, tokens)</li>
+</ul>
+<h3>5. Définir l'expiration</h3>
+<pre><code>Données système (config, feature flags)   → TTL 5-30 min ou invalidation event-based
+Données utilisateur (profil, panier)      → TTL 5-15 min
+Résultats de requêtes analytiques        → TTL 1-24 h
+Résultats de recherche / catalogue       → TTL 5-30 min + purge sur update
+Sessions                                  → TTL = durée de session + sliding expiration
+Assets statiques (CDN)                   → Cache-Control: max-age=31536000, immutable</code></pre>
+<p><strong>Eviction policies Redis</strong> (à configurer selon l'usage) :</p>
+<ul>
+<li><code>allkeys-lru</code> : usage général (évince le moins récemment utilisé)</li>
+<li><code>allkeys-lfu</code> : données avec popularité stable</li>
+<li><code>volatile-lru</code> : seulement les keys avec TTL (si mélange cache + stockage)</li>
+<li><code>noeviction</code> : bases de données / queues (ne jamais pour un cache pur)</li>
+</ul>
+<h3>6. Snippets copiables</h3>
+<p><strong>Redis cache-aside — Python (redis-py)</strong></p>
+<pre><code class="lang-python">import redis, json, hashlib
+
+r = redis.Redis(host=&quot;localhost&quot;, port=6379, decode_responses=True)
+
+def get_product(product_id: int) -&gt; dict:
+    key = f&quot;catalog:product:{product_id}&quot;
+    cached = r.get(key)
+    if cached:
+        return json.loads(cached)
+    product = db.query(&quot;SELECT * FROM products WHERE id = %s&quot;, product_id)
+    r.setex(key, 300, json.dumps(product))  # TTL 5 min
+    return product
+
+def update_product(product_id: int, data: dict):
+    db.execute(&quot;UPDATE products SET ... WHERE id = %s&quot;, product_id)
+    r.delete(f&quot;catalog:product:{product_id}&quot;)  # invalidation active</code></pre>
+<p><strong>IDistributedCache — .NET 8</strong></p>
+<pre><code class="lang-csharp">public async Task&lt;UserProfile?&gt; GetProfileAsync(int userId, CancellationToken ct)
+{
+    var key = $&quot;users:profile:{userId}&quot;;
+    var cached = await _cache.GetStringAsync(key, ct);
+    if (cached is not null)
+        return JsonSerializer.Deserialize&lt;UserProfile&gt;(cached);
+
+    var profile = await _db.Users.FindAsync(userId, ct);
+    if (profile is not null)
+        await _cache.SetStringAsync(key, JsonSerializer.Serialize(profile),
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5) }, ct);
+    return profile;
+}</code></pre>
+<p><strong>HTTP Cache-Control (API REST)</strong></p>
+<pre><code class="lang-http">Cache-Control: public, max-age=300, stale-while-revalidate=60
+ETag: &quot;abc123&quot;
+Vary: Accept-Language, Accept-Encoding</code></pre>
+<p><strong>Output caching — ASP.NET Core 8</strong></p>
+<pre><code class="lang-csharp">app.MapGet(&quot;/products/{id}&quot;, async (int id, IProductService svc) =&gt;
+    await svc.GetAsync(id))
+   .CacheOutput(p =&gt; p.Expire(TimeSpan.FromMinutes(5)).Tag(&quot;products&quot;));
+
+// Purge ciblée :
+await outputCache.EvictByTagAsync(&quot;products&quot;, ct);</code></pre>
+<h3>7. Prévenir le cache stampede (thundering herd)</h3>
+<pre><code class="lang-python">import threading
+
+_locks = {}
+
+def get_with_lock(key, loader_fn, ttl=300):
+    cached = r.get(key)
+    if cached:
+        return json.loads(cached)
+    lock = _locks.setdefault(key, threading.Lock())
+    with lock:
+        cached = r.get(key)  # double-check après lock
+        if cached:
+            return json.loads(cached)
+        value = loader_fn()
+        r.setex(key, ttl, json.dumps(value))
+        return value</code></pre>
+<p>Alternative Redis native : <code>SET key value NX EX 300</code> (SET if Not eXists).</p>
+<h3>8. Configurer Redis (production)</h3>
+<pre><code class="lang-conf"># redis.conf — points critiques
+maxmemory 2gb
+maxmemory-policy allkeys-lru
+save &quot;&quot;                        # désactiver AOF/RDB si cache pur (pas de persistance)
+requirepass &lt;password&gt;
+bind 127.0.0.1                 # ne jamais exposer Redis sans auth sur réseau public</code></pre>
+<p>Cluster Redis (≥ 3 nœuds) pour HA ; Redis Sentinel pour failover automatique sans cluster.</p>
+<h3>9. Monitorer</h3>
+<p>Métriques indispensables :</p>
+<ul>
+<li><strong>Hit rate</strong> : <code>keyspace_hits / (keyspace_hits + keyspace_misses)</code> → objectif &gt; 85 %</li>
+<li><strong>Eviction rate</strong> : <code>evicted_keys</code> en hausse → mémoire sous-dimensionnée</li>
+<li><strong>Latence</strong> : P99 &lt; 1 ms pour Redis sur réseau local</li>
+<li><strong>Memory fragmentation ratio</strong> &gt; 1.5 → <code>redis-cli MEMORY DOCTOR</code></li>
+</ul>
+<pre><code class="lang-bash">redis-cli INFO stats | grep -E &quot;hits|misses|evicted&quot;
+redis-cli INFO memory | grep used_memory_human
+redis-cli --latency -h localhost</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Correctif</th></tr></thead><tbody><tr><td><strong>Cache everything</strong></td><td>Mémoire saturée, hit rate bas</td><td>Profiler les hot paths avant de cacher</td></tr><tr><td><strong>TTL trop long</strong></td><td>Données périmées servies longtemps</td><td>Invalidation active sur mutation</td></tr><tr><td><strong>TTL trop court</strong></td><td>Hit rate effondré, DB surchargée</td><td>Analyser la fréquence réelle de changement</td></tr><tr><td><strong>Thundering herd</strong></td><td>Pics CPU/DB au restart</td><td>Mutex ou probabilistic early expiration</td></tr><tr><td><strong>Cache stampede multi-serveurs</strong></td><td>Même problème à grande échelle</td><td>Redis SETNX ou Lua lock distribué</td></tr><tr><td><strong>Cache sans namespace</strong></td><td>Invalidation impossible sans flush total</td><td>Convention de keys dès le départ</td></tr><tr><td><strong>Cacher des données PII sans chiffrement</strong></td><td>RGPD / fuite de données</td><td>Chiffrer ou ne pas cacher</td></tr><tr><td><strong>Redis exposé sans auth</strong></td><td>Vecteur d'attaque critique</td><td><code>requirepass</code> + TLS + bind local</td></tr><tr><td><strong>Oublier Vary sur le CDN</strong></td><td>Cache non segmenté par langue/device</td><td>Ajouter <code>Vary: Accept-Language</code></td></tr><tr><td><strong>Write-behind sans WAL</strong></td><td>Perte de données au crash</td><td>Préférer write-through pour les données critiques</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Stale-while-revalidate</strong> : servir le cache périmé immédiatement, rafraîchir en arrière-plan → latence perçue quasi nulle.</li>
+<li><strong>Cache warming</strong> : préremplir au démarrage les données les plus chaudes pour éviter le cold start.</li>
+<li><strong>Valkey</strong> (fork Redis open-source, 2024) : alternative à considérer si licence Redis Stack est un frein.</li>
+<li><strong>Dragonfly / Garnet</strong> : alternatives Redis-compatibles à très haute performance pour charges extrêmes.</li>
+<li><strong>Edge caching (Workers KV, Cloudflare D1)</strong> : cacher au plus près de l'utilisateur pour les lectures globales.</li>
+<li><strong>Observabilité first</strong> : instrumenter le hit/miss rate dès le début, pas après coup.</li>
 </ul>
 </article>
 </main>

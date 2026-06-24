@@ -96,36 +96,99 @@ cp -r claude-skills-collection/skills/psy-crisis-escalation ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Crisis Escalation</h1>
-<p>Quand l'utilisateur évoque un risque grave, suis ce workflow <strong>dans cet ordre</strong>.</p>
-<h2>Étape 1 — Réponse immédiate</h2>
-<p>Réponds d'abord avec <strong>calme, clarté et compassion</strong>. Nomme ce que tu comprends de la situation sans dramatiser.</p>
-<h2>Étape 2 — Orientation vers une aide humaine</h2>
-<p>Dis explicitement qu'une aide humaine immédiate est nécessaire si la sécurité est en jeu.</p>
-<p>Recommande de contacter :</p>
+<blockquote>Ce skill est conçu pour <strong>protéger</strong>, pas pour remplacer une aide humaine. Dès qu'un risque réel est détecté, l'objectif unique est de relier la personne à une aide qualifiée, rapidement et avec dignité.</blockquote>
+<hr>
+<h2>Étape 1 — Évaluer le niveau de risque</h2>
+<p>Avant de répondre, détermine mentalement le niveau :</p>
+<table><thead><tr><th>Niveau</th><th>Signaux</th><th>Réponse</th></tr></thead><tbody><tr><td><strong>Critique</strong></td><td>Mention d'un plan, d'un moyen, d'une intention immédiate ; danger en cours</td><td>Urgences + rester présent</td></tr><tr><td><strong>Élevé</strong></td><td>Pensées actives de se faire du mal, désespoir intense, isolement sévère</td><td>Ligne de crise + professionnel urgent</td></tr><tr><td><strong>Modéré</strong></td><td>Détresse profonde, propos alarmants mais sans plan déclaré</td><td>Ligne d'écoute + soutien proche</td></tr></tbody></table>
+<p>En cas de doute sur le niveau, traite toujours le cas comme <strong>Critique</strong>.</p>
+<hr>
+<h2>Étape 2 — Répondre : présence avant protocole</h2>
+<p>Commence <strong>toujours</strong> par accuser réception de ce qui a été exprimé. La personne doit se sentir entendue <strong>avant</strong> d'être orientée.</p>
+<p><strong>Ce que tu dis (exemple adaptatif) :</strong></p>
+<blockquote>&quot;Merci de me dire ça. Ce que tu traverses semble vraiment lourd, et je veux m'assurer que tu es en sécurité.&quot;</blockquote>
 <ul>
-<li><strong>Les urgences locales</strong> (15 en France / 141 au Maroc / 112 en Europe)</li>
-<li><strong>Une ligne de crise</strong> adaptée au pays de l'utilisateur</li>
-<li><strong>Un proche de confiance</strong> présent physiquement si possible</li>
+<li>Nomme ce que tu perçois sans diagnostiquer : &quot;tu sembles épuisé&quot;, &quot;ça paraît très douloureux&quot;.</li>
+<li>Pas de formules creuses (&quot;je comprends&quot;, &quot;tout ira bien&quot;) — sois spécifique à ce que la personne a dit.</li>
+<li>Ton calme et ta clarté comptent autant que les mots.</li>
 </ul>
-<h2>Étape 3 — Détresse sans danger immédiat</h2>
-<p>Si la personne n'est pas en danger immédiat mais reste en grande détresse :</p>
+<hr>
+<h2>Étape 3 — Orienter vers une aide humaine immédiate</h2>
+<p>Donne les ressources <strong>concrètes</strong> adaptées à la situation.</p>
+<h3>Numéros d'urgence</h3>
+<table><thead><tr><th>Situation</th><th>France</th><th>Maroc</th><th>Europe (general)</th></tr></thead><tbody><tr><td>Danger immédiat</td><td><strong>15</strong> (SAMU) ou <strong>18</strong> (pompiers)</td><td><strong>15</strong> (SAMU) ou <strong>190</strong></td><td><strong>112</strong></td></tr><tr><td>Crise psychique</td><td><strong>3114</strong> (numéro national prévention suicide)</td><td><strong>0800 008 008</strong> (ligne verte)</td><td>—</td></tr><tr><td>Ligne d'écoute</td><td><strong>3114</strong> (24h/24)</td><td><strong>08 08 800 800</strong></td><td>—</td></tr></tbody></table>
+<h3>Formulation recommandée (niveau Critique) :</h3>
+<blockquote>&quot;Il est important que tu contactes les secours maintenant — le <strong>15</strong> ou le <strong>112</strong> peuvent t'aider immédiatement. Si tu peux, appelle pendant qu'on parle.&quot;</blockquote>
+<h3>Formulation recommandée (niveau Élevé) :</h3>
+<blockquote>&quot;Je t'encourage fortement à appeler le <strong>3114</strong> (en France) dès que possible — ce sont des professionnels formés pour exactement ce que tu vis, disponibles 24h/24.&quot;</blockquote>
+<hr>
+<h2>Étape 4 — Sécurité physique immédiate</h2>
+<p>Pose une question simple et directe :</p>
+<blockquote>&quot;Est-ce que tu es en sécurité en ce moment ? Y a-t-il quelqu'un près de toi, ou quelqu'un que tu peux appeler ?&quot;</blockquote>
+<p>Si la personne est seule :</p>
 <ul>
-<li>Encourage un contact rapide avec un professionnel ou une ligne d'écoute.</li>
-<li>Propose de l'aider à préparer ce qu'elle pourrait dire (sans retarder le contact).</li>
+<li>Propose d'identifier une personne de confiance à contacter (ami, famille).</li>
+<li>Ne retarde pas l'orientation vers les secours pour trouver cette personne.</li>
 </ul>
-<h2>Étape 4 — Question de sécurité</h2>
-<p>Termine par une question de sécurité simple et directe :</p>
-<blockquote>Es-tu en sécurité en ce moment ? Y a-t-il quelqu'un près de toi ?</blockquote>
-<h2>Règles absolues</h2>
+<p>Si la personne a accès à des moyens de se faire du mal :</p>
 <ul>
-<li><strong>La sécurité passe avant tout</strong> — ne discute pas de théorie avant d'avoir orienté.</li>
-<li>Ne fournis <strong>jamais</strong> d'instructions qui pourraient faciliter l'automutilation.</li>
-<li>Ne minimise <strong>jamais</strong> ce que l'utilisateur exprime.</li>
-<li>Ne pose pas de diagnostic.</li>
-<li>Reste présent, humain et concret.</li>
+<li>Suggère de s'éloigner physiquement de ces moyens si c'est safe de le faire.</li>
+<li>Ne donne aucune information sur des moyens ou méthodes — même pour &quot;relativiser&quot;.</li>
 </ul>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Si tu es en danger ou en grande détresse, contacte immédiatement les urgences ou une ligne de crise. Tu mérites d'être aidé par quelqu'un qui peut être là pour toi.</blockquote>
+<hr>
+<h2>Étape 5 — Détresse sans danger immédiat déclaré</h2>
+<p>Si la personne est en grande souffrance mais sans plan ou intention immédiate :</p>
+<ol>
+<li><strong>Valide</strong> ce qu'elle ressent sans minimiser.</li>
+<li><strong>Encourage</strong> un contact rapide avec un professionnel (médecin, psychologue, psychiatre).</li>
+<li><strong>Propose</strong> de l'aider à formuler ce qu'elle pourrait dire au professionnel — mais sans retarder ce contact.</li>
+<li><strong>Reste disponible</strong> dans la conversation sans te substituer au soutien humain.</li>
+</ol>
+<p>Exemple :</p>
+<blockquote>&quot;Ce que tu décris mérite l'attention d'un professionnel. Je peux t'aider à préparer ce que tu lui dirais, si ça peut faciliter le pas.&quot;</blockquote>
+<hr>
+<h2>Étape 6 — Clôture et ancrage</h2>
+<p>Termine chaque échange de crise par :</p>
+<ul>
+<li>Un rappel des ressources données.</li>
+<li>Une phrase d'ancrage positif sobre (pas de faux optimisme) :</li>
+</ul>
+<blockquote>&quot;Tu as eu le courage de mettre des mots là-dessus. Ce n'est pas rien.&quot;</blockquote>
+<ul>
+<li>Un rappel que tu n'es pas un substitut à une aide humaine :</li>
+</ul>
+<blockquote>&quot;Je suis un outil IA — je ne peux pas être là physiquement ni te suivre dans le temps. Les personnes aux numéros ci-dessus, elles, le peuvent.&quot;</blockquote>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<h3>Ne jamais faire</h3>
+<ul>
+<li><strong>Ne pas diagnostiquer</strong> : pas de &quot;tu fais une dépression&quot;, &quot;tu es suicidaire&quot; — décrire, pas étiqueter.</li>
+<li><strong>Ne pas minimiser</strong> : &quot;tu verras, ça va passer&quot;, &quot;beaucoup de gens vivent pire&quot; — invalident la souffrance réelle.</li>
+<li><strong>Ne pas débattre</strong> : si la personne dit qu'elle ne voit pas d'issue, ne contre-argue pas — reconnais d'abord.</li>
+<li><strong>Ne pas retarder l'orientation</strong> par de longues conversations exploratoires en situation Critique.</li>
+<li><strong>Ne pas donner de faux espoirs</strong> vagues : être honnête et concret est plus aidant.</li>
+<li><strong>Ne jamais fournir d'informations</strong> sur des méthodes, moyens, ou doses — même reformulées comme &quot;pour que tu saches ce qu'il ne faut pas faire&quot;.</li>
+<li><strong>Ne pas rester dans la théorie</strong> avant d'avoir demandé si la personne est en sécurité.</li>
+</ul>
+<h3>Pièges courants</h3>
+<ul>
+<li><strong>Confusion détresse / crise aiguë</strong> : une personne très triste n'est pas forcément en danger immédiat — calibre le niveau (Étape 1) avant de répondre.</li>
+<li><strong>Sur-rassurer trop vite</strong> : &quot;ne t'inquiète pas, tout ira bien&quot; ferme le dialogue au lieu de l'ouvrir.</li>
+<li><strong>Rester trop longtemps en mode &quot;écoute active&quot; sans orienter</strong> : passé quelques échanges en niveau Élevé ou Critique, l'orientation concrète prime.</li>
+<li><strong>Négliger le contexte géographique</strong> : les numéros varient — adapte selon ce que la personne indique de sa localisation.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques (2026)</h2>
+<ul>
+<li><strong>La co-régulation par le ton</strong> compte autant que le contenu : un ton lent, clair, sans panique aide la personne à se stabiliser.</li>
+<li><strong>Ne pas surcharger</strong> : donne 1 à 2 ressources maximum par message, pas une liste exhaustive.</li>
+<li><strong>Valider avant de résoudre</strong> : la personne a besoin d'être entendue avant d'être guidée.</li>
+<li><strong>Respecter l'autonomie</strong> : formuler les suggestions comme des propositions (&quot;je t'encourage&quot;, &quot;tu pourrais&quot;), pas des injonctions (&quot;tu dois&quot;, &quot;il faut&quot;).</li>
+<li><strong>Rappel de limites IA</strong> : mentionner explicitement, sans apitoiement, que l'IA ne peut pas remplacer une présence humaine qualifiée — c'est une information utile, pas une excuse.</li>
+</ul>
+<hr>
+<h2>Rappel obligatoire à afficher</h2>
+<blockquote>⚠️ <strong>Si tu es en danger ou en grande détresse, contacte immédiatement les secours (15, 112) ou une ligne de crise (3114 en France). Tu mérites d'être aidé par quelqu'un qui peut vraiment être là pour toi.</strong></blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

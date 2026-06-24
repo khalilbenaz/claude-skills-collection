@@ -96,31 +96,112 @@ cp -r claude-skills-collection/skills/legal-complaint-letter-writer ~/.claude/sk
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Complaint Letter Writer</h1>
-<h2>Étape 1 — Contexte</h2>
-<p>Destinataire, objet de la plainte, faits, actions déjà tentées, résultat souhaité.</p>
-<h2>Étape 2 — Structure de la lettre</h2>
+<blockquote>Ce skill génère des modèles de courriers. Pour les litiges importants (montants élevés, licenciement, procédure judiciaire), faites relire par un avocat ou une association de consommateurs avant envoi.</blockquote>
+<hr>
+<h2>Étape 1 — Collecter les informations nécessaires</h2>
+<p>Demande systématiquement :</p>
+<table><thead><tr><th>Information</th><th>Pourquoi</th></tr></thead><tbody><tr><td>Destinataire exact (nom, adresse, service)</td><td>Cibler la bonne entité juridique</td></tr><tr><td>Objet du litige (produit, prestation, décision)</td><td>Cadrer la réclamation</td></tr><tr><td>Chronologie des faits (dates précises)</td><td>Établir la preuve</td></tr><tr><td>Démarches déjà effectuées (appels, emails)</td><td>Montrer la bonne foi</td></tr><tr><td>Références disponibles (n° de commande, contrat, facture)</td><td>Identifier le dossier</td></tr><tr><td>Résultat attendu (remboursement, remplacement, annulation)</td><td>Formuler une demande précise</td></tr><tr><td>Pays / juridiction</td><td>Adapter la base légale</td></tr></tbody></table>
+<hr>
+<h2>Étape 2 — Choisir le niveau de la lettre</h2>
+<h3>Niveau 1 — Réclamation amiable (premier contact)</h3>
+<p>Ton poli mais ferme. Pas de mention de recours judiciaires. Délai de réponse suggéré : <strong>15 jours</strong>.</p>
+<p>Utiliser quand :</p>
+<ul>
+<li>Aucune démarche préalable n'a été faite</li>
+<li>La relation commerciale peut être préservée</li>
+<li>Le litige est simple (erreur de facturation, retard de livraison)</li>
+</ul>
+<h3>Niveau 2 — Lettre formelle de réclamation</h3>
+<p>Ton formel. Mention des droits légaux et d'une escalade possible. Délai : <strong>8 jours</strong>.</p>
+<p>Utiliser quand :</p>
+<ul>
+<li>Une réclamation amiable est restée sans réponse</li>
+<li>Le préjudice est établi et documenté</li>
+</ul>
+<h3>Niveau 3 — Mise en demeure</h3>
+<p>Ton juridique. Mention explicite des recours (tribunal, médiateur, signalement DGCCRF). Délai : <strong>8 jours francs</strong>.</p>
+<p>Utiliser quand :</p>
+<ul>
+<li>Les deux premiers niveaux ont échoué</li>
+<li>Le montant ou le préjudice justifie une procédure</li>
+<li>Document qui peut servir de pièce en justice</li>
+</ul>
+<hr>
+<h2>Étape 3 — Structure de la lettre (template)</h2>
+<pre><code>[Prénom NOM]
+[Adresse complète]
+[Email / Téléphone]
+
+[Ville], le [date]
+
+À l'attention de [Service concerné]
+[Entreprise / Organisme]
+[Adresse]
+
+Lettre recommandée avec accusé de réception
+
+Objet : Réclamation relative à [objet précis] — Réf. [n° dossier/commande]
+
+Madame, Monsieur,
+
+**Rappel des faits**
+[Chronologie factuelle : date d'achat/contrat, description du problème, date de survenance]
+
+**Démarches déjà effectuées**
+[Contact du [date] par [moyen] — sans réponse / réponse insatisfaisante]
+
+**Fondement de ma demande**
+[Base légale : article L217-4 du Code de la consommation (garantie légale), article 1231-1 du Code civil (responsabilité contractuelle), clause X du contrat, etc.]
+
+**Ma demande**
+Je vous demande, dans un délai de [X] jours à compter de la réception de ce courrier :
+- [Action précise : remboursement de X €, remplacement, correction, etc.]
+
+À défaut de réponse satisfaisante dans ce délai, je me réserve le droit de saisir [médiateur compétent / tribunal judiciaire / autorité de contrôle].
+
+Veuillez agréer, Madame, Monsieur, l'expression de mes salutations distinguées.
+
+[Signature]
+[Pièces jointes : liste]</code></pre>
+<hr>
+<h2>Étape 4 — Bases légales fréquentes (France, 2026)</h2>
+<table><thead><tr><th>Situation</th><th>Texte applicable</th></tr></thead><tbody><tr><td>Produit défectueux</td><td>Art. L217-4 à L217-14 Code conso — garantie légale 2 ans</td></tr><tr><td>Prestation non conforme</td><td>Art. 1217 et 1231-1 Code civil — inexécution contractuelle</td></tr><tr><td>Remboursement refusé</td><td>Art. L224-25-22 Code conso (e-commerce), 14 jours légaux</td></tr><tr><td>Litige bancaire</td><td>Art. L316-1 Code monétaire et financier — médiation obligatoire</td></tr><tr><td>Employeur / travail</td><td>Art. L1237-19 Code du travail (rupture), lettres LRAR</td></tr><tr><td>Copropriété</td><td>Art. 42 loi du 10 juillet 1965</td></tr><tr><td>Assurance</td><td>Art. L113-12 Code des assurances (résiliation), L133-2</td></tr></tbody></table>
+<hr>
+<h2>Étape 5 — Envoi et suivi</h2>
+<p><strong>Format papier :</strong></p>
+<ul>
+<li>Lettre recommandée avec avis de réception (LRAR) — preuve légale de réception</li>
+<li>Conserver une copie signée + le récépissé La Poste</li>
+</ul>
+<p><strong>Format numérique :</strong></p>
+<ul>
+<li>Email avec demande d'accusé de lecture + confirmation de réception</li>
+<li>Service type &quot;AR24&quot; ou &quot;Maileva&quot; pour recommandé électronique (valeur juridique équivalente depuis 2022)</li>
+</ul>
+<p><strong>Délais à surveiller :</strong></p>
+<ul>
+<li>Noter la date de réception (AR) — le délai court à partir de ce jour</li>
+<li>Sans réponse : passer au niveau supérieur ou saisir le médiateur sectoriel</li>
+</ul>
+<p><strong>Recours si pas de réponse :</strong></p>
 <ol>
-<li><strong>En-tête</strong> : coordonnées, date, référence</li>
-<li><strong>Objet</strong> : clair et factuel</li>
-<li><strong>Rappel des faits</strong> : chronologique, précis</li>
-<li><strong>Fondement</strong> : droits, contrat, loi invoquée</li>
-<li><strong>Demande</strong> : ce que vous attendez, avec délai</li>
-<li><strong>Avertissement</strong> : mention des recours si pas de réponse</li>
-<li><strong>Formule de politesse</strong></li>
+<li>Médiateur sectoriel (médiation de la consommation obligatoire pour les pros)</li>
+<li>Signalement sur SignalConso (DGCCRF)</li>
+<li>Justice de proximité (&lt; 5 000 €) ou tribunal judiciaire</li>
+<li>Associations : UFC-Que Choisir, 60 Millions de consommateurs</li>
 </ol>
-<h2>Étape 3 — Rédaction</h2>
-<p>Lettre complète, ton formel mais ferme.</p>
-<h2>Étape 4 — Variantes</h2>
+<hr>
+<h2>Garde-fous et pièges courants</h2>
 <ul>
-<li>Version amiable (premier contact)</li>
-<li>Version formelle (mise en demeure)</li>
+<li><strong>Ne jamais menacer sans intention</strong> : &quot;je vais poursuivre&quot; sans suite affaiblit la position.</li>
+<li><strong>Éviter le ton agressif ou émotionnel</strong> : les faits seuls sont convaincants ; les insultes invalident la lettre.</li>
+<li><strong>Pas de fausses références légales</strong> : vérifier l'article cité avant de l'inclure.</li>
+<li><strong>Ne pas demander plusieurs choses contradictoires</strong> : une demande principale, une alternative.</li>
+<li><strong>Délai trop court</strong> : moins de 8 jours est rarement considéré comme raisonnable par les tribunaux.</li>
+<li><strong>Pièces jointes non citées</strong> : lister chaque document joint dans le corps de la lettre.</li>
+<li><strong>Signature manquante</strong> : une lettre non signée n'a pas de valeur probante.</li>
+<li><strong>Mise en demeure trop tôt</strong> : pour les petits litiges, un premier contact amiable évite l'escalade inutile.</li>
 </ul>
-<h2>Étape 5 — Envoi</h2>
-<ul>
-<li>Recommandé avec AR (physique) ou email avec accusé</li>
-<li>Délai de réponse à mentionner</li>
-</ul>
-<blockquote>⚠️ Ce courrier est un modèle. Pour les litiges importants, faites-le relire par un professionnel du droit.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

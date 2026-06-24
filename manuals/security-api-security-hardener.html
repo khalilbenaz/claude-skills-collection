@@ -96,97 +96,162 @@ cp -r claude-skills-collection/skills/security-api-security-hardener ~/.claude/s
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Durcissement de la Sécurité des APIs</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Auditer</strong> : identifier les failles potentielles (OWASP API Top 10).</li>
-<li><strong>Configurer</strong> : headers, CORS, rate limiting.</li>
-<li><strong>Valider</strong> : entrées, sorties, authentification.</li>
-<li><strong>Monitorer</strong> : logs de sécurité, détection d'anomalies.</li>
-</ol>
-<h2>OWASP API Top 10 — Checklist</h2>
-<table><thead><tr><th>#</th><th>Risque</th><th>Contrôle</th></tr></thead><tbody><tr><td>1</td><td>Broken Object Level Authorization</td><td>Vérifier l'ownership sur chaque ressource</td></tr><tr><td>2</td><td>Broken Authentication</td><td>JWT court, refresh rotation, MFA</td></tr><tr><td>3</td><td>Broken Object Property Level Authorization</td><td>DTO de réponse, pas d'entités directes</td></tr><tr><td>4</td><td>Unrestricted Resource Consumption</td><td>Rate limiting, pagination obligatoire</td></tr><tr><td>5</td><td>Broken Function Level Authorization</td><td>RBAC sur chaque endpoint</td></tr><tr><td>6</td><td>Unrestricted Access to Sensitive Business Flows</td><td>Captcha, anti-bot, limites métier</td></tr><tr><td>7</td><td>Server Side Request Forgery</td><td>Whitelist d'URLs, pas d'URLs utilisateur</td></tr><tr><td>8</td><td>Security Misconfiguration</td><td>Headers, CORS strict, erreurs génériques</td></tr><tr><td>9</td><td>Improper Inventory Management</td><td>Documenter tous les endpoints, décommissionner les anciens</td></tr><tr><td>10</td><td>Unsafe Consumption of APIs</td><td>Valider les réponses des APIs tierces</td></tr></tbody></table>
-<h2>Implémentation ASP.NET Core</h2>
-<h3>Headers de sécurité</h3>
-<pre><code class="lang-csharp">app.Use(async (context, next) =&gt;
+<h2>Workflow en 5 étapes</h2>
+<h3>1. Auditer — cartographier la surface d'attaque</h3>
+<ul>
+<li>Lister tous les endpoints (y compris ceux non documentés via <code>/swagger</code>, logs, code).</li>
+<li>Vérifier chaque endpoint : authentification requise ? autorisation granulaire (BOLA) ? exposition de données excessive ?</li>
+<li>Scanner les headers de réponse actuels :</li>
+</ul>
+<pre><code class="lang-bash">curl -sI https://api.example.com/health | grep -iE &quot;server|x-powered|access-control|x-content&quot;</code></pre>
+<ul>
+<li>Identifier les endpoints sensibles (paiement, auth, admin) → appliquer un rate limit plus strict.</li>
+</ul>
+<p><strong>Critère de décision</strong> : si un endpoint peut être appelé sans jeton ou sans vérification d'ownership sur la ressource → priorité 1.</p>
+<hr>
+<h3>2. Configurer les headers de sécurité (ASP.NET Core)</h3>
+<pre><code class="lang-csharp">// Program.cs — avant app.UseRouting()
+app.Use(async (context, next) =&gt;
 {
-    context.Response.Headers.Append(&quot;X-Content-Type-Options&quot;, &quot;nosniff&quot;);
-    context.Response.Headers.Append(&quot;X-Frame-Options&quot;, &quot;DENY&quot;);
-    context.Response.Headers.Append(&quot;X-XSS-Protection&quot;, &quot;0&quot;);
-    context.Response.Headers.Append(&quot;Referrer-Policy&quot;, &quot;strict-origin-when-cross-origin&quot;);
-    context.Response.Headers.Append(&quot;Content-Security-Policy&quot;, &quot;default-src 'self'&quot;);
-    context.Response.Headers.Append(&quot;Permissions-Policy&quot;, &quot;camera=(), microphone=(), geolocation=()&quot;);
-    context.Response.Headers.Remove(&quot;Server&quot;);
-    context.Response.Headers.Remove(&quot;X-Powered-By&quot;);
-
+    var headers = context.Response.Headers;
+    headers.Append(&quot;X-Content-Type-Options&quot;, &quot;nosniff&quot;);
+    headers.Append(&quot;X-Frame-Options&quot;, &quot;DENY&quot;);
+    headers.Append(&quot;X-XSS-Protection&quot;, &quot;0&quot;);            // désactivé volontairement (géré par CSP)
+    headers.Append(&quot;Referrer-Policy&quot;, &quot;strict-origin-when-cross-origin&quot;);
+    headers.Append(&quot;Content-Security-Policy&quot;, &quot;default-src 'self'&quot;);
+    headers.Append(&quot;Permissions-Policy&quot;, &quot;camera=(), microphone=(), geolocation=()&quot;);
+    headers.Append(&quot;Strict-Transport-Security&quot;, &quot;max-age=31536000; includeSubDomains&quot;);
+    headers.Remove(&quot;Server&quot;);
+    headers.Remove(&quot;X-Powered-By&quot;);
+    headers.Remove(&quot;X-AspNet-Version&quot;);
     await next();
 });</code></pre>
-<h3>Rate Limiting</h3>
-<pre><code class="lang-csharp">builder.Services.AddRateLimiter(options =&gt;
+<blockquote>Vérifier après déploiement avec <a href="https://securityheaders.com" target="_blank" rel="noopener">securityheaders.com</a> ou <code>curl -sI</code>.</blockquote>
+<hr>
+<h3>3. Configurer le Rate Limiting</h3>
+<p><strong>Critères de choix</strong> :</p>
+<ul>
+<li>Endpoint public / auth → <code>FixedWindow</code> large (ex. 100 req/min par IP)</li>
+<li>Endpoint sensible (paiement, OTP, login) → <code>SlidingWindow</code> strict (ex. 5–10 req/min)</li>
+<li>Endpoint admin → <code>TokenBucket</code> ou blocage complet hors IP whitelist</li>
+</ul>
+<pre><code class="lang-csharp">// .NET 7+ — Microsoft.AspNetCore.RateLimiting
+builder.Services.AddRateLimiter(options =&gt;
 {
-    // Rate limit global
-    options.GlobalLimiter = PartitionedRateLimiter.Create&lt;HttpContext, string&gt;(context =&gt;
+    // Global : 100 req/min par IP
+    options.GlobalLimiter = PartitionedRateLimiter.Create&lt;HttpContext, string&gt;(ctx =&gt;
         RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? &quot;unknown&quot;,
+            partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? &quot;unknown&quot;,
             factory: _ =&gt; new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 100,
                 Window = TimeSpan.FromMinutes(1)
             }));
 
-    // Rate limit par endpoint
-    options.AddPolicy(&quot;strict&quot;, context =&gt;
+    // Politique &quot;strict&quot; pour endpoints sensibles
+    options.AddPolicy(&quot;strict&quot;, ctx =&gt;
         RateLimitPartition.GetSlidingWindowLimiter(
-            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? &quot;unknown&quot;,
+            partitionKey: ctx.User.Identity?.Name     // par utilisateur si authentifié
+                          ?? ctx.Connection.RemoteIpAddress?.ToString()
+                          ?? &quot;anon&quot;,
             factory: _ =&gt; new SlidingWindowRateLimiterOptions
             {
-                PermitLimit = 10,
+                PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1),
-                SegmentsPerWindow = 4
+                SegmentsPerWindow = 6
             }));
 
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (ctx, token) =&gt;
+    {
+        ctx.HttpContext.Response.StatusCode = 429;
+        ctx.HttpContext.Response.Headers.Append(&quot;Retry-After&quot;, &quot;60&quot;);
+        await ctx.HttpContext.Response.WriteAsync(&quot;Too Many Requests&quot;, token);
+    };
 });
 
-// Usage
+app.UseRateLimiter();
+
+// Sur l'endpoint
 app.MapPost(&quot;/api/payments&quot;, handler).RequireRateLimiting(&quot;strict&quot;);</code></pre>
-<h3>Validation d'entrée</h3>
+<hr>
+<h3>4. Valider les entrées et sécuriser les sorties</h3>
+<p><strong>Validation d'entrée (DTO)</strong> :</p>
 <pre><code class="lang-csharp">public class CreatePaymentRequest
 {
     [Required]
-    [Range(1, 99999999, ErrorMessage = &quot;Le montant doit être entre 1 et 99999999 centimes&quot;)]
-    public int Amount { get; set; }
+    [Range(1, 9_999_999)]
+    public int AmountCents { get; set; }
 
-    [Required]
-    [RegularExpression(&quot;^(EUR|USD|GBP)$&quot;)]
-    public string Currency { get; set; }
+    [Required, RegularExpression(&quot;^(EUR|USD|MAD|TND)$&quot;)]
+    public string Currency { get; set; } = default!;
 
-    [Required]
-    [StringLength(100, MinimumLength = 1)]
-    public string RecipientId { get; set; }
+    [Required, StringLength(50, MinimumLength = 1)]
+    [RegularExpression(&quot;^[a-zA-Z0-9_-]+$&quot;)]   // pas d'injection possible
+    public string RecipientId { get; set; } = default!;
 
     [MaxLength(10)]
     public Dictionary&lt;string, string&gt;? Metadata { get; set; }
 }</code></pre>
-<h3>CORS strict</h3>
+<p><strong>BOLA — vérification d'ownership</strong> :</p>
+<pre><code class="lang-csharp">// Toujours filtrer par UserId de la session, pas par paramètre URL seul
+var order = await db.Orders
+    .Where(o =&gt; o.Id == orderId &amp;&amp; o.UserId == currentUserId)  // double filtre obligatoire
+    .FirstOrDefaultAsync();
+
+if (order is null) return Results.NotFound();   // ne pas révéler l'existence</code></pre>
+<p><strong>Réponses d'erreur génériques</strong> :</p>
+<pre><code class="lang-csharp">// Anti-pattern : retourner le message d'exception
+return Results.Problem(ex.Message);   // ❌ fuite d'info
+
+// Correct
+return Results.Problem(&quot;Une erreur est survenue.&quot;, statusCode: 500);  // ✅
+// Logger ex en interne avec correlation ID</code></pre>
+<hr>
+<h3>5. Configurer CORS et monitorer</h3>
+<p><strong>CORS strict</strong> :</p>
 <pre><code class="lang-csharp">builder.Services.AddCors(options =&gt;
 {
     options.AddPolicy(&quot;Production&quot;, policy =&gt;
-    {
         policy.WithOrigins(&quot;https://app.company.com&quot;, &quot;https://admin.company.com&quot;)
               .WithMethods(&quot;GET&quot;, &quot;POST&quot;, &quot;PUT&quot;, &quot;DELETE&quot;)
-              .WithHeaders(&quot;Authorization&quot;, &quot;Content-Type&quot;)
-              .SetMaxAge(TimeSpan.FromHours(1));
-    });
-});</code></pre>
-<h2>Règles</h2>
+              .WithHeaders(&quot;Authorization&quot;, &quot;Content-Type&quot;, &quot;X-Correlation-Id&quot;)
+              .SetMaxAge(TimeSpan.FromHours(1)));   // cache preflight 1h
+});
+
+// Jamais AllowAnyOrigin() + AllowCredentials() ensemble → erreur runtime + faille critique</code></pre>
+<p><strong>Logging sécurité</strong> (Serilog / ILogger) :</p>
+<pre><code class="lang-csharp">// Événements à logger systématiquement
+logger.LogWarning(&quot;Auth failed: user={User} ip={Ip} endpoint={Ep}&quot;, user, ip, path);
+logger.LogWarning(&quot;Rate limit hit: ip={Ip} policy={Policy}&quot;, ip, policy);
+logger.LogWarning(&quot;BOLA attempt: requestedId={Id} ownerId={Owner}&quot;, id, owner);</code></pre>
+<p>Envoyer ces logs vers un SIEM ou au moins un fichier séparé consultable en cas d'incident.</p>
+<hr>
+<h2>OWASP API Top 10 — Checklist 2023</h2>
+<table><thead><tr><th>#</th><th>Risque</th><th>Contrôle minimal</th></tr></thead><tbody><tr><td>API1</td><td>Broken Object Level Authorization</td><td>Filtre <code>UserId</code> sur chaque requête DB</td></tr><tr><td>API2</td><td>Broken Authentication</td><td>JWT exp court (15 min), refresh rotation, révocation</td></tr><tr><td>API3</td><td>Broken Object Property Level Authorization</td><td>DTO explicites, jamais d'entités directes</td></tr><tr><td>API4</td><td>Unrestricted Resource Consumption</td><td>Rate limit + pagination obligatoire (<code>maxPageSize</code>)</td></tr><tr><td>API5</td><td>Broken Function Level Authorization</td><td><code>[Authorize(Roles=&quot;Admin&quot;)]</code> sur chaque endpoint admin</td></tr><tr><td>API6</td><td>Unrestricted Sensitive Business Flows</td><td>Limites métier (ex. max 3 OTP/24h), CAPTCHA</td></tr><tr><td>API7</td><td>Server Side Request Forgery</td><td>Whitelist d'URLs, interdire les IPs privées dans les webhooks</td></tr><tr><td>API8</td><td>Security Misconfiguration</td><td>Headers corrects, swagger désactivé en prod, erreurs génériques</td></tr><tr><td>API9</td><td>Improper Inventory Management</td><td>Inventaire d'endpoints versionné, décommissionner <code>/v1</code> obsolètes</td></tr><tr><td>API10</td><td>Unsafe Consumption of APIs</td><td>Valider le schéma des réponses tierces, timeout agressif</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns / Pièges</h2>
 <ul>
-<li>Ne jamais exposer les entités de base de données directement — toujours des <strong>DTOs</strong>.</li>
-<li>Les messages d'erreur ne doivent <strong>jamais</strong> révéler des détails d'implémentation.</li>
-<li>Chaque endpoint doit vérifier l'<strong>autorisation</strong> (pas seulement l'authentification).</li>
-<li>Le rate limiting doit être appliqué <strong>avant</strong> la logique métier.</li>
-<li>Logger les tentatives d'accès non autorisées pour la détection d'intrusion.</li>
+<li><strong><code>AllowAnyOrigin().AllowCredentials()</code></strong> : interdit par la spec CORS et par ASP.NET Core — exception au démarrage.</li>
+<li><strong>Rate limit uniquement par IP</strong> : un attaquant distribué contourne facilement ; combiner IP + user ID + fingerprint.</li>
+<li><strong>Exposer les stack traces</strong> en prod : désactiver <code>UseDeveloperExceptionPage()</code> hors <code>Development</code>.</li>
+<li><strong>JWT sans expiration</strong> (<code>exp</code> absent ou très long) : une clé volée reste valide indéfiniment.</li>
+<li><strong>Ignorer les paramètres de tri/filtrage</strong> : <code>?orderBy=DROP TABLE</code> → injection si non validé.</li>
+<li><strong>Rate limit après la logique métier</strong> : une requête lourde peut être exécutée avant d'être rejetée.</li>
+<li><strong>Pagination sans limite serveur</strong> : <code>?pageSize=999999</code> → DoS.</li>
+<li>**CORS <code>*</code> sur une API avec <code>Authorization</code>** : les cookies/tokens ne sont pas envoyés dans ce cas, mais la config reste dangereuse si évolution future.</li>
 </ul>
-<blockquote>Ce skill est un outil de sécurité défensif. Il aide à protéger les APIs contre les attaques courantes.</blockquote>
+<hr>
+<h2>Commandes de vérification rapide</h2>
+<pre><code class="lang-bash"># Tester les headers en prod
+curl -sI https://api.example.com/ | grep -iE &quot;strict-transport|content-security|x-content|server&quot;
+
+# Tester CORS
+curl -sI -X OPTIONS https://api.example.com/api/payments \
+  -H &quot;Origin: https://evil.com&quot; \
+  -H &quot;Access-Control-Request-Method: POST&quot; | grep -i &quot;access-control&quot;
+
+# Tester le rate limit (10 appels rapides)
+for i in {1..12}; do curl -sw &quot;%{http_code}\n&quot; -o /dev/null https://api.example.com/api/auth/login; done</code></pre>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -97,26 +97,76 @@ cp -r claude-skills-collection/skills/education-concept-explainer ~/.claude/skil
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Concept Explainer</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Niveau de base</strong> : explication en 2-3 phrases simples avec une analogie du quotidien.</li>
-<li><strong>Approfondissement</strong> : explication plus détaillée avec les mécanismes.</li>
-<li><strong>Exemple concret</strong> : illustration avec un cas réel ou un scénario.</li>
-<li><strong>Ce que les gens confondent souvent</strong> : clarifier les malentendus fréquents.</li>
-<li><strong>Pour aller plus loin</strong> : les questions naturelles qui suivent.</li>
-</ol>
-<h2>Structure : méthode de l'entonnoir</h2>
+<h3>Étape 1 — Calibrer le niveau</h3>
+<p>Avant d'expliquer, identifier :</p>
 <ul>
-<li>Phrase 1 : c'est quoi en une phrase</li>
-<li>Phrase 2 : à quoi ça sert / pourquoi c'est important</li>
-<li>Paragraphe : comment ça marche</li>
-<li>Analogie : comparaison avec quelque chose de familier</li>
-<li>Nuance : ce que ce n'est PAS</li>
+<li><strong>Audience</strong> : débutant complet / praticien adjacent / expert qui change de domaine ?</li>
+<li><strong>Contexte</strong> : la question vient d'une erreur de code ? d'une lecture ? d'un entretien ?</li>
+<li><strong>Objectif</strong> : comprendre pour utiliser / pour expliquer à autrui / pour aller plus loin ?</li>
 </ul>
-<h2>Règles</h2>
+<p>Si le contexte est absent, démarrer niveau &quot;praticien adjacent&quot; et ajuster au premier retour.</p>
+<h3>Étape 2 — Ancrage en une phrase</h3>
+<p>Formule : <strong>&quot;[Concept] = [analogie simple] sauf que [différence clé].&quot;</strong></p>
+<p>Exemples :</p>
 <ul>
-<li>Adapte le niveau au contexte (enfant, étudiant, professionnel).</li>
-<li>Évite le jargon sauf si demandé.</li>
-<li>Utilise des analogies ancrées dans le quotidien.</li>
+<li>Un mutex = un jeton de salle de bain partagé, sauf qu'un seul thread peut l'avoir à la fois.</li>
+<li>Un index SQL = la table des matières d'un livre, sauf que le moteur la construit et la maintient automatiquement.</li>
+<li>Un JWT = une carte d'identité signée numériquement, sauf qu'aucun serveur ne doit appeler une base pour la vérifier.</li>
+</ul>
+<h3>Étape 3 — Mécanisme core (comment ça marche)</h3>
+<p>Expliquer le fonctionnement interne avec :</p>
+<ul>
+<li>un schéma textuel ASCII si utile (<code>A → B → C</code>)</li>
+<li>un snippet copiable minimal pour les concepts techniques</li>
+</ul>
+<p>Exemple pour le concept &quot;Promise&quot; en JS :</p>
+<pre><code class="lang-js">// Une Promise = un résultat futur. Trois états : pending / fulfilled / rejected.
+fetch('/api/data')          // retourne une Promise (pending)
+  .then(res =&gt; res.json())  // fulfilled → on traite
+  .catch(err =&gt; console.error(err)); // rejected → on gère</code></pre>
+<h3>Étape 4 — Cas concret / scénario réel</h3>
+<p>Ancrer dans un exemple qui résonne avec le contexte de l'utilisateur :</p>
+<ul>
+<li>Si contexte web → donner un exemple HTTP ou navigateur</li>
+<li>Si contexte data → donner un exemple SQL ou pipeline</li>
+<li>Si généraliste → donner un exemple de la vie quotidienne</li>
+</ul>
+<h3>Étape 5 — Ce que ce N'EST PAS (frontières du concept)</h3>
+<p>Toujours préciser au moins 2 confusions fréquentes :</p>
+<ul>
+<li>&quot;Ce n'est pas la même chose que X parce que...&quot;</li>
+<li>&quot;Attention : beaucoup confondent Y et [concept], la différence est...&quot;</li>
+</ul>
+<h3>Étape 6 — Critères de décision / Quand l'utiliser</h3>
+<p>Pour les concepts techniques, ajouter un tableau ou une liste de décision :</p>
+<table><thead><tr><th>Situation</th><th>Choisir</th></tr></thead><tbody><tr><td>Données relationnelles avec jointures</td><td>SQL (PostgreSQL/MySQL)</td></tr><tr><td>Documents JSON flexibles</td><td>MongoDB</td></tr><tr><td>Cache clé-valeur haute perf</td><td>Redis</td></tr></tbody></table>
+<h3>Étape 7 — Prochaine question naturelle</h3>
+<p>Proposer 2-3 points d'approfondissement sous forme de questions que l'utilisateur devrait se poser :</p>
+<ul>
+<li>&quot;La question suivante est souvent : comment gérer les erreurs ?&quot;</li>
+<li>&quot;Si tu veux aller plus loin : [sous-concept A] et [sous-concept B].&quot;</li>
+</ul>
+<hr>
+<h2>Critères de décision du format</h2>
+<table><thead><tr><th>Contexte</th><th>Format à utiliser</th></tr></thead><tbody><tr><td>Concept purement abstrait</td><td>Analogie + schéma textuel</td></tr><tr><td>Concept avec code</td><td>Snippet minimal + explication ligne par ligne</td></tr><tr><td>Concept avec plusieurs variantes</td><td>Tableau comparatif</td></tr><tr><td>Audience non-technique</td><td>Métaphore + zéro code</td></tr><tr><td>Demande express (&quot;en 2 lignes&quot;)</td><td>Étape 2 uniquement + lien vers détail</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns / Pièges</h2>
+<ul>
+<li><strong>Jargon sur jargon</strong> : expliquer un terme inconnu avec d'autres termes inconnus → toujours partir d'un ancrage connu.</li>
+<li><strong>Exemple trop abstrait</strong> : <code>foo</code>, <code>bar</code>, <code>baz</code> dans les snippets → utiliser des noms de domaine réels (<code>userId</code>, <code>orderTotal</code>).</li>
+<li><strong>Sur-simplification trompeuse</strong> : une analogie qui induit une fausse croyance → toujours nommer la limite de l'analogie.</li>
+<li><strong>Explication monolithique</strong> : un bloc de texte sans structure → toujours découper en étapes ou bullet points.</li>
+<li><strong>Ignorer le &quot;pourquoi&quot;</strong> : expliquer le comment sans dire à quoi ça sert → le &quot;pourquoi&quot; vient en Étape 1 obligatoirement.</li>
+<li><strong>Faux niveau de précision</strong> : dire &quot;toujours&quot; ou &quot;jamais&quot; pour des concepts qui ont des exceptions → qualifier avec &quot;en général&quot; ou &quot;sauf si...&quot;.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Interactif d'abord</strong> : proposer de couper l'explication en niveaux plutôt qu'un monologue long ; l'utilisateur peut dire &quot;stop, j'ai compris&quot; ou &quot;continue&quot;.</li>
+<li><strong>Snippets exécutables</strong> : pour les concepts de code, privilégier des exemples qu'on peut copier-coller dans un REPL ou terminal immédiatement.</li>
+<li><strong>Lier au contexte projet</strong> : si l'utilisateur a un projet ouvert, illustrer avec les fichiers présents plutôt qu'un exemple générique.</li>
+<li><strong>Différencier théorie et pratique</strong> : indiquer clairement quand une règle est &quot;théoriquement correcte mais rarement vue en production&quot;.</li>
+<li><strong>Sources sans hallucination</strong> : ne pas citer de documentation si on n'est pas certain de l'URL exacte ; dire &quot;voir la doc officielle de [outil]&quot; plutôt qu'inventer un lien.</li>
 </ul>
 </article>
 </main>

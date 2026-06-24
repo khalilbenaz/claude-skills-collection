@@ -97,37 +97,193 @@ cp -r claude-skills-collection/skills/devops-ansible-playbook-builder ~/.claude/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Ansible Playbook Builder</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser l'infrastructure cible</strong> — Recenser les serveurs à configurer, leurs rôles (web, database, cache, monitoring), les systèmes d'exploitation, et les opérations à automatiser (provisioning, déploiement, configuration, maintenance).</li>
-</ol>
-<ol>
-<li><strong>Structurer l'inventaire</strong> — Créer l'inventaire avec les groupes d'hôtes logiques, les variables par groupe et par hôte, les inventaires dynamiques (AWS EC2, Azure, GCP) si nécessaire, et les fichiers <code>group_vars/</code> et <code>host_vars/</code> pour la séparation des configurations.</li>
-</ol>
-<ol>
-<li><strong>Concevoir les playbooks</strong> — Écrire les playbooks YAML avec les plays organisés par rôle serveur, les handlers pour les redémarrages de services, les tags pour l'exécution sélective, et les conditions (<code>when</code>) pour adapter le comportement selon l'environnement.</li>
-</ol>
-<ol>
-<li><strong>Développer les roles</strong> — Créer des roles réutilisables avec la structure standard (<code>tasks/</code>, <code>handlers/</code>, <code>templates/</code>, <code>files/</code>, <code>vars/</code>, <code>defaults/</code>, <code>meta/</code>). Paramétrer les roles avec des variables par défaut surchargeables et documenter les variables disponibles.</li>
-</ol>
-<ol>
-<li><strong>Sécuriser avec Ansible Vault</strong> — Chiffrer les secrets (mots de passe, clés API, certificats) avec Ansible Vault, organiser les fichiers vault par environnement, configurer le <code>vault-password-file</code> pour l'automatisation, et séparer les variables chiffrées des variables en clair.</li>
-</ol>
-<ol>
-<li><strong>Utiliser les templates Jinja2</strong> — Créer des templates de configuration dynamiques avec Jinja2 pour les fichiers de configuration (nginx.conf, application.yml, systemd units), en utilisant les filtres, boucles et conditions pour adapter la configuration à chaque environnement.</li>
-</ol>
-<ol>
-<li><strong>Tester les playbooks</strong> — Valider avec <code>ansible-lint</code> pour les bonnes pratiques, <code>--check --diff</code> pour le dry-run, Molecule pour les tests d'intégration des roles, et <code>ansible-playbook --syntax-check</code> pour la validation syntaxique.</li>
-</ol>
-<ol>
-<li><strong>Orchestrer les déploiements</strong> — Implémenter les stratégies de déploiement (rolling update avec <code>serial</code>, canary), les pre/post-tasks de vérification, les rollback automatiques en cas d'échec, et l'intégration avec les pipelines CI/CD.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Analyser l'infrastructure cible</h3>
+<p>Recenser : systèmes d'exploitation (RHEL/Ubuntu/Debian), accès SSH (clé ou bastion), utilisateur de connexion (<code>ansible_user</code>), privilèges sudo.</p>
+<p><strong>Critères de décision — inventaire statique vs dynamique :</strong></p>
 <ul>
-<li>Écris des playbooks idempotents — chaque exécution doit produire le même résultat final, sans effets de bord en cas de relance.</li>
-<li>Utilise toujours les modules Ansible natifs plutôt que les modules <code>command</code>/<code>shell</code> quand un module spécifique existe pour l'opération.</li>
-<li>Chiffre systématiquement les secrets avec Ansible Vault — jamais de mots de passe ou clés en clair dans les fichiers de configuration.</li>
-<li>Fournis des playbooks complets avec les commentaires, les handlers et les tags nécessaires pour une utilisation en production.</li>
-<li>Teste chaque role individuellement avec Molecule avant de l'intégrer dans les playbooks de déploiement.</li>
+<li>&lt; 20 hôtes stables → inventaire statique INI/YAML</li>
+<li>Cloud (AWS, Azure, GCP) ou infra éphémère → plugin dynamique (<code>amazon.aws.ec2</code>, <code>azure.azcollection.azure_rm</code>)</li>
+</ul>
+<h3>2. Structurer l'inventaire</h3>
+<pre><code class="lang-ini"># inventories/production/hosts.ini
+[web]
+web01.prod.example.com ansible_user=deploy
+web02.prod.example.com ansible_user=deploy
+
+[db]
+db01.prod.example.com ansible_user=deploy
+
+[all:vars]
+ansible_ssh_private_key_file=~/.ssh/id_ed25519</code></pre>
+<pre><code>inventories/
+  production/
+    hosts.ini
+    group_vars/
+      all.yml          # variables communes
+      web.yml          # variables groupe web
+    host_vars/
+      db01.prod.example.com.yml
+  staging/
+    hosts.ini
+    group_vars/</code></pre>
+<p>Tester la connectivité avant tout playbook :</p>
+<pre><code class="lang-bash">ansible all -i inventories/production/hosts.ini -m ping</code></pre>
+<h3>3. Concevoir les playbooks</h3>
+<p>Structure minimale production-ready :</p>
+<pre><code class="lang-yaml"># site.yml
+---
+- name: Configure web servers
+  hosts: web
+  become: true
+  gather_facts: true
+  tags: [web]
+
+  pre_tasks:
+    - name: Ensure Python3 is present
+      raw: apt-get install -y python3
+      changed_when: false
+
+  roles:
+    - role: common
+    - role: nginx
+      vars:
+        nginx_port: 443
+
+  post_tasks:
+    - name: Verify nginx is responding
+      uri:
+        url: &quot;https://{{ ansible_fqdn }}&quot;
+        status_code: 200
+      delegate_to: localhost</code></pre>
+<p><strong>Commandes courantes :</strong></p>
+<pre><code class="lang-bash"># Dry-run avec diff
+ansible-playbook -i inventories/production/hosts.ini site.yml --check --diff
+
+# Exécution ciblée par tag
+ansible-playbook site.yml -i inventories/production/hosts.ini --tags nginx
+
+# Limiter à un hôte
+ansible-playbook site.yml -i inventories/production/hosts.ini --limit web01.prod.example.com
+
+# Verbose pour debug
+ansible-playbook site.yml -vvv</code></pre>
+<h3>4. Développer les roles</h3>
+<p>Structure standard à respecter :</p>
+<pre><code>roles/nginx/
+  tasks/
+    main.yml
+    install.yml
+    configure.yml
+  handlers/
+    main.yml          # notify: Restart nginx
+  templates/
+    nginx.conf.j2
+  files/
+    dhparam.pem
+  defaults/
+    main.yml          # variables surchargeables (priorité basse)
+  vars/
+    main.yml          # variables internes (priorité haute)
+  meta/
+    main.yml          # dépendances, galaxy_info</code></pre>
+<p><code>defaults/main.yml</code> — toujours documenter :</p>
+<pre><code class="lang-yaml"># Port d'écoute HTTP
+nginx_http_port: 80
+# Port d'écoute HTTPS (0 = désactivé)
+nginx_https_port: 443
+# Nombre de workers (auto = nb CPUs)
+nginx_worker_processes: auto</code></pre>
+<p>Handler exemple :</p>
+<pre><code class="lang-yaml"># handlers/main.yml
+- name: Restart nginx
+  service:
+    name: nginx
+    state: restarted
+  listen: Restart nginx</code></pre>
+<h3>5. Sécuriser avec Ansible Vault</h3>
+<pre><code class="lang-bash"># Chiffrer un fichier de secrets
+ansible-vault encrypt inventories/production/group_vars/all/vault.yml
+
+# Éditer un fichier chiffré
+ansible-vault edit inventories/production/group_vars/all/vault.yml
+
+# Exécuter avec le mot de passe vault
+ansible-playbook site.yml --vault-password-file ~/.vault_pass.txt
+# ou via variable d'environnement CI/CD
+ANSIBLE_VAULT_PASSWORD_FILE=~/.vault_pass.txt ansible-playbook site.yml</code></pre>
+<p>Convention de nommage — préfixe <code>vault_</code> pour les variables chiffrées :</p>
+<pre><code class="lang-yaml"># group_vars/all/vars.yml (clair)
+db_password: &quot;{{ vault_db_password }}&quot;
+
+# group_vars/all/vault.yml (chiffré)
+vault_db_password: &quot;S3cr3t!&quot;</code></pre>
+<h3>6. Templates Jinja2</h3>
+<pre><code class="lang-jinja2">{# templates/nginx.conf.j2 #}
+worker_processes {{ nginx_worker_processes }};
+
+server {
+    listen {{ nginx_https_port }} ssl;
+    server_name {{ ansible_fqdn }};
+
+    {% for location in nginx_locations %}
+    location {{ location.path }} {
+        proxy_pass {{ location.backend }};
+    }
+    {% endfor %}
+}</code></pre>
+<p>Filtres utiles :</p>
+<pre><code class="lang-yaml"># Convertir en majuscules
+- debug: msg=&quot;{{ env | upper }}&quot;
+# Valeur par défaut
+- debug: msg=&quot;{{ timeout | default(30) }}&quot;
+# Joindre une liste
+- debug: msg=&quot;{{ groups['web'] | join(',') }}&quot;</code></pre>
+<h3>7. Tester les playbooks</h3>
+<pre><code class="lang-bash"># Lint (ansible-lint &gt;= 6)
+pip install ansible-lint
+ansible-lint site.yml
+
+# Syntaxe seule
+ansible-playbook --syntax-check site.yml
+
+# Test de role avec Molecule (driver Docker)
+pip install molecule molecule-docker
+cd roles/nginx
+molecule init scenario --driver-name docker
+molecule test   # create → converge → verify → destroy</code></pre>
+<p><code>molecule/default/verify.yml</code> minimal :</p>
+<pre><code class="lang-yaml">- name: Verify nginx
+  hosts: all
+  tasks:
+    - name: Check nginx service is running
+      service_facts:
+    - assert:
+        that: &quot;'nginx' in services and services['nginx'].state == 'running'&quot;</code></pre>
+<h3>8. Orchestrer les déploiements</h3>
+<p><strong>Rolling update :</strong></p>
+<pre><code class="lang-yaml">- hosts: web
+  serial: &quot;25%&quot;        # 25% des hôtes à la fois
+  max_fail_percentage: 0
+  roles:
+    - nginx</code></pre>
+<p><strong>Intégration CI/CD (GitHub Actions) :</strong></p>
+<pre><code class="lang-yaml">- name: Deploy to production
+  run: |
+    ansible-playbook -i inventories/production/hosts.ini site.yml \
+      --vault-password-file &lt;(echo &quot;$VAULT_PASS&quot;) \
+      --diff
+  env:
+    VAULT_PASS: ${{ secrets.ANSIBLE_VAULT_PASS }}</code></pre>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td><code>shell: rm -rf /tmp/{{ app }}</code></td><td>Idempotence cassée + risque injection</td><td><code>file: path=... state=absent</code></td></tr><tr><td><code>command: service nginx restart</code></td><td>Non-idempotent</td><td>Module <code>service</code> + handler</td></tr><tr><td>Variables en clair dans git</td><td>Fuite de secrets</td><td>Ansible Vault obligatoire</td></tr><tr><td><code>ignore_errors: true</code> systématique</td><td>Erreurs silencieuses en prod</td><td>Gérer explicitement les cas d'échec</td></tr><tr><td><code>gather_facts: false</code> par défaut</td><td>Perte des variables <code>ansible_*</code></td><td>Désactiver seulement si perf critique et bien documenté</td></tr><tr><td>Pas de <code>--check</code> avant prod</td><td>Changements imprévus</td><td>Toujours dry-run sur staging d'abord</td></tr><tr><td><code>become: true</code> sur tout le playbook</td><td>Surface d'attaque élargie</td><td><code>become: true</code> uniquement sur les tâches qui le nécessitent</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Collections &gt; rôles communautaires</strong> : utiliser <code>ansible.posix</code>, <code>community.general</code>, <code>community.docker</code> via <code>requirements.yml</code> + <code>ansible-galaxy collection install -r requirements.yml</code>.</li>
+<li><strong><code>ansible.cfg</code> versionné</strong> dans le dépôt : <code>[defaults] host_key_checking = True</code>, <code>forks = 10</code>, <code>callback_whitelist = profile_tasks</code>.</li>
+<li><strong>Épingler la version Ansible</strong> dans le CI (<code>pip install ansible-core==2.17.*</code>) pour éviter les régressions.</li>
+<li><strong>Pas de boucle <code>with_items</code></strong> → remplacer par <code>loop</code> (syntaxe moderne depuis Ansible 2.5).</li>
+<li><strong><code>changed_when</code> et <code>failed_when</code></strong> explicites sur les modules <code>command</code>/<code>shell</code> inévitables.</li>
+<li><strong>Secrets rotation</strong> : intégrer HashiCorp Vault ou AWS Secrets Manager via le lookup <code>community.hashi_vault.vault_read</code> plutôt que Ansible Vault seul pour les environnements multi-équipes.</li>
 </ul>
 </article>
 </main>

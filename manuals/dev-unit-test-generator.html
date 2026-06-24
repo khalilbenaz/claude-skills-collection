@@ -97,85 +97,121 @@ cp -r claude-skills-collection/skills/dev-unit-test-generator ~/.claude/skills/<
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Unit Test Generator</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyse du code à tester</strong></li>
+<h3>Étape 1 — Analyser le code à tester</h3>
 <ul>
-<li>Identifier toutes les fonctions et méthodes publiques</li>
-<li>Repérer les classes et leurs responsabilités</li>
-<li>Cartographier les dépendances (imports, injections)</li>
-<li>Détecter les side effects (I/O, mutations d'état, appels réseau)</li>
+<li>Identifier toutes les méthodes/fonctions <strong>publiques</strong> (l'interface contractuelle).</li>
+<li>Cartographier les dépendances injectées (constructeur, DI, imports).</li>
+<li>Repérer les side effects : I/O, DB, HTTP, mutation d'état global, horloge.</li>
+<li>Détecter les branches conditionnelles (if/else, switch, early return, ternaire) — chaque branche = un cas de test distinct.</li>
 </ul>
-</ol>
+<h3>Étape 2 — Choisir le bon framework</h3>
+<table><thead><tr><th>Langage</th><th>Framework principal</th><th>Assertion / Mock</th></tr></thead><tbody><tr><td>TypeScript / JS</td><td><strong>Jest</strong> ou <strong>Vitest</strong> (ESM natif)</td><td><code>@testing-library</code>, <code>vi.mock</code></td></tr><tr><td>Python</td><td><strong>pytest</strong></td><td><code>pytest-mock</code>, <code>unittest.mock</code></td></tr><tr><td>C# / .NET</td><td><strong>xUnit</strong></td><td><code>FluentAssertions</code>, <code>Moq</code> / <code>NSubstitute</code></td></tr><tr><td>Java</td><td><strong>JUnit 5</strong></td><td><code>AssertJ</code>, <code>Mockito</code></td></tr><tr><td>Go</td><td><code>testing</code> stdlib</td><td><code>testify/assert</code>, <code>testify/mock</code></td></tr><tr><td>Rust</td><td><code>#[cfg(test)]</code> intégré</td><td><code>mockall</code> si besoin</td></tr></tbody></table>
+<blockquote>Critère de décision : si le projet a déjà un framework installé, l'utiliser ; si greenfield, préférer Vitest (TS), pytest (Python), xUnit (C#), JUnit 5 (Java).</blockquote>
+<h3>Étape 3 — Identifier tous les cas de test</h3>
+<p>Pour chaque méthode publique, couvrir systématiquement :</p>
 <ol>
-<li><strong>Identification des cas de test</strong></li>
-<ul>
-<li>Happy path : comportement nominal attendu</li>
-<li>Edge cases : valeurs limites, null, undefined, chaînes vides</li>
-<li>Error cases : exceptions, erreurs métier, états invalides</li>
-<li>Boundary values : min/max, zéro, nombres négatifs, tableaux vides</li>
-</ul>
+<li><strong>Happy path</strong> — entrée valide, résultat nominal.</li>
+<li><strong>Edge cases</strong> — <code>null</code>, <code>undefined</code>, chaîne vide, liste vide, zéro, négatif, max value.</li>
+<li><strong>Error cases</strong> — exception attendue, code d'erreur métier, état invalide.</li>
+<li><strong>Interactions</strong> — appels aux dépendances (mock appelé N fois avec tels args).</li>
 </ol>
-<ol>
-<li><strong>Setup du framework de test adapté</strong></li>
+<h3>Étape 4 — Mocker les dépendances</h3>
+<p><strong>Principe</strong> : isoler la SUT (System Under Test) de tout ce qui n'est pas elle.</p>
+<pre><code class="lang-python"># Python — pytest-mock
+def test_get_user_returns_none_when_not_found(mocker):
+    repo = mocker.MagicMock()
+    repo.find_by_id.return_value = None
+    svc = UserService(repo)
+    assert svc.get_user(99) is None
+    repo.find_by_id.assert_called_once_with(99)</code></pre>
+<pre><code class="lang-csharp">// C# — Moq + FluentAssertions
+[Fact]
+public void GetUser_ShouldReturnNull_WhenNotFound()
+{
+    var repo = new Mock&lt;IUserRepository&gt;();
+    repo.Setup(r =&gt; r.FindById(99)).Returns((User?)null);
+    var svc = new UserService(repo.Object);
+
+    var result = svc.GetUser(99);
+
+    result.Should().BeNull();
+    repo.Verify(r =&gt; r.FindById(99), Times.Once);
+}</code></pre>
+<pre><code class="lang-typescript">// TypeScript — Vitest
+import { vi, describe, it, expect } from 'vitest';
+import { UserService } from './UserService';
+
+describe('UserService.getUser', () =&gt; {
+  it('returns null when user not found', async () =&gt; {
+    const repo = { findById: vi.fn().mockResolvedValue(null) };
+    const svc = new UserService(repo as any);
+    expect(await svc.getUser(99)).toBeNull();
+    expect(repo.findById).toHaveBeenCalledWith(99);
+  });
+});</code></pre>
+<h3>Étape 5 — Écrire avec le pattern AAA</h3>
+<pre><code>Arrange → Act → Assert  (une seule assertion logique par test)</code></pre>
+<p>Nommage : <code>Should_&lt;résultat&gt;_When_&lt;condition&gt;</code> ou <code>&lt;méthode&gt;_&lt;état&gt;_&lt;attendu&gt;</code>.</p>
+<h3>Étape 6 — Tests paramétrés pour les variations de données</h3>
+<pre><code class="lang-python"># pytest
+@pytest.mark.parametrize(&quot;amount,expected&quot;, [
+    (0,     False),
+    (-1,    False),
+    (0.01,  True),
+    (10_000, True),
+])
+def test_is_valid_amount(amount, expected):
+    assert is_valid_amount(amount) == expected</code></pre>
+<pre><code class="lang-csharp">// xUnit
+[Theory]
+[InlineData(0,      false)]
+[InlineData(-1,     false)]
+[InlineData(0.01,   true)]
+[InlineData(10_000, true)]
+public void IsValidAmount_ShouldMatchExpected(decimal amount, bool expected)
+    =&gt; Assert.Equal(expected, PaymentValidator.IsValidAmount(amount));</code></pre>
+<pre><code class="lang-typescript">// Vitest / Jest
+it.each([
+  [0,      false],
+  [-1,     false],
+  [0.01,   true],
+  [10_000, true],
+])('isValidAmount(%s) → %s', (amount, expected) =&gt; {
+  expect(isValidAmount(amount)).toBe(expected);
+});</code></pre>
+<h3>Étape 7 — Vérifier la couverture</h3>
+<pre><code class="lang-bash"># Python
+pytest --cov=src --cov-report=term-missing --cov-fail-under=80
+
+# TypeScript (Vitest)
+vitest run --coverage          # génère coverage/index.html
+
+# .NET
+dotnet test --collect:&quot;XPlat Code Coverage&quot;
+reportgenerator -reports:coverage.cobertura.xml -targetdir:coverageReport
+
+# Java (Maven + JaCoCo)
+mvn test jacoco:report          # target/site/jacoco/index.html</code></pre>
+<p>Objectif minimal : <strong>80 % lignes + 70 % branches</strong> sur le code métier. Ne pas poursuivre la couverture sur les DTOs, générés, migrations.</p>
+<h3>Étape 8 — Refactoring des tests</h3>
 <ul>
-<li>JavaScript/TypeScript : Jest ou Vitest avec ts-jest si nécessaire</li>
-<li>.NET (C#) : xUnit avec FluentAssertions ou NUnit</li>
-<li>Python : pytest avec pytest-mock et fixtures</li>
-<li>Java : JUnit 5 avec Mockito et AssertJ</li>
+<li>Partager l'initialisation via <code>beforeEach</code> / fixture / builder factory — pas de copier-coller.</li>
+<li>Créer des <code>TestBuilders</code> (pattern Builder) pour les entités complexes.</li>
+<li>Regrouper par classe/feature dans des <code>describe</code> / <code>TestClass</code> / inner classes.</li>
+<li>Supprimer les tests qui vérifient un détail d'implémentation (ex : ordre exact des appels internes).</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Création des mocks et stubs</strong></li>
+<hr>
+<h2>Garde-fous — anti-patterns à éviter</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Pourquoi c'est problématique</th><th>Correction</th></tr></thead><tbody><tr><td>Tester des méthodes privées directement</td><td>Couplage fort à l'implémentation</td><td>Tester via l'interface publique</td></tr><tr><td>Un seul test &quot;dieu&quot; qui couvre tout</td><td>Diagnostics impossibles, maintenance difficile</td><td>1 test = 1 comportement</td></tr><tr><td>Mock de tout (y compris la SUT elle-même)</td><td>On ne teste plus rien de réel</td><td>Mocker uniquement les dépendances externes</td></tr><tr><td><code>Assert.True(result != null)</code> flou</td><td>Message d'échec inutile</td><td><code>result.Should().NotBeNull()</code> / <code>assertNotNull(result, &quot;msg&quot;)</code></td></tr><tr><td>Tests order-dependent (shared mutable state)</td><td>Flaky selon l'ordre d'exécution</td><td>Réinitialiser l'état dans <code>beforeEach</code></td></tr><tr><td>Faux positifs sur les exceptions</td><td><code>try/catch</code> silencieux ou <code>ThrowsAny</code> trop large</td><td>Vérifier le type exact + le message si critique</td></tr><tr><td>Tester des tiers (bibliothèques externes)</td><td>Pas votre responsabilité</td><td>Wrapper les tiers et tester le wrapper</td></tr><tr><td>Noms génériques (<code>test1</code>, <code>testOK</code>)</td><td>Impossible de diagnostiquer sans lire le corps</td><td>Convention <code>Should_X_When_Y</code> obligatoire</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Mocker les dépendances externes (repositories, services tiers)</li>
-<li>Stubber les appels DB, API REST, systèmes de fichiers</li>
-<li>Utiliser des spy pour vérifier les interactions</li>
-<li>Configurer les valeurs de retour et les comportements simulés</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Écriture des tests avec pattern AAA</strong></li>
-<ul>
-<li><strong>Arrange</strong> : préparer les données, configurer les mocks</li>
-<li><strong>Act</strong> : appeler la méthode/fonction testée</li>
-<li><strong>Assert</strong> : vérifier le résultat, les effets de bord, les appels aux mocks</li>
-<li>Un seul comportement par test, une seule assertion logique</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Tests paramétrés pour les variations de données</strong></li>
-<ul>
-<li>xUnit : <code>[Theory]</code> + <code>[InlineData]</code> ou <code>[MemberData]</code></li>
-<li>pytest : <code>@pytest.mark.parametrize</code> avec liste de tuples</li>
-<li>Jest/Vitest : <code>it.each</code> ou <code>test.each</code> avec tableau de cas</li>
-<li>JUnit 5 : <code>@ParameterizedTest</code> + <code>@MethodSource</code></li>
-</ul>
-</ol>
-<ol>
-<li><strong>Vérification de la couverture</strong></li>
-<ul>
-<li>Lignes couvertes : chaque ligne de code exécutée au moins une fois</li>
-<li>Branches couvertes : chaque branche if/else, switch testée</li>
-<li>Conditions booléennes : combinaisons true/false testées</li>
-<li>Identifier les zones sans couverture et prioriser les tests manquants</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Refactoring des tests</strong></li>
-<ul>
-<li>Appliquer le principe DRY avec des helpers et builders partagés</li>
-<li>Utiliser des test fixtures pour l'initialisation commune</li>
-<li>Nommer selon la convention <code>Should_X_When_Y</code> ou <code>méthode_état_résultat</code></li>
-<li>Regrouper les tests par classe/module dans des describe/TestClass dédiés</li>
-</ul>
-</ol>
-<h2>Règles</h2>
-<ul>
-<li>Adapte systématiquement le framework au langage et à l'environnement existant du projet.</li>
-<li>Fournis du code complet et exécutable, pas des squelettes ou des pseudocodes.</li>
-<li>Nomme chaque test de façon descriptive : <code>Should_ReturnNull_When_InputIsEmpty</code>.</li>
-<li>Ne teste pas les détails d'implémentation : teste les comportements observables.</li>
-<li>Un test doit être rapide, isolé, répétable, auto-vérifiant et simple (principes FIRST).</li>
+<li><strong>Test Doubles hiérarchie</strong> : préférer les <code>Fake</code> (implémentation légère en mémoire) aux <code>Mock</code> quand la logique est non triviale.</li>
+<li><strong>Snapshot testing</strong> avec <code>jest-snapshot</code> / <code>Verify</code> (.NET) pour les sorties complexes (JSON, HTML, rapports) — évite les assertions fragiles ligne à ligne.</li>
+<li><strong>Contract testing</strong> (Pact) pour les intégrations HTTP entre services : ne pas mocker le contrat, le valider.</li>
+<li><strong>Mutation testing</strong> (<code>Stryker</code> .NET/JS, <code>mutmut</code> Python) : mesure la qualité réelle des assertions, pas juste la couverture de lignes.</li>
+<li><strong>Tests de propriétés</strong> (<code>Hypothesis</code> Python, <code>fast-check</code> JS, <code>FsCheck</code> .NET) pour explorer l'espace des entrées au-delà des cas manuels.</li>
+<li>Placer les tests au plus proche du code : <code>src/services/user.service.spec.ts</code> ou <code>tests/</code> miroir de <code>src/</code> selon la convention du projet.</li>
+<li>Faire tourner les tests en mode watch pendant le développement (<code>vitest</code>, <code>pytest-watch</code>, <code>dotnet watch test</code>).</li>
 </ul>
 </article>
 </main>

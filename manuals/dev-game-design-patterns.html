@@ -97,37 +97,248 @@ cp -r claude-skills-collection/skills/dev-game-design-patterns ~/.claude/skills/
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Game Design Patterns</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Game Loop et Update</strong> : Concevoir la boucle de jeu principale avec un timestep fixe pour la physique et variable pour le rendu, implémenter le frame-independent movement avec Time.deltaTime, séparer les phases update/fixed update/late update, et gérer la synchronisation entre rendu et simulation.</li>
-</ol>
-<ol>
-<li><strong>Component pattern et ECS</strong> : Appliquer la composition plutôt que l'héritage en décomposant les entités en composants indépendants, implémenter l'architecture Entity-Component-System pour la performance et la flexibilité, et explorer Unity DOTS (Data-Oriented Technology Stack) pour les simulations à grande échelle.</li>
-</ol>
-<ol>
-<li><strong>State machines</strong> : Implémenter des FSM (Finite State Machines) pour les comportements de personnages (idle, walk, attack, hurt), utiliser des HSM (Hierarchical State Machines) pour les états imbriqués complexes, appliquer le State pattern orienté objet avec des classes d'état interchangeables, et gérer proprement les transitions et les conditions d'entrée/sortie.</li>
-</ol>
-<ol>
-<li><strong>Observer et Event system</strong> : Mettre en place un event bus découplé pour la communication entre systèmes, utiliser les delegates et events C# ou les ScriptableObject events pour éviter les dépendances directes, implémenter un système de signals (Zenject, VContainer), et garantir la désinscription des listeners pour éviter les fuites mémoire.</li>
-</ol>
-<ol>
-<li><strong>Object pooling</strong> : Créer un pool manager générique pour le spawn/despawn d'entités (bullets, ennemis, effets), préchauffer les pools au chargement de scène pour éliminer les stutters, rendre les pools extensibles avec une politique de croissance configurable, et réinitialiser correctement l'état des objets à leur retour dans le pool.</li>
-</ol>
-<ol>
-<li><strong>Command pattern</strong> : Encapsuler les actions joueur en objets Command pour l'input handling découplé, implémenter l'undo/redo pour les éditeurs de niveaux ou puzzles, construire un système de replay en enregistrant la séquence de commandes, et gérer les commandes réseau dans un contexte multijoueur (autoritative server).</li>
-</ol>
-<ol>
-<li><strong>Spatial partitioning</strong> : Utiliser le quadtree (2D) ou l'octree (3D) pour accélérer les requêtes spatiales, implémenter un grid spatial pour la détection de collision large phase, appliquer le spatial hashing pour les mondes procéduraux ou très larges, et optimiser les requêtes d'IA (vision, portée) avec ces structures.</li>
-</ol>
-<ol>
-<li><strong>Singleton et Service Locator</strong> : Utiliser le Singleton avec précaution pour les managers globaux (AudioManager, GameManager), préférer le Service Locator ou l'injection de dépendances (Zenject, VContainer) pour les architectures testables, identifier les anti-patterns (Singleton sur MonoBehaviour, dépendances circulaires), et structurer l'initialisation des services au démarrage.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Identifier le besoin avant de choisir un pattern</h3>
+<table><thead><tr><th>Symptôme</th><th>Pattern adapté</th></tr></thead><tbody><tr><td>Hiérarchies d'héritage explosives</td><td>Component / ECS</td></tr><tr><td>Stutters de rendu ou physique instable</td><td>Game Loop fixe/variable</td></tr><tr><td>Comportements personnage complexes</td><td>FSM / HSM</td></tr><tr><td>Couplage fort entre systèmes</td><td>Observer / Event Bus</td></tr><tr><td>GC spikes (bullets, ennemis)</td><td>Object Pooling</td></tr><tr><td>Besoin undo/replay/réseau</td><td>Command</td></tr><tr><td>Collisions/IA lentes sur grande map</td><td>Spatial Partitioning</td></tr><tr><td>Manager global difficile à tester</td><td>Service Locator / DI</td></tr></tbody></table>
+<hr>
+<h3>2. Game Loop — timestep fixe + rendu variable</h3>
+<p>Principe : physique/IA à rate fixe (50–60 Hz), rendu aussi vite que possible avec interpolation.</p>
+<pre><code class="lang-csharp">// C# pseudocode — double timestep classique
+const float FIXED_DT = 0.02f; // 50 Hz
+float accumulator = 0f;
+
+void Update(float realDeltaTime)
+{
+    accumulator += realDeltaTime;
+    while (accumulator &gt;= FIXED_DT)
+    {
+        FixedSimulate(FIXED_DT);   // physique, IA
+        accumulator -= FIXED_DT;
+    }
+    float alpha = accumulator / FIXED_DT; // [0,1] pour interpolation
+    Render(alpha);
+}</code></pre>
+<p><strong>Pièges :</strong></p>
 <ul>
-<li>Fournis des exemples de code concrets (C#, pseudocode) illustrant chaque pattern dans un contexte de jeu réel.</li>
-<li>Adapte le pattern recommandé au moteur de jeu utilisé (Unity, Godot, Unreal) et à ses spécificités.</li>
-<li>Priorise la lisibilité et la maintenabilité du code, et souligne les compromis performance/architecture de chaque pattern.</li>
-<li>Mentionne les outils et frameworks recommandés : Unity DOTS, Zenject, VContainer, Mirror (multijoueur).</li>
-<li>Signale quand un pattern est sur-ingénieuré pour le contexte et propose une solution plus simple si appropriée.</li>
+<li>Ne jamais utiliser <code>Time.deltaTime</code> directement pour la physique.</li>
+<li>Limiter <code>accumulator</code> (<code>maxAccumulator</code>) pour éviter la &quot;spiral of death&quot;.</li>
+<li>Unity : utiliser <code>FixedUpdate</code> pour physique, <code>LateUpdate</code> pour caméra.</li>
+</ul>
+<hr>
+<h3>3. Component Pattern &amp; ECS</h3>
+<p><strong>Composition over inheritance</strong> — découper les entités en composants indépendants.</p>
+<pre><code class="lang-csharp">// Unity MonoBehaviour — composition classique
+public class Player : MonoBehaviour
+{
+    [SerializeField] HealthComponent health;
+    [SerializeField] MovementComponent movement;
+    [SerializeField] WeaponComponent weapon;
+}</code></pre>
+<p><strong>ECS (Unity DOTS) — quand &gt; ~1 000 entités similaires :</strong></p>
+<pre><code class="lang-csharp">// Component (struct pure, zéro allocation)
+public struct Velocity : IComponentData { public float3 Value; }
+
+// System
+[BurstCompile]
+public partial struct MoveSystem : ISystem
+{
+    public void OnUpdate(ref SystemState state)
+    {
+        foreach (var (transform, vel) in
+            SystemAPI.Query&lt;RefRW&lt;LocalTransform&gt;, RefRO&lt;Velocity&gt;&gt;())
+        {
+            transform.ValueRW.Position += vel.ValueRO.Value * SystemAPI.Time.DeltaTime;
+        }
+    }
+}</code></pre>
+<p><strong>Critères de décision :</strong></p>
+<ul>
+<li>&lt; 500 entités : MonoBehaviour classique.</li>
+<li>500–5 000 : Component pattern + pooling.</li>
+<li>&gt; 5 000 entités similaires (crowd, bullets) : DOTS / ECS.</li>
+</ul>
+<hr>
+<h3>4. State Machine (FSM / HSM)</h3>
+<pre><code class="lang-csharp">// Interface état
+public interface IState
+{
+    void Enter();
+    void Update();
+    void Exit();
+}
+
+public class IdleState : IState
+{
+    private readonly PlayerController ctx;
+    public IdleState(PlayerController ctx) =&gt; this.ctx = ctx;
+
+    public void Enter() =&gt; ctx.Animator.Play(&quot;Idle&quot;);
+    public void Update()
+    {
+        if (ctx.Input.Move != Vector2.zero)
+            ctx.StateMachine.ChangeState(new WalkState(ctx));
+    }
+    public void Exit() { }
+}
+
+// StateMachine générique
+public class StateMachine
+{
+    private IState current;
+    public void ChangeState(IState next) { current?.Exit(); current = next; current.Enter(); }
+    public void Update() =&gt; current?.Update();
+}</code></pre>
+<p><strong>HSM (Hierarchical)</strong> : utiliser Animator Controller Unity avec sub-state machines, ou la lib <strong>Stateless</strong> (NuGet) pour la logique pure.</p>
+<p><strong>Anti-pattern :</strong> <code>switch</code> géant dans <code>Update()</code> — illisible dès 5 états, impossible à tester.</p>
+<hr>
+<h3>5. Observer / Event Bus</h3>
+<pre><code class="lang-csharp">// Event Bus statique typé — zéro dépendance directe
+public static class EventBus&lt;T&gt;
+{
+    private static readonly HashSet&lt;IEventListener&lt;T&gt;&gt; listeners = new();
+
+    public static void Subscribe(IEventListener&lt;T&gt; l) =&gt; listeners.Add(l);
+    public static void Unsubscribe(IEventListener&lt;T&gt; l) =&gt; listeners.Remove(l);
+    public static void Publish(T e)
+    {
+        foreach (var l in listeners) l.OnEvent(e);
+    }
+}
+
+// Usage
+EventBus&lt;PlayerDiedEvent&gt;.Publish(new PlayerDiedEvent { Score = 1500 });</code></pre>
+<p><strong>Pièges :</strong></p>
+<ul>
+<li>Toujours Unsubscribe dans <code>OnDestroy</code> — les fuites mémoire sont silencieuses.</li>
+<li>Éviter les événements synchrones chaînés (A → B → C → A = stackoverflow).</li>
+<li>Pour Unity : ScriptableObject events (Ryan Hipple pattern) = pas de fuites, inspectable.</li>
+</ul>
+<hr>
+<h3>6. Object Pooling</h3>
+<pre><code class="lang-csharp">// Pool générique Unity (compatible PoolManager 2021+)
+public class BulletPool : MonoBehaviour
+{
+    [SerializeField] Bullet prefab;
+    private Queue&lt;Bullet&gt; pool = new();
+
+    public Bullet Get()
+    {
+        if (pool.Count == 0) Grow(10);
+        var b = pool.Dequeue();
+        b.gameObject.SetActive(true);
+        return b;
+    }
+
+    public void Return(Bullet b)
+    {
+        b.gameObject.SetActive(false);
+        pool.Enqueue(b);
+    }
+
+    private void Grow(int n)
+    {
+        for (int i = 0; i &lt; n; i++)
+        {
+            var b = Instantiate(prefab);
+            b.Pool = this;
+            b.gameObject.SetActive(false);
+            pool.Enqueue(b);
+        }
+    }
+}</code></pre>
+<p><strong>Règles :</strong></p>
+<ul>
+<li>Préchauffer (Prewarm) au chargement de scène, jamais au runtime.</li>
+<li>Toujours reset l'état complet (position, velocity, health) au <code>Return</code>.</li>
+<li>Unity 2021+ : <code>UnityEngine.Pool.ObjectPool&lt;T&gt;</code> est disponible nativement.</li>
+</ul>
+<hr>
+<h3>7. Command Pattern — input, undo, replay</h3>
+<pre><code class="lang-csharp">public interface ICommand { void Execute(); void Undo(); }
+
+public class MoveCommand : ICommand
+{
+    private readonly Transform target;
+    private readonly Vector3 delta;
+    private Vector3 previousPos;
+
+    public MoveCommand(Transform t, Vector3 d) { target = t; delta = d; }
+
+    public void Execute() { previousPos = target.position; target.position += delta; }
+    public void Undo()    { target.position = previousPos; }
+}
+
+// History manager
+public class CommandHistory
+{
+    private readonly Stack&lt;ICommand&gt; history = new();
+    public void Execute(ICommand cmd) { cmd.Execute(); history.Push(cmd); }
+    public void Undo()                { if (history.Count &gt; 0) history.Pop().Undo(); }
+}</code></pre>
+<p><strong>Replay réseau :</strong> sérialiser les Commands (tick + joueurId + payload) → rejouer sur serveur autoritaire (authoritative server). Voir <strong>Mirror</strong> ou <strong>Netcode for GameObjects</strong>.</p>
+<hr>
+<h3>8. Spatial Partitioning</h3>
+<pre><code class="lang-csharp">// Grid spatial O(1) insert/query — idéal top-down 2D
+public class SpatialGrid&lt;T&gt;
+{
+    private readonly float cellSize;
+    private readonly Dictionary&lt;(int, int), List&lt;T&gt;&gt; cells = new();
+
+    private (int, int) Key(Vector2 pos) =&gt;
+        ((int)(pos.x / cellSize), (int)(pos.y / cellSize));
+
+    public void Insert(Vector2 pos, T item)
+    {
+        var k = Key(pos);
+        if (!cells.ContainsKey(k)) cells[k] = new();
+        cells[k].Add(item);
+    }
+
+    public IEnumerable&lt;T&gt; Query(Vector2 pos, float radius)
+    {
+        int r = Mathf.CeilToInt(radius / cellSize);
+        var (cx, cy) = Key(pos);
+        for (int x = cx - r; x &lt;= cx + r; x++)
+        for (int y = cy - r; y &lt;= cy + r; y++)
+            if (cells.TryGetValue((x, y), out var list))
+                foreach (var item in list) yield return item;
+    }
+}</code></pre>
+<p><strong>Critères :</strong></p>
+<ul>
+<li>Grid spatial : objets répartis uniformément, taille fixe.</li>
+<li>Quadtree : objets clustérisés ou densité variable.</li>
+<li>Octree : monde 3D, objets 3D volumineux.</li>
+<li>BVH : rendu, raycasting (Burst + Unity Physics).</li>
+</ul>
+<hr>
+<h3>9. Service Locator / Injection de dépendances</h3>
+<pre><code class="lang-csharp">// Service Locator minimal — mieux que Singleton pur
+public static class Services
+{
+    private static readonly Dictionary&lt;Type, object&gt; registry = new();
+    public static void Register&lt;T&gt;(T service) =&gt; registry[typeof(T)] = service;
+    public static T Get&lt;T&gt;()                  =&gt; (T)registry[typeof(T)];
+}
+
+// Usage
+Services.Register&lt;IAudioService&gt;(new FmodAudioService());
+var audio = Services.Get&lt;IAudioService&gt;();</code></pre>
+<p><strong>Préférer VContainer ou Zenject</strong> pour les projets &gt; 5 scènes : testabilité, injection constructeur, scope de vie.</p>
+<p><strong>Anti-patterns à éviter :</strong></p>
+<ul>
+<li><code>GameManager.Instance.PlayerHealth</code> dans chaque classe = couplage total.</li>
+<li>Singleton MonoBehaviour avec <code>DontDestroyOnLoad</code> chaîné = ordre d'init imprévisible.</li>
+</ul>
+<hr>
+<h2>Garde-fous &amp; Anti-patterns globaux</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td><code>Update()</code> avec <code>FindObjectOfType</code></td><td>10–100 ms/frame</td><td>Cache au <code>Start</code>, inject</td></tr><tr><td>Héritage profond (Enemy &gt; Boss &gt; FinalBoss)</td><td>Impossible à modifier</td><td>Composition + composants</td></tr><tr><td>Events non désincrits</td><td>Fuites mémoire, crashs</td><td>Unsubscribe dans <code>OnDestroy</code></td></tr><tr><td>Pool non préchauffé</td><td>GC spike au premier spawn</td><td>Prewarm à la scène</td></tr><tr><td>FSM en switch-case géant</td><td>Inextensible, non testable</td><td>Classes d'état dédiées</td></tr><tr><td>Singleton pour tout</td><td>Tests impossibles</td><td>Service Locator ou DI</td></tr><tr><td>Timestep variable pour physique</td><td>Comportement non-déterministe</td><td>FixedUpdate / double-timestep</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Profiler first</strong> : identifier le vrai bottleneck avant d'adopter ECS/DOTS.</li>
+<li><strong>Unity 6 / Netcode for GameObjects</strong> : prefer <code>NetworkVariable&lt;T&gt;</code> et <code>RPC</code> typed pour le multijoueur.</li>
+<li><strong>Burst + Jobs</strong> : toute simulation CPU-bound &gt; 500 entités doit passer par le Job System.</li>
+<li><strong>ScriptableObject Architecture</strong> : events, variables et channels SO = couplage minimal, hot-reload editor.</li>
+<li><strong>Tests Play Mode</strong> : valider FSM et Command avec <code>UnityTest</code> — chaque state en isolation.</li>
 </ul>
 </article>
 </main>

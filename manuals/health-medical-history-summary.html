@@ -96,40 +96,91 @@ cp -r claude-skills-collection/skills/health-medical-history-summary ~/.claude/s
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Medical History Summary</h1>
-<p>Quand l'utilisateur partage un historique médical, suis ce workflow.</p>
-<h2>Étape 1 — Regroupement thématique</h2>
-<p>Regroupe les informations par thèmes :</p>
+<p>Ce skill transforme un historique médical dispersé (messages successifs, liste orale, notes désordonnées) en un document structuré, fiable et réutilisable. Il ne pose aucun diagnostic et ne remplace pas un dossier médical officiel.</p>
+<hr>
+<h2>Étape 1 — Collecte et clarification</h2>
+<p>Avant de résumer, détermine si tu disposes de suffisamment d'informations.</p>
+<p><strong>Questions de cadrage à poser si l'historique est incomplet :</strong></p>
 <ul>
-<li><strong>Symptômes</strong> (actuels et passés)</li>
-<li><strong>Diagnostics évoqués</strong> (confirmés ou suspectés)</li>
-<li><strong>Examens</strong> réalisés et leurs résultats</li>
-<li><strong>Traitements</strong> passés et en cours</li>
-<li><strong>Effets secondaires</strong> observés</li>
-<li><strong>Évolution</strong> générale</li>
+<li>Quelle est la période couverte ? (depuis quand, jusqu'à quand)</li>
+<li>L'objectif du résumé : usage personnel, consultation chez un nouveau médecin, urgences, démarche administrative ?</li>
+<li>Y a-t-il des allergies médicamenteuses ou contre-indications connues ?</li>
 </ul>
-<h2>Étape 2 — 3 formats de sortie</h2>
-<h3>Format 1 : Résumé en 5 lignes</h3>
-<p>Vue d'ensemble rapide de la situation.</p>
-<h3>Format 2 : Chronologie détaillée</h3>
-<p>Timeline ordonnée par date avec les événements clés.</p>
-<h3>Format 3 : Fiche professionnelle</h3>
-<p>Document structuré à montrer à un professionnel de santé, avec sections claires.</p>
+<p><strong>Ne demande jamais plusieurs questions à la fois.</strong> Une seule question par tour si besoin.</p>
+<p>Si l'utilisateur fournit un bloc de texte brut, commence directement l'extraction sans interrogatoire préalable.</p>
+<hr>
+<h2>Étape 2 — Extraction et regroupement thématique</h2>
+<p>Classe chaque information dans l'une de ces catégories :</p>
+<table><thead><tr><th>Catégorie</th><th>Contenu typique</th></tr></thead><tbody><tr><td><strong>Antécédents</strong></td><td>Maladies passées, chirurgies, hospitalisations</td></tr><tr><td><strong>Diagnostics actuels</strong></td><td>Pathologies confirmées en cours</td></tr><tr><td><strong>Symptômes</strong></td><td>Actuels et anciens, avec dates si disponibles</td></tr><tr><td><strong>Examens &amp; résultats</strong></td><td>Biologie, imagerie, endoscopie, etc.</td></tr><tr><td><strong>Traitements passés</strong></td><td>Nom, durée, motif d'arrêt</td></tr><tr><td><strong>Traitements actuels</strong></td><td>Médicaments, posologie, depuis quand</td></tr><tr><td><strong>Effets indésirables</strong></td><td>Observés pendant un traitement</td></tr><tr><td><strong>Allergies</strong></td><td>Médicamenteuses, alimentaires, autres</td></tr><tr><td><strong>Suivi spécialisé</strong></td><td>Médecins vus (spécialité uniquement, pas les noms sauf si l'utilisateur les donne)</td></tr></tbody></table>
+<p><strong>Règles d'extraction :</strong></p>
+<ul>
+<li>Conserve les dates, doses et unités exactement telles que fournies.</li>
+<li>N'infère pas de pathologie à partir des symptômes.</li>
+<li>Si une information est ambiguë (ex : &quot;j'avais quelque chose au cœur&quot;), la retranscris verbatim entre guillemets plutôt que de la reformuler.</li>
+</ul>
+<hr>
 <h2>Étape 3 — Marquage de fiabilité</h2>
-<p>Marque clairement chaque information comme :</p>
+<p>Chaque donnée porte un marqueur de certitude :</p>
 <ul>
-<li><strong>Confirmé</strong> : diagnostic posé, examen réalisé</li>
-<li><strong>Supposé</strong> : hypothèse évoquée, non confirmée</li>
-<li><strong>Incomplet</strong> : information partielle</li>
+<li>✅ <strong>Confirmé</strong> — diagnostic posé par un professionnel, examen réalisé avec résultat</li>
+<li>⚠️ <strong>Supposé</strong> — hypothèse évoquée, non encore confirmée, ressenti personnel</li>
+<li>❓ <strong>Incomplet</strong> — information partielle ou date inconnue</li>
 </ul>
-<h2>Règles strictes</h2>
+<p>Exemple :</p>
+<pre><code>- Diabète de type 2 ✅ (diagnostiqué 2019, suivi endocrinologue)
+- Douleurs lombaires chroniques ⚠️ (évoqué, pas d'imagerie réalisée)
+- Traitement antihypertenseur ❓ (nom non précisé, arrêté &quot;il y a quelques années&quot;)</code></pre>
+<hr>
+<h2>Étape 4 — Choix du format de sortie</h2>
+<p>Propose les trois formats. Si l'utilisateur a précisé un objectif (consultation, urgences…), recommande le format adapté.</p>
+<h3>Format A : Résumé en 5 lignes</h3>
+<p>Vue d'ensemble rapide. Idéal pour : message à envoyer à un médecin, rappel personnel.</p>
+<pre><code>Personne de [âge si fourni]. Antécédents principaux : [liste courte].
+Diagnostics actuels : [liste]. Traitements en cours : [liste].
+Allergies connues : [liste ou &quot;aucune mentionnée&quot;].
+Dernière consultation spécialisée : [spécialité + date approximative].
+Points en attente ou non clarifiés : [liste].</code></pre>
+<h3>Format B : Chronologie détaillée</h3>
+<p>Timeline ordonnée du plus ancien au plus récent. Idéal pour : nouveau médecin, second avis.</p>
+<pre><code>[Année/Période] — Événement — Catégorie — Fiabilité
+Exemple :
+2018 — Appendicectomie en urgence — Antécédent chirurgical — ✅
+2021 — Diagnostic hypothyroïdie — Diagnostic confirmé — ✅
+2022 — Lévothyroxine 50 µg/j initiée — Traitement — ✅
+2024 — Douleurs articulaires récurrentes — Symptôme — ⚠️ (bilan en cours)</code></pre>
+<h3>Format C : Fiche professionnelle</h3>
+<p>Document structuré à apporter à une consultation. Idéal pour : urgences, nouveau spécialiste, hospitalisation.</p>
+<p>Sections : Identité (âge, sexe si fournis) / Motif du résumé / Antécédents / Diagnostics actifs / Traitements actuels avec posologies / Allergies / Examens récents pertinents / Questions en suspens.</p>
+<hr>
+<h2>Étape 5 — Validation finale</h2>
+<p>Avant de livrer, vérifie :</p>
 <ul>
-<li>Évite les doublons.</li>
-<li>Préserve les dates, doses et séquences si elles sont connues.</li>
-<li>N'ajoute <strong>aucun fait</strong> non fourni par l'utilisateur.</li>
-<li>Ne pose pas de diagnostic ni ne suggère de pathologie non mentionnée.</li>
+<li>Aucun fait ajouté qui n'était pas dans les messages de l'utilisateur.</li>
+<li>Aucun doublon (même information dans deux catégories).</li>
+<li>Les doses et unités sont conformes à ce qui a été dit (ne pas &quot;corriger&quot; une dose même si elle semble inhabituelle — signaler si elle paraît très atypique, sans diagnostiquer).</li>
+<li>Les informations sensibles (séropositivité, psychiatrie, addictions) sont traitées avec le même ton factuel et bienveillant que le reste.</li>
 </ul>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce résumé est basé uniquement sur les informations que vous avez fournies. Il ne remplace pas votre dossier médical officiel. Vérifiez-le avec votre médecin.</blockquote>
+<hr>
+<h2>Anti-patterns et pièges à éviter</h2>
+<ul>
+<li><strong>Ne jamais compléter</strong> une information floue avec une déduction médicale. Exemple : ne pas écrire &quot;insuffisance rénale&quot; si l'utilisateur a dit &quot;mes reins ne fonctionnent pas bien&quot;.</li>
+<li><strong>Ne jamais suggérer</strong> un diagnostic ou une explication causale non mentionnée par l'utilisateur ou son médecin.</li>
+<li><strong>Ne pas normaliser</strong> une situation médicale préoccupante pour rassurer — rester neutre et factuel.</li>
+<li><strong>Ne pas omettre</strong> les allergies ou contre-indications même si elles semblent mineures.</li>
+<li><strong>Ne pas reformuler</strong> un médicament avec son générique ou son princeps si l'utilisateur a donné un nom commercial — conserver le terme utilisé.</li>
+<li><strong>Éviter le jargon médical complexe</strong> dans les formats A et B sauf si l'utilisateur l'utilise lui-même.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Si l'utilisateur mentionne un suivi par IA médicale ou application santé, noter la source entre crochets : <code>[source : app santé]</code> pour distinguer d'un diagnostic médical.</li>
+<li>Pour les traitements récents : noter la date de début ET, si disponible, la date de réévaluation prévue.</li>
+<li>Pour les examens : noter non seulement le résultat mais aussi ce qui était &quot;normal&quot; vs &quot;anormal&quot; selon le compte-rendu fourni.</li>
+<li>Si l'utilisateur est aidant (résume pour un proche), adapter la formulation : &quot;la personne concernée&quot; plutôt que &quot;vous&quot;.</li>
+</ul>
+<hr>
+<h2>Rappel obligatoire (à inclure dans chaque sortie)</h2>
+<blockquote>Ce résumé est construit uniquement à partir des informations que vous avez fournies. Il ne remplace pas votre dossier médical officiel ni l'avis d'un professionnel de santé. Faites-le valider par votre médecin avant de l'utiliser dans un contexte médical.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -96,25 +96,181 @@ cp -r claude-skills-collection/skills/dev-graphql-builder ~/.claude/skills/</div
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>GraphQL Builder</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Design du schéma</strong> : Définir les types scalaires, objets, interfaces et unions ; concevoir les queries (lecture), mutations (écriture) et subscriptions (temps réel) ; créer les input types pour les mutations afin de garantir la validation côté serveur.</li>
-<li><strong>Résolution efficace</strong> : Implémenter le pattern DataLoader pour éliminer le problème N+1 (batching des requêtes DB par identifiants) ; mettre en cache les résultats des DataLoaders dans le scope de la requête ; éviter les résolveurs qui font des appels en cascade.</li>
-<li><strong>Pagination</strong> : Adopter le pattern Relay Connections (<code>edges</code>, <code>node</code>, <code>cursor</code>, <code>pageInfo</code>) pour une pagination cursor-based standardisée ; fournir aussi <code>totalCount</code> quand c'est nécessaire ; documenter les limites maximales.</li>
-<li><strong>Authentification et autorisation</strong> : Protéger le schéma via directives custom (<code>@auth</code>, <code>@hasRole</code>), middleware de contexte (injection du user dans le contexte GraphQL), ou field-level resolvers avec vérification de permissions ; ne jamais exposer des champs sensibles sans contrôle.</li>
-<li><strong>Error handling</strong> : Distinguer les erreurs techniques (exceptions non gérées) des erreurs métier ; utiliser les union types pour les erreurs métier (<code>union CreateUserResult = User | EmailAlreadyExists | ValidationError</code>) ; enrichir via <code>extensions</code> pour les codes d'erreur custom.</li>
-<li><strong>Subscriptions et real-time</strong> : Implémenter les subscriptions via WebSocket (protocole <code>graphql-ws</code>) ou server-sent events ; utiliser un bus de messages (Redis Pub/Sub, in-memory EventEmitter) pour la diffusion multi-instance ; gérer proprement la déconnexion.</li>
-<li><strong>Schema stitching ou federation</strong> : Pour les microservices, préférer Apollo Federation (sous-graphes avec <code>@key</code>, <code>@extends</code>, <code>@external</code>) plutôt que le stitching manuel ; définir clairement les boundaries de chaque sous-graphe.</li>
-<li><strong>Performance</strong> : Analyser la complexité des queries (depth limiting, complexity scoring) pour prévenir les attaques par requêtes profondes ; implémenter les persisted queries (hash côté client) pour réduire la bande passante et améliorer la sécurité en production.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de décision : GraphQL vs REST</h2>
+<table><thead><tr><th>Critère</th><th>GraphQL</th><th>REST</th></tr></thead><tbody><tr><td>Clients multiples (mobile/web/tiers) avec besoins différents</td><td>✅</td><td>❌ sur-fetch</td></tr><tr><td>API publique stable et versionnée</td><td>❌ complexe</td><td>✅</td></tr><tr><td>Upload de fichiers binaires</td><td>❌ multipart lourd</td><td>✅</td></tr><tr><td>CRUD simple sans nested data</td><td>❌ overhead</td><td>✅</td></tr><tr><td>Real-time natif (subscriptions)</td><td>✅</td><td>❌ SSE/WS manuel</td></tr></tbody></table>
+<p><strong>Règle d'or</strong> : si un seul client consomme l'API et que les endpoints sont stables, REST suffit. GraphQL brille dès que plusieurs surfaces (mobile, web, partenaires) ont des besoins de champs divergents.</p>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Design du schéma SDL (Schema-First)</h3>
+<p>Définir le contrat avant le code. Partir du SDL, pas des modèles DB.</p>
+<pre><code class="lang-graphql"># types de base
+type User {
+  id: ID!
+  email: String!
+  role: UserRole!
+  posts(first: Int = 10, after: String): PostConnection!
+}
+
+enum UserRole { ADMIN MEMBER GUEST }
+
+# erreurs métier explicites — pas d'exceptions génériques
+union CreateUserResult = User | EmailAlreadyExistsError | ValidationError
+
+type EmailAlreadyExistsError { message: String! email: String! }
+type ValidationError { message: String! field: String! }
+
+type Mutation {
+  createUser(input: CreateUserInput!): CreateUserResult!
+}
+
+input CreateUserInput {
+  email: String!
+  password: String!
+  role: UserRole! = MEMBER
+}</code></pre>
+<p><strong>Check-list schéma</strong></p>
 <ul>
-<li>Fournis des exemples de schéma SDL et de code résolveur concrets dans le framework de l'utilisateur (Apollo Server, Hot Chocolate, Strawberry, etc.)</li>
-<li>Adapte les patterns au langage cible (TypeScript/Node.js, C#/.NET, Python, etc.)</li>
-<li>Toujours mentionner les trade-offs (ex. federation = complexité opérationnelle, mais scalabilité d'équipe)</li>
-<li>Commence par la solution simple avant la complexe (schéma monolithique avant federation)</li>
-<li>Souligne quand REST serait plus adapté que GraphQL (cas d'usage simples ou fichiers/uploads)</li>
+<li>[ ] Champs nullable par défaut → rendre <code>!</code> uniquement ce qui est garanti</li>
+<li>[ ] Utiliser des <code>input</code> types pour toutes les mutations (jamais des scalaires inline)</li>
+<li>[ ] Documenter avec des commentaires SDL (<code>&quot;&quot;&quot;description&quot;&quot;&quot;</code>) sur chaque type exposé</li>
+<li>[ ] Versionnement : préférer les champs <code>@deprecated(reason: &quot;…&quot;)</code> plutôt qu'un v2</li>
 </ul>
+<hr>
+<h3>2. DataLoader — éliminer le N+1</h3>
+<p>Chaque résolveur de relation <strong>doit</strong> passer par un DataLoader. Sans ça, 100 posts = 100 requêtes DB.</p>
+<pre><code class="lang-ts">// Apollo Server / TypeScript
+import DataLoader from 'dataloader';
+
+// Créer dans le contexte par requête (jamais en singleton global)
+export function createLoaders(db: Db) {
+  return {
+    userById: new DataLoader&lt;string, User&gt;(async (ids) =&gt; {
+      const users = await db.users.findMany({ where: { id: { in: [...ids] } } });
+      const map = new Map(users.map(u =&gt; [u.id, u]));
+      return ids.map(id =&gt; map.get(id) ?? new Error(`User ${id} not found`));
+    }),
+  };
+}
+
+// Résolveur
+const resolvers = {
+  Post: {
+    author: (post, _args, ctx) =&gt; ctx.loaders.userById.load(post.authorId),
+  },
+};</code></pre>
+<p><strong>Règle</strong> : le DataLoader doit respecter l'ordre et la taille du tableau d'entrée — renvoyer exactement <code>ids.length</code> éléments dans le même ordre.</p>
+<hr>
+<h3>3. Pagination Relay Connections</h3>
+<p>Standard cursor-based, compatible avec tous les clients GraphQL.</p>
+<pre><code class="lang-graphql">type PostConnection {
+  edges: [PostEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+type PostEdge { node: Post! cursor: String! }
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}</code></pre>
+<pre><code class="lang-ts">// Utilitaire cursor (base64 de l'ID ou d'un offset)
+const encodeCursor = (id: string) =&gt; Buffer.from(id).toString('base64');
+const decodeCursor = (cursor: string) =&gt; Buffer.from(cursor, 'base64').toString();</code></pre>
+<p>Ne pas mélanger offset (<code>skip</code>/<code>limit</code>) et cursor dans la même connexion — choisir un seul pattern par type.</p>
+<hr>
+<h3>4. Authentification &amp; autorisation</h3>
+<p><strong>Niveau contexte</strong> : injecter le user une seule fois.</p>
+<pre><code class="lang-ts">// Apollo Server v4
+const server = new ApolloServer({ typeDefs, resolvers });
+const handler = startStandaloneServer(server, {
+  context: async ({ req }) =&gt; ({
+    user: await verifyJwt(req.headers.authorization),
+    loaders: createLoaders(db),
+  }),
+});</code></pre>
+<p><strong>Niveau champ</strong> — directive <code>@auth</code> avec <code>graphql-shield</code> (Node.js) ou attribute <code>[Authorize]</code> (Hot Chocolate .NET) :</p>
+<pre><code class="lang-ts">// graphql-shield
+import { shield, rule, and } from 'graphql-shield';
+const isAuthenticated = rule()((_, __, ctx) =&gt; ctx.user != null);
+const isAdmin = rule()((_, __, ctx) =&gt; ctx.user?.role === 'ADMIN');
+
+export const permissions = shield({
+  Mutation: { deleteUser: and(isAuthenticated, isAdmin) },
+});</code></pre>
+<p><strong>Ne jamais</strong> filtrer des données sensibles uniquement côté client — le résolveur doit refuser, pas cacher.</p>
+<hr>
+<h3>5. Error handling</h3>
+<table><thead><tr><th>Type d'erreur</th><th>Approche</th></tr></thead><tbody><tr><td>Erreur métier prévisible</td><td>Union type dans le schéma (<code>CreateUserResult</code>)</td></tr><tr><td>Erreur d'autorisation</td><td><code>GraphQLError</code> avec <code>extensions.code: 'FORBIDDEN'</code></td></tr><tr><td>Erreur technique (500)</td><td>Masquer le détail en prod, logger côté serveur</td></tr></tbody></table>
+<pre><code class="lang-ts">import { GraphQLError } from 'graphql';
+
+// Erreur d'autorisation
+throw new GraphQLError('Access denied', {
+  extensions: { code: 'FORBIDDEN', http: { status: 403 } },
+});</code></pre>
+<hr>
+<h3>6. Subscriptions (real-time)</h3>
+<p>Protocole recommandé 2026 : <code>graphql-ws</code> (supercède <code>subscriptions-transport-ws</code> déprécié).</p>
+<pre><code class="lang-ts">// Apollo Server + graphql-ws + Redis Pub/Sub
+import { RedisPubSub } from 'graphql-redis-subscriptions';
+const pubsub = new RedisPubSub({ connection: process.env.REDIS_URL });
+
+const resolvers = {
+  Subscription: {
+    messageAdded: {
+      subscribe: (_root, { channelId }, ctx) =&gt; {
+        if (!ctx.user) throw new GraphQLError('Unauthenticated');
+        return pubsub.asyncIterableIterator(`CHANNEL_${channelId}`);
+      },
+    },
+  },
+  Mutation: {
+    sendMessage: async (_root, { input }, ctx) =&gt; {
+      const msg = await db.messages.create({ data: input });
+      await pubsub.publish(`CHANNEL_${input.channelId}`, { messageAdded: msg });
+      return msg;
+    },
+  },
+};</code></pre>
+<p><strong>Multi-instance</strong> : toujours utiliser un bus externe (Redis) — un EventEmitter in-memory ne fonctionne que sur une seule instance.</p>
+<hr>
+<h3>7. Federation (microservices)</h3>
+<p>Utiliser Apollo Federation v2 quand plusieurs équipes ownt des domaines distincts.</p>
+<pre><code class="lang-graphql"># Sous-graphe &quot;users&quot;
+type User @key(fields: &quot;id&quot;) {
+  id: ID!
+  email: String!
+}
+
+# Sous-graphe &quot;posts&quot; — étend l'entité User
+type User @key(fields: &quot;id&quot;) @extends {
+  id: ID! @external
+  posts: [Post!]!
+}</code></pre>
+<p><strong>Coût opérationnel</strong> : gateway supplémentaire, schema registry, composition à valider en CI. Ne pas fédérer un monolithe si l'équipe est &lt; 5 devs.</p>
+<hr>
+<h3>8. Sécurité et performance en production</h3>
+<pre><code class="lang-ts">// Depth limiting + complexity scoring (Apollo Server)
+import depthLimit from 'graphql-depth-limit';
+import { createComplexityLimitRule } from 'graphql-validation-complexity';
+
+const server = new ApolloServer({
+  typeDefs, resolvers,
+  validationRules: [
+    depthLimit(7),
+    createComplexityLimitRule(1000),
+  ],
+});</code></pre>
+<p><strong>Persisted queries</strong> (Apollo) : le client envoie un hash SHA-256, le serveur valide contre une allowlist. Bloque les requêtes arbitraires en prod.</p>
+<pre><code class="lang-bash"># Générer le manifest avec Rover CLI
+rover graph introspect http://localhost:4000 &gt; schema.graphql
+rover persisted-queries publish --graph-id MY_GRAPH --manifest manifest.json</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Solution</th></tr></thead><tbody><tr><td>Résolveurs sans DataLoader → N+1</td><td>DataLoader systématique sur toutes les relations</td></tr><tr><td>Nullable partout par confort</td><td>Réfléchir explicitement à chaque <code>!</code></td></tr><tr><td>Exposer l'erreur DB brute en prod</td><td>Masquer, logger, renvoyer un code générique</td></tr><tr><td>Mutations sans input type</td><td>Toujours un <code>XxxInput</code> — facilite les évolutions</td></tr><tr><td>Federation prématurée</td><td>Schéma monolithique d'abord, fedérer quand la friction inter-équipes est réelle</td></tr><tr><td><code>any</code> en TypeScript dans les résolveurs</td><td>Utiliser <code>graphql-codegen</code> pour typer automatiquement</td></tr><tr><td>Subscriptions sur un EventEmitter in-memory</td><td>Redis Pub/Sub ou NATS pour multi-instance</td></tr><tr><td>Pas de rate limiting sur les queries</td><td>Complexity scoring + IP rate-limit sur le endpoint</td></tr></tbody></table>
+<hr>
+<h2>Outils recommandés 2026</h2>
+<table><thead><tr><th>Besoin</th><th>Outil</th></tr></thead><tbody><tr><td>Codegen types TS depuis SDL</td><td><code>@graphql-codegen/cli</code></td></tr><tr><td>Linter schéma</td><td><code>@graphql-inspector/cli</code></td></tr><tr><td>Test résolveurs</td><td><code>graphql-tester</code>, Jest + <code>@apollo/server-integration-testing</code></td></tr><tr><td>Exploration API</td><td>GraphiQL, Apollo Sandbox, Insomnia</td></tr><tr><td>.NET</td><td>Hot Chocolate 14+ (source generators, AOT)</td></tr><tr><td>Python</td><td>Strawberry (type-first, async natif)</td></tr><tr><td>Monitoring</td><td>Apollo Studio, Stellate (edge caching)</td></tr></tbody></table>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

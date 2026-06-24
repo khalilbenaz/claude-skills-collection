@@ -96,23 +96,126 @@ cp -r claude-skills-collection/skills/management-technical-debt-manager ~/.claud
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Technical Debt Manager</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Inventaire de la dette</strong> — Recenser les sources de dette technique : code dupliqué, dépendances obsolètes, tests manquants, architecture inadaptée, documentation absente, workarounds en production.</li>
-<li><strong>Classification</strong> — Catégoriser chaque élément de dette : intentionnelle vs accidentelle, prudente vs imprudente (quadrant de Martin Fowler). Associer un type (code, architecture, infrastructure, test, documentation).</li>
-<li><strong>Évaluation de l'impact</strong> — Pour chaque élément, estimer : le coût de maintenance actuel (temps perdu/sprint), le risque technique (probabilité et impact d'incident), le coût de remboursement (effort en jours).</li>
-<li><strong>Priorisation</strong> — Calculer le ratio coût de maintenance / coût de remboursement pour prioriser. Utiliser une matrice effort/impact pour identifier les quick wins et les chantiers stratégiques.</li>
-<li><strong>Planification du remboursement</strong> — Proposer une stratégie : règle du 20% (1 jour/sprint dédié), sprint technique dédié, intégration dans les stories fonctionnelles, ou remboursement opportuniste.</li>
-<li><strong>Suivi des métriques</strong> — Définir et suivre les indicateurs : couverture de tests, nombre de dépendances obsolètes, temps moyen de correction de bug, complexité cyclomatique, score SonarQube.</li>
-<li><strong>Communication</strong> — Traduire la dette technique en termes business compréhensibles : impact sur le time-to-market, risque de pannes, coût de recrutement (personne ne veut travailler sur du legacy).</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Inventaire — recensement des sources</h2>
+<p>Commencer par une collecte structurée. Sources classiques :</p>
+<table><thead><tr><th>Catégorie</th><th>Exemples concrets</th></tr></thead><tbody><tr><td>Code</td><td>duplication &gt;30 lignes, méthodes &gt;200 lignes, couplage fort</td></tr><tr><td>Architecture</td><td>monolithe impossible à scaler, absence de séparation couches</td></tr><tr><td>Dépendances</td><td>packages avec CVE ouverts, versions EOL (ex : .NET 6, Node 16)</td></tr><tr><td>Tests</td><td>couverture &lt;40%, pas de tests d'intégration, tests flaky</td></tr><tr><td>Infrastructure</td><td>scripts de déploiement manuels, pas d'IaC</td></tr><tr><td>Documentation</td><td>README absent, API sans spec OpenAPI, ADR manquants</td></tr><tr><td>Workarounds prod</td><td>flags hardcodés, configs non versionnées, cron jobs orphelins</td></tr></tbody></table>
+<p><strong>Commandes utiles pour l'inventaire rapide :</strong></p>
+<pre><code class="lang-bash"># Dépendances obsolètes Node
+npx npm-check-updates --format group
+
+# Audit de sécurité npm
+npm audit --json | jq '.vulnerabilities | to_entries[] | select(.value.severity==&quot;critical&quot;)'
+
+# Complexité cyclomatique Python
+radon cc src/ -s -n C   # affiche les fonctions complexité &gt;= C
+
+# Duplication de code
+jscpd --min-lines 10 --reporters json src/</code></pre>
+<pre><code class="lang-bash"># .NET : packages obsolètes
+dotnet list package --outdated --format json
+
+# Couverture de tests .NET
+dotnet test --collect:&quot;XPlat Code Coverage&quot; &amp;&amp; reportgenerator -reports:coverage.xml -targetdir:report</code></pre>
+<hr>
+<h2>2. Classification — Quadrant de Fowler</h2>
+<p>Positionner chaque élément sur deux axes :</p>
+<pre><code>                    PRUDENT              IMPRUDENT
+DÉLIBÉRÉ    &quot;On sait qu'on doit     &quot;On déploie vite,
+             refacto plus tard&quot;      on verra après&quot;
+             → OK si tracé (ADR)     → Éviter
+
+INADVERTANT &quot;On a appris un         &quot;On ne savait pas
+             meilleur pattern         qu'on faisait mal&quot;
+             depuis&quot;                 → Former l'équipe
+             → Refacto planifiée</code></pre>
+<p>Associer à chaque item : <strong>type</strong>, <strong>auteur/équipe</strong>, <strong>date de création</strong>, <strong>ADR ou ticket existant</strong>.</p>
+<hr>
+<h2>3. Évaluation de l'impact — score de priorité</h2>
+<p>Pour chaque élément de dette, noter sur 5 :</p>
 <ul>
-<li>La dette technique zéro n'existe pas : l'objectif est de la maintenir à un niveau gérable.</li>
-<li>Toujours documenter la dette technique créée intentionnellement (ADR, ticket technique).</li>
-<li>Ne jamais planifier un remboursement sans mesurer l'état avant et après (métriques concrètes).</li>
-<li>Rendre la dette visible au Product Owner pour qu'elle soit prise en compte dans les arbitrages.</li>
-<li>Prioriser la dette qui ralentit activement l'équipe sur les fonctionnalités en cours.</li>
+<li><strong>P</strong> : probabilité d'incident ou de ralentissement (1=faible, 5=certain)</li>
+<li><strong>I</strong> : impact si le problème survient (1=cosmétique, 5=production down)</li>
+<li><strong>C</strong> : coût de remboursement (1=&lt; 1 jour, 5=sprint entier)</li>
+</ul>
+<p><strong>Score de priorité</strong> = (P × I) / C → plus le score est élevé, plus c'est urgent.</p>
+<p>Exemple de tableau :</p>
+<table><thead><tr><th>Item</th><th>P</th><th>I</th><th>C</th><th>Score</th><th>Action</th></tr></thead><tbody><tr><td>Auth sans refresh token</td><td>4</td><td>5</td><td>2</td><td>10</td><td>Sprint suivant</td></tr><tr><td>README obsolète</td><td>2</td><td>2</td><td>1</td><td>4</td><td>Quick win (&lt; 2h)</td></tr><tr><td>ORM N+1 sur /orders</td><td>3</td><td>4</td><td>3</td><td>4</td><td>Planifier</td></tr><tr><td>Migration Node 16→20</td><td>5</td><td>4</td><td>2</td><td>10</td><td>Sprint suivant</td></tr></tbody></table>
+<hr>
+<h2>4. Priorisation — critères de décision</h2>
+<p><strong>Traiter en priorité si :</strong></p>
+<ul>
+<li>La dette ralentit activement une feature en cours (couplage, tests flaky).</li>
+<li>CVE critique ou dépendance EOL dans les 3 mois.</li>
+<li>Score (P×I)/C ≥ 8.</li>
+<li>L'item bloque le recrutement ou la montée en compétence.</li>
+</ul>
+<p><strong>Différer si :</strong></p>
+<ul>
+<li>Le module est en voie d'être remplacé (&lt;6 mois).</li>
+<li>Score &lt; 3 et aucun développeur ne touche ce code.</li>
+<li>Le remboursement nécessite un arrêt service non planifiable.</li>
+</ul>
+<p><strong>Quick wins à ne jamais rater :</strong></p>
+<ul>
+<li>Mettre à jour une dépendance avec 0 breaking change.</li>
+<li>Ajouter un test sur un bug qu'on vient de corriger.</li>
+<li>Supprimer du code mort (feature flags désactivés, endpoints dépréciés).</li>
+</ul>
+<hr>
+<h2>5. Stratégies de remboursement</h2>
+<table><thead><tr><th>Stratégie</th><th>Quand l'utiliser</th><th>Exemple</th></tr></thead><tbody><tr><td><strong>Règle 20%</strong> (1 jour/sprint)</td><td>Dette diffuse, équipe stable</td><td>Chaque sprint : 1 jour refacto</td></tr><tr><td><strong>Sprint technique dédié</strong></td><td>Dette localisée bloquante</td><td>Sprint &quot;migration Node 20&quot;</td></tr><tr><td><strong>Boy Scout Rule</strong></td><td>Culture quotidienne</td><td>&quot;Leave the code cleaner than you found it&quot;</td></tr><tr><td><strong>Strangler Fig</strong></td><td>Remplacement progressif d'un module</td><td>Nouveau service en parallèle, migration par route</td></tr><tr><td><strong>Branch by abstraction</strong></td><td>Gros refacto sans arrêt</td><td>Interface + implémentation legacy → nouvelle implémentation</td></tr></tbody></table>
+<p><strong>Template ADR pour dette intentionnelle :</strong></p>
+<pre><code class="lang-markdown">## ADR-042 : Workaround authentification JWT
+
+**Statut** : Accepted / To Refactor
+**Date** : 2026-06-24
+**Contexte** : Deadline J+3, pas le temps d'implémenter le refresh token.
+**Décision** : Token valide 24h, session expirée = re-login.
+**Conséquences** : UX dégradée. Refacto planifiée sprint S+4.
+**Ticket** : PROJ-1234</code></pre>
+<hr>
+<h2>6. Métriques de suivi (avant/après obligatoire)</h2>
+<p>Mesurer <strong>avant</strong> de commencer, <strong>après</strong> chaque remboursement :</p>
+<pre><code class="lang-bash"># Couverture de tests (Jest)
+jest --coverage --coverageReporters=json-summary
+cat coverage/coverage-summary.json | jq '.total.lines.pct'
+
+# Complexité moyenne (Python)
+radon mi src/ -s | awk '{sum+=$NF; count++} END {print sum/count}'
+
+# Taille du bundle (webpack)
+npx webpack-bundle-analyzer stats.json --mode=json | jq '.assets[].size' | paste -sd+ | bc</code></pre>
+<p>KPIs à suivre en dashboard (Jira, ADO, Notion) :</p>
+<ul>
+<li>% couverture de tests (cible : ≥ 70%)</li>
+<li>Nombre de dépendances avec CVE critique (cible : 0)</li>
+<li>Vélocité sprint (avant/après refacto)</li>
+<li>Temps moyen résolution bug (MTTR)</li>
+<li>Score SonarQube / Code Climate GPA</li>
+<li>Nombre de TODO/FIXME en production (<code>grep -r &quot;TODO\|FIXME\|HACK&quot; src/ | wc -l</code>)</li>
+</ul>
+<hr>
+<h2>7. Communication business</h2>
+<p>Traduire la dette en langage décisionnel :</p>
+<ul>
+<li><strong>&quot;Ce module prend 3× plus de temps à modifier&quot;</strong> → &quot;Chaque feature dans ce périmètre coûte 2 jours de plus.&quot;</li>
+<li><strong>&quot;Dépendance EOL fin 2026&quot;</strong> → &quot;Risque de 0 patch de sécurité après décembre, exposition CVE permanente.&quot;</li>
+<li><strong>&quot;Pas de tests&quot;</strong> → &quot;Chaque déploiement est un pari. Incident toutes les N semaines = X heures de prod perdues.&quot;</li>
+</ul>
+<p>Template slide PO/PM :</p>
+<pre><code>Dette actuelle : 12 items → 8 jours/sprint perdus (estimation)
+Investissement remboursement : 3 sprints × 1 jour = 3 jours
+ROI attendu : -3 jours perdus/sprint à partir de S+3</code></pre>
+<hr>
+<h2>Garde-fous &amp; anti-patterns</h2>
+<ul>
+<li><strong>&quot;On refactore tout d'un coup&quot;</strong> : non. Strangler Fig ou par module. Le big bang échoue.</li>
+<li><strong>Refacto sans tests</strong> : toujours écrire les tests caractéristiques AVANT de changer le code (Golden Master Testing).</li>
+<li><strong>Planifier sans métriques</strong> : impossible de prouver le ROI. Mesurer avant/après systématiquement.</li>
+<li><strong>Cacher la dette au PO</strong> : la dette non visible n'est jamais remboursée. La rendre explicite dans le backlog.</li>
+<li><strong>Viser 0 dette</strong> : objectif irréaliste et contre-productif. Viser un niveau stable et gérable.</li>
+<li><strong>Refacto = réécriture</strong> : préférer l'amélioration incrémentale. Réécrire = risque de régression + perte de connaissance implicite.</li>
+<li><strong>Ignorer la dette de test</strong> : c'est souvent la plus coûteuse. Un code non testé = refacto risquée.</li>
 </ul>
 </article>
 </main>

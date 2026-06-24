@@ -5,31 +5,191 @@ description: Audit de sécurité de smart contracts Solidity et blockchain. Se d
 
 # Smart Contract Auditor
 
-## Workflow
+## Workflow d'audit
 
-1. **Lecture et compréhension du contrat** : Analyser la logique métier, les flux de tokens, les rôles et permissions, les interactions entre contrats, et documenter l'architecture générale avant toute analyse de sécurité.
+### 1. Cartographie du périmètre
 
-2. **Vérification des vulnérabilités classiques** : Identifier les failles connues telles que reentrancy (appels externes avant mise à jour d'état), integer overflow/underflow, front-running, access control défaillant, et problèmes de timestamp dependance.
+Avant toute analyse de code, délimiter précisément la surface d'attaque :
 
-3. **Analyse des patterns de sécurité** : Vérifier l'application du pattern checks-effects-interactions, l'utilisation de pull payments plutôt que push, la présence de guard modifiers, et la gestion correcte des erreurs avec revert/require/assert.
+```bash
+# Compter les lignes Solidity hors tests
+find . -name "*.sol" ! -path "*/test*" ! -path "*/node_modules*" | xargs wc -l | sort -rn
 
-4. **Vérification des standards** : Contrôler la conformité aux standards ERC-20, ERC-721 et ERC-1155, valider l'utilisation correcte des bibliothèques OpenZeppelin, et vérifier la compatibilité avec les interfaces attendues par l'écosystème.
+# Lister les contrats upgradeable (proxy pattern)
+grep -rl "UUPSUpgradeable\|TransparentUpgradeableProxy\|BeaconProxy" contracts/
+```
 
-5. **Gas optimization** : Analyser l'utilisation de storage vs memory, détecter les boucles coûteuses, identifier les opportunités de batch operations, vérifier l'usage de variables constant/immutable, et optimiser les patterns d'écriture en storage.
+Critères de décision sur la profondeur :
+- < 500 SLOC → audit complet manuel en une session
+- 500–3000 SLOC → découpage par module, prioriser les contrats porteurs de fonds
+- > 3000 SLOC → focus sur invariants critiques + outils automatisés en premier
 
-6. **Tests et fuzzing** : Écrire et exécuter des tests unitaires avec Foundry, mettre en place du fuzzing sur les fonctions critiques, définir des invariants de test, et effectuer des fork tests sur mainnet pour simuler des scénarios réels.
+### 2. Analyse statique automatisée
 
-7. **Outils d'analyse statique** : Exécuter Slither pour détecter les patterns vulnérables, Mythril pour l'analyse symbolique, Echidna pour le fuzzing basé sur propriétés, et Certora Prover pour la vérification formelle des invariants critiques.
+Lancer systématiquement avant toute revue manuelle :
 
-8. **Rapport d'audit structuré** : Rédiger un rapport complet classant chaque finding par sévérité (Critical/High/Medium/Low/Info), avec description de la vulnérabilité, proof of concept reproductible, recommandation de correction, et suivi du statut de remédiation.
+```bash
+# Slither — détection patterns vulnérables
+slither . --checklist --json slither-report.json
 
-## Règles
+# Mythril — analyse symbolique (fonctions critiques)
+myth analyze contracts/Vault.sol --execution-timeout 120 --solv 0.8.24
 
-- Fournis toujours des exemples de code Solidity concrets et des PoC exploitables pour illustrer chaque vulnérabilité identifiée.
-- Classe systématiquement les findings par niveau de sévérité et évalue l'impact réel sur les fonds et la logique du protocole.
-- Recommande en priorité les solutions éprouvées (OpenZeppelin, patterns standards) plutôt que des implémentations personnalisées.
-- Mentionne les outils recommandés pour chaque type d'analyse : Slither, Foundry, Hardhat, Echidna, Mythril, Certora.
-- Priorise la sécurité sur la performance : une optimisation de gas ne vaut jamais le risque d'introduire une vulnérabilité exploitable.
+# Aderyn (2024+) — alternative Rust, plus rapide sur gros repos
+aderyn . --output report.md
+```
+
+Trier les findings Slither par impact : ignorer `low` et `informational` en premier passage, se concentrer sur `high` et `medium`.
+
+### 3. Vérification des vulnérabilités critiques
+
+**Reentrancy** — pattern CEI (Checks-Effects-Interactions) obligatoire :
+
+```solidity
+// VULNERABLE
+function withdraw(uint amount) external {
+    require(balances[msg.sender] >= amount);
+    (bool ok,) = msg.sender.call{value: amount}(""); // appel externe AVANT mise à jour
+    balances[msg.sender] -= amount;
+}
+
+// CORRECT
+function withdraw(uint amount) external nonReentrant {
+    require(balances[msg.sender] >= amount);
+    balances[msg.sender] -= amount; // état mis à jour EN PREMIER
+    (bool ok,) = msg.sender.call{value: amount}("");
+    require(ok);
+}
+```
+
+**Access control** — vérifier chaque fonction `external`/`public` :
+
+```solidity
+// Checklist : toute fonction modifiant l'état a-t-elle un modifier ?
+// Slither détecte : slither . --detect missing-zero-check,suicidal,unprotected-upgrade
+```
+
+**Flash loan / price manipulation** :
+- Toute lecture de prix on-chain via `getReserves()` sans TWAP est exploitable
+- Utiliser Chainlink ou Uniswap V3 TWAP (30 min minimum)
+
+**Signature replay** :
+- Vérifier présence de `nonce` + `block.chainid` dans chaque `ecrecover`
+- EIP-712 est obligatoire pour tout mécanisme de permit/meta-tx
+
+**Overflow (Solidity < 0.8)** :
+- Tout contrat < 0.8.x sans SafeMath est suspect ; chercher `pragma solidity ^0.7`
+
+### 4. Analyse des standards ERC
+
+```bash
+# Vérifier conformité ERC-20 avec Foundry
+forge test --match-contract ERC20Compliance -vvv
+
+# OpenZeppelin Wizard — base safe à utiliser comme référence
+# https://wizard.openzeppelin.com/
+```
+
+Points de contrôle ERC-20 : `transfer` retourne `bool`, `approve` + `transferFrom` atomique, events `Transfer`/`Approval` émis. ERC-721 : `safeTransferFrom` gère `IERC721Receiver`, `tokenURI` ne doit pas revert sur token inexistant.
+
+### 5. Tests et fuzzing avec Foundry
+
+```bash
+# Lancer les tests en mode fork mainnet
+forge test --fork-url $ETH_RPC_URL --fork-block-number 20000000 -vvv
+
+# Fuzzing d'une fonction critique (définir un invariant)
+# Dans le fichier de test Foundry :
+```
+
+```solidity
+// test/VaultFuzz.t.sol
+contract VaultFuzzTest is Test {
+    Vault vault;
+
+    function setUp() public { vault = new Vault(); }
+
+    // Invariant : la balance du contrat >= somme des dépôts utilisateurs
+    function invariant_solvency() public view {
+        assertGe(address(vault).balance, vault.totalDeposits());
+    }
+}
+```
+
+```bash
+forge test --match-contract VaultFuzzTest --fuzz-runs 10000
+```
+
+### 6. Vérification gas et storage
+
+```bash
+forge snapshot --diff                    # comparer avant/après optimisation
+forge test --gas-report                  # rapport détaillé par fonction
+```
+
+Règles d'optimisation sûres :
+- `constant`/`immutable` pour toute valeur fixée au déploiement
+- `uint256` par défaut (éviter `uint8` en storage, coûteux via masking)
+- Regrouper les variables storage pour packing (max 32 bytes par slot)
+- `calldata` vs `memory` pour les paramètres de fonctions `external`
+
+**Ne jamais sacrifier la sécurité pour le gas** : toute économie < 5000 gas sur une fonction critique ne justifie pas de supprimer un `nonReentrant`.
+
+### 7. Rapport de findings
+
+Chaque finding suit ce template :
+
+```
+## [CRIT-01] Reentrancy dans `withdraw()`
+
+**Sévérité** : Critical
+**Contrat** : Vault.sol, ligne 42
+**Impact** : Drain total des fonds du contrat
+**Reproductibilité** : 100%
+
+### PoC
+[code Solidity ou séquence d'appels reproductible]
+
+### Recommandation
+Appliquer le pattern CEI + modificateur `nonReentrant` d'OpenZeppelin.
+
+### Statut
+[ ] Non corrigé  [ ] Corrigé  [ ] Accepté (risque assumé)
+```
+
+Niveaux de sévérité :
+| Niveau | Critère |
+|--------|---------|
+| Critical | Perte de fonds, drain total possible |
+| High | Perte partielle ou blocage permanent |
+| Medium | Comportement inattendu, contournement de règle métier |
+| Low | Bonne pratique non respectée, risque faible |
+| Info | Qualité de code, optimisation |
+
+---
+
+## Garde-fous et anti-patterns
+
+- **Ne jamais utiliser `tx.origin`** pour l'authentification — utiliser `msg.sender`
+- **`block.timestamp`** manipulable par les mineurs à ±15s — ne pas baser de logique critique dessus
+- **`delegatecall` vers une adresse contrôlable** → takeover de storage immédiat
+- **`selfdestruct`** suivi d'un `CREATE2` au même address → contournement de whitelist
+- **Proxies upgradeable** : vérifier que l'implémentation n'a pas de constructeur avec état, et que `initialize()` est protégé contre double-appel (`initializer` modifier)
+- **Randomness on-chain** (`blockhash`, `block.difficulty`) : trivialmente manipulable — utiliser Chainlink VRF
+- **Boucles sur des arrays dynamiques** sans borne maximale → DoS par gas limit
+- **Retour de `call()` non vérifié** : toujours `require(ok, "call failed")`
+
+## Outils de référence (2026)
+
+| Outil | Usage | Commande rapide |
+|-------|-------|-----------------|
+| Slither | Analyse statique | `slither . --checklist` |
+| Foundry | Tests + fuzzing | `forge test --fuzz-runs 5000` |
+| Aderyn | Analyse statique Rust | `aderyn .` |
+| Echidna | Fuzzing basé propriétés | `echidna-test . --contract MyContract` |
+| Mythril | Analyse symbolique | `myth analyze file.sol` |
+| Certora | Vérification formelle | `certoraRun spec.conf` |
+| Tenderly | Simulation fork + debug | UI + CLI |
 
 
 ## Communication Rules — MANDATORY

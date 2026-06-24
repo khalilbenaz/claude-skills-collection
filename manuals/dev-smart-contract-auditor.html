@@ -96,39 +96,133 @@ cp -r claude-skills-collection/skills/dev-smart-contract-auditor ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Smart Contract Auditor</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Lecture et compréhension du contrat</strong> : Analyser la logique métier, les flux de tokens, les rôles et permissions, les interactions entre contrats, et documenter l'architecture générale avant toute analyse de sécurité.</li>
-</ol>
-<ol>
-<li><strong>Vérification des vulnérabilités classiques</strong> : Identifier les failles connues telles que reentrancy (appels externes avant mise à jour d'état), integer overflow/underflow, front-running, access control défaillant, et problèmes de timestamp dependance.</li>
-</ol>
-<ol>
-<li><strong>Analyse des patterns de sécurité</strong> : Vérifier l'application du pattern checks-effects-interactions, l'utilisation de pull payments plutôt que push, la présence de guard modifiers, et la gestion correcte des erreurs avec revert/require/assert.</li>
-</ol>
-<ol>
-<li><strong>Vérification des standards</strong> : Contrôler la conformité aux standards ERC-20, ERC-721 et ERC-1155, valider l'utilisation correcte des bibliothèques OpenZeppelin, et vérifier la compatibilité avec les interfaces attendues par l'écosystème.</li>
-</ol>
-<ol>
-<li><strong>Gas optimization</strong> : Analyser l'utilisation de storage vs memory, détecter les boucles coûteuses, identifier les opportunités de batch operations, vérifier l'usage de variables constant/immutable, et optimiser les patterns d'écriture en storage.</li>
-</ol>
-<ol>
-<li><strong>Tests et fuzzing</strong> : Écrire et exécuter des tests unitaires avec Foundry, mettre en place du fuzzing sur les fonctions critiques, définir des invariants de test, et effectuer des fork tests sur mainnet pour simuler des scénarios réels.</li>
-</ol>
-<ol>
-<li><strong>Outils d'analyse statique</strong> : Exécuter Slither pour détecter les patterns vulnérables, Mythril pour l'analyse symbolique, Echidna pour le fuzzing basé sur propriétés, et Certora Prover pour la vérification formelle des invariants critiques.</li>
-</ol>
-<ol>
-<li><strong>Rapport d'audit structuré</strong> : Rédiger un rapport complet classant chaque finding par sévérité (Critical/High/Medium/Low/Info), avec description de la vulnérabilité, proof of concept reproductible, recommandation de correction, et suivi du statut de remédiation.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow d'audit</h2>
+<h3>1. Cartographie du périmètre</h3>
+<p>Avant toute analyse de code, délimiter précisément la surface d'attaque :</p>
+<pre><code class="lang-bash"># Compter les lignes Solidity hors tests
+find . -name &quot;*.sol&quot; ! -path &quot;*/test*&quot; ! -path &quot;*/node_modules*&quot; | xargs wc -l | sort -rn
+
+# Lister les contrats upgradeable (proxy pattern)
+grep -rl &quot;UUPSUpgradeable\|TransparentUpgradeableProxy\|BeaconProxy&quot; contracts/</code></pre>
+<p>Critères de décision sur la profondeur :</p>
 <ul>
-<li>Fournis toujours des exemples de code Solidity concrets et des PoC exploitables pour illustrer chaque vulnérabilité identifiée.</li>
-<li>Classe systématiquement les findings par niveau de sévérité et évalue l'impact réel sur les fonds et la logique du protocole.</li>
-<li>Recommande en priorité les solutions éprouvées (OpenZeppelin, patterns standards) plutôt que des implémentations personnalisées.</li>
-<li>Mentionne les outils recommandés pour chaque type d'analyse : Slither, Foundry, Hardhat, Echidna, Mythril, Certora.</li>
-<li>Priorise la sécurité sur la performance : une optimisation de gas ne vaut jamais le risque d'introduire une vulnérabilité exploitable.</li>
+<li>&lt; 500 SLOC → audit complet manuel en une session</li>
+<li>500–3000 SLOC → découpage par module, prioriser les contrats porteurs de fonds</li>
+<li>&gt; 3000 SLOC → focus sur invariants critiques + outils automatisés en premier</li>
 </ul>
+<h3>2. Analyse statique automatisée</h3>
+<p>Lancer systématiquement avant toute revue manuelle :</p>
+<pre><code class="lang-bash"># Slither — détection patterns vulnérables
+slither . --checklist --json slither-report.json
+
+# Mythril — analyse symbolique (fonctions critiques)
+myth analyze contracts/Vault.sol --execution-timeout 120 --solv 0.8.24
+
+# Aderyn (2024+) — alternative Rust, plus rapide sur gros repos
+aderyn . --output report.md</code></pre>
+<p>Trier les findings Slither par impact : ignorer <code>low</code> et <code>informational</code> en premier passage, se concentrer sur <code>high</code> et <code>medium</code>.</p>
+<h3>3. Vérification des vulnérabilités critiques</h3>
+<p><strong>Reentrancy</strong> — pattern CEI (Checks-Effects-Interactions) obligatoire :</p>
+<pre><code class="lang-solidity">// VULNERABLE
+function withdraw(uint amount) external {
+    require(balances[msg.sender] &gt;= amount);
+    (bool ok,) = msg.sender.call{value: amount}(&quot;&quot;); // appel externe AVANT mise à jour
+    balances[msg.sender] -= amount;
+}
+
+// CORRECT
+function withdraw(uint amount) external nonReentrant {
+    require(balances[msg.sender] &gt;= amount);
+    balances[msg.sender] -= amount; // état mis à jour EN PREMIER
+    (bool ok,) = msg.sender.call{value: amount}(&quot;&quot;);
+    require(ok);
+}</code></pre>
+<p><strong>Access control</strong> — vérifier chaque fonction <code>external</code>/<code>public</code> :</p>
+<pre><code class="lang-solidity">// Checklist : toute fonction modifiant l'état a-t-elle un modifier ?
+// Slither détecte : slither . --detect missing-zero-check,suicidal,unprotected-upgrade</code></pre>
+<p><strong>Flash loan / price manipulation</strong> :</p>
+<ul>
+<li>Toute lecture de prix on-chain via <code>getReserves()</code> sans TWAP est exploitable</li>
+<li>Utiliser Chainlink ou Uniswap V3 TWAP (30 min minimum)</li>
+</ul>
+<p><strong>Signature replay</strong> :</p>
+<ul>
+<li>Vérifier présence de <code>nonce</code> + <code>block.chainid</code> dans chaque <code>ecrecover</code></li>
+<li>EIP-712 est obligatoire pour tout mécanisme de permit/meta-tx</li>
+</ul>
+<p><strong>Overflow (Solidity &lt; 0.8)</strong> :</p>
+<ul>
+<li>Tout contrat &lt; 0.8.x sans SafeMath est suspect ; chercher <code>pragma solidity ^0.7</code></li>
+</ul>
+<h3>4. Analyse des standards ERC</h3>
+<pre><code class="lang-bash"># Vérifier conformité ERC-20 avec Foundry
+forge test --match-contract ERC20Compliance -vvv
+
+# OpenZeppelin Wizard — base safe à utiliser comme référence
+# https://wizard.openzeppelin.com/</code></pre>
+<p>Points de contrôle ERC-20 : <code>transfer</code> retourne <code>bool</code>, <code>approve</code> + <code>transferFrom</code> atomique, events <code>Transfer</code>/<code>Approval</code> émis. ERC-721 : <code>safeTransferFrom</code> gère <code>IERC721Receiver</code>, <code>tokenURI</code> ne doit pas revert sur token inexistant.</p>
+<h3>5. Tests et fuzzing avec Foundry</h3>
+<pre><code class="lang-bash"># Lancer les tests en mode fork mainnet
+forge test --fork-url $ETH_RPC_URL --fork-block-number 20000000 -vvv
+
+# Fuzzing d'une fonction critique (définir un invariant)
+# Dans le fichier de test Foundry :</code></pre>
+<pre><code class="lang-solidity">// test/VaultFuzz.t.sol
+contract VaultFuzzTest is Test {
+    Vault vault;
+
+    function setUp() public { vault = new Vault(); }
+
+    // Invariant : la balance du contrat &gt;= somme des dépôts utilisateurs
+    function invariant_solvency() public view {
+        assertGe(address(vault).balance, vault.totalDeposits());
+    }
+}</code></pre>
+<pre><code class="lang-bash">forge test --match-contract VaultFuzzTest --fuzz-runs 10000</code></pre>
+<h3>6. Vérification gas et storage</h3>
+<pre><code class="lang-bash">forge snapshot --diff                    # comparer avant/après optimisation
+forge test --gas-report                  # rapport détaillé par fonction</code></pre>
+<p>Règles d'optimisation sûres :</p>
+<ul>
+<li><code>constant</code>/<code>immutable</code> pour toute valeur fixée au déploiement</li>
+<li><code>uint256</code> par défaut (éviter <code>uint8</code> en storage, coûteux via masking)</li>
+<li>Regrouper les variables storage pour packing (max 32 bytes par slot)</li>
+<li><code>calldata</code> vs <code>memory</code> pour les paramètres de fonctions <code>external</code></li>
+</ul>
+<p><strong>Ne jamais sacrifier la sécurité pour le gas</strong> : toute économie &lt; 5000 gas sur une fonction critique ne justifie pas de supprimer un <code>nonReentrant</code>.</p>
+<h3>7. Rapport de findings</h3>
+<p>Chaque finding suit ce template :</p>
+<pre><code>## [CRIT-01] Reentrancy dans `withdraw()`
+
+**Sévérité** : Critical
+**Contrat** : Vault.sol, ligne 42
+**Impact** : Drain total des fonds du contrat
+**Reproductibilité** : 100%
+
+### PoC
+[code Solidity ou séquence d'appels reproductible]
+
+### Recommandation
+Appliquer le pattern CEI + modificateur `nonReentrant` d'OpenZeppelin.
+
+### Statut
+[ ] Non corrigé  [ ] Corrigé  [ ] Accepté (risque assumé)</code></pre>
+<p>Niveaux de sévérité :</p>
+<table><thead><tr><th>Niveau</th><th>Critère</th></tr></thead><tbody><tr><td>Critical</td><td>Perte de fonds, drain total possible</td></tr><tr><td>High</td><td>Perte partielle ou blocage permanent</td></tr><tr><td>Medium</td><td>Comportement inattendu, contournement de règle métier</td></tr><tr><td>Low</td><td>Bonne pratique non respectée, risque faible</td></tr><tr><td>Info</td><td>Qualité de code, optimisation</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<ul>
+<li><strong>Ne jamais utiliser <code>tx.origin</code></strong> pour l'authentification — utiliser <code>msg.sender</code></li>
+<li><strong><code>block.timestamp</code></strong> manipulable par les mineurs à ±15s — ne pas baser de logique critique dessus</li>
+<li><strong><code>delegatecall</code> vers une adresse contrôlable</strong> → takeover de storage immédiat</li>
+<li><strong><code>selfdestruct</code></strong> suivi d'un <code>CREATE2</code> au même address → contournement de whitelist</li>
+<li><strong>Proxies upgradeable</strong> : vérifier que l'implémentation n'a pas de constructeur avec état, et que <code>initialize()</code> est protégé contre double-appel (<code>initializer</code> modifier)</li>
+<li><strong>Randomness on-chain</strong> (<code>blockhash</code>, <code>block.difficulty</code>) : trivialmente manipulable — utiliser Chainlink VRF</li>
+<li><strong>Boucles sur des arrays dynamiques</strong> sans borne maximale → DoS par gas limit</li>
+<li><strong>Retour de <code>call()</code> non vérifié</strong> : toujours <code>require(ok, &quot;call failed&quot;)</code></li>
+</ul>
+<h2>Outils de référence (2026)</h2>
+<table><thead><tr><th>Outil</th><th>Usage</th><th>Commande rapide</th></tr></thead><tbody><tr><td>Slither</td><td>Analyse statique</td><td><code>slither . --checklist</code></td></tr><tr><td>Foundry</td><td>Tests + fuzzing</td><td><code>forge test --fuzz-runs 5000</code></td></tr><tr><td>Aderyn</td><td>Analyse statique Rust</td><td><code>aderyn .</code></td></tr><tr><td>Echidna</td><td>Fuzzing basé propriétés</td><td><code>echidna-test . --contract MyContract</code></td></tr><tr><td>Mythril</td><td>Analyse symbolique</td><td><code>myth analyze file.sol</code></td></tr><tr><td>Certora</td><td>Vérification formelle</td><td><code>certoraRun spec.conf</code></td></tr><tr><td>Tenderly</td><td>Simulation fork + debug</td><td>UI + CLI</td></tr></tbody></table>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

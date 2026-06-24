@@ -95,40 +95,218 @@ cp -r claude-skills-collection/skills/dev-angular-guide ~/.claude/skills/</div><
 
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
-<h1>Guide Angular</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le besoin</strong> — Identifier le type d'application (dashboard, portail entreprise, PWA) et définir l'architecture : standalone components vs NgModules, stratégie de lazy loading, et choix de la gestion d'état (NgRx, signals, ou services simples).</li>
-</ol>
-<ol>
-<li><strong>Structurer le projet</strong> — Organiser en feature modules avec Angular CLI : <code>core/</code> pour les services singleton, <code>shared/</code> pour les composants et pipes réutilisables, et un dossier par feature contenant composants, services, models et guards associés.</li>
-</ol>
-<ol>
-<li><strong>Créer les composants</strong> — Développer les composants avec le décorateur <code>@Component</code>, utiliser les signals Angular pour l'état réactif (<code>signal()</code>, <code>computed()</code>, <code>effect()</code>), configurer <code>changeDetection: OnPush</code> pour les performances, et gérer les inputs/outputs typés.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les services et l'injection de dépendances</strong> — Créer les services avec <code>@Injectable({ providedIn: 'root' })</code>, utiliser le système d'injection hiérarchique d'Angular, et implémenter les interceptors HTTP pour l'authentification et la gestion des erreurs.</li>
-</ol>
-<ol>
-<li><strong>Gérer les flux asynchrones avec RxJS</strong> — Utiliser les opérateurs RxJS essentiels (<code>switchMap</code>, <code>mergeMap</code>, <code>combineLatest</code>, <code>debounceTime</code>), gérer les souscriptions avec le pattern <code>async</code> pipe dans les templates, et éviter les memory leaks avec <code>takeUntilDestroyed()</code>.</li>
-</ol>
-<ol>
-<li><strong>Configurer le routing</strong> — Définir les routes avec lazy loading (<code>loadComponent</code>, <code>loadChildren</code>), implémenter les guards fonctionnels (<code>canActivate</code>, <code>canMatch</code>), les resolvers pour le pre-fetching, et les stratégies de preloading.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les formulaires</strong> — Utiliser les Reactive Forms avec <code>FormBuilder</code>, <code>FormGroup</code> et <code>FormArray</code>, créer des validateurs custom synchrones et asynchrones, et gérer l'affichage des erreurs de validation de manière centralisée.</li>
-</ol>
-<ol>
-<li><strong>Tester et déployer</strong> — Écrire des tests unitaires avec Jasmine/Karma ou Jest, des tests d'intégration avec TestBed, configurer les environnements de build, et optimiser le bundle avec le tree-shaking et le build AOT.</li>
-</ol>
-<h2>Règles</h2>
-<ul>
-<li>Privilégie les standalone components et les signals Angular plutôt que les NgModules classiques pour les nouveaux projets.</li>
-<li>Utilise toujours le pipe <code>async</code> ou <code>toSignal()</code> dans les templates plutôt que des souscriptions manuelles dans les composants.</li>
-<li>Active systématiquement <code>changeDetection: OnPush</code> sur chaque composant pour éviter les cycles de détection inutiles.</li>
-<li>Ne place jamais de logique métier dans les composants — délègue aux services injectables pour la testabilité et la réutilisabilité.</li>
-<li>Gère toujours les erreurs HTTP dans les interceptors et les services, jamais directement dans les composants.</li>
-</ul>
+<h1>Guide Angular (v17+)</h1>
+<h2>1. Initialisation du projet</h2>
+<pre><code class="lang-bash">npm install -g @angular/cli
+ng new my-app --routing --style=scss --standalone
+cd my-app &amp;&amp; ng serve</code></pre>
+<p><strong>Critère de décision — standalone vs NgModule</strong></p>
+<table><thead><tr><th>Situation</th><th>Recommandation</th></tr></thead><tbody><tr><td>Nouveau projet (v17+)</td><td>Standalone components (défaut CLI)</td></tr><tr><td>Migration progressive</td><td>Hybrid : <code>ng generate component --standalone</code></td></tr><tr><td>Legacy codebase</td><td>Maintenir NgModules, migrer par feature</td></tr></tbody></table>
+<p>Structure cible pour un projet moyen :</p>
+<pre><code>src/app/
+  core/           # services singleton, interceptors, guards globaux
+  shared/         # composants, pipes, directives réutilisables
+  features/
+    orders/       # composant, service, model, route propres à la feature
+    users/
+  app.routes.ts
+  app.config.ts</code></pre>
+<hr>
+<h2>2. Composants standalone et Signals</h2>
+<pre><code class="lang-typescript">// signal-counter.component.ts
+import { Component, signal, computed, effect } from '@angular/core';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  standalone: true,
+  imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    &lt;p&gt;Count: {{ count() }}&lt;/p&gt;
+    &lt;p&gt;Double: {{ double() }}&lt;/p&gt;
+    &lt;button (click)=&quot;increment()&quot;&gt;+1&lt;/button&gt;
+  `,
+})
+export class SignalCounterComponent {
+  count = signal(0);
+  double = computed(() =&gt; this.count() * 2);
+
+  constructor() {
+    effect(() =&gt; console.log('count changed:', this.count()));
+  }
+
+  increment() { this.count.update(c =&gt; c + 1); }
+}</code></pre>
+<p><strong>Règle</strong> : <code>ChangeDetectionStrategy.OnPush</code> est obligatoire. Avec les signals, la détection est automatiquement granulaire — pas besoin de <code>markForCheck()</code>.</p>
+<p><strong>Input typés (v17.1+)</strong></p>
+<pre><code class="lang-typescript">// signal inputs
+readonly userId = input.required&lt;number&gt;();
+readonly label = input&lt;string&gt;('default');
+// output
+readonly selected = output&lt;User&gt;();</code></pre>
+<hr>
+<h2>3. Services et injection de dépendances</h2>
+<pre><code class="lang-typescript">@Injectable({ providedIn: 'root' })
+export class UserService {
+  private http = inject(HttpClient);
+  private cache = new Map&lt;number, User&gt;();
+
+  getUser(id: number): Observable&lt;User&gt; {
+    if (this.cache.has(id)) return of(this.cache.get(id)!);
+    return this.http.get&lt;User&gt;(`/api/users/${id}`).pipe(
+      tap(u =&gt; this.cache.set(id, u)),
+      catchError(err =&gt; { throw new UserError(err); })
+    );
+  }
+}</code></pre>
+<p><strong>inject() vs constructor DI</strong> : Préfère <code>inject()</code> dans les standalone components et les fonctions (guards, resolvers). Le constructeur reste valide dans les services.</p>
+<hr>
+<h2>4. RxJS — opérateurs essentiels</h2>
+<pre><code class="lang-typescript">// Recherche avec debounce + annulation automatique
+search$ = this.searchControl.valueChanges.pipe(
+  debounceTime(300),
+  distinctUntilChanged(),
+  filter(q =&gt; q.length &gt; 2),
+  switchMap(q =&gt; this.api.search(q)),   // annule la requête précédente
+  takeUntilDestroyed(),                 // cleanup automatique (v16+)
+);
+
+// Combiner plusieurs sources
+data$ = combineLatest({
+  users: this.userService.getAll(),
+  roles: this.roleService.getAll(),
+}).pipe(
+  map(({ users, roles }) =&gt; users.map(u =&gt; ({
+    ...u, roleName: roles.find(r =&gt; r.id === u.roleId)?.name
+  })))
+);</code></pre>
+<p><strong>Choisir le bon opérateur de flatten :</strong></p>
+<table><thead><tr><th>Cas d'usage</th><th>Opérateur</th></tr></thead><tbody><tr><td>Requête HTTP (annuler la précédente)</td><td><code>switchMap</code></td></tr><tr><td>Upload parallèle</td><td><code>mergeMap</code></td></tr><tr><td>Requêtes en séquence</td><td><code>concatMap</code></td></tr><tr><td>Ignorer si déjà en cours</td><td><code>exhaustMap</code></td></tr></tbody></table>
+<p><strong>Éviter les memory leaks :</strong></p>
+<pre><code class="lang-typescript">// Option 1 — async pipe (recommandé dans les templates)
+// Option 2 — takeUntilDestroyed() dans le constructeur/ngOnInit
+// Option 3 — toSignal() convertit Observable → Signal (se désinscrit auto)
+readonly users = toSignal(this.userService.getAll(), { initialValue: [] });</code></pre>
+<hr>
+<h2>5. Routing avec lazy loading</h2>
+<pre><code class="lang-typescript">// app.routes.ts
+export const routes: Routes = [
+  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+  {
+    path: 'orders',
+    loadComponent: () =&gt; import('./features/orders/orders.component')
+      .then(m =&gt; m.OrdersComponent),
+    canActivate: [authGuard],
+    resolve: { orders: ordersResolver },
+  },
+  {
+    path: 'admin',
+    loadChildren: () =&gt; import('./features/admin/admin.routes')
+      .then(m =&gt; m.ADMIN_ROUTES),
+    canMatch: [adminGuard],   // bloque même le téléchargement du chunk
+  },
+];</code></pre>
+<p><strong>Guard fonctionnel (v15+) :</strong></p>
+<pre><code class="lang-typescript">export const authGuard: CanActivateFn = (route, state) =&gt; {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  return auth.isLoggedIn()
+    ? true
+    : router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+};</code></pre>
+<p><strong>Resolver typé :</strong></p>
+<pre><code class="lang-typescript">export const ordersResolver: ResolveFn&lt;Order[]&gt; = () =&gt;
+  inject(OrderService).getAll();</code></pre>
+<hr>
+<h2>6. Formulaires réactifs</h2>
+<pre><code class="lang-typescript">@Component({ standalone: true, imports: [ReactiveFormsModule] })
+export class UserFormComponent {
+  private fb = inject(FormBuilder);
+
+  form = this.fb.group({
+    name: ['', [Validators.required, Validators.minLength(3)]],
+    email: ['', [Validators.required, Validators.email], [this.uniqueEmailValidator()]],
+    address: this.fb.group({
+      city: ['', Validators.required],
+    }),
+  });
+
+  // Validateur asynchrone (ex: vérification serveur)
+  private uniqueEmailValidator(): AsyncValidatorFn {
+    return ctrl =&gt; this.userService.checkEmail(ctrl.value).pipe(
+      map(taken =&gt; taken ? { emailTaken: true } : null),
+      catchError(() =&gt; of(null)),
+    );
+  }
+
+  submit() {
+    if (this.form.invalid) return;
+    this.userService.create(this.form.getRawValue()).subscribe();
+  }
+}</code></pre>
+<p>Template affichage d'erreur :</p>
+<pre><code class="lang-html">&lt;input formControlName=&quot;name&quot; /&gt;
+@if (form.get('name')?.errors?.['required'] &amp;&amp; form.get('name')?.touched) {
+  &lt;span class=&quot;error&quot;&gt;Champ requis&lt;/span&gt;
+}</code></pre>
+<hr>
+<h2>7. Interceptors HTTP</h2>
+<pre><code class="lang-typescript">export const authInterceptor: HttpInterceptorFn = (req, next) =&gt; {
+  const token = inject(AuthService).getToken();
+  const authReq = token
+    ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
+    : req;
+  return next(authReq).pipe(
+    catchError(err =&gt; {
+      if (err.status === 401) inject(AuthService).logout();
+      return throwError(() =&gt; err);
+    })
+  );
+};
+
+// app.config.ts
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideHttpClient(withInterceptors([authInterceptor])),
+    provideRouter(routes, withPreloading(PreloadAllModules)),
+  ],
+};</code></pre>
+<hr>
+<h2>8. Tests</h2>
+<pre><code class="lang-typescript">// Service unitaire
+it('getUser retourne depuis cache', () =&gt; {
+  const { service } = TestBed.inject(UserService);
+  // ...
+});
+
+// Composant avec TestBed
+beforeEach(() =&gt; TestBed.configureTestingModule({
+  imports: [SignalCounterComponent],
+}));
+
+it('incrémenter le compteur', () =&gt; {
+  const fixture = TestBed.createComponent(SignalCounterComponent);
+  fixture.detectChanges();
+  fixture.nativeElement.querySelector('button').click();
+  fixture.detectChanges();
+  expect(fixture.nativeElement.querySelector('p').textContent).toContain('1');
+});</code></pre>
+<p>Commandes :</p>
+<pre><code class="lang-bash">ng test --code-coverage          # Karma (défaut)
+# ou avec Jest :
+jest --coverage --watchAll=false</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Correction</th></tr></thead><tbody><tr><td>Souscrire manuellement dans le composant (<code>subscribe()</code> sans cleanup)</td><td><code>async pipe</code>, <code>toSignal()</code>, ou <code>takeUntilDestroyed()</code></td></tr><tr><td>Logique métier dans le template</td><td>Déplacer dans un <code>computed()</code> ou un service</td></tr><tr><td><code>any</code> pour les réponses HTTP</td><td>Typer avec <code>this.http.get&lt;User[]&gt;(...)</code></td></tr><tr><td>Guard via classe (<code>CanActivate</code>)</td><td>Guard fonctionnel (<code>CanActivateFn</code>) — classes dépréciées v15+</td></tr><tr><td><code>NgModule</code> imports inutiles dans un standalone</td><td>Importer uniquement ce qui est utilisé dans le composant</td></tr><tr><td><code>ngOnDestroy</code> + <code>Subject</code>/<code>takeUntil</code></td><td>Remplacer par <code>takeUntilDestroyed()</code> (plus simple, moins de code)</td></tr><tr><td>Appeler une méthode dans le template <code>{{ getLabel() }}</code></td><td>Utiliser <code>computed()</code> ou <code>pipe</code> pur pour éviter les re-exécutions</td></tr><tr><td><code>ChangeDetectionStrategy.Default</code></td><td>Toujours <code>OnPush</code> — meilleure performance, détection contrôlée</td></tr></tbody></table>
+<hr>
+<h2>Commandes CLI fréquentes</h2>
+<pre><code class="lang-bash">ng generate component features/orders/order-list --standalone --skip-tests=false
+ng generate service core/auth --skip-tests=false
+ng generate guard core/auth --functional
+ng generate pipe shared/truncate --standalone
+ng build --configuration production   # bundle AOT + tree-shaking
+ng update @angular/core @angular/cli  # mise à jour majeure
+npx nx affected:test                  # si monorepo Nx</code></pre>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

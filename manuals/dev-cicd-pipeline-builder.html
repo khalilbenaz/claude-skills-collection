@@ -96,23 +96,138 @@ cp -r claude-skills-collection/skills/dev-cicd-pipeline-builder ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>CI/CD Pipeline Builder</h1>
-<h2>Workflow</h2>
-<ol>
-<li>Analyse du projet : langage, framework, suite de tests, environnements cibles (staging, production) et contraintes de déploiement</li>
-<li>Choix de la plateforme CI/CD adaptée (GitHub Actions, Azure Pipelines, GitLab CI, Jenkins) selon le contexte et l'hébergement</li>
-<li>Configuration du pipeline de CI : étapes de build, lint, tests unitaires/intégration, security scan (SAST/DAST) et rapport de couverture de code</li>
-<li>Configuration du pipeline de CD : déploiement vers staging puis production, avec gates de validation et stratégie de rollback automatique</li>
-<li>Gestion sécurisée des secrets et variables (HashiCorp Vault, Azure Key Vault, GitHub Secrets, configs spécifiques par environnement)</li>
-<li>Définition de la stratégie de déploiement : blue-green, canary release ou rolling update selon les exigences de disponibilité</li>
-<li>Mise en place des notifications et du reporting (alertes Slack/Teams, rapports email, dashboards de qualité SonarQube/Codecov)</li>
-<li>Optimisation du pipeline : caching des dépendances, jobs parallèles, stages conditionnels, gestion des artefacts et temps de build</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en étapes</h2>
+<h3>1. Cadrage projet</h3>
+<p>Identifier avant tout :</p>
 <ul>
-<li>Adapte le pipeline à la plateforme cloud de l'utilisateur (Azure DevOps, GitHub Actions pour AWS/GCP, GitLab CI)</li>
-<li>Fournis les fichiers de configuration complets et commentés (YAML) prêts à l'emploi</li>
-<li>Priorise la sécurité : scan de vulnérabilités obligatoire, rotation des secrets, principe du moindre privilège</li>
-<li>Propose des solutions progressives : pipeline minimal fonctionnel en premier, puis enrichissement avec les étapes avancées</li>
+<li>Langage / runtime (Node.js, .NET, Python, Go…) et gestionnaire de paquets</li>
+<li>Registre d'artefacts cible (Docker Hub, GHCR, Azure Container Registry, npm…)</li>
+<li>Environnements : <code>dev</code> / <code>staging</code> / <code>prod</code> — isolés ou partagés ?</li>
+<li>Contraintes réglementaires : approbations manuelles obligatoires en prod ? audit trail ?</li>
+</ul>
+<h3>2. Choix de plateforme</h3>
+<table><thead><tr><th>Contexte</th><th>Plateforme recommandée</th></tr></thead><tbody><tr><td>Repo GitHub, cloud agnostique</td><td><strong>GitHub Actions</strong></td></tr><tr><td>Azure DevOps + AKS / App Service</td><td><strong>Azure Pipelines</strong></td></tr><tr><td>GitLab auto-hébergé</td><td><strong>GitLab CI</strong></td></tr><tr><td>On-premise, legacy, multi-repo</td><td><strong>Jenkins</strong></td></tr></tbody></table>
+<p>Critère décisif : la plateforme doit être là où vit le code ou là où tourne l'infra. Éviter les ponts cross-plateforme sauf nécessité absolue.</p>
+<h3>3. Pipeline CI — structure minimale</h3>
+<pre><code class="lang-yaml"># .github/workflows/ci.yml (GitHub Actions)
+name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22', cache: npm }
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -- --coverage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/</code></pre>
+<p>Équivalent Azure Pipelines minimal :</p>
+<pre><code class="lang-yaml"># azure-pipelines.yml
+trigger: [main, develop]
+pool: { vmImage: ubuntu-latest }
+steps:
+  - task: NodeTool@0
+    inputs: { versionSpec: '22.x' }
+  - script: npm ci &amp;&amp; npm run lint &amp;&amp; npm test -- --coverage
+    displayName: Build &amp; Test
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFormat: JUnit
+      testResultsFiles: '**/test-results.xml'</code></pre>
+<h3>4. Security scan — intégrer dès la CI</h3>
+<pre><code class="lang-yaml"># Trivy (container vulnerabilities)
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE_TAG }}
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+# SAST léger avec CodeQL (GitHub Advanced Security)
+      - uses: github/codeql-action/analyze@v3
+        with: { languages: javascript }</code></pre>
+<p>Pour Azure DevOps : utiliser la task <code>CredScan</code> ou l'extension <strong>Microsoft Security DevOps</strong>.</p>
+<h3>5. Pipeline CD — gates et stratégies</h3>
+<p><strong>Gate d'approbation manuelle (GitHub Actions) :</strong></p>
+<pre><code class="lang-yaml">  deploy-prod:
+    needs: deploy-staging
+    environment:
+      name: production          # configure reviewers dans les Settings GitHub
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: my-app-prod
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}</code></pre>
+<p><strong>Blue-Green sur Kubernetes :</strong></p>
+<pre><code class="lang-bash">kubectl apply -f k8s/deployment-green.yaml
+kubectl rollout status deployment/app-green --timeout=120s
+kubectl patch service app-svc -p '{&quot;spec&quot;:{&quot;selector&quot;:{&quot;slot&quot;:&quot;green&quot;}}}'
+# En cas d'échec :
+kubectl patch service app-svc -p '{&quot;spec&quot;:{&quot;selector&quot;:{&quot;slot&quot;:&quot;blue&quot;}}}'</code></pre>
+<p><strong>Canary avec Argo Rollouts (critère de choix : trafic progressif sans downtime) :</strong></p>
+<pre><code class="lang-yaml">spec:
+  strategy:
+    canary:
+      steps:
+        - setWeight: 10
+        - pause: { duration: 5m }
+        - setWeight: 50
+        - pause: { duration: 10m }</code></pre>
+<h3>6. Gestion des secrets</h3>
+<ul>
+<li><strong>GitHub Actions</strong> : <code>${{ secrets.MY_SECRET }}</code> — jamais en clair dans les logs</li>
+<li><strong>Azure Pipelines</strong> : Variable group lié à Azure Key Vault</li>
+<li><strong>GitLab CI</strong> : <code>CI/CD &gt; Variables</code> avec flag <code>Masked</code> obligatoire</li>
+</ul>
+<p>Règle absolue : aucun secret dans le code ou les artefacts. Scanner avec <code>truffleHog</code> ou <code>git-secrets</code> avant merge.</p>
+<pre><code class="lang-bash"># Scan local avant push
+trufflehog git file://. --since-commit HEAD --only-verified</code></pre>
+<h3>7. Optimisation build — leviers principaux</h3>
+<pre><code class="lang-yaml"># Cache npm (GitHub Actions)
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
+
+# Jobs parallèles
+  jobs:
+    lint:   { ... }
+    test:   { needs: [] }   # parallèle à lint
+    build:  { needs: [lint, test] }</code></pre>
+<p>Pour .NET : activer <code>--configuration Release</code> + cache NuGet via <code>actions/cache</code> sur <code>~/.nuget/packages</code>.</p>
+<h3>8. Notifications</h3>
+<pre><code class="lang-yaml"># Slack en fin de pipeline (succès ou échec)
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {&quot;text&quot;: &quot;${{ job.status }}: ${{ github.repository }} @ ${{ github.sha }}&quot;}</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td>Secrets en clair dans le YAML</td><td>Exposition immédiate</td><td>Toujours via variables masquées ou vault</td></tr><tr><td><code>git push --force</code> sur main sans protection</td><td>Historique corrompu</td><td>Activer branch protection rules + required reviews</td></tr><tr><td>Pipeline monolithique (tout en 1 job)</td><td>Impossible à debugger, pas de parallélisme</td><td>Découper en jobs lint / test / build / deploy</td></tr><tr><td>Deploy direct en prod sans staging</td><td>Régressions en prod</td><td>Toujours staging → approbation → prod</td></tr><tr><td>Image Docker <code>latest</code> en prod</td><td>Non-reproductible, rollback impossible</td><td>Tags immuables : SHA court ou version sémantique</td></tr><tr><td>Caches trop larges (cache sur <code>node_modules/</code>)</td><td>Dépendances corrompues entre branches</td><td>Cache sur <code>~/.npm</code> keyed par lockfile hash</td></tr><tr><td>Tests ignorés si flaky</td><td>Dégradation silencieuse de la qualité</td><td><code>--ci</code> flag (no watch, exit on fail), retry max 2</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Pinning des actions</strong> : utiliser le SHA de commit (<code>uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683</code>) pour éviter les supply-chain attacks.</li>
+<li><strong>SLSA Level 2+</strong> : générer des attestations de build avec <code>attest-build-provenance</code> (GitHub Actions native depuis 2024).</li>
+<li><strong>Ephemeral runners</strong> : préférer les runners éphémères (Actions Large Runners ou Azure VMSS) pour l'isolation des jobs sensibles.</li>
+<li><strong>Fail-fast par défaut</strong> : <code>strategy.fail-fast: true</code> pour les matrices, évite de gâcher des minutes de compute.</li>
+<li><strong>Convention de nommage</strong> : <code>&lt;type&gt;/&lt;scope&gt;/&lt;action&gt;</code> pour les jobs (<code>ci/lint</code>, <code>cd/staging/deploy</code>) — lisibilité dans les dashboards.</li>
+<li><strong>IaC pipeline-as-code</strong> : versionner les templates de pipeline dans le même repo que le code applicatif (pas de pipelines configurés uniquement via UI).</li>
 </ul>
 </article>
 </main>

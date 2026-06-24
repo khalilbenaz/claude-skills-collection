@@ -97,85 +97,183 @@ cp -r claude-skills-collection/skills/dev-test-coverage-analyzer ~/.claude/skill
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Test Coverage Analyzer</h1>
 <h2>Workflow</h2>
+<h3>1. Choisir et configurer l'outil de coverage</h3>
+<p><strong>JavaScript / TypeScript</strong></p>
+<pre><code class="lang-bash"># c8 (natif V8, recommandé Node 18+)
+npm install --save-dev c8
+npx c8 --reporter=lcov --reporter=text npm test
+
+# Istanbul / nyc (legacy mais encore répandu)
+npx nyc --reporter=lcov --reporter=text mocha</code></pre>
+<p><strong>.NET / C#</strong></p>
+<pre><code class="lang-bash">dotnet add package coverlet.collector
+dotnet test --collect:&quot;XPlat Code Coverage&quot; \
+  --results-directory ./TestResults
+# Convertir en HTML (nécessite reportgenerator)
+reportgenerator -reports:TestResults/**/coverage.cobertura.xml \
+  -targetdir:coverage-html -reporttypes:Html</code></pre>
+<p><strong>Python</strong></p>
+<pre><code class="lang-bash">pip install pytest-cov
+pytest --cov=src --cov-report=html --cov-report=term-missing</code></pre>
+<p><strong>Java (Maven)</strong></p>
+<pre><code class="lang-xml">&lt;!-- pom.xml --&gt;
+&lt;plugin&gt;
+  &lt;groupId&gt;org.jacoco&lt;/groupId&gt;
+  &lt;artifactId&gt;jacoco-maven-plugin&lt;/artifactId&gt;
+  &lt;version&gt;0.8.12&lt;/version&gt;
+  &lt;executions&gt;
+    &lt;execution&gt;&lt;goals&gt;&lt;goal&gt;prepare-agent&lt;/goal&gt;&lt;/goals&gt;&lt;/execution&gt;
+    &lt;execution&gt;
+      &lt;id&gt;report&lt;/id&gt;
+      &lt;phase&gt;test&lt;/phase&gt;
+      &lt;goals&gt;&lt;goal&gt;report&lt;/goal&gt;&lt;/goals&gt;
+    &lt;/execution&gt;
+  &lt;/executions&gt;
+&lt;/plugin&gt;</code></pre>
+<pre><code class="lang-bash">mvn test jacoco:report   # rapport dans target/site/jacoco/</code></pre>
+<hr>
+<h3>2. Interpréter les métriques — critères de décision</h3>
+<table><thead><tr><th>Métrique</th><th>Signification</th><th>Seuil minimum recommandé</th></tr></thead><tbody><tr><td><strong>Line coverage</strong></td><td>Lignes exécutées / total</td><td>80 % global</td></tr><tr><td><strong>Branch coverage</strong></td><td>Chaque if/else/switch couverts</td><td>70 %</td></tr><tr><td><strong>Function coverage</strong></td><td>Fonctions appelées ≥ 1 fois</td><td>90 %</td></tr><tr><td><strong>Statement coverage</strong></td><td>Instructions individuelles</td><td>≈ line coverage</td></tr><tr><td><strong>Mutation score</strong></td><td>Tests détectent les mutations</td><td>70 %</td></tr></tbody></table>
+<p>Priorité : <strong>branch &gt; line</strong>. Un fichier à 90 % line coverage peut n'avoir aucun test de sa branche <code>catch</code> ou de son chemin <code>null</code>.</p>
+<hr>
+<h3>3. Identifier les zones non couvertes (priorité)</h3>
+<p>Ordre d'analyse :</p>
 <ol>
-<li><strong>Configuration de l'outil de coverage</strong></li>
-<ul>
-<li>JavaScript/TypeScript : Istanbul (nyc) ou c8 avec rapport lcov/html</li>
-<li>.NET (C#) : coverlet avec <code>dotnet test --collect:&quot;XPlat Code Coverage&quot;</code></li>
-<li>Python : coverage.py avec <code>pytest --cov</code> et rapport HTML</li>
-<li>Java : JaCoCo intégré via Maven/Gradle, rapport HTML et XML</li>
-</ul>
+<li>Fonctions/méthodes à zéro couverture dans le code métier critique (paiement, auth, calculs financiers).</li>
+<li>Branches de gestion d'erreur (<code>catch</code>, <code>else</code>, <code>default</code>) jamais exercées.</li>
+<li>Fichiers entiers non couverts (oubli d'import dans le test runner).</li>
+<li>Lignes isolées non couvertes dans des fonctions par ailleurs testées (early returns, guards).</li>
 </ol>
+<p><strong>Détecter le dead code réel</strong> : une ligne non couverte depuis des mois n'est pas forcément du dead code — vérifier via <code>git log</code> ou grep si elle est appelée en production. Utiliser <code>knip</code> (TS) ou <code>vulture</code> (Python) pour détecter le dead code structurel.</p>
+<pre><code class="lang-bash"># TypeScript : dead exports
+npx knip
+
+# Python : dead code
+pip install vulture
+vulture src/ --min-confidence 80</code></pre>
+<hr>
+<h3>4. Prioriser les efforts de test</h3>
+<p>Règle 80/20 : concentrer les efforts sur le code à impact business, pas sur maximiser le chiffre.</p>
+<p><strong>À couvrir en priorité :</strong></p>
+<ul>
+<li>Logique métier (validation, calcul, transformation de données)</li>
+<li>Chemins d'erreur et cas limites (valeur nulle, liste vide, token expiré)</li>
+<li>Intégrations externes (clients HTTP, accès BDD) via mocks</li>
+</ul>
+<p><strong>À ne pas couvrir ou ignorer explicitement :</strong></p>
+<ul>
+<li>Code généré automatiquement (migrations EF Core, scaffolding, proto-generated)</li>
+<li>Fichiers de configuration pure (<code>.config.ts</code>, <code>appsettings.json</code> wrappers)</li>
+<li>Bootstrap / entry points (<code>main.ts</code>, <code>Program.cs</code>) sauf si logique métier dedans</li>
+</ul>
+<p><strong>.NET — exclure du coverage :</strong></p>
+<pre><code class="lang-csharp">[ExcludeFromCodeCoverage]
+public class GeneratedMappingProfile : Profile { ... }</code></pre>
+<p><strong>Jest / c8 — exclure via commentaire :</strong></p>
+<pre><code class="lang-js">/* c8 ignore next 3 */
+if (process.env.NODE_ENV === 'development') { ... }</code></pre>
+<p><strong>Python — exclure via <code>.coveragerc</code> :</strong></p>
+<pre><code class="lang-ini">[report]
+omit =
+    */migrations/*
+    */generated/*
+    */manage.py</code></pre>
+<hr>
+<h3>5. Générer des tests ciblés pour les gaps</h3>
+<p>Pour chaque zone non couverte, utiliser ce pattern :</p>
 <ol>
-<li><strong>Exécution et collecte des métriques</strong></li>
-<ul>
-<li><strong>Line coverage</strong> : pourcentage de lignes exécutées par les tests</li>
-<li><strong>Branch coverage</strong> : chaque branche de condition (if/else, switch) couverte</li>
-<li><strong>Function/method coverage</strong> : toutes les fonctions appelées au moins une fois</li>
-<li><strong>Statement coverage</strong> : chaque instruction individuelle exécutée</li>
-</ul>
+<li>Lire le code source de la zone manquante.</li>
+<li>Identifier le contrat de la fonction (entrées, sorties, effets de bord).</li>
+<li>Écrire un test qui suit le chemin non couvert (branch spécifique).</li>
+<li>Re-lancer le rapport et vérifier que la couverture progresse.</li>
 </ol>
-<ol>
-<li><strong>Analyse des zones non couvertes</strong></li>
+<p>Exemple — branche <code>catch</code> non couverte :</p>
+<pre><code class="lang-ts">// Code source
+async function fetchUser(id: string) {
+  try {
+    return await db.findUser(id);
+  } catch (e) {
+    logger.error(e);   // ← jamais testé
+    throw new AppError('USER_NOT_FOUND');
+  }
+}
+
+// Test ajouté
+it('rethrows AppError when db throws', async () =&gt; {
+  jest.spyOn(db, 'findUser').mockRejectedValue(new Error('db down'));
+  await expect(fetchUser('1')).rejects.toThrow('USER_NOT_FOUND');
+});</code></pre>
+<hr>
+<h3>6. Mutation testing — valider la qualité des assertions</h3>
+<p>La couverture de lignes ne garantit pas que les tests <em>assertent</em> correctement. Le mutation testing modifie le code source (change <code>&gt;</code> en <code>&gt;=</code>, supprime un <code>return</code>, etc.) et vérifie que les tests échouent.</p>
+<p><strong>Stryker (.NET / JS/TS)</strong></p>
+<pre><code class="lang-bash"># .NET
+dotnet tool install -g dotnet-stryker
+dotnet stryker
+
+# JavaScript/TypeScript
+npx stryker run</code></pre>
+<p><strong>mutmut (Python)</strong></p>
+<pre><code class="lang-bash">pip install mutmut
+mutmut run
+mutmut results
+mutmut show &lt;id&gt;   # voir le mutant survivant</code></pre>
+<p><strong>PITest (Java)</strong></p>
+<pre><code class="lang-bash">mvn org.pitest:pitest-maven:mutationCoverage
+# rapport dans target/pit-reports/</code></pre>
+<p>Interprétation :</p>
 <ul>
-<li>Identifier les fichiers avec moins de 60% de couverture ligne</li>
-<li>Repérer les fonctions critiques business sans aucun test</li>
-<li>Localiser les branches de gestion d'erreur jamais exercées</li>
-<li>Distinguer le code testé du dead code réel (jamais appelé nulle part)</li>
+<li><strong>Score &lt; 50 %</strong> : assertions trop faibles, tests passent même avec du code cassé.</li>
+<li><strong>Score 50–70 %</strong> : acceptable, améliorer les assertions des cas limites.</li>
+<li><strong>Score &gt; 70 %</strong> : bonne qualité de test.</li>
+<li><strong>Score 100 %</strong> : probablement trop lent en CI, échantillonner par module.</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Priorisation des efforts de test</strong></li>
+<hr>
+<h3>7. Configurer les seuils CI/CD</h3>
+<p><strong>GitHub Actions — Jest / c8</strong></p>
+<pre><code class="lang-yaml">- name: Test with coverage
+  run: npx c8 --lines 80 --branches 70 --functions 90 npm test
+  # Retourne exit code 1 si seuil non atteint</code></pre>
+<p><strong>.NET — coverlet avec seuil bloquant</strong></p>
+<pre><code class="lang-bash">dotnet test /p:CollectCoverage=true \
+  /p:CoverletOutputFormat=cobertura \
+  /p:Threshold=80 \
+  /p:ThresholdType=line</code></pre>
+<p><strong>Python — pytest-cov avec fail-under</strong></p>
+<pre><code class="lang-bash">pytest --cov=src --cov-fail-under=80</code></pre>
+<p><strong>Diff coverage (ne pas régresser sur le nouveau code)</strong> :</p>
+<pre><code class="lang-bash"># diff-cover compare le coverage du diff courant vs main
+pip install diff-cover
+coverage xml
+diff-cover coverage.xml --compare-branch=origin/main --fail-under=90</code></pre>
+<hr>
+<h3>8. Visualisation et suivi dans le temps</h3>
 <ul>
-<li>Couvrir en priorité le code à haute valeur business (paiement, auth, calculs)</li>
-<li>Ne pas viser 100% aveuglément : le code de configuration ou de bootstrap est moins critique</li>
-<li>Appliquer la règle 80/20 : 20% du code non testé représente 80% du risque</li>
-<li>Ignorer explicitement le code généré automatiquement (migrations, scaffolding)</li>
+<li><strong>Codecov</strong> : intégration GitHub/GitLab, badge de couverture, commentaires PR automatiques.</li>
+<li><strong>Coveralls</strong> : alternative légère pour projets open source.</li>
+<li><strong>SonarQube / SonarCloud</strong> : coverage + code smells + duplication dans un seul dashboard.</li>
+<li><strong>ReportGenerator</strong> (.NET) : rapport HTML local multi-projets avec tendances.</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Génération de tests pour les gaps identifiés</strong></li>
+<p>Configuration Codecov minimale (<code>.codecov.yml</code>) :</p>
+<pre><code class="lang-yaml">coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 2%   # tolérance de baisse acceptable
+    patch:
+      default:
+        target: 90%     # nouveau code doit être bien couvert</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
 <ul>
-<li>Analyser le contexte de chaque zone non couverte</li>
-<li>Écrire des tests ciblés pour les branches manquantes</li>
-<li>Ajouter des tests pour les cas d'erreur et d'exception non testés</li>
-<li>Vérifier après chaque ajout que la couverture progresse réellement</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Mutation testing pour valider la qualité des tests</strong></li>
-<ul>
-<li><strong>Stryker</strong> pour .NET et JavaScript : modifie le code et vérifie que les tests échouent</li>
-<li><strong>mutmut</strong> ou <strong>cosmic-ray</strong> pour Python</li>
-<li><strong>PITest</strong> pour Java avec intégration Maven/Gradle</li>
-<li>Un score de mutation &gt; 70% indique des tests de bonne qualité</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Configuration des seuils CI/CD</strong></li>
-<ul>
-<li>Définir un minimum de coverage global (ex : 80% lines) bloquant le build</li>
-<li>Configurer le diff coverage : ne pas baisser la couverture sur le nouveau code</li>
-<li>Intégrer les rapports dans les pull requests (commentaires automatiques)</li>
-<li>Alerter en cas de régression de coverage entre deux commits</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Rapport visuel et tendances</strong></li>
-<ul>
-<li>Codecov ou Coveralls pour l'historique et les badges de couverture</li>
-<li>SonarQube pour analyse complète (coverage + code smells + duplication)</li>
-<li>Dashboards de couverture par module pour identifier les zones à risque</li>
-<li>Suivre l'évolution dans le temps pour détecter les régressions progressives</li>
-</ul>
-</ol>
-<h2>Règles</h2>
-<ul>
-<li>Adapte les outils de coverage au langage et au système de build du projet.</li>
-<li>Fournis des commandes complètes et exécutables pour générer les rapports.</li>
-<li>Priorise le coverage des comportements critiques, pas la maximisation du chiffre.</li>
-<li>Le mutation testing est la seule vraie mesure de la qualité des assertions de tests.</li>
-<li>Configure toujours des seuils CI/CD pour maintenir la couverture dans le temps.</li>
+<li><strong>Chasing 100 %</strong> : ajouter des tests sans assertion (<code>expect(true).toBe(true)</code>) pour gonfler la couverture. Résultat : couverture haute, qualité nulle. → Toujours coupler avec mutation testing.</li>
+<li><strong>Ignorer la branch coverage</strong> : line coverage à 95 % mais les branches <code>catch</code> et <code>else</code> jamais exercées. → Configurer <code>--branches</code> en CI obligatoire.</li>
+<li><strong>Tests couplés à l'implémentation</strong> : tester l'état interne plutôt que le comportement observable. Les refactorings cassent tous les tests. → Tester les contrats publics.</li>
+<li><strong>Seuils trop bas au départ</strong> : configurer 30 % en CI parce que le projet est en retard. → Difficile à remonter ensuite. Mieux vaut démarrer à 60 % et incrémenter.</li>
+<li><strong>Coverage sur le code de test lui-même</strong> : certains outils incluent les fichiers <code>*.spec.ts</code> dans le rapport. → Exclure explicitement via glob.</li>
+<li><strong>Oublier l'exclusion du code généré</strong> : les migrations ou proto-generated files faussent les chiffres vers le bas. → Configurer les exclusions dès le départ.</li>
+<li><strong>Mutation testing en CI sur tout le projet</strong> : trop lent. → Lancer en CI sur les fichiers modifiés uniquement, full run en nightly build.</li>
 </ul>
 </article>
 </main>

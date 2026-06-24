@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-chrome-devtools-debugger — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Débogage et automatisation de navigateur via Chrome DevTools. Inspecter des pages, analyser les performances, surveiller le réseau et automatiser des interactions.">
+<meta name="description" content="Débogage et automatisation de navigateur via Chrome DevTools MCP. Inspecter des pages, analyser les performances, surveiller le réseau et automatiser des interactions.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-chrome-devtools-debugger</h1>
-<p class="lead">Débogage et automatisation de navigateur via Chrome DevTools. Inspecter des pages, analyser les performances, surveiller le réseau et automatiser des interactions.</p>
+<p class="lead">Débogage et automatisation de navigateur via Chrome DevTools MCP. Inspecter des pages, analyser les performances, surveiller le réseau et automatiser des interactions.</p>
 
 
 
@@ -96,66 +96,86 @@ cp -r claude-skills-collection/skills/dev-chrome-devtools-debugger ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Débogueur Chrome DevTools</h1>
-<h2>Workflow</h2>
+<h2>Workflow général (ordre obligatoire)</h2>
+<pre><code>Naviguer → Attendre chargement → Inspecter (snapshot) → Agir → Vérifier</code></pre>
 <ol>
-<li><strong>Navigation</strong> : accéder à la page cible.</li>
-<li><strong>Sélection de page</strong> : lister les pages disponibles et sélectionner la bonne.</li>
-<li><strong>Inspection</strong> : prendre un snapshot pour comprendre la structure (arbre d'accessibilité avec identifiants uniques).</li>
-<li><strong>Action</strong> selon le besoin :</li>
-<ul>
-<li>Déboguer des erreurs (console, réseau)</li>
-<li>Analyser les performances (traces)</li>
-<li>Automatiser des interactions (clic, saisie, navigation)</li>
-</ul>
-<li><strong>Vérification</strong> : valider le résultat visuellement ou structurellement.</li>
+<li><strong>Naviguer</strong> vers la page cible (<code>navigate</code> avec URL complète incluant le protocole).</li>
+<li><strong>Attendre</strong> que la page soit stable (réseau idle, <code>DOMContentLoaded</code>).</li>
+<li><strong>Lister les pages</strong> disponibles si plusieurs onglets, sélectionner le bon <code>targetId</code>.</li>
+<li><strong>Snapshot</strong> de la structure (arbre d'accessibilité) — donne les identifiants uniques pour les interactions.</li>
+<li><strong>Agir</strong> selon le besoin : clic, saisie, scroll, exécution JS.</li>
+<li><strong>Vérifier</strong> le résultat : snapshot diff, console, capture si visuel requis.</li>
 </ol>
-<h2>Patterns de débogage</h2>
-<h3>Erreurs JavaScript</h3>
-<ol>
-<li>Naviguer vers la page problématique</li>
-<li>Consulter les messages de la console pour les erreurs et warnings</li>
-<li>Inspecter la structure de la page pour identifier les éléments en erreur</li>
-<li>Exécuter du JavaScript personnalisé pour investiguer davantage</li>
-</ol>
-<h3>Problèmes réseau</h3>
-<ol>
-<li>Naviguer vers la page</li>
-<li>Analyser les requêtes réseau :</li>
+<hr>
+<h2>Scénarios courants</h2>
+<h3>1. Erreurs JavaScript</h3>
+<pre><code>naviguer → snapshot → getConsoleMessages → evalScript</code></pre>
 <ul>
-<li>Requêtes échouées (4xx, 5xx)</li>
-<li>Requêtes lentes</li>
-<li>Requêtes bloquées (CORS, CSP)</li>
+<li>Récupérer les messages console filtrés sur <code>level: error</code>.</li>
+<li>Identifier le fichier et la ligne dans la stack trace.</li>
+<li>Exécuter du JS pour inspecter l'état en direct :</li>
 </ul>
-<li>Filtrer par type (XHR, Fetch, Script, CSS) pour cibler l'analyse</li>
-</ol>
-<h3>Analyse de performance</h3>
-<ol>
-<li>Lancer un trace de performance sur la page</li>
-<li>Identifier les goulots d'étranglement :</li>
+<pre><code class="lang-js">// Exemples copiables dans evalScript
+document.querySelectorAll('[data-error]').length
+window.__reactFiber !== undefined  // détecter React
+performance.getEntriesByType('resource').filter(r =&gt; r.duration &gt; 1000)</code></pre>
 <ul>
-<li>Scripts longs (Long Tasks)</li>
-<li>Layout thrashing</li>
-<li>Repaints excessifs</li>
+<li>Si l'erreur est <code>Cannot read properties of undefined</code> : vérifier le timing (race condition) avec <code>document.readyState</code>.</li>
 </ul>
-<li>Proposer des optimisations ciblées</li>
-</ol>
-<h2>Bonnes pratiques</h2>
-<h3>Choix de l'outil d'inspection</h3>
-<table><thead><tr><th>Besoin</th><th>Outil</th></tr></thead><tbody><tr><td>Automatisation, trouver des éléments</td><td>Snapshot (texte, rapide, avec identifiants)</td></tr><tr><td>Vérification visuelle</td><td>Capture d'écran (quand l'utilisateur doit voir l'état visuel)</td></tr><tr><td>Données absentes de l'arbre d'accessibilité</td><td>Exécution de script JavaScript</td></tr></tbody></table>
-<h3>Optimisation des performances</h3>
+<h3>2. Problèmes réseau</h3>
+<pre><code>naviguer → getNetworkRequests → filtrer → analyser</code></pre>
+<p>Filtres prioritaires :</p>
+<table><thead><tr><th>Symptôme</th><th>Filtre à appliquer</th></tr></thead><tbody><tr><td>Page blanche / données manquantes</td><td><code>status &gt;= 400</code></td></tr><tr><td>Lenteur</td><td><code>duration &gt; 2000ms</code></td></tr><tr><td>Erreur CORS</td><td><code>blocked: true</code>, header <code>Access-Control-Allow-Origin</code> absent</td></tr><tr><td>CSP violation</td><td>messages console de type <code>Content Security Policy</code></td></tr><tr><td>Waterfall lent</td><td>requêtes séquentielles au lieu de parallèles</td></tr></tbody></table>
+<p>Snippet de diagnostic réseau via <code>evalScript</code> :</p>
+<pre><code class="lang-js">// Ressources lentes (&gt; 1s)
+performance.getEntriesByType('resource')
+  .filter(r =&gt; r.duration &gt; 1000)
+  .map(r =&gt; ({ name: r.name, duration: Math.round(r.duration) }))</code></pre>
+<h3>3. Analyse de performance</h3>
+<pre><code>naviguer → startTrace → déclencher l'action → stopTrace → analyser</code></pre>
+<p>Points à identifier dans la trace :</p>
 <ul>
-<li>Utiliser la pagination et le filtrage pour minimiser les données récupérées</li>
-<li>Sauvegarder les sorties volumineuses dans des fichiers</li>
-<li>Ne pas prendre de capture d'écran systématiquement — préférer les snapshots</li>
+<li><strong>Long Tasks</strong> (&gt; 50 ms) : bloquent le thread principal.</li>
+<li><strong>Layout thrashing</strong> : alternance forcée lecture/écriture DOM en boucle.</li>
+<li><strong>Repaints excessifs</strong> : vérifier <code>will-change</code>, layers composites.</li>
+<li><strong>Time to Interactive (TTI)</strong> : si &gt; 3,8 s, chercher les scripts bloquants.</li>
 </ul>
-<h3>Ordre des opérations</h3>
-<p>Toujours respecter : <strong>Naviguer → Attendre → Inspecter → Interagir</strong></p>
-<h2>Règles</h2>
+<p>Snippet pour identifier le layout thrashing :</p>
+<pre><code class="lang-js">// Propriétés qui forcent un reflow
+const reflow_props = ['offsetHeight','offsetWidth','clientHeight',
+  'scrollTop','getBoundingClientRect']
+// Chercher dans le code source les lectures de ces props dans une boucle</code></pre>
+<h3>4. Automatisation d'interactions</h3>
+<pre><code>snapshot → récupérer nodeId → click/type/scroll → snapshot de vérification</code></pre>
+<p>Règles d'or pour les interactions fiables :</p>
 <ul>
-<li>Toujours prendre un snapshot avant d'interagir avec des éléments.</li>
-<li>Respecter l'ordre des opérations (naviguer → attendre → inspecter → interagir).</li>
-<li>Préférer les snapshots aux captures d'écran pour le débogage structurel.</li>
-<li>Si DevTools MCP ne suffit pas, orienter vers l'interface Chrome DevTools native.</li>
+<li>Toujours utiliser le <code>nodeId</code> issu du snapshot, jamais un sélecteur CSS deviné.</li>
+<li>Attendre un indicateur de stabilité après chaque action (snapshot qui ne change plus, network idle).</li>
+<li>Pour les formulaires : <code>type</code> sur le champ → <code>click</code> sur le bouton submit → vérifier navigation ou message de confirmation.</li>
+</ul>
+<hr>
+<h2>Critères de décision : quel outil utiliser</h2>
+<table><thead><tr><th>Besoin</th><th>Outil</th><th>Raison</th></tr></thead><tbody><tr><td>Trouver un élément pour interagir</td><td><code>snapshot</code></td><td>Retourne les <code>nodeId</code> uniques, léger</td></tr><tr><td>Vérification visuelle (rendu, layout)</td><td><code>screenshot</code></td><td>Seul moyen de voir le rendu réel</td></tr><tr><td>Données hors arbre d'accessibilité</td><td><code>evalScript</code></td><td>Accès direct au DOM/window</td></tr><tr><td>Analyser erreurs runtime</td><td><code>getConsoleMessages</code></td><td>Messages filtrables par niveau</td></tr><tr><td>Diagnostiquer la lenteur réseau</td><td><code>getNetworkRequests</code></td><td>Timing, status, headers</td></tr><tr><td>Mesurer perf (LCP, TTI, FPS)</td><td><code>startTrace</code> / <code>stopTrace</code></td><td>Profil complet du thread principal</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<h3>Ne jamais faire</h3>
+<ul>
+<li><strong>Screenshot systématique</strong> — coûteux en tokens, inutile pour le débogage structurel. Réserver au besoin visuel explicite.</li>
+<li><strong>Interagir sans snapshot préalable</strong> — les sélecteurs CSS peuvent pointer sur plusieurs éléments ; les <code>nodeId</code> sont uniques.</li>
+<li><strong>Ignorer l'ordre naviguer→attendre→inspecter</strong> — un snapshot trop tôt capture une page incomplète.</li>
+<li><strong>Lancer une trace sur une page déjà chargée</strong> — démarrer la trace avant l'action à mesurer.</li>
+<li><strong>evalScript avec <code>document.write</code></strong> — détruit le DOM existant.</li>
+</ul>
+<h3>Pièges fréquents</h3>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Solution</th></tr></thead><tbody><tr><td>SPA (React/Vue/Angular)</td><td>snapshot vide ou partiel</td><td>Attendre l'hydratation ; chercher <code>[data-reactroot]</code> ou <code>#app</code></td></tr><tr><td>iframes</td><td>éléments introuvables</td><td>Changer de <code>targetId</code> sur l'iframe</td></tr><tr><td>Shadow DOM</td><td>nodeId absent</td><td><code>evalScript</code> avec <code>shadowRoot.querySelectorAll</code></td></tr><tr><td>Auth / cookies</td><td>redirections inattendues</td><td>Vérifier cookies via <code>evalScript(document.cookie)</code> avant navigation</td></tr><tr><td>HTTPS self-signed</td><td>page blanche</td><td>Passer <code>--ignore-certificate-errors</code> au démarrage de Chrome</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Headless Chrome</strong> : préférer <code>--headless=new</code> (Chromium 112+) plutôt que l'ancien flag <code>--headless</code>.</li>
+<li><strong>Core Web Vitals</strong> : cibler LCP &lt; 2,5 s, INP &lt; 200 ms, CLS &lt; 0,1 — mesurables via <code>evalScript</code> avec la Performance API ou <code>PerformanceObserver</code>.</li>
+<li><strong>Données volumineuses</strong> : paginer ou filtrer côté DevTools avant d'exposer les résultats ; sauvegarder les traces dans un fichier JSON plutôt que de les inliner dans la conversation.</li>
+<li><strong>Reproductibilité</strong> : documenter la séquence exacte d'actions (URL, snapshots, scripts) pour rejouer le débogage.</li>
+<li><strong>Si DevTools MCP ne suffit pas</strong> : orienter vers Playwright MCP (<code>dev-playwright-browser-automation</code>) pour les scénarios E2E complexes, ou vers l'interface Chrome DevTools native pour le profiling GPU/memory avancé.</li>
 </ul>
 </article>
 </main>

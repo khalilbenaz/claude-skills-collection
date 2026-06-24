@@ -97,22 +97,95 @@ cp -r claude-skills-collection/skills/management-sprint-planner ~/.claude/skills
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Sprint Planner</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Contexte équipe</strong> — Identifier la taille de l'équipe, la durée du sprint, les congés et contraintes de disponibilité.</li>
-<li><strong>Revue du backlog</strong> — Passer en revue le product backlog, vérifier que les user stories sont bien rédigées (format &quot;En tant que... je veux... afin de...&quot;) et ont des critères d'acceptation clairs.</li>
-<li><strong>Estimation</strong> — Appliquer une méthode d'estimation (Planning Poker, T-shirt sizing, story points Fibonacci) pour chaque story candidate.</li>
-<li><strong>Calcul de capacité</strong> — Calculer la capacité réelle du sprint en tenant compte de la vélocité moyenne des 3 derniers sprints, des absences et du focus factor.</li>
-<li><strong>Sélection des stories</strong> — Sélectionner les stories prioritaires qui rentrent dans la capacité calculée, en respectant l'ordre du Product Owner.</li>
-<li><strong>Découpage en tâches</strong> — Décomposer chaque story en tâches techniques concrètes avec des estimations en heures si nécessaire.</li>
-<li><strong>Définition du Sprint Goal</strong> — Formuler un objectif de sprint clair et mesurable qui donne du sens à l'ensemble des stories sélectionnées.</li>
-<li><strong>Validation</strong> — Obtenir l'engagement de l'équipe sur le contenu du sprint et documenter le sprint backlog final.</li>
-</ol>
-<h2>Règles</h2>
+<h3>Étape 1 — Collecter le contexte équipe</h3>
+<p>Avant toute estimation, recueillir :</p>
+<table><thead><tr><th>Info</th><th>Exemple</th></tr></thead><tbody><tr><td>Taille équipe</td><td>5 devs + 1 QA</td></tr><tr><td>Durée sprint</td><td>2 semaines (10 jours ouvrés)</td></tr><tr><td>Absences connues</td><td>2 jours congés (dev A), 1 jour formation (dev B)</td></tr><tr><td>Focus factor historique</td><td>0.70 (70 % du temps sur le sprint)</td></tr></tbody></table>
+<blockquote>Focus factor = temps réellement productif / temps calendaire disponible. Partir sur 0.65–0.75 si inconnu.</blockquote>
+<hr>
+<h3>Étape 2 — Calculer la capacité réelle</h3>
+<pre><code>Capacité (points) = vélocité_moyenne_3_derniers_sprints × (jours_disponibles / jours_sprint_complet)
+
+Exemple :
+- Vélocité moyenne : 40 pts
+- Jours disponibles : 10j - 3j absences = 7j
+- Jours sprint complet : 10j
+- Capacité ajustée : 40 × (7/10) = 28 pts</code></pre>
+<p>Buffer obligatoire : soustraire 10–15 % pour support, incidents, revues de PR.</p>
+<pre><code>Capacité nette = 28 × 0.85 = ~24 pts</code></pre>
+<hr>
+<h3>Étape 3 — Vérifier la Definition of Ready (DoR)</h3>
+<p>Chaque story candidate doit cocher <strong>tous</strong> les critères avant d'entrer dans le sprint :</p>
 <ul>
-<li>Ne jamais dépasser la capacité réelle de l'équipe, même sous pression du Product Owner.</li>
-<li>Chaque story doit respecter la Definition of Ready avant d'entrer dans le sprint.</li>
-<li>Prévoir un buffer de 10-15% pour les imprévus et le support.</li>
-<li>Les stories doivent être suffisamment petites pour être terminées en un sprint (pas de carry-over planifié).</li>
+<li>[ ] Rédigée en format user story : &quot;En tant que <code>&lt;rôle&gt;</code>, je veux <code>&lt;action&gt;</code> afin de <code>&lt;valeur&gt;</code>&quot;</li>
+<li>[ ] Critères d'acceptation listés (format Given/When/Then ou liste à puces)</li>
+<li>[ ] Estimée (story points ou T-shirt size)</li>
+<li>[ ] Dépendances identifiées et déblocables dans le sprint</li>
+<li>[ ] Maquette/design disponible si besoin</li>
+<li>[ ] Pas de blocker technique connu non résolu</li>
+</ul>
+<p>Story qui échoue à la DoR → retour au backlog, pas de négociation.</p>
+<hr>
+<h3>Étape 4 — Estimer avec Planning Poker</h3>
+<p>Séquence Fibonacci recommandée : <code>1, 2, 3, 5, 8, 13, 21, ?</code></p>
+<p>Règles d'animation :</p>
+<ol>
+<li>PO lit la story + critères d'acceptation.</li>
+<li>Chaque dev vote en silence (cartes physiques ou outil type PlanningPoker.com / Jira).</li>
+<li>Révéler simultanément.</li>
+<li>Si écart &gt; 2 niveaux → discussion de 2 min max, puis re-vote.</li>
+<li>Consensus = valeur la plus basse sur laquelle l'équipe est à l'aise.</li>
+</ol>
+<p>Critères de décision rapide :</p>
+<table><thead><tr><th>Points</th><th>Signal</th></tr></thead><tbody><tr><td>1–3</td><td>Story triviale, attention aux oublis cachés</td></tr><tr><td>5–8</td><td>Taille idéale</td></tr><tr><td>13</td><td>Limite haute, envisager un découpage</td></tr><tr><td>21+</td><td>Trop gros — découper obligatoirement</td></tr></tbody></table>
+<hr>
+<h3>Étape 5 — Sélectionner les stories</h3>
+<ol>
+<li>Trier le backlog par priorité PO (MoSCoW ou ordre Jira/ADO).</li>
+<li>Ajouter les stories dans le sprint du plus prioritaire au moins prioritaire <strong>jusqu'à atteindre la capacité nette</strong>.</li>
+<li>Ne jamais dépasser la capacité nette, même si le PO insiste.</li>
+<li>Si une story dépasse seule la capacité restante → la découper ou la reporter.</li>
+</ol>
+<pre><code>Exemple : capacité nette = 24 pts
+Story #101 : 8 pts  → total = 8  ✓
+Story #102 : 5 pts  → total = 13 ✓
+Story #103 : 8 pts  → total = 21 ✓
+Story #104 : 5 pts  → total = 26 ✗ → reporter
+Story #105 : 3 pts  → total = 24 ✓ (si #104 reportée)</code></pre>
+<hr>
+<h3>Étape 6 — Décomposer en tâches techniques</h3>
+<p>Pour chaque story retenue, créer des tâches (&lt; 1 jour chacune idéalement) :</p>
+<pre><code>Story : &quot;Afficher le solde en temps réel&quot;
+Tâches :
+  - [ ] Endpoint GET /account/balance (dev, 3h)
+  - [ ] Intégration front composant BalanceWidget (dev, 4h)
+  - [ ] Tests unitaires service + composant (dev, 2h)
+  - [ ] Test E2E scénario solde (QA, 2h)</code></pre>
+<p>Tâche &gt; 8h → la redécouper.</p>
+<hr>
+<h3>Étape 7 — Formuler le Sprint Goal</h3>
+<p>Un seul objectif, 1–2 phrases, orienté valeur métier (pas liste de features) :</p>
+<pre><code>Bon : &quot;Permettre au client de consulter son solde et d'initier un virement depuis l'app mobile.&quot;
+Mauvais : &quot;Finir les stories #101, #102 et #105.&quot;</code></pre>
+<p>Le sprint goal guide les arbitrages en cours de sprint si un imprévu survient.</p>
+<hr>
+<h3>Étape 8 — Clôturer le sprint planning</h3>
+<ul>
+<li>Équipe confirme verbalement l'engagement sur le contenu.</li>
+<li>Sprint backlog verrouillé dans l'outil (Jira, Azure DevOps, Linear...).</li>
+<li>Sprint goal affiché sur le board.</li>
+<li>Date/heure de la Daily, Review et Rétro fixées.</li>
+</ul>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Surcharger la capacité &quot;parce qu'on est motivés&quot;</td><td>Carry-over chronique, moral en berne</td><td>Respecter la capacité nette sans exception</td></tr><tr><td>Stories floues sans critères d'acceptation</td><td>Débat en fin de sprint, rejet en review</td><td>DoR stricte, retour backlog si flou</td></tr><tr><td>Estimer sous pression du PO</td><td>Estimates biaisés, retard garanti</td><td>Votes anonymes, règle des 2 min de discussion</td></tr><tr><td>Sprint goal = liste de tickets</td><td>Aucune cohérence, arbitrage impossible</td><td>1 objectif métier unique, formulé en valeur</td></tr><tr><td>Tâches de &gt; 1 jour</td><td>Manque de visibilité, blocages invisibles</td><td>Découpage systématique à &lt; 8h</td></tr><tr><td>Ignorer la dette technique</td><td>Vélocité qui s'effondre sprint après sprint</td><td>Réserver 15–20 % de la capacité à la dette</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Vibe check en ouverture</strong> : 2 min pour que chacun dise son niveau d'énergie (1–5). Identifie les surcharges cachées avant de commencer.</li>
+<li><strong>Definition of Done (DoD) visible</strong> : affiché sur le board, mise à jour à chaque rétro. Sans DoD partagée, &quot;terminé&quot; ne veut rien dire.</li>
+<li><strong>Velocity trend</strong> : surveiller la tendance sur 6 sprints, pas seulement la moyenne des 3 derniers. Une tendance baissière est un signal d'alerte.</li>
+<li><strong>Async planning possible</strong> : pour les équipes distribuées, utiliser un outil de Planning Poker async (Jira/ADO + extension, PlanningPoker.com) plutôt qu'une réunion synchrone de 3h.</li>
+<li><strong>Refine ≠ Plan</strong> : le backlog refinement (grooming) doit précéder le sprint planning d'au moins 48h. Ne pas faire les deux le même jour.</li>
 </ul>
 </article>
 </main>

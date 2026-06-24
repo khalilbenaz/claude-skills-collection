@@ -97,23 +97,162 @@ cp -r claude-skills-collection/skills/networking-dns-expert ~/.claude/skills/</d
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>DNS Expert</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyse de l'architecture DNS existante</strong> — Inventorier les serveurs DNS en place (primaires, secondaires, récursifs), les zones hébergées et les forwarders configurés.</li>
-<li><strong>Diagnostic de résolution</strong> — Tester la résolution DNS avec <code>dig</code>, <code>nslookup</code> et <code>host</code> en vérifiant les réponses autoritaires, le TTL, la propagation et les éventuelles erreurs SERVFAIL ou NXDOMAIN.</li>
-<li><strong>Configuration des zones</strong> — Créer ou modifier les fichiers de zone avec les enregistrements appropriés (SOA, NS, A, AAAA, CNAME, MX, TXT, SRV) en respectant les conventions de nommage.</li>
-<li><strong>Mise en place de DNSSEC</strong> — Générer les clés de signature (KSK et ZSK), signer les zones, configurer les enregistrements DS auprès du registrar et valider la chaîne de confiance.</li>
-<li><strong>Optimisation des performances</strong> — Configurer les TTL de manière appropriée, mettre en place du cache DNS local, et intégrer les enregistrements nécessaires pour les CDN et la répartition de charge.</li>
-<li><strong>Configuration de la haute disponibilité</strong> — Déployer des serveurs DNS secondaires, configurer les transferts de zone (AXFR/IXFR) et mettre en place le monitoring de la réplication.</li>
-<li><strong>Tests de validation</strong> — Vérifier la propagation DNS globale, tester la résolution depuis différents points géographiques et valider le bon fonctionnement de DNSSEC avec des outils en ligne.</li>
-<li><strong>Documentation et monitoring</strong> — Documenter l'architecture DNS complète, configurer les alertes sur les expirations de zone, les échecs de transfert et les anomalies de résolution.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Analyse de l'architecture existante</h3>
+<p>Inventorier avant toute modification :</p>
+<pre><code class="lang-bash"># Identifier les serveurs DNS autoritaires d'un domaine
+dig NS exemple.com +short
+
+# Lister les serveurs récursifs configurés localement
+cat /etc/resolv.conf
+resolvectl status          # systemd-resolved
+nmcli dev show | grep DNS  # NetworkManager</code></pre>
+<p>Critères de décision :</p>
 <ul>
-<li>Toujours incrémenter le numéro de série SOA lors de chaque modification de zone et respecter le format recommandé (YYYYMMDDnn) pour assurer la propagation.</li>
-<li>Ne jamais configurer un enregistrement CNAME au sommet d'une zone (apex) car cela viole la RFC 1034 ; utiliser un enregistrement A ou ALIAS selon le fournisseur.</li>
-<li>Définir des TTL adaptés au contexte : courts (300s) pour les enregistrements susceptibles de changer fréquemment, longs (86400s) pour les enregistrements stables.</li>
-<li>Vérifier systématiquement la syntaxe des fichiers de zone avec <code>named-checkzone</code> ou un outil équivalent avant de recharger la configuration DNS.</li>
-<li>Maintenir une documentation à jour de tous les enregistrements DNS avec leur justification, leur propriétaire et leur date de dernière modification.</li>
+<li><strong>Hébergé chez registrar</strong> → modifier via interface web (Cloudflare, OVH, Gandi…)</li>
+<li><strong>BIND/PowerDNS auto-hébergé</strong> → éditer fichiers de zone + reload</li>
+<li><strong>DNS interne (Active Directory)</strong> → utiliser DNSMGMT ou <code>dnscmd</code> PowerShell</li>
+</ul>
+<hr>
+<h3>2. Diagnostic de résolution</h3>
+<p>Protocole de tri rapide :</p>
+<pre><code class="lang-bash"># Résolution de base
+dig A app.exemple.com @8.8.8.8 +short          # Via Google (externe)
+dig A app.exemple.com @ns1.exemple.com +short   # Via serveur autoritaire
+
+# Voir le chemin complet de délégation
+dig +trace app.exemple.com
+
+# Vérifier si NXDOMAIN ou SERVFAIL
+dig app.exemple.com +noall +comments | grep -E &quot;status|flags&quot;
+
+# TTL restant dans le cache d'un résolveur
+dig app.exemple.com @votre-dns-interne +ttlunits
+
+# Reverse DNS
+dig -x 203.0.113.10 +short</code></pre>
+<table><thead><tr><th>Symptôme</th><th>Cause probable</th><th>Action</th></tr></thead><tbody><tr><td>NXDOMAIN</td><td>Enregistrement absent ou typo</td><td>Vérifier zone autoritaire</td></tr><tr><td>SERVFAIL</td><td>Zone corrompue / DNSSEC KO</td><td>Vérifier logs + <code>dnssec-verify</code></td></tr><tr><td>Réponse différente selon résolveur</td><td>Cache obsolète ou split-horizon</td><td>Vider cache + vérifier TTL</td></tr><tr><td>Timeout</td><td>Firewall UDP/53 ou serveur down</td><td>Tester TCP : <code>dig +tcp</code></td></tr></tbody></table>
+<hr>
+<h3>3. Configuration des zones</h3>
+<p>Structure minimale d'un fichier de zone BIND :</p>
+<pre><code class="lang-zone">$ORIGIN exemple.com.
+$TTL 3600
+
+@   IN  SOA  ns1.exemple.com. admin.exemple.com. (
+        2026062401 ; numéro de série YYYYMMDDnn
+        3600       ; refresh
+        900        ; retry
+        604800     ; expire
+        300 )      ; negative TTL
+
+; Serveurs de noms
+@       IN  NS   ns1.exemple.com.
+@       IN  NS   ns2.exemple.com.
+
+; Enregistrements A / AAAA
+ns1     IN  A    203.0.113.1
+ns2     IN  A    203.0.113.2
+@       IN  A    203.0.113.10
+www     IN  A    203.0.113.10
+app     IN  A    203.0.113.20
+@       IN  AAAA 2001:db8::1
+
+; CNAME — jamais à l'apex !
+ftp     IN  CNAME  app.exemple.com.
+
+; MX
+@       IN  MX  10  mail.exemple.com.
+mail    IN  A   203.0.113.30
+
+; SPF / DKIM / DMARC
+@       IN  TXT  &quot;v=spf1 mx -all&quot;
+_dmarc  IN  TXT  &quot;v=DMARC1; p=reject; rua=mailto:dmarc@exemple.com&quot;
+
+; SRV (exemple SIP)
+_sip._tcp  IN  SRV  10 20 5060 sip.exemple.com.</code></pre>
+<p>Validation avant reload :</p>
+<pre><code class="lang-bash">named-checkzone exemple.com /etc/bind/db.exemple.com
+named-checkconf /etc/bind/named.conf
+rndc reload exemple.com          # BIND
+pdnsutil check-zone exemple.com  # PowerDNS</code></pre>
+<hr>
+<h3>4. DNSSEC — mise en place</h3>
+<pre><code class="lang-bash"># Générer KSK (Key Signing Key) et ZSK (Zone Signing Key)
+dnssec-keygen -a ECDSAP256SHA256 -f KSK -n ZONE exemple.com
+dnssec-keygen -a ECDSAP256SHA256 -n ZONE exemple.com
+
+# Signer la zone
+dnssec-signzone -A -3 $(head -c 16 /dev/urandom | xxd -p) \
+  -N INCREMENT -o exemple.com -t db.exemple.com
+
+# Publier le DS chez le registrar (hash de la KSK)
+dnssec-dsfromkey Kexemple.com.+013+XXXXX.key</code></pre>
+<p>Validation de la chaîne de confiance :</p>
+<pre><code class="lang-bash">dig DS exemple.com @8.8.8.8 +short
+dig DNSKEY exemple.com +short
+# Outil en ligne : https://dnssec-debugger.verisignlabs.com/
+# ou : https://dnsviz.net/</code></pre>
+<p>Rotation des clés ZSK (tous les 3 mois recommandé) :</p>
+<ol>
+<li>Générer nouvelle ZSK</li>
+<li>Publier dans la zone (pre-publish)</li>
+<li>Attendre TTL de propagation</li>
+<li>Signer avec nouvelle ZSK</li>
+<li>Retirer l'ancienne ZSK après le TTL</li>
+</ol>
+<hr>
+<h3>5. Optimisation TTL et CDN</h3>
+<table><thead><tr><th>Type d'enregistrement</th><th>TTL recommandé</th><th>Raison</th></tr></thead><tbody><tr><td>A / AAAA stable</td><td>3600–86400 s</td><td>Réduit charge DNS</td></tr><tr><td>A / AAAA migrant bientôt</td><td>300 s</td><td>Changer 48 h avant migration</td></tr><tr><td>MX</td><td>3600 s</td><td>Email tolérant aux délais</td></tr><tr><td>TXT (SPF, DKIM)</td><td>3600 s</td><td>Changements rares</td></tr><tr><td>CNAME vers CDN</td><td>300 s</td><td>Failover rapide</td></tr></tbody></table>
+<p>Intégration CDN — points d'attention :</p>
+<ul>
+<li><strong>Cloudflare orange-cloud</strong> : le CNAME est résolu en IP Cloudflare — le <code>dig</code> ne retourne pas votre IP origine</li>
+<li><strong>Akamai / Fastly</strong> : utiliser le CNAME fourni par le CDN, ne pas hardcoder les IP Anycast</li>
+<li><strong>Apex + CDN</strong> : utiliser ALIAS (Route53), ANAME (PowerDNS) ou activer le &quot;CNAME flattening&quot; (Cloudflare)</li>
+</ul>
+<hr>
+<h3>6. Haute disponibilité et transferts de zone</h3>
+<pre><code class="lang-bash"># named.conf — autoriser les transferts vers secondaires
+zone &quot;exemple.com&quot; {
+    type master;
+    file &quot;db.exemple.com&quot;;
+    allow-transfer { 203.0.113.2; };     // IP ns2
+    notify yes;
+    also-notify { 203.0.113.2; };
+};
+
+# Tester le transfert AXFR
+dig AXFR exemple.com @ns1.exemple.com
+
+# Vérifier la synchronisation
+dig SOA exemple.com @ns1.exemple.com +short
+dig SOA exemple.com @ns2.exemple.com +short
+# Les numéros de série doivent être identiques</code></pre>
+<hr>
+<h3>7. Monitoring et alertes</h3>
+<p>Métriques à surveiller :</p>
+<ul>
+<li>Expiration de zone (EXPIRE dans SOA)</li>
+<li>Validité des signatures DNSSEC (<code>RRSIG</code> — vérifier la date d'expiration)</li>
+<li>Taux de SERVFAIL / NXDOMAIN sur le résolveur</li>
+<li>Latence de réponse &gt; 100 ms</li>
+</ul>
+<pre><code class="lang-bash"># Vérifier expiration RRSIG
+dig RRSIG A exemple.com +short | awk '{print $5}'  # date expiration
+
+# Script de vérification rapide
+for ns in ns1.exemple.com ns2.exemple.com; do
+  echo -n &quot;$ns série: &quot;
+  dig SOA exemple.com @$ns +short | awk '{print $3}'
+done</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Remède</th></tr></thead><tbody><tr><td>CNAME à l'apex (@)</td><td>Violation RFC 1034 — certains résolveurs rejettent</td><td>Utiliser A/AAAA ou ALIAS</td></tr><tr><td>Oublier d'incrémenter le SOA serial</td><td>Secondaires ne propagent pas</td><td>Utiliser format <code>YYYYMMDDnn</code></td></tr><tr><td>TTL trop long avant migration</td><td>Downtime prolongé</td><td>Baisser à 300 s 48 h avant</td></tr><tr><td>DNSSEC sans monitoring de RRSIG</td><td>Expiration silencieuse → SERVFAIL</td><td>Alerter 30 j avant expiration</td></tr><tr><td>Wildcard <code>*</code> + DNSSEC</td><td>Enregistrements NSEC exposent la structure</td><td>Utiliser NSEC3 avec opt-out</td></tr><tr><td>Split-horizon sans cohérence</td><td>Comportement imprévisible en VPN</td><td>Documenter et tester les deux vues</td></tr><tr><td><code>allow-transfer { any; }</code></td><td>Transfert de zone public (fuite d'info)</td><td>Restreindre aux IPs secondaires</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Privilégier <strong>ECDSAP256SHA256</strong> (algo 13) pour DNSSEC plutôt que RSA — plus rapide et sûr</li>
+<li>Activer <strong>DNS-over-HTTPS (DoH)</strong> ou <strong>DNS-over-TLS (DoT)</strong> sur les résolveurs internes pour chiffrer les requêtes</li>
+<li>Utiliser <strong>RPZ (Response Policy Zones)</strong> pour filtrer les domaines malveillants en entreprise</li>
+<li>Exporter les zones vers Git (versionning) — traiter le DNS comme du code (DNS-as-Code avec OctoDNS ou dnscontrol)</li>
+<li>Tester les changements en staging avec <code>dig</code> et des outils comme <a href="https://dnsviz.net/" target="_blank" rel="noopener">DNSViz</a> avant déploiement production</li>
 </ul>
 </article>
 </main>

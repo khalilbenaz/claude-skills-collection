@@ -97,37 +97,208 @@ cp -r claude-skills-collection/skills/dev-unity-game-helper ~/.claude/skills/</d
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Unity Game Helper</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Architecture du jeu</strong> : Concevoir la gestion des scènes (scene manager, loading screens), définir les états du jeu (FSM global), structurer les managers via le pattern Singleton ou Service Locator, et organiser la hiérarchie des GameObjects pour la lisibilité et la maintenabilité.</li>
-</ol>
-<ol>
-<li><strong>Gameplay systems</strong> : Implémenter le système d'input avec le New Input System d'Unity, développer le character controller (CharacterController ou Rigidbody selon le besoin), configurer les layers de physics et la détection de collision, et gérer les interactions entre objets de jeu.</li>
-</ol>
-<ol>
-<li><strong>ScriptableObjects</strong> : Utiliser les ScriptableObjects comme conteneurs de données de jeu (stats, items, configurations), implémenter des event channels pour la communication découplée, créer des runtime sets pour suivre les entités actives, et construire une architecture flexible basée sur les assets.</li>
-</ol>
-<ol>
-<li><strong>UI et UX</strong> : Construire l'interface avec uGUI (Canvas) ou le UI Toolkit selon la version Unity, créer des layouts responsives adaptés à plusieurs résolutions, implémenter des transitions fluides et animations d'UI, et concevoir un feedback visuel clair pour les actions joueur.</li>
-</ol>
-<ol>
-<li><strong>Performance</strong> : Mettre en place l'object pooling pour les entités fréquemment instanciées, utiliser le LOD (Level of Detail) pour les assets 3D, configurer le batching statique et dynamique, profiler avec l'Unity Profiler, et gérer le garbage collection en évitant les allocations en Update.</li>
-</ol>
-<ol>
-<li><strong>Animation</strong> : Configurer les Animator Controllers avec des états et transitions conditionnels, créer des Blend Trees pour les mouvements directionnels, utiliser les Animation Events pour synchroniser effets et sons, et intégrer DOTween pour les animations procédurales et de UI.</li>
-</ol>
-<ol>
-<li><strong>Audio et effets</strong> : Gérer l'audio avec AudioMixer (groupes, effets DSP, mixage dynamique), implémenter le spatial audio 3D pour l'immersion, créer des systèmes de particules optimisés, et configurer le post-processing (Bloom, Color Grading, AO) avec l'URP ou HDRP.</li>
-</ol>
-<ol>
-<li><strong>Build et distribution</strong> : Configurer les build settings pour chaque plateforme cible (PC, mobile, console, WebGL), utiliser Addressables pour le chargement asynchrone d'assets, mettre en place une pipeline de tests automatisés (Unity Test Framework), et optimiser les paramètres de compression et qualité par plateforme.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Choisir la version Unity et le render pipeline</h3>
+<table><thead><tr><th>Cible</th><th>Version recommandée</th><th>Pipeline</th></tr></thead><tbody><tr><td>Mobile 2D/3D</td><td>LTS actuelle (6.x)</td><td>URP</td></tr><tr><td>PC/Console AAA</td><td>LTS actuelle</td><td>HDRP</td></tr><tr><td>WebGL / prototypage</td><td>LTS actuelle</td><td>URP ou Built-in</td></tr></tbody></table>
+<pre><code># Créer un projet URP via CLI (Unity Hub)
+Unity -createProject MyGame -version 6000.0.47f1 -templateId com.unity.template.urp-blank</code></pre>
+<hr>
+<h3>2. Structurer le projet</h3>
+<pre><code>Assets/
+  _Project/
+    Art/
+    Audio/
+    Prefabs/
+    ScriptableObjects/
+    Scripts/
+      Core/        ← managers, state machine, services
+      Gameplay/    ← character, enemies, interactions
+      UI/
+      Utils/
+    Scenes/
+  Tests/
+    EditMode/
+    PlayMode/</code></pre>
+<p>Règle : <strong>pas de scripts dans le dossier racine Assets</strong>. Tout code va sous <code>_Project/Scripts/</code>.</p>
+<hr>
+<h3>3. Architecture : Service Locator ou Injection</h3>
+<p><strong>Option A — Service Locator (simple, no dependency)</strong></p>
+<pre><code class="lang-csharp">public static class ServiceLocator
+{
+    private static readonly Dictionary&lt;Type, object&gt; _services = new();
+
+    public static void Register&lt;T&gt;(T service) =&gt; _services[typeof(T)] = service;
+
+    public static T Get&lt;T&gt;()
+    {
+        if (_services.TryGetValue(typeof(T), out var svc)) return (T)svc;
+        throw new Exception($&quot;Service {typeof(T).Name} non enregistré.&quot;);
+    }
+}
+
+// Au démarrage
+ServiceLocator.Register&lt;IAudioService&gt;(new AudioService());
+
+// Usage
+ServiceLocator.Get&lt;IAudioService&gt;().Play(&quot;sfx_jump&quot;);</code></pre>
+<p><strong>Option B — Singleton (acceptable pour GameManager, uniquement)</strong></p>
+<pre><code class="lang-csharp">public class GameManager : MonoBehaviour
+{
+    public static GameManager Instance { get; private set; }
+
+    private void Awake()
+    {
+        if (Instance != null) { Destroy(gameObject); return; }
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
+}</code></pre>
+<p>Critère de choix : &gt; 2 singletons → passer au Service Locator ou Zenject/VContainer.</p>
+<hr>
+<h3>4. Input System (New Input System)</h3>
+<pre><code class="lang-csharp">// PlayerControls.inputactions → générer la classe C#
+public class PlayerController : MonoBehaviour
+{
+    private PlayerControls _controls;
+
+    private void Awake()
+    {
+        _controls = new PlayerControls();
+        _controls.Player.Jump.performed += _ =&gt; OnJump();
+    }
+
+    private void OnEnable()  =&gt; _controls.Enable();
+    private void OnDisable() =&gt; _controls.Disable();
+
+    private void OnJump() { /* logique */ }
+}</code></pre>
+<p>Ne jamais utiliser <code>Input.GetKey</code> dans un nouveau projet — l'ancien Input Manager n'est pas rebindable.</p>
+<hr>
+<h3>5. ScriptableObjects : données et events</h3>
+<p><strong>Canal d'événement découplé</strong></p>
+<pre><code class="lang-csharp">[CreateAssetMenu(menuName = &quot;Events/GameEvent&quot;)]
+public class GameEvent : ScriptableObject
+{
+    private readonly List&lt;GameEventListener&gt; _listeners = new();
+
+    public void Raise()
+    {
+        for (int i = _listeners.Count - 1; i &gt;= 0; i--)
+            _listeners[i].OnEventRaised();
+    }
+
+    public void Register(GameEventListener l)   =&gt; _listeners.Add(l);
+    public void Unregister(GameEventListener l) =&gt; _listeners.Remove(l);
+}</code></pre>
+<p>Usage : <code>playerDied.Raise()</code> depuis le gameplay, UI écoute sans référence directe au player.</p>
+<hr>
+<h3>6. Object Pooling (Unity 2021+)</h3>
+<pre><code class="lang-csharp">using UnityEngine.Pool;
+
+public class BulletSpawner : MonoBehaviour
+{
+    [SerializeField] private Bullet _prefab;
+    private IObjectPool&lt;Bullet&gt; _pool;
+
+    private void Awake()
+    {
+        _pool = new ObjectPool&lt;Bullet&gt;(
+            createFunc:    () =&gt; Instantiate(_prefab),
+            actionOnGet:   b  =&gt; b.gameObject.SetActive(true),
+            actionOnRelease: b =&gt; b.gameObject.SetActive(false),
+            actionOnDestroy: b =&gt; Destroy(b.gameObject),
+            defaultCapacity: 20, maxSize: 100
+        );
+    }
+
+    public void Shoot() =&gt; _pool.Get().Init(_pool);
+}</code></pre>
+<hr>
+<h3>7. Performance : règles Update</h3>
+<pre><code class="lang-csharp">// MAL — recherche en Update, allocation string
+void Update()
+{
+    var rb = GetComponent&lt;Rigidbody&gt;(); // alloc à chaque frame
+    Debug.Log(&quot;pos: &quot; + transform.position); // string concat
+}
+
+// BIEN — cache en Awake, pas d'alloc
+private Rigidbody _rb;
+void Awake() =&gt; _rb = GetComponent&lt;Rigidbody&gt;();
+
+void Update()
+{
+    // utilise _rb directement, pas d'alloc
+}</code></pre>
+<p>Checklist performance par domaine :</p>
 <ul>
-<li>Fournis des exemples de code C# complets et fonctionnels avec les bonnes pratiques Unity (namespaces, SerializeField, etc.).</li>
-<li>Adapte les recommandations au type de jeu (2D/3D) et à la version Unity utilisée (LTS recommandée).</li>
-<li>Priorise la performance en proposant systématiquement les alternatives optimisées (pooling, cache de composants, etc.).</li>
-<li>Mentionne les outils recommandés : Unity Profiler, DOTween, Addressables, New Input System, URP/HDRP.</li>
-<li>Signale les anti-patterns courants Unity (Find dans Update, Instantiate/Destroy fréquents, coroutines non gérées) et propose des alternatives.</li>
+<li><strong>GC</strong> : éviter <code>new</code> en Update, utiliser <code>StringBuilder</code>, <code>List.Clear()</code> plutôt que <code>new List</code></li>
+<li><strong>Draw calls</strong> : static batching sur décors fixes, GPU instancing sur props répétés</li>
+<li><strong>Physics</strong> : <code>FixedUpdate</code> uniquement pour les forces, <code>LayerMask</code> pour filtrer les raycasts</li>
+<li><strong>Coroutines</strong> : toujours stocker la référence et <code>StopCoroutine</code> à la destruction</li>
+</ul>
+<hr>
+<h3>8. Animation</h3>
+<pre><code class="lang-csharp">// Blend Tree : X = horizontal, Y = vertical
+// Paramètres via hash (plus rapide que string)
+private static readonly int SpeedX = Animator.StringToHash(&quot;SpeedX&quot;);
+private static readonly int SpeedY = Animator.StringToHash(&quot;SpeedY&quot;);
+
+private void Update()
+{
+    _animator.SetFloat(SpeedX, _moveInput.x);
+    _animator.SetFloat(SpeedY, _moveInput.y);
+}</code></pre>
+<p>Pour les tweens UI ou effets procéduraux, préférer <strong>DOTween</strong> (gratuit, zéro GC en mode Blendable) :</p>
+<pre><code class="lang-csharp">transform.DOMove(target, 0.5f).SetEase(Ease.OutBack);</code></pre>
+<hr>
+<h3>9. Tests automatisés</h3>
+<pre><code class="lang-csharp">// EditMode — test pur C#
+[Test]
+public void StatCalculator_AppliesMultiplier()
+{
+    var stat = new Stat(baseValue: 10f);
+    stat.AddModifier(new StatModifier(0.5f, ModType.Percent));
+    Assert.AreEqual(15f, stat.Value, 0.001f);
+}
+
+// PlayMode — test avec MonoBehaviour
+[UnityTest]
+public IEnumerator PlayerDies_WhenHealthZero()
+{
+    var go = new GameObject();
+    var player = go.AddComponent&lt;PlayerHealth&gt;();
+    player.TakeDamage(9999);
+    yield return null; // une frame
+    Assert.IsTrue(player.IsDead);
+}</code></pre>
+<p>Lancer en CLI :</p>
+<pre><code>Unity -runTests -testPlatform EditMode -testResults results.xml -batchmode -projectPath .</code></pre>
+<hr>
+<h3>10. Build et Addressables</h3>
+<pre><code class="lang-csharp">// Chargement asynchrone d'un prefab
+var handle = Addressables.LoadAssetAsync&lt;GameObject&gt;(&quot;Enemies/Boss&quot;);
+await handle.Task;
+Instantiate(handle.Result);
+// Ne pas oublier de libérer
+Addressables.Release(handle);</code></pre>
+<p>Paramètres de build recommandés (Player Settings) :</p>
+<ul>
+<li><strong>IL2CPP</strong> pour mobile/console (plus sûr et plus rapide à l'exécution que Mono)</li>
+<li><strong>ARM64</strong> obligatoire pour iOS App Store</li>
+<li><strong>Managed stripping level</strong> : High → tester que le jeu démarre bien</li>
+<li><strong>Incremental GC</strong> : activé (réduit les pics)</li>
+</ul>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Alternative</th></tr></thead><tbody><tr><td><code>GameObject.Find()</code> en Update</td><td>Recherche O(n) à chaque frame</td><td>Cache en <code>Awake</code> / <code>[SerializeField]</code></td></tr><tr><td><code>Instantiate</code>/<code>Destroy</code> fréquents</td><td>GC spikes, hitches</td><td>Object Pool (§6)</td></tr><tr><td>Singleton sur tout</td><td>Couplage fort, tests impossibles</td><td>Service Locator ou Injection</td></tr><tr><td><code>SendMessage</code></td><td>Réflexion lente, pas de typage</td><td>Events typés ou UnityEvent</td></tr><tr><td>Coroutines sans référence</td><td>Fuite mémoire, double-start</td><td>Stocker <code>Coroutine _c</code> et vérifier null</td></tr><tr><td><code>Resources.Load</code> au runtime</td><td>Tous les assets chargés en RAM</td><td>Addressables</td></tr><tr><td><code>string</code> dans <code>Animator.SetFloat</code></td><td>Allocation + lenteur</td><td><code>Animator.StringToHash</code> (§8)</td></tr></tbody></table>
+<hr>
+<h2>Références rapides</h2>
+<ul>
+<li><strong>Profiler CPU</strong> : Window → Analysis → Profiler (Deep Profile uniquement pour diagnostiquer)</li>
+<li><strong>Frame Debugger</strong> : Window → Analysis → Frame Debugger (visualiser les draw calls)</li>
+<li><strong>Unity Docs</strong> : &lt;https://docs.unity3d.com/6000.0/Documentation/Manual/&gt;</li>
+<li><strong>DOTween</strong> : &lt;http://dotween.demigiant.com/&gt;</li>
+<li><strong>Addressables</strong> : <code>com.unity.addressables</code> via Package Manager</li>
 </ul>
 </article>
 </main>

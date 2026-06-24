@@ -1,73 +1,149 @@
 ---
 name: dev-chrome-devtools-debugger
-description: Débogage et automatisation de navigateur via Chrome DevTools. Inspecter des pages, analyser les performances, surveiller le réseau et automatiser des interactions. À utiliser quand l'utilisateur veut déboguer une page web, analyser les performances ou inspecter les requêtes réseau. Se déclenche aussi avec "devtools", "debug navigateur", "inspecter la page", "performances web", "requêtes réseau", "console chrome".
+description: Débogage et automatisation de navigateur via Chrome DevTools MCP. Inspecter des pages, analyser les performances, surveiller le réseau et automatiser des interactions. À utiliser quand l'utilisateur veut déboguer une page web, analyser les performances ou inspecter les requêtes réseau. Se déclenche aussi avec "devtools", "debug navigateur", "inspecter la page", "performances web", "requêtes réseau", "console chrome".
 ---
 
 # Débogueur Chrome DevTools
 
-## Workflow
+## Workflow général (ordre obligatoire)
 
-1. **Navigation** : accéder à la page cible.
-2. **Sélection de page** : lister les pages disponibles et sélectionner la bonne.
-3. **Inspection** : prendre un snapshot pour comprendre la structure (arbre d'accessibilité avec identifiants uniques).
-4. **Action** selon le besoin :
-   - Déboguer des erreurs (console, réseau)
-   - Analyser les performances (traces)
-   - Automatiser des interactions (clic, saisie, navigation)
-5. **Vérification** : valider le résultat visuellement ou structurellement.
+```
+Naviguer → Attendre chargement → Inspecter (snapshot) → Agir → Vérifier
+```
 
-## Patterns de débogage
+1. **Naviguer** vers la page cible (`navigate` avec URL complète incluant le protocole).
+2. **Attendre** que la page soit stable (réseau idle, `DOMContentLoaded`).
+3. **Lister les pages** disponibles si plusieurs onglets, sélectionner le bon `targetId`.
+4. **Snapshot** de la structure (arbre d'accessibilité) — donne les identifiants uniques pour les interactions.
+5. **Agir** selon le besoin : clic, saisie, scroll, exécution JS.
+6. **Vérifier** le résultat : snapshot diff, console, capture si visuel requis.
 
-### Erreurs JavaScript
+---
 
-1. Naviguer vers la page problématique
-2. Consulter les messages de la console pour les erreurs et warnings
-3. Inspecter la structure de la page pour identifier les éléments en erreur
-4. Exécuter du JavaScript personnalisé pour investiguer davantage
+## Scénarios courants
 
-### Problèmes réseau
+### 1. Erreurs JavaScript
 
-1. Naviguer vers la page
-2. Analyser les requêtes réseau :
-   - Requêtes échouées (4xx, 5xx)
-   - Requêtes lentes
-   - Requêtes bloquées (CORS, CSP)
-3. Filtrer par type (XHR, Fetch, Script, CSS) pour cibler l'analyse
+```
+naviguer → snapshot → getConsoleMessages → evalScript
+```
 
-### Analyse de performance
+- Récupérer les messages console filtrés sur `level: error`.
+- Identifier le fichier et la ligne dans la stack trace.
+- Exécuter du JS pour inspecter l'état en direct :
 
-1. Lancer un trace de performance sur la page
-2. Identifier les goulots d'étranglement :
-   - Scripts longs (Long Tasks)
-   - Layout thrashing
-   - Repaints excessifs
-3. Proposer des optimisations ciblées
+```js
+// Exemples copiables dans evalScript
+document.querySelectorAll('[data-error]').length
+window.__reactFiber !== undefined  // détecter React
+performance.getEntriesByType('resource').filter(r => r.duration > 1000)
+```
 
-## Bonnes pratiques
+- Si l'erreur est `Cannot read properties of undefined` : vérifier le timing (race condition) avec `document.readyState`.
 
-### Choix de l'outil d'inspection
+### 2. Problèmes réseau
 
-| Besoin | Outil |
-|--------|-------|
-| Automatisation, trouver des éléments | Snapshot (texte, rapide, avec identifiants) |
-| Vérification visuelle | Capture d'écran (quand l'utilisateur doit voir l'état visuel) |
-| Données absentes de l'arbre d'accessibilité | Exécution de script JavaScript |
+```
+naviguer → getNetworkRequests → filtrer → analyser
+```
 
-### Optimisation des performances
+Filtres prioritaires :
 
-- Utiliser la pagination et le filtrage pour minimiser les données récupérées
-- Sauvegarder les sorties volumineuses dans des fichiers
-- Ne pas prendre de capture d'écran systématiquement — préférer les snapshots
+| Symptôme | Filtre à appliquer |
+|---|---|
+| Page blanche / données manquantes | `status >= 400` |
+| Lenteur | `duration > 2000ms` |
+| Erreur CORS | `blocked: true`, header `Access-Control-Allow-Origin` absent |
+| CSP violation | messages console de type `Content Security Policy` |
+| Waterfall lent | requêtes séquentielles au lieu de parallèles |
 
-### Ordre des opérations
+Snippet de diagnostic réseau via `evalScript` :
 
-Toujours respecter : **Naviguer → Attendre → Inspecter → Interagir**
+```js
+// Ressources lentes (> 1s)
+performance.getEntriesByType('resource')
+  .filter(r => r.duration > 1000)
+  .map(r => ({ name: r.name, duration: Math.round(r.duration) }))
+```
 
-## Règles
-- Toujours prendre un snapshot avant d'interagir avec des éléments.
-- Respecter l'ordre des opérations (naviguer → attendre → inspecter → interagir).
-- Préférer les snapshots aux captures d'écran pour le débogage structurel.
-- Si DevTools MCP ne suffit pas, orienter vers l'interface Chrome DevTools native.
+### 3. Analyse de performance
+
+```
+naviguer → startTrace → déclencher l'action → stopTrace → analyser
+```
+
+Points à identifier dans la trace :
+
+- **Long Tasks** (> 50 ms) : bloquent le thread principal.
+- **Layout thrashing** : alternance forcée lecture/écriture DOM en boucle.
+- **Repaints excessifs** : vérifier `will-change`, layers composites.
+- **Time to Interactive (TTI)** : si > 3,8 s, chercher les scripts bloquants.
+
+Snippet pour identifier le layout thrashing :
+
+```js
+// Propriétés qui forcent un reflow
+const reflow_props = ['offsetHeight','offsetWidth','clientHeight',
+  'scrollTop','getBoundingClientRect']
+// Chercher dans le code source les lectures de ces props dans une boucle
+```
+
+### 4. Automatisation d'interactions
+
+```
+snapshot → récupérer nodeId → click/type/scroll → snapshot de vérification
+```
+
+Règles d'or pour les interactions fiables :
+
+- Toujours utiliser le `nodeId` issu du snapshot, jamais un sélecteur CSS deviné.
+- Attendre un indicateur de stabilité après chaque action (snapshot qui ne change plus, network idle).
+- Pour les formulaires : `type` sur le champ → `click` sur le bouton submit → vérifier navigation ou message de confirmation.
+
+---
+
+## Critères de décision : quel outil utiliser
+
+| Besoin | Outil | Raison |
+|---|---|---|
+| Trouver un élément pour interagir | `snapshot` | Retourne les `nodeId` uniques, léger |
+| Vérification visuelle (rendu, layout) | `screenshot` | Seul moyen de voir le rendu réel |
+| Données hors arbre d'accessibilité | `evalScript` | Accès direct au DOM/window |
+| Analyser erreurs runtime | `getConsoleMessages` | Messages filtrables par niveau |
+| Diagnostiquer la lenteur réseau | `getNetworkRequests` | Timing, status, headers |
+| Mesurer perf (LCP, TTI, FPS) | `startTrace` / `stopTrace` | Profil complet du thread principal |
+
+---
+
+## Garde-fous et anti-patterns
+
+### Ne jamais faire
+
+- **Screenshot systématique** — coûteux en tokens, inutile pour le débogage structurel. Réserver au besoin visuel explicite.
+- **Interagir sans snapshot préalable** — les sélecteurs CSS peuvent pointer sur plusieurs éléments ; les `nodeId` sont uniques.
+- **Ignorer l'ordre naviguer→attendre→inspecter** — un snapshot trop tôt capture une page incomplète.
+- **Lancer une trace sur une page déjà chargée** — démarrer la trace avant l'action à mesurer.
+- **evalScript avec `document.write`** — détruit le DOM existant.
+
+### Pièges fréquents
+
+| Piège | Symptôme | Solution |
+|---|---|---|
+| SPA (React/Vue/Angular) | snapshot vide ou partiel | Attendre l'hydratation ; chercher `[data-reactroot]` ou `#app` |
+| iframes | éléments introuvables | Changer de `targetId` sur l'iframe |
+| Shadow DOM | nodeId absent | `evalScript` avec `shadowRoot.querySelectorAll` |
+| Auth / cookies | redirections inattendues | Vérifier cookies via `evalScript(document.cookie)` avant navigation |
+| HTTPS self-signed | page blanche | Passer `--ignore-certificate-errors` au démarrage de Chrome |
+
+---
+
+## Bonnes pratiques 2026
+
+- **Headless Chrome** : préférer `--headless=new` (Chromium 112+) plutôt que l'ancien flag `--headless`.
+- **Core Web Vitals** : cibler LCP < 2,5 s, INP < 200 ms, CLS < 0,1 — mesurables via `evalScript` avec la Performance API ou `PerformanceObserver`.
+- **Données volumineuses** : paginer ou filtrer côté DevTools avant d'exposer les résultats ; sauvegarder les traces dans un fichier JSON plutôt que de les inliner dans la conversation.
+- **Reproductibilité** : documenter la séquence exacte d'actions (URL, snapshots, scripts) pour rejouer le débogage.
+- **Si DevTools MCP ne suffit pas** : orienter vers Playwright MCP (`dev-playwright-browser-automation`) pour les scénarios E2E complexes, ou vers l'interface Chrome DevTools native pour le profiling GPU/memory avancé.
 
 
 ## Communication Rules — MANDATORY

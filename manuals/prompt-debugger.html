@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>prompt-debugger — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Diagnostique pourquoi un prompt produit des résultats indésirables et propose des corrections.">
+<meta name="description" content="Diagnostique pourquoi un prompt produit des résultats indésirables et propose des corrections ciblées.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">✍️ Prompting</span>
 <h1 class="skill-title">prompt-debugger</h1>
-<p class="lead">Diagnostique pourquoi un prompt produit des résultats indésirables et propose des corrections.</p>
+<p class="lead">Diagnostique pourquoi un prompt produit des résultats indésirables et propose des corrections ciblées.</p>
 
 
 
@@ -96,20 +96,88 @@ cp -r claude-skills-collection/skills/prompt-debugger ~/.claude/skills/</div><bu
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Prompt Debugger</h1>
-<h2>Étape 1 — Le problème</h2>
-<p>Prompt actuel, résultat obtenu, résultat attendu, modèle utilisé.</p>
-<h2>Étape 2 — Diagnostic</h2>
-<table><thead><tr><th>Symptôme</th><th>Cause probable</th><th>Solution</th></tr></thead><tbody><tr><td>Hallucinations</td><td>Question trop ouverte</td><td>Contraindre les sources</td></tr><tr><td>Format ignoré</td><td>Format pas explicite</td><td>Exemple de sortie exact</td></tr><tr><td>Instructions ignorées</td><td>Noyées dans le texte</td><td>Restructurer, premier/dernier</td></tr><tr><td>Trop court/long</td><td>Pas de contrainte longueur</td><td>Spécifier explicitement</td></tr><tr><td>Ton inadapté</td><td>Pas de directive ton</td><td>Rôle + exemples</td></tr><tr><td>Hors sujet</td><td>Ambiguïté</td><td>Reformuler + &quot;ne parle PAS de…&quot;</td></tr><tr><td>Incohérence</td><td>Contradictions</td><td>Résoudre</td></tr></tbody></table>
-<h2>Étape 3 — Corrections</h2>
-<p>Avant → Après → Pourquoi pour chaque problème.</p>
-<h2>Étape 4 — Prompt corrigé</h2>
-<p>Version complète corrigée.</p>
-<h2>Étape 5 — Checklist prévention</h2>
+<h2>Étape 1 — Collecte du contexte</h2>
+<p>Demander (ou inférer depuis la conversation) :</p>
+<ol>
+<li><strong>Prompt actuel</strong> — coller le texte complet, pas un résumé.</li>
+<li><strong>Résultat obtenu</strong> — extrait représentatif de la mauvaise sortie.</li>
+<li><strong>Résultat attendu</strong> — description précise ou exemple concret.</li>
+<li><strong>Modèle ciblé</strong> — GPT-4o, Claude Sonnet 3.7, Gemini 1.5 Pro… (certains bugs sont modèle-spécifiques).</li>
+<li><strong>Température / paramètres</strong> — température &gt; 0.8 → instabilité de format quasi-systématique.</li>
+<li><strong>Contexte d'appel</strong> — API directe, playground, outil tiers, RAG, agent ?</li>
+</ol>
+<blockquote>Si l'utilisateur n'a que le symptôme, aller directement au tableau de diagnostic (Étape 2) et poser une question ciblée.</blockquote>
+<hr>
+<h2>Étape 2 — Diagnostic par symptôme</h2>
+<table><thead><tr><th>Symptôme observé</th><th>Causes probables (par ordre de fréquence)</th><th>Correction prioritaire</th></tr></thead><tbody><tr><td><strong>Hallucinations factuelles</strong></td><td>Question ouverte sans ancrage ; données hors knowledge cutoff</td><td>Fournir les faits en contexte ; ajouter <code>&quot;Réponds uniquement à partir du texte fourni.&quot;</code></td></tr><tr><td><strong>Format ignoré</strong> (JSON, Markdown, liste…)</td><td>Format décrit en prose, non montré</td><td>Inclure un exemple de sortie verbatim dans le prompt</td></tr><tr><td><strong>Instructions sautées</strong></td><td>Instruction noyée au milieu ; trop d'instructions simultanées</td><td>Mettre l'instruction critique en <strong>première ou dernière ligne</strong> ; réduire à 3 contraintes max</td></tr><tr><td><strong>Réponse trop courte</strong></td><td>Pas de contrainte de longueur ; modèle en mode &quot;assistant concis&quot;</td><td><code>&quot;Développe en minimum 300 mots.&quot;</code> ou <code>&quot;Fournis 5 points détaillés.&quot;</code></td></tr><tr><td><strong>Réponse trop longue / rembourrage</strong></td><td>Pas de plafond ; modèle optimiste sur la verbosité</td><td><code>&quot;Réponse en 3 phrases max.&quot;</code> + <code>&quot;N'explique pas ce que tu vas faire.&quot;</code></td></tr><tr><td><strong>Ton/style inadapté</strong></td><td>Aucune directive de ton ; rôle absent</td><td>Définir persona + donner 1 exemple de phrase cible</td></tr><tr><td><strong>Résultat hors sujet</strong></td><td>Ambiguïté lexicale ; contrainte négative absente</td><td>Reformuler + <code>&quot;Ne parle PAS de X.&quot;</code> ; décomposer en sous-tâches</td></tr><tr><td><strong>Incohérences entre paragraphes</strong></td><td>Contradictions internes au prompt ; fenêtre context saturée</td><td>Supprimer les contradictions ; résumer le contexte avant de le passer</td></tr><tr><td><strong>Refus non justifié</strong></td><td>Trigger de safety sur un terme ambigu</td><td>Reformuler le terme sensible ; ajouter un contexte professionnel</td></tr><tr><td><strong>Résultat non-déterministe</strong></td><td>Température &gt; 0.7 + formulation ouverte</td><td>Baisser <code>temperature</code> à 0–0.3 pour les tâches structurées</td></tr></tbody></table>
+<hr>
+<h2>Étape 3 — Analyse Avant / Après</h2>
+<p>Pour chaque problème identifié, produire un bloc :</p>
+<pre><code>PROBLÈME : [symptôme précis]
+CAUSE     : [mécanique sous-jacente]
+AVANT     : &lt;extrait du prompt fautif&gt;
+APRÈS     : &lt;correctif minimal&gt;
+POURQUOI  : [explication d'une ligne]</code></pre>
+<p><strong>Exemple concret :</strong></p>
+<pre><code>PROBLÈME : Le modèle répond en anglais malgré la demande en français.
+CAUSE     : La directive de langue arrive après 400 tokens d'instructions en anglais.
+AVANT     : &quot;... [long prompt anglais] ... Réponds en français.&quot;
+APRÈS     : &quot;LANGUE DE RÉPONSE : FRANÇAIS UNIQUEMENT.\n\n[reste du prompt]&quot;
+POURQUOI  : Les modèles pondèrent davantage les instructions en début de prompt
+            (primacy bias) ; les instructions tardives sont souvent ignorées.</code></pre>
+<hr>
+<h2>Étape 4 — Prompt corrigé complet</h2>
+<p>Fournir la version corrigée <strong>prête à copier-coller</strong>, avec :</p>
 <ul>
-<li>[ ] Objectif clair en première ligne</li>
-<li>[ ] Format avec exemple</li>
-<li>[ ] Contraintes explicites</li>
-<li>[ ] Testé avec 3 inputs</li>
+<li>Structure : Rôle → Contexte → Tâche → Contraintes → Format de sortie</li>
+<li>Format montré par l'exemple, pas seulement décrit</li>
+<li>Contraintes négatives explicites si pertinent</li>
+</ul>
+<p><strong>Template de structure recommandé :</strong></p>
+<pre><code># RÔLE
+Tu es [persona précis].
+
+# CONTEXTE
+[Informations factuelles nécessaires, données brutes, extraits de documents]
+
+# TÂCHE
+[Action unique et claire — un seul verbe principal]
+
+# CONTRAINTES
+- [Contrainte 1]
+- [Contrainte 2]
+- (3 max pour éviter la surcharge)
+
+# FORMAT DE SORTIE
+[Exemple verbatim de la sortie attendue — pas une description]</code></pre>
+<hr>
+<h2>Étape 5 — Pièges courants et anti-patterns</h2>
+<h3>❌ Anti-patterns à bannir</h3>
+<table><thead><tr><th>Anti-pattern</th><th>Pourquoi ça échoue</th><th>Alternative</th></tr></thead><tbody><tr><td><code>&quot;Fais de ton mieux&quot;</code></td><td>Objectif non défini → variance maximale</td><td>Critères de succès explicites</td></tr><tr><td>Instructions en prose continue</td><td>Le modèle perd le fil entre règles</td><td>Listes à puces ou sections titrées</td></tr><tr><td>Répéter la même contrainte 3 fois</td><td>N'améliore pas l'obéissance, augmente la confusion</td><td>1 fois, bien formulée, bien placée</td></tr><tr><td>Prompt &gt; 2 000 tokens sans structure</td><td>Dégradation de l'attention au milieu (lost-in-the-middle)</td><td>Diviser en appels chaînés</td></tr><tr><td>Mélanger langue du prompt et langue attendue</td><td>Ambiguïté sur la langue de sortie</td><td>Déclarer la langue en ligne 1</td></tr><tr><td>Température haute + format strict (JSON)</td><td>Parsing failures fréquents</td><td><code>temperature: 0</code> pour la génération structurée</td></tr><tr><td>Négliger le system prompt</td><td>Instructions utilisateur plus faibles que system en poids</td><td>Mettre les règles invariantes dans le system prompt</td></tr></tbody></table>
+<h3>⚠️ Pièges spécifiques aux modèles (2026)</h3>
+<ul>
+<li><strong>Claude</strong> : respecte mieux les instructions en system prompt qu'en human turn ; sensible aux XML tags (<code>&lt;instructions&gt;</code>, <code>&lt;context&gt;</code>).</li>
+<li><strong>GPT-4o</strong> : le format JSON est plus fiable via <code>response_format: { type: &quot;json_object&quot; }</code> qu'en prompt seul.</li>
+<li><strong>Gemini</strong> : décrochage de format plus fréquent sur les longs contextes ; préférer des exemples courts et multiples (few-shot).</li>
+<li><strong>Modèles fine-tunés</strong> : les instructions contraires au fine-tuning sont souvent ignorées silencieusement.</li>
+</ul>
+<hr>
+<h2>Étape 6 — Validation</h2>
+<p>Tester le prompt corrigé sur <strong>au moins 3 inputs représentatifs</strong> couvrant :</p>
+<ol>
+<li>Cas nominal (happy path)</li>
+<li>Cas limite (input vide, très court, ou ambigu)</li>
+<li>Cas adversarial (input qui pourrait déclencher le bug initial)</li>
+</ol>
+<p>Checklist de validation rapide :</p>
+<ul>
+<li>[ ] Objectif lisible en 5 secondes (première ligne)</li>
+<li>[ ] Format montré par l'exemple, pas seulement décrit</li>
+<li>[ ] Contraintes ≤ 5, non-contradictoires</li>
+<li>[ ] Langue de sortie déclarée explicitement si multilingue</li>
+<li>[ ] Testé sur 3 inputs différents</li>
+<li>[ ] <code>temperature</code> ≤ 0.3 pour les sorties structurées</li>
+<li>[ ] Pas d'instruction critique enfouie au milieu du prompt</li>
 </ul>
 </article>
 </main>

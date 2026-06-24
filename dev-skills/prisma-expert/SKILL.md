@@ -3,114 +3,215 @@ name: prisma-expert
 description: Expert Prisma ORM pour la conception de schémas, les migrations, l'optimisation de requêtes, la modélisation de relations et les opérations base de données. À utiliser quand l'utilisateur travaille avec Prisma, a des problèmes de schéma, de migration ou de performance de requêtes. Se déclenche aussi avec "prisma", "schema prisma", "migration prisma", "prisma client", "requête prisma lente", "relation prisma".
 ---
 
-# Expert Prisma
+# Expert Prisma ORM
 
-## Workflow
+## Workflow de diagnostic
 
-1. **Diagnostic** : identifier la catégorie du problème (schéma, migration, requête, connexion).
-2. **Analyse** : vérifier la configuration et détecter les anti-patterns.
-3. **Correction progressive** : minimal → mieux → complet.
-4. **Validation** : tester avec le CLI Prisma et vérifier le résultat.
+1. **Catégoriser** : schéma · migration · requête lente · connexion · transaction
+2. **Valider l'état actuel** : `npx prisma validate` + `npx prisma migrate status`
+3. **Identifier le root cause** : logs SQL (`log: ['query']`), `EXPLAIN ANALYZE`, état drift
+4. **Appliquer la correction** : minimal d'abord, vérifier l'impact
+5. **Valider** : relancer les commandes de diagnostic, tests d'intégration
+
+---
 
 ## Conception de schéma
 
-### Bonnes pratiques
+### Modèle canonique
 
 ```prisma
 model User {
-  id        String   @id @default(cuid())
+  id        String   @id @default(cuid())   // ou uuid() selon besoin
   email     String   @unique
+  role      Role     @default(USER)
   posts     Post[]   @relation("UserPosts")
   profile   Profile? @relation("UserProfile")
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([email])
+  @@index([role, createdAt])
   @@map("users")
 }
 
+enum Role { USER ADMIN MODERATOR }
+
 model Post {
-  id       String @id @default(cuid())
-  title    String
-  author   User   @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
-  authorId String
+  id        String   @id @default(cuid())
+  title     String
+  status    PostStatus @default(DRAFT)
+  authorId  String
+  author    User     @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([authorId])
+  @@index([status, createdAt])
   @@map("posts")
 }
 ```
 
+### Many-to-Many explicite (toujours préférer)
+
+```prisma
+// EVITER : relation implicite (perte de flexibilité)
+model Post { tags Tag[] }
+model Tag  { posts Post[] }
+
+// FAIRE : table de jointure explicite
+model PostTag {
+  postId    String
+  tagId     String
+  addedAt   DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId],  references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("post_tags")
+}
+```
+
+### Critères de choix `@id`
+
+| Cas | Choix |
+|-----|-------|
+| Public, URL-friendly | `cuid()` ou `uuid()` |
+| Performance max (write-heavy) | `Int @id @default(autoincrement())` |
+| UUID v7 (ordre temporel) | `uuid()` + trigger ou app-generated |
+| Clé composée | `@@id([a, b])` |
+
 ### Checklist schéma
-- Toutes les relations avec `@relation` explicite, `fields` et `references`
-- Comportements de cascade définis (`onDelete`, `onUpdate`)
-- Index sur les champs fréquemment requêtés
-- Enums pour les ensembles de valeurs fixes
-- `@@map` pour les conventions de nommage des tables
+
+- `@relation` explicite avec `fields` + `references` sur chaque FK
+- `onDelete` / `onUpdate` défini (ne pas laisser le défaut `NoAction` en prod)
+- `@@index` sur chaque FK, chaque champ filtré/trié fréquemment
+- Enums pour valeurs fixes (pas de `String` ouvert)
+- `@@map` / `@map` pour respecter la convention snake_case de la DB
+
+---
 
 ## Migrations
 
-### Workflow sécurisé
+### Environnements
 
 ```bash
-# Développement
-npx prisma migrate dev --name nom_descriptif
+# Développement — génère + applique + regénère le client
+npx prisma migrate dev --name add_user_role
 
-# Production (jamais migrate dev !)
+# CI/Staging — vérifier sans appliquer
+npx prisma migrate diff \
+  --from-schema-datasource prisma/schema.prisma \
+  --to-schema-datamodel prisma/schema.prisma
+
+# Production — UNIQUEMENT cette commande (jamais migrate dev)
 npx prisma migrate deploy
 
-# Si une migration échoue en production
-npx prisma migrate resolve --applied "nom_migration"
-npx prisma migrate resolve --rolled-back "nom_migration"
+# Résoudre une migration bloquée en prod
+npx prisma migrate resolve --applied  "20240601_add_user_role"
+npx prisma migrate resolve --rolled-back "20240601_add_user_role"
 ```
 
-### Diagnostic
+### Drift de schéma
 
 ```bash
-npx prisma validate        # Valider le schéma
-npx prisma migrate status  # Vérifier l'état des migrations
-npx prisma format          # Formater le schéma
+# Détecter un drift (DB modifiée hors Prisma)
+npx prisma migrate diff \
+  --from-schema-datasource prisma/schema.prisma \
+  --to-migrations ./prisma/migrations
+
+# Introspect pour récupérer l'état réel
+npx prisma db pull
 ```
+
+### Migration destructive — procédure safe
+
+```bash
+# 1. Créer la migration sans l'appliquer
+npx prisma migrate dev --name rename_col --create-only
+
+# 2. Editer le SQL généré manuellement :
+#    - Copier les données avant DROP
+#    - Utiliser ADD COLUMN + UPDATE + DROP COLUMN en 2 déploiements
+
+# 3. Appliquer
+npx prisma migrate dev
+```
+
+---
 
 ## Optimisation des requêtes
 
-### Problème N+1
+### Problème N+1 — recette complète
 
 ```typescript
-// MAUVAIS : N+1
+// MAUVAIS : N+1 queries
 const users = await prisma.user.findMany();
 for (const user of users) {
   const posts = await prisma.post.findMany({ where: { authorId: user.id } });
 }
 
-// BON : Include
-const users = await prisma.user.findMany({
-  include: { posts: true }
-});
+// BON : include (charge tout)
+const users = await prisma.user.findMany({ include: { posts: true } });
 
-// MIEUX : Select ciblé
+// MIEUX : select ciblé (moins de données réseau)
 const users = await prisma.user.findMany({
   select: {
     id: true,
     email: true,
-    posts: { select: { id: true, title: true } }
+    posts: { select: { id: true, title: true }, take: 5 }
   }
+});
+
+// OPTIMAL pour pagination + count : transaction parallèle
+const [items, total] = await prisma.$transaction([
+  prisma.post.findMany({ where, skip, take, orderBy }),
+  prisma.post.count({ where }),
+]);
+```
+
+### Critère `select` vs `include`
+
+- `select` : quand on ne veut qu'un sous-ensemble de champs (performance réseau)
+- `include` : quand on veut tous les champs du modèle + la relation
+- Les deux ne peuvent pas coexister au même niveau
+
+### `$queryRaw` — quand et comment
+
+```typescript
+// Utiliser $queryRaw pour : agrégations complexes, WINDOW functions, requêtes non supportées
+import { Prisma } from '@prisma/client';
+
+const stats = await prisma.$queryRaw<{ userId: string; count: bigint }[]>`
+  SELECT author_id as "userId", COUNT(*) as count
+  FROM posts
+  WHERE created_at > ${new Date('2025-01-01')}
+  GROUP BY author_id
+  HAVING COUNT(*) > 10
+`;
+
+// Toujours utiliser les template literals Prisma.sql (pas de string concat — injection risk)
+const safeQuery = await prisma.$queryRaw(
+  Prisma.sql`SELECT * FROM users WHERE id = ${userId}`
+);
+```
+
+### Activer les logs SQL en dev
+
+```typescript
+const prisma = new PrismaClient({
+  log: [
+    { level: 'query', emit: 'event' },
+    { level: 'warn',  emit: 'stdout' },
+  ],
+});
+prisma.$on('query', (e) => {
+  console.log(`Query: ${e.query} — ${e.duration}ms`);
 });
 ```
 
-### Requêtes complexes
+---
 
-```typescript
-// Pour les agrégations complexes, utiliser $queryRaw
-const result = await prisma.$queryRaw`
-  SELECT u.id, u.email, COUNT(p.id) as post_count
-  FROM users u
-  LEFT JOIN posts p ON p.author_id = u.id
-  GROUP BY u.id
-`;
-```
+## Gestion des connexions
 
-## Gestion des connexions (Serverless)
+### Singleton (Node.js / Next.js)
 
 ```typescript
 import { PrismaClient } from '@prisma/client';
@@ -118,46 +219,89 @@ import { PrismaClient } from '@prisma/client';
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 export const prisma =
-  globalForPrisma.prisma ||
+  globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query'] : [],
+    log: process.env.NODE_ENV === 'development' ? ['query', 'warn'] : ['warn'],
   });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 ```
 
-## Transactions
+### Serverless / Edge (Vercel, Cloudflare)
 
 ```typescript
-// Transaction séquentielle
-const [user, profile] = await prisma.$transaction([
-  prisma.user.create({ data: userData }),
-  prisma.profile.create({ data: profileData }),
-]);
+// Utiliser Prisma Accelerate ou connection pooling externe (PgBouncer)
+// DATABASE_URL=prisma://accelerate.prisma-data.net/?api_key=...
 
-// Transaction interactive
-const result = await prisma.$transaction(async (tx) => {
-  const user = await tx.user.create({ data: userData });
-  const profile = await tx.profile.create({
-    data: { ...profileData, userId: user.id }
-  });
-  return { user, profile };
-}, {
-  maxWait: 5000,
-  timeout: 10000,
+import { PrismaClient } from '@prisma/client/edge';
+import { withAccelerate } from '@prisma/extension-accelerate';
+
+const prisma = new PrismaClient().$extends(withAccelerate());
+
+// Avec cache Accelerate
+const user = await prisma.user.findUnique({
+  where: { id },
+  cacheStrategy: { ttl: 60 },  // 60 secondes
 });
 ```
 
-## Anti-patterns à éviter
+### Pool de connexions — valeurs recommandées
 
-1. **Many-to-Many implicite** : toujours utiliser des tables de jointure explicites
-2. **Over-Including** : ne pas inclure des relations inutiles
-3. **Ignorer les limites de connexion** : toujours configurer la taille du pool
-4. **Abus de requêtes brutes** : utiliser Prisma quand possible
-5. **`migrate dev` en production** : jamais, utiliser `migrate deploy`
+```env
+# connection_limit = (nb_CPU * 2) + 1 en général
+DATABASE_URL="postgresql://user:pass@host/db?connection_limit=10&pool_timeout=15"
+```
 
-## Règles
-- Toujours valider le schéma avant de créer une migration.
-- Ne jamais utiliser `migrate dev` en production.
-- Chaque relation doit avoir un `@relation` explicite.
-- Tester les deux états de chaque migration (apply et rollback).
+---
+
+## Transactions
+
+```typescript
+// Transaction séquentielle (simple, atomic)
+const [user, account] = await prisma.$transaction([
+  prisma.user.create({ data: userData }),
+  prisma.account.create({ data: accountData }),
+]);
+
+// Transaction interactive (logique conditionnelle)
+const result = await prisma.$transaction(async (tx) => {
+  const user = await tx.user.create({ data: userData });
+  if (!user) throw new Error('User creation failed');  // rollback auto
+
+  await tx.auditLog.create({ data: { action: 'USER_CREATED', userId: user.id } });
+  return user;
+}, {
+  maxWait: 5000,   // attente de slot de connexion
+  timeout: 10000,  // durée max de la transaction
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+});
+```
+
+---
+
+## Pièges et anti-patterns
+
+| Anti-pattern | Problème | Correction |
+|---|---|---|
+| `migrate dev` en production | Réinitialise la DB si drift | Utiliser `migrate deploy` |
+| `include` sans `where` sur relation large | Charge tout en mémoire | Ajouter `take` + `where` |
+| Many-to-many implicite | Impossible d'ajouter des champs à la relation | Table de jointure explicite |
+| `$queryRaw` avec concaténation string | Injection SQL | Template literals `Prisma.sql` |
+| Instancier PrismaClient dans chaque handler | Épuisement du pool | Singleton global |
+| Omettre `onDelete` | Erreur FK en cascade ou orphelins | Définir `Cascade` / `SetNull` |
+| Index manquant sur FK | Full table scan à chaque JOIN | `@@index([foreignKeyField])` |
+| Enum modifié via `db push` en prod | Risque de perte de données | Migration SQL explicite |
+
+---
+
+## Commandes essentielles
+
+```bash
+npx prisma generate          # Régénérer le client après changement schéma
+npx prisma validate          # Valider le schéma
+npx prisma format            # Formater schema.prisma
+npx prisma migrate status    # État des migrations
+npx prisma studio            # UI graphique pour explorer la DB
+npx prisma db push           # Appliquer schéma sans migration (proto uniquement)
+npx prisma db seed           # Exécuter le seed (prisma.seed dans package.json)
+```

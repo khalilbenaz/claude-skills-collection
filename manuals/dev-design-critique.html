@@ -97,23 +97,97 @@ cp -r claude-skills-collection/skills/dev-design-critique ~/.claude/skills/</div
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Design Critique</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Évaluation globale</strong> : analyser la première impression (les 5 premières secondes), la clarté du purpose (l'utilisateur comprend-il immédiatement ce que fait ce produit ?), la hiérarchie visuelle globale (l'œil sait-il où aller ?), et l'adéquation entre le style visuel et la cible.</li>
-<li><strong>Analyse de la hiérarchie visuelle</strong> : évaluer l'utilisation de la taille (contrast de taille entre les niveaux d'importance), de la couleur (distinction visuelle des éléments clés), du contraste (luminosité, poids), du whitespace (respiration, séparation des groupes), et du focal point (y a-t-il un point d'entrée clair ?).</li>
-<li><strong>Typographie</strong> : vérifier la lisibilité (taille minimale, corps de texte à 16px+), la hiérarchie des titres (H1 → H2 → body clairement distincts), les line-heights (1.4–1.6 pour le body), les longueurs de ligne (45–75 caractères), la consistance des styles, et les paires de fontes.</li>
-<li><strong>Couleurs et contraste</strong> : évaluer la cohérence de la palette (combien de couleurs, logique de l'utilisation), les ratios de contraste WCAG (AA minimum : 4.5:1 pour le texte, 3:1 pour les éléments UI), les couleurs sémantiques (rouge = erreur, vert = succès), et la performance en dark mode ou pour les daltoniens.</li>
-<li><strong>Layout et spacing</strong> : analyser l'alignement (les éléments sont-ils sur une grille ?), la consistance du spacing (utilise-t-on une scale cohérente ?), les marges et paddings (breathing room suffisant), la densité d'information (trop dense ou trop aéré selon le contexte).</li>
-<li><strong>Composants et interactions</strong> : évaluer l'affordance (les éléments interactifs sont-ils reconnaissables ?), le feedback visuel (les états hover/active/focus sont-ils visibles ?), la consistance des composants entre les écrans, et la qualité des micro-interactions (transitions, animations purposeful).</li>
-<li><strong>Heuristiques de Nielsen</strong> : appliquer les 10 heuristiques — visibilité du statut système, correspondance monde réel, contrôle utilisateur, consistance et standards, prévention des erreurs, reconnaissance plutôt que rappel, flexibilité, esthétique minimaliste, aide à la récupération d'erreur, aide et documentation.</li>
-<li><strong>Recommandations priorisées</strong> : structurer le feedback en trois niveaux — quick wins (changements rapides, fort impact : contraste, spacing, alignement), améliorations majeures (refonte d'un composant ou d'un flow), et nice-to-have (polish et raffinement) — avec des exemples visuels ou références pour chaque suggestion.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Contexte et périmètre (avant tout)</h3>
+<p>Identifier avant de commencer :</p>
 <ul>
-<li>Base-toi sur des principes de design éprouvés (heuristiques de Nielsen, principes Gestalt, WCAG, lois UX).</li>
-<li>Sois constructif, jamais juste critique : chaque problème identifié doit être accompagné d'une suggestion d'amélioration concrète.</li>
-<li>Fournis des exemples visuels de référence (interfaces similaires bien réussies) pour illustrer les recommandations.</li>
-<li>Adapte la critique au contexte et à la plateforme cible (standards mobile vs. desktop, B2B vs. consumer).</li>
-<li>Priorise les problèmes d'accessibilité et d'utilisabilité avant l'esthétique pure.</li>
+<li>Cible utilisateur (consumer grand public / B2B / développeurs / seniors)</li>
+<li>Plateforme (web desktop, mobile native iOS/Android, tablette, TV)</li>
+<li>Stade du projet (wireframe, maquette haute-fidélité, produit live)</li>
+<li>Contraintes connues (charte graphique imposée, dark mode requis, accessibilité légale RGAA/WCAG)</li>
+</ul>
+<h3>2. Première impression — les 5 secondes</h3>
+<p>Répondre à ces trois questions sans réfléchir :</p>
+<ol>
+<li>Qu'est-ce que ce produit fait ?</li>
+<li>À qui s'adresse-t-il ?</li>
+<li>Quelle action suis-je censé faire maintenant ?</li>
+</ol>
+<p>Si l'une des réponses est floue → problème de clarté à signaler en priorité.</p>
+<h3>3. Hiérarchie visuelle</h3>
+<p>Vérifier avec le test du &quot;blur&quot; (défocaliser mentalement l'écran) :</p>
+<table><thead><tr><th>Niveau</th><th>Signal attendu</th><th>Anti-pattern</th></tr></thead><tbody><tr><td>H1 — titre principal</td><td>Largest element, bold</td><td>Plusieurs éléments de même poids</td></tr><tr><td>CTA principal</td><td>Couleur contrastante, seul de son type</td><td>Deux boutons primaires côte à côte</td></tr><tr><td>Body content</td><td>Lisible, subordonné au titre</td><td>Même taille que les titres</td></tr><tr><td>Metadata / labels</td><td>Réduit, discret</td><td>Trop proche du corps</td></tr></tbody></table>
+<h3>4. Typographie — critères mesurables</h3>
+<pre><code>Taille corps          : ≥ 16px (mobile ≥ 14px uniquement pour labels)
+Line-height body      : 1.4 – 1.6
+Longueur de ligne     : 45 – 75 ch (CSS: max-width: 75ch)
+Nombre de fontes      : ≤ 2 (une pour les titres, une pour le corps)
+Contrastes de taille  : H1/body ratio ≥ 2x</code></pre>
+<p>Outil de vérification rapide : <code>https://typescale.com</code> (générer la scale et comparer).</p>
+<h3>5. Couleurs et contraste WCAG</h3>
+<p>Seuils obligatoires :</p>
+<table><thead><tr><th>Contexte</th><th>Ratio minimum (AA)</th><th>Ratio idéal (AAA)</th></tr></thead><tbody><tr><td>Texte normal</td><td>4.5:1</td><td>7:1</td></tr><tr><td>Texte large (≥ 18px bold)</td><td>3:1</td><td>4.5:1</td></tr><tr><td>Éléments UI (bordures, icônes)</td><td>3:1</td><td>—</td></tr></tbody></table>
+<p>Outil : <code>npx color-contrast-checker</code> ou <code>https://webaim.org/resources/contrastchecker/</code></p>
+<p>Vérifier aussi :</p>
+<ul>
+<li>Mode daltonisme (deuteranopie) : ne jamais coder une info par la couleur seule → toujours ajouter icône ou label.</li>
+<li>Dark mode : tester avec <code>prefers-color-scheme: dark</code> si applicable.</li>
+</ul>
+<h3>6. Spacing et grille</h3>
+<p>Utiliser une spacing scale cohérente (exemple Tailwind / Material 8px base) :</p>
+<pre><code>4px  (0.25rem) — séparateur interne
+8px  (0.5rem)  — gap entre éléments liés
+16px (1rem)    — padding standard de card
+24px (1.5rem)  — gap entre sections
+32px (2rem)    — section breathing room
+48px (3rem)    — séparation majeure</code></pre>
+<p>Anti-pattern : spacing arbitraire (13px, 22px, 37px) → toujours arrondir à la scale.</p>
+<h3>7. Composants et interactions</h3>
+<p>Checklist :</p>
+<ul>
+<li>[ ] Affordance : les boutons ont une forme reconnaissable de bouton (shadow, border-radius, fond plein)</li>
+<li>[ ] États : <code>hover</code>, <code>active</code>, <code>focus-visible</code>, <code>disabled</code> définis pour chaque composant interactif</li>
+<li>[ ] Focus visible : outline ≥ 2px visible (ne jamais <code>outline: none</code> sans alternative)</li>
+<li>[ ] Touch targets (mobile) : ≥ 44×44px (Apple HIG) / 48×48dp (Material)</li>
+<li>[ ] Feedback d'erreur : message texte + couleur + icône (pas uniquement rouge)</li>
+</ul>
+<p>Exemple CSS focus accessible :</p>
+<pre><code class="lang-css">:focus-visible {
+  outline: 2px solid #005fcc;
+  outline-offset: 2px;
+  border-radius: 2px;
+}</code></pre>
+<h3>8. Heuristiques de Nielsen — grille d'évaluation rapide</h3>
+<table><thead><tr><th>#</th><th>Heuristique</th><th>Question à poser</th></tr></thead><tbody><tr><td>1</td><td>Visibilité du statut</td><td>L'utilisateur sait-il ce qui se passe ? (loaders, progress)</td></tr><tr><td>2</td><td>Correspondance monde réel</td><td>Le vocabulaire est-il celui de l'utilisateur, pas du développeur ?</td></tr><tr><td>3</td><td>Contrôle utilisateur</td><td>Peut-on annuler / revenir en arrière facilement ?</td></tr><tr><td>4</td><td>Consistance et standards</td><td>Les patterns suivent-ils la plateforme (iOS HIG / Material) ?</td></tr><tr><td>5</td><td>Prévention d'erreurs</td><td>Les erreurs sont-elles évitées avant de survenir (validation inline) ?</td></tr><tr><td>6</td><td>Reconnaissance &gt; rappel</td><td>L'info nécessaire est-elle visible sans avoir à mémoriser ?</td></tr><tr><td>7</td><td>Flexibilité</td><td>Y a-t-il des raccourcis pour les utilisateurs avancés ?</td></tr><tr><td>8</td><td>Esthétique minimaliste</td><td>Chaque élément a-t-il une raison d'être ?</td></tr><tr><td>9</td><td>Aide à la récupération</td><td>Les messages d'erreur expliquent-ils comment corriger ?</td></tr><tr><td>10</td><td>Documentation</td><td>Le produit est-il utilisable sans aide ? Si non, la doc est-elle accessible ?</td></tr></tbody></table>
+<h3>9. Recommandations priorisées</h3>
+<p>Structurer le feedback en trois niveaux actionnables :</p>
+<p><strong>P1 — Quick wins</strong> (&lt; 1 jour, fort impact)</p>
+<ul>
+<li>Corriger les ratios de contraste WCAG insuffisants</li>
+<li>Uniformiser le spacing sur la scale 8px</li>
+<li>Ajouter les états <code>hover</code>/<code>focus</code> manquants</li>
+</ul>
+<p><strong>P2 — Améliorations majeures</strong> (1 sprint)</p>
+<ul>
+<li>Refonte d'un composant ou d'un flow entier</li>
+<li>Restructuration de la hiérarchie visuelle d'une page</li>
+</ul>
+<p><strong>P3 — Nice-to-have</strong> (backlog)</p>
+<ul>
+<li>Micro-interactions et transitions</li>
+<li>Illustrations et empty states</li>
+<li>Dark mode</li>
+</ul>
+<p>Chaque suggestion doit inclure : <strong>problème observé → impact utilisateur → solution concrète</strong> (avec référence visuelle ou snippet si possible).</p>
+<hr>
+<h2>Anti-patterns courants (pièges fréquents)</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Deux CTA primaires côte à côte</td><td>L'utilisateur hésite, taux de conversion baisse</td><td>Un seul bouton primary ; l'autre en secondary/ghost</td></tr><tr><td><code>outline: none</code> sans alternative</td><td>Inaccessible au clavier</td><td>Remplacer par <code>outline-offset</code> stylé</td></tr><tr><td>Couleur seule pour coder une info</td><td>Daltoniens exclus</td><td>Ajouter icône + label texte</td></tr><tr><td>Modals empilées</td><td>Désorientation complète</td><td>Une seule modal active ; préférer les drawers sur mobile</td></tr><tr><td>Animations &gt; 300ms sur interactions répétées</td><td>Frustration utilisateur avancé</td><td>Respecter <code>prefers-reduced-motion</code> ; durée ≤ 200ms pour feedback immédiat</td></tr><tr><td>Densité identique desktop/mobile</td><td>Mobile illisible</td><td>Adapter la taille des touch targets et le spacing par breakpoint</td></tr><tr><td>3+ niveaux de gris similaires</td><td>Hiérarchie invisible</td><td>Limiter à 3 grises distinctes (light / mid / dark)</td></tr></tbody></table>
+<h2>Principes de référence</h2>
+<ul>
+<li><strong>Gestalt</strong> : proximité, similarité, continuité, fermeture → grouper les éléments liés visuellement.</li>
+<li><strong>Loi de Fitts</strong> : les cibles importantes doivent être grandes et proches (CTA en bas de mobile, pas en haut).</li>
+<li><strong>Loi de Hick</strong> : plus il y a de choix, plus la décision prend du temps → simplifier les menus.</li>
+<li><strong>Effet de primauté/récence</strong> : les utilisateurs retiennent le premier et le dernier élément → placer les CTA à ces positions.</li>
+<li><strong>WCAG 2.2 (2024 standard)</strong> : critère 2.5.8 Target Size minimum 24×24px, 3.2.6 Consistent Help.</li>
 </ul>
 </article>
 </main>

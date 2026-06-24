@@ -96,22 +96,81 @@ cp -r claude-skills-collection/skills/finance-savings-goal-planner ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Savings Goal Planner</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Objectif</strong> : quel montant ? Pour quoi ? Pour quand ?</li>
-<li><strong>Situation actuelle</strong> : revenus, dépenses, épargne existante.</li>
-<li><strong>Calcul</strong> : montant mensuel nécessaire = (objectif − épargne actuelle) ÷ mois restants.</li>
-<li><strong>Plan</strong> : tableau mois par mois avec projection.</li>
-<li><strong>Stratégies</strong> : 3-5 pistes pour dégager le montant nécessaire.</li>
-<li><strong>Scénarios</strong> : optimiste, réaliste, conservateur.</li>
-<li>Si intérêts composés pertinents, montre l'effet du placement.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 7 étapes</h2>
+<h3>1. Cadrage de l'objectif</h3>
+<p>Collecter au minimum :</p>
 <ul>
-<li>Reste réaliste sur les montants.</li>
-<li>Ne recommande pas de produits financiers spécifiques.</li>
-<li>Adapte à la devise et au contexte local.</li>
-<li>Rappelle qu'un fonds d'urgence (3-6 mois de dépenses) est prioritaire.</li>
+<li><strong>Montant cible</strong> (€/MAD/autre devise)</li>
+<li><strong>Date limite</strong> (ou nombre de mois)</li>
+<li><strong>Raison</strong> : achat, voyage, fonds d'urgence, apport immobilier, autre</li>
+</ul>
+<p>Poser la question si l'un manque. Ne pas continuer sans ces 3 données.</p>
+<hr>
+<h3>2. Situation financière actuelle</h3>
+<ul>
+<li>Revenu net mensuel (après impôts/cotisations)</li>
+<li>Dépenses fixes mensuelles (loyer, crédits, abonnements)</li>
+<li>Épargne déjà accumulée pour cet objectif</li>
+</ul>
+<blockquote>Calcul rapide du solde disponible :<br><code>disponible = revenu_net − dépenses_fixes</code></blockquote>
+<hr>
+<h3>3. Calcul de base</h3>
+<p>Formule sans intérêts (effort mensuel brut) :</p>
+<pre><code>effort_mensuel = (objectif − épargne_existante) / mois_restants</code></pre>
+<p>Formule avec intérêts composés (livret, placement) :</p>
+<pre><code># Python — copier-coller directement
+r = taux_annuel / 12          # taux mensuel
+n = mois_restants
+C = épargne_existante
+G = objectif
+
+# Versement mensuel nécessaire (annuité future)
+if r == 0:
+    versement = (G - C) / n
+else:
+    versement = (G - C * (1 + r)**n) * r / ((1 + r)**n - 1)
+
+print(f&quot;Versement mensuel : {versement:.2f}&quot;)</code></pre>
+<p>Utiliser le taux actuel réel du livret (ex. livret A = 2,4 % en 2026, soit <code>r = 0.002</code>).</p>
+<hr>
+<h3>4. Tableau de projection mois par mois</h3>
+<p>Générer un tableau Markdown compact (12 mois max en ligne, sinon annuel) :</p>
+<table><thead><tr><th>Mois</th><th>Versement</th><th>Solde cumulé</th><th>% objectif</th></tr></thead><tbody><tr><td>1</td><td>300 €</td><td>500 €</td><td>10 %</td></tr><tr><td>…</td><td>…</td><td>…</td><td>…</td></tr><tr><td>N</td><td>300 €</td><td>5 000 €</td><td>100 %</td></tr></tbody></table>
+<p>Inclure la date d'atteinte de l'objectif.</p>
+<hr>
+<h3>5. Scénarios comparatifs</h3>
+<p>Toujours proposer 3 scénarios :</p>
+<table><thead><tr><th>Scénario</th><th>Effort mensuel</th><th>Durée</th><th>Note</th></tr></thead><tbody><tr><td>Conservateur</td><td>−20 % effort</td><td>+X mois</td><td>si revenu incertain</td></tr><tr><td>Réaliste</td><td>calcul nominal</td><td>durée cible</td><td>plan de base</td></tr><tr><td>Optimiste</td><td>+20 % effort</td><td>−X mois</td><td>si rentrée d'argent</td></tr></tbody></table>
+<hr>
+<h3>6. Stratégies pour dégager l'effort mensuel</h3>
+<p>Proposer 3 à 5 pistes adaptées au contexte :</p>
+<ul>
+<li><strong>Réduction de dépenses</strong> : abonnements inutilisés, sorties, achats impulsifs</li>
+<li><strong>Automatisation</strong> : virement automatique le jour du salaire (« pay yourself first »)</li>
+<li><strong>Revenus complémentaires</strong> : freelance, revente d'objets, heures supplémentaires</li>
+<li><strong>Optimisation des charges fixes</strong> : renégociation assurance, forfait téléphone</li>
+<li><strong>Regroupement de crédits</strong> si ratio dépenses/revenu &gt; 40 %</li>
+</ul>
+<hr>
+<h3>7. Recommandations et priorisation</h3>
+<p>Vérifier et mentionner si nécessaire :</p>
+<ul>
+<li><strong>Fonds d'urgence</strong> : si absent, le prioriser avant tout autre objectif (3 à 6 mois de dépenses fixes)</li>
+<li><strong>Dettes à taux élevé</strong> : rembourser avant d'épargner si taux crédit &gt; rendement épargne</li>
+<li><strong>Effort ≥ 30 % du disponible</strong> : signaler le risque, proposer de rallonger la durée</li>
+</ul>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td>Objectif sans date</td><td>Pas de sens d'urgence, abandon</td><td>Fixer une deadline ferme</td></tr><tr><td>Versement &gt; disponible réel</td><td>Découvert, abandon</td><td>Rallonger la durée ou réduire l'objectif</td></tr><tr><td>Ignorer les dépenses imprévues</td><td>Plan cassé au premier incident</td><td>Prévoir +10 % de marge sur l'effort</td></tr><tr><td>Taux d'intérêt irréaliste</td><td>Sous-estimation de l'effort</td><td>Utiliser le taux actuel du marché, pas historique</td></tr><tr><td>Épargner avant de rembourser dettes coûteuses</td><td>Perte nette garantie</td><td>Comparer taux crédit vs rendement</td></tr><tr><td>Tableau trop long (5 ans mois par mois)</td><td>Illisible</td><td>Passer en projection annuelle au-delà de 12 mois</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Automatiser</strong> : virement programmé J+1 après salaire — taux de réussite nettement supérieur à l'épargne volontaire</li>
+<li><strong>Séparer physiquement</strong> : compte dédié à l'objectif (pas le compte courant)</li>
+<li><strong>Révision trimestrielle</strong> : ajuster le versement si revenu change</li>
+<li><strong>Indexation</strong> : si objectif &gt; 1 an, intégrer l'inflation (cible 2 % en zone euro)</li>
+<li><strong>Ne pas recommander</strong> de produits financiers spécifiques (assurance-vie, crypto, etc.) — rester sur les principes</li>
+<li><strong>Adapter la devise</strong> et la fiscalité au pays de l'utilisateur (mentionner si incertain)</li>
 </ul>
 </article>
 </main>

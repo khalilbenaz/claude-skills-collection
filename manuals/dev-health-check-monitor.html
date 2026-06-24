@@ -96,165 +96,210 @@ cp -r claude-skills-collection/skills/dev-health-check-monitor ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Health Checks &amp; Monitoring</h1>
-<h2>Workflow</h2>
+<h2>Workflow en 5 étapes</h2>
 <ol>
-<li><strong>Identifier les dépendances</strong> : base de données, cache, services externes, file queues.</li>
-<li><strong>Implémenter les checks</strong> : un check par dépendance critique.</li>
-<li><strong>Configurer les probes</strong> : liveness (l'app est vivante) et readiness (l'app peut servir du trafic).</li>
-<li><strong>Intégrer</strong> : Kubernetes probes, dashboard, alertes.</li>
+<li><strong>Inventorier les dépendances</strong> — base de données, cache, message broker, services HTTP tiers, système de fichiers.</li>
+<li><strong>Classifier les checks</strong> — liveness (process vivant), readiness (dépendances critiques up), startup (warm-up initial).</li>
+<li><strong>Implémenter les checks</strong> — un <code>IHealthCheck</code> par dépendance ; package NuGet dédié quand il existe.</li>
+<li><strong>Exposer les endpoints</strong> — <code>/health/live</code> minimal, <code>/health/ready</code> filtré par tags, <code>/health/full</code> protégé.</li>
+<li><strong>Brancher l'observabilité</strong> — Kubernetes probes, Prometheus scraping, alertes Grafana.</li>
 </ol>
+<hr>
+<h2>Packages NuGet recommandés (2026)</h2>
+<pre><code class="lang-bash">dotnet add package AspNetCore.HealthChecks.SqlServer
+dotnet add package AspNetCore.HealthChecks.Redis
+dotnet add package AspNetCore.HealthChecks.RabbitMQ
+dotnet add package AspNetCore.HealthChecks.Uris
+dotnet add package AspNetCore.HealthChecks.Npgsql       # PostgreSQL
+dotnet add package AspNetCore.HealthChecks.Kafka
+dotnet add package AspNetCore.HealthChecks.UI.Client    # UI dashboard optionnel</code></pre>
+<hr>
 <h2>Configuration ASP.NET Core</h2>
-<h3>Setup de base</h3>
-<pre><code class="lang-csharp">// Program.cs
-builder.Services.AddHealthChecks()
-    // Base de données
+<h3>Program.cs — setup complet</h3>
+<pre><code class="lang-csharp">builder.Services.AddHealthChecks()
+    // SQL Server — tag &quot;ready&quot; = inclus dans readiness probe
     .AddSqlServer(
-        connectionString,
+        builder.Configuration.GetConnectionString(&quot;Default&quot;)!,
         name: &quot;sqlserver&quot;,
-        tags: new[] { &quot;db&quot;, &quot;ready&quot; },
+        tags: [&quot;db&quot;, &quot;ready&quot;],
         timeout: TimeSpan.FromSeconds(5))
 
     // Redis
     .AddRedis(
-        redisConnectionString,
+        builder.Configuration[&quot;Redis:ConnectionString&quot;]!,
         name: &quot;redis&quot;,
-        tags: new[] { &quot;cache&quot;, &quot;ready&quot; },
+        tags: [&quot;cache&quot;, &quot;ready&quot;],
         timeout: TimeSpan.FromSeconds(3))
 
     // RabbitMQ
     .AddRabbitMQ(
-        rabbitConnectionString,
+        builder.Configuration[&quot;RabbitMQ:Uri&quot;]!,
         name: &quot;rabbitmq&quot;,
-        tags: new[] { &quot;messaging&quot;, &quot;ready&quot; },
+        tags: [&quot;messaging&quot;, &quot;ready&quot;],
         timeout: TimeSpan.FromSeconds(5))
 
-    // Service externe
+    // URL externe — NON incluse dans liveness ni readiness
     .AddUrlGroup(
-        new Uri(&quot;https://api.partner.com/health&quot;),
+        new Uri(&quot;https://api.partner.com/ping&quot;),
         name: &quot;partner-api&quot;,
-        tags: new[] { &quot;external&quot; },
-        timeout: TimeSpan.FromSeconds(10))
+        tags: [&quot;external&quot;],
+        timeout: TimeSpan.FromSeconds(8))
 
     // Check custom
     .AddCheck&lt;DiskSpaceHealthCheck&gt;(&quot;disk-space&quot;,
-        tags: new[] { &quot;infrastructure&quot; });
+        tags: [&quot;infra&quot;],
+        timeout: TimeSpan.FromSeconds(2));
 
-// Endpoints
+// --- Endpoints ---
+
+// Liveness : aucun check, répond 200 si le process tourne
 app.MapHealthChecks(&quot;/health/live&quot;, new HealthCheckOptions
 {
-    Predicate = _ =&gt; false, // Aucun check — juste &quot;l'app répond&quot;
+    Predicate = _ =&gt; false,
     ResponseWriter = WriteMinimalResponse
 });
 
+// Readiness : seules les dépendances critiques (tag &quot;ready&quot;)
 app.MapHealthChecks(&quot;/health/ready&quot;, new HealthCheckOptions
 {
-    Predicate = check =&gt; check.Tags.Contains(&quot;ready&quot;),
+    Predicate = hc =&gt; hc.Tags.Contains(&quot;ready&quot;),
     ResponseWriter = WriteDetailedResponse
 });
 
+// Full : tous les checks, endpoint protégé
 app.MapHealthChecks(&quot;/health/full&quot;, new HealthCheckOptions
 {
     ResponseWriter = WriteDetailedResponse
-});</code></pre>
-<h3>Health Check personnalisé</h3>
-<pre><code class="lang-csharp">public class DiskSpaceHealthCheck : IHealthCheck
+}).RequireAuthorization(&quot;internal&quot;);</code></pre>
+<h3>IHealthCheck personnalisé</h3>
+<pre><code class="lang-csharp">public class DiskSpaceHealthCheck(ILogger&lt;DiskSpaceHealthCheck&gt; logger) : IHealthCheck
 {
-    private const long MinimumFreeBytes = 1_073_741_824; // 1 GB
+    private const long MinFreeBytes = 1_073_741_824; // 1 GB
 
     public Task&lt;HealthCheckResult&gt; CheckHealthAsync(
-        HealthCheckContext context,
-        CancellationToken ct = default)
+        HealthCheckContext context, CancellationToken ct = default)
     {
-        var drive = new DriveInfo(&quot;/&quot;);
-        var freeSpace = drive.AvailableFreeSpace;
+        var drive = new DriveInfo(OperatingSystem.IsWindows() ? &quot;C:\\&quot; : &quot;/&quot;);
+        var free = drive.AvailableFreeSpace;
 
-        if (freeSpace &lt; MinimumFreeBytes)
+        var data = new Dictionary&lt;string, object&gt;
         {
-            return Task.FromResult(HealthCheckResult.Unhealthy(
-                $&quot;Espace disque faible : {freeSpace / 1_048_576} MB restants&quot;));
+            [&quot;free_gb&quot;] = Math.Round((double)free / 1_073_741_824, 2),
+            [&quot;drive&quot;]   = drive.Name
+        };
+
+        if (free &lt; MinFreeBytes)
+        {
+            logger.LogWarning(&quot;Disk space low: {FreeGb} GB&quot;, data[&quot;free_gb&quot;]);
+            return Task.FromResult(HealthCheckResult.Degraded(
+                $&quot;Espace disque faible : {data[&quot;free_gb&quot;]} GB&quot;, data: data));
         }
 
-        return Task.FromResult(HealthCheckResult.Healthy(
-            $&quot;Espace disque OK : {freeSpace / 1_073_741_824} GB disponibles&quot;));
+        return Task.FromResult(HealthCheckResult.Healthy(null, data));
     }
 }</code></pre>
-<h3>Réponse JSON détaillée</h3>
-<pre><code class="lang-csharp">static async Task WriteDetailedResponse(HttpContext context, HealthReport report)
+<h3>ResponseWriter JSON structuré</h3>
+<pre><code class="lang-csharp">static async Task WriteDetailedResponse(HttpContext ctx, HealthReport report)
 {
-    context.Response.ContentType = &quot;application/json&quot;;
+    ctx.Response.ContentType = MediaTypeNames.Application.Json;
+    ctx.Response.StatusCode = report.Status == HealthStatus.Unhealthy ? 503 : 200;
 
-    var result = new
+    var payload = new
     {
-        status = report.Status.ToString(),
+        status   = report.Status.ToString(),
         duration = report.TotalDuration.TotalMilliseconds,
-        checks = report.Entries.Select(e =&gt; new
+        checks   = report.Entries.Select(e =&gt; new
         {
-            name = e.Key,
-            status = e.Value.Status.ToString(),
-            duration = e.Value.Duration.TotalMilliseconds,
+            name        = e.Key,
+            status      = e.Value.Status.ToString(),
+            duration_ms = e.Value.Duration.TotalMilliseconds,
             description = e.Value.Description,
-            error = e.Value.Exception?.Message
+            data        = e.Value.Data,
+            error       = e.Value.Exception?.Message
         })
     };
+    await ctx.Response.WriteAsJsonAsync(payload);
+}
 
-    await context.Response.WriteAsJsonAsync(result);
+static Task WriteMinimalResponse(HttpContext ctx, HealthReport report)
+{
+    ctx.Response.ContentType = MediaTypeNames.Text.Plain;
+    ctx.Response.StatusCode  = report.Status == HealthStatus.Unhealthy ? 503 : 200;
+    return ctx.Response.WriteAsync(report.Status.ToString());
 }</code></pre>
+<hr>
 <h2>Intégration Kubernetes</h2>
-<h3>Probes</h3>
-<pre><code class="lang-yaml"># deployment.yaml
-spec:
+<h3>Critères de choix des probes</h3>
+<table><thead><tr><th>Probe</th><th>Question</th><th>Conséquence échec</th><th>Endpoint conseillé</th></tr></thead><tbody><tr><td><strong>startupProbe</strong></td><td>L'app a-t-elle fini de démarrer ?</td><td>liveness/readiness suspendues</td><td><code>/health/live</code></td></tr><tr><td><strong>livenessProbe</strong></td><td>Le process est-il fonctionnel ?</td><td>Pod redémarré</td><td><code>/health/live</code></td></tr><tr><td><strong>readinessProbe</strong></td><td>Peut-on envoyer du trafic ?</td><td>Pod retiré du LB</td><td><code>/health/ready</code></td></tr></tbody></table>
+<h3>deployment.yaml</h3>
+<pre><code class="lang-yaml">spec:
   containers:
     - name: payment-api
+      image: myregistry/payment-api:1.0.0
       ports:
         - containerPort: 8080
-      livenessProbe:
-        httpGet:
-          path: /health/live
-          port: 8080
-        initialDelaySeconds: 15
-        periodSeconds: 10
-        failureThreshold: 3
-        # Si 3 échecs → K8s redémarre le pod
-      readinessProbe:
-        httpGet:
-          path: /health/ready
-          port: 8080
-        initialDelaySeconds: 5
-        periodSeconds: 5
-        failureThreshold: 3
-        # Si 3 échecs → K8s retire le pod du service
       startupProbe:
         httpGet:
           path: /health/live
           port: 8080
         initialDelaySeconds: 0
         periodSeconds: 3
-        failureThreshold: 30
-        # Laisse 90s au pod pour démarrer</code></pre>
-<h3>Différences entre probes</h3>
-<table><thead><tr><th>Probe</th><th>Question</th><th>Conséquence si échec</th></tr></thead><tbody><tr><td><strong>Liveness</strong></td><td>L'app est-elle vivante ?</td><td>Pod redémarré</td></tr><tr><td><strong>Readiness</strong></td><td>L'app peut-elle servir du trafic ?</td><td>Pod retiré du load balancer</td></tr><tr><td><strong>Startup</strong></td><td>L'app a-t-elle fini de démarrer ?</td><td>Liveness/readiness suspendues</td></tr></tbody></table>
-<h2>Bonnes pratiques</h2>
-<h3>À faire</h3>
+        failureThreshold: 30   # 90 s max pour démarrer
+      livenessProbe:
+        httpGet:
+          path: /health/live
+          port: 8080
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        failureThreshold: 3
+        timeoutSeconds: 5
+      readinessProbe:
+        httpGet:
+          path: /health/ready
+          port: 8080
+        initialDelaySeconds: 0
+        periodSeconds: 5
+        failureThreshold: 3
+        timeoutSeconds: 5</code></pre>
+<hr>
+<h2>Critères de décision</h2>
 <ul>
-<li>Séparer <code>/health/live</code> (léger, pas de checks) et <code>/health/ready</code> (checks des dépendances)</li>
-<li>Mettre des <strong>timeouts</strong> sur chaque health check</li>
-<li>Taguer les checks pour filtrer par contexte</li>
-<li>Retourner des détails en JSON pour le debugging</li>
-<li>Monitorer les résultats avec Prometheus/Grafana</li>
+<li><strong>Mettre dans liveness</strong> : état interne seulement (deadlock détecté, mémoire critique). Jamais une dépendance externe.</li>
+<li><strong>Mettre dans readiness</strong> : toute dépendance sans laquelle le trafic ne peut pas être traité (DB, cache session).</li>
+<li><strong>Mettre en external/infra</strong> : services tiers à surveiller mais non bloquants (API partenaire, CDN).</li>
+<li><strong>Degraded vs Unhealthy</strong> : utiliser <code>Degraded</code> pour les seuils d'avertissement ; K8s traite Degraded comme Healthy (HTTP 200).</li>
 </ul>
-<h3>À éviter</h3>
+<hr>
+<h2>Monitoring Prometheus + Grafana</h2>
+<pre><code class="lang-csharp">// Exposer les métriques health check pour Prometheus
+builder.Services.AddHealthChecks()
+    // ... checks ...
+    .ForwardToPrometheus();
+
+app.UseHealthChecksPrometheusExporter(&quot;/metrics/health&quot;,
+    options =&gt; options.ResultStatusCodes[HealthStatus.Unhealthy] = 503);</code></pre>
+<p>Alerte Grafana alerting rule :</p>
+<pre><code class="lang-promql"># Alerte si un check est Unhealthy depuis &gt; 1 min
+health_check_status{status=&quot;Unhealthy&quot;} == 1</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
 <ul>
-<li>Faire des health checks trop lourds (requêtes complexes en DB)</li>
-<li>Mettre des checks de services externes dans le liveness (risque de cascade)</li>
-<li>Oublier le <code>startupProbe</code> pour les apps lentes au démarrage</li>
-<li>Exposer le <code>/health/full</code> sans authentification en production</li>
+<li><strong>Liveness qui vérifie la DB</strong> → boucle de redémarrage si la DB tombe, tous les pods crashent en cascade.</li>
+<li><strong>Timeout trop long</strong> → la probe K8s timeout elle-même (défaut 1s) ; toujours <code>timeout</code> &lt; <code>timeoutSeconds</code> probe.</li>
+<li><strong>Requête SQL lourde dans le check</strong> → utiliser <code>SELECT 1</code> ou <code>SELECT TOP 1 1 FROM sysobjects</code> pour SQL Server.</li>
+<li><strong>Pas de startupProbe</strong> → liveness tue les pods qui ont une initialisation lente (EF migrations, cache warm-up).</li>
+<li><strong><code>/health/full</code> exposé publiquement</strong> → fuite d'informations sur la topologie interne ; toujours <code>RequireAuthorization</code>.</li>
+<li><strong>Checks synchrones bloquants</strong> → implémenter <code>CheckHealthAsync</code> avec vrai <code>await</code> ; ne jamais <code>.Result</code> ou <code>.Wait()</code>.</li>
+<li><strong>Un seul endpoint fourre-tout</strong> → impossible de séparer liveness/readiness ; segmenter dès le départ.</li>
 </ul>
-<h2>Règles</h2>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Le liveness probe ne doit <strong>jamais</strong> vérifier les dépendances externes.</li>
-<li>Le readiness probe doit vérifier toutes les dépendances nécessaires au traitement du trafic.</li>
-<li>Chaque health check doit avoir un timeout explicite.</li>
-<li>Les détails des health checks ne doivent pas être exposés publiquement sans authentification.</li>
+<li>Utiliser les <strong>primary constructors</strong> C# 12 dans <code>IHealthCheck</code> (voir exemple DiskSpace).</li>
+<li>Ajouter <code>HealthCheckPublisherHostedService</code> pour publier les résultats en push vers un système de monitoring externe.</li>
+<li>Tester les health checks en intégration avec <code>WebApplicationFactory</code> : forcer <code>Unhealthy</code> via stub et vérifier le HTTP 503.</li>
+<li>Nommer les checks de façon <strong>consistante avec les tags</strong> pour faciliter le filtrage en dashboard.</li>
+<li>En microservices, centraliser les checks dans un <strong>aggregator</strong> plutôt que de surveiller chaque pod individuellement.</li>
 </ul>
 </article>
 </main>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>health-sleep-journal — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Suit la qualité du sommeil, les habitudes nocturnes et les facteurs perturbateurs pour identifier des schémas.">
+<meta name="description" content="Suit la qualité du sommeil, les habitudes nocturnes et les facteurs perturbateurs pour identifier des schémas et proposer des pistes d'hygiène du sommeil.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🩺 Santé</span>
 <h1 class="skill-title">health-sleep-journal</h1>
-<p class="lead">Suit la qualité du sommeil, les habitudes nocturnes et les facteurs perturbateurs pour identifier des schémas.</p>
+<p class="lead">Suit la qualité du sommeil, les habitudes nocturnes et les facteurs perturbateurs pour identifier des schémas et proposer des pistes d'hygiène du sommeil.</p>
 
 
 
@@ -96,52 +96,132 @@ cp -r claude-skills-collection/skills/health-sleep-journal ~/.claude/skills/</di
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Sleep Journal</h1>
-<p>Quand l'utilisateur décrit des problèmes de sommeil, suis ce workflow.</p>
-<h2>Étape 1 — Profil de sommeil</h2>
-<p>Identifie :</p>
+<p>Outil d'observation et de suivi du sommeil. Ton bienveillant, sans jugement, sans diagnostic.</p>
+<hr>
+<h2>Étape 1 — Accueil et contexte</h2>
+<p>Avant de collecter des données, pose <strong>une seule question ouverte</strong> pour comprendre la situation :</p>
+<blockquote>&quot;Depuis combien de temps dormez-vous mal, et qu'est-ce qui vous perturbe le plus : l'endormissement, les réveils nocturnes, ou la fatigue au réveil ?&quot;</blockquote>
+<p>Cela permet de cibler le profil dès le départ sans bombarder l'utilisateur de questions.</p>
+<hr>
+<h2>Étape 2 — Profil de sommeil (une nuit ou plusieurs)</h2>
+<p>Collecte les informations suivantes, en posant des questions naturelles au fil de la conversation :</p>
+<table><thead><tr><th>Variable</th><th>Ce qu'on cherche</th></tr></thead><tbody><tr><td>Heure de coucher</td><td>Heure à laquelle l'utilisateur se met au lit</td></tr><tr><td>Heure de réveil</td><td>Réveil définitif (pas les réveils intermédiaires)</td></tr><tr><td>Latence d'endormissement</td><td>Temps estimé avant de s'endormir (en minutes)</td></tr><tr><td>Réveils nocturnes</td><td>Nombre et durée estimée ; cause perçue si connue</td></tr><tr><td>Qualité ressentie</td><td>Score 1-10 ou description (reposé / moyen / épuisé)</td></tr><tr><td>Durée totale estimée</td><td>Coucher → réveil, moins les éveils</td></tr></tbody></table>
+<p><strong>Calcul de la durée effective</strong> (à faire silencieusement) :</p>
+<pre><code>Durée effective = (Réveil - Coucher) - latence - cumul des réveils nocturnes</code></pre>
+<p>Exemple : coucher 23h30, réveil 7h00, latence 30 min, 1 réveil de 20 min → durée effective ≈ 6h40.</p>
+<hr>
+<h2>Étape 3 — Facteurs perturbateurs</h2>
+<p>Passe en revue ces catégories à partir du récit (ne pose pas toutes les questions d'un coup) :</p>
+<p><strong>Comportements pré-sommeil</strong></p>
 <ul>
-<li><strong>Heure de coucher</strong> habituelle</li>
-<li><strong>Heure de réveil</strong> habituelle</li>
-<li><strong>Temps d'endormissement</strong> estimé</li>
-<li><strong>Réveils nocturnes</strong> (nombre, durée, cause perçue)</li>
-<li><strong>Qualité ressentie au réveil</strong> (reposé / moyen / fatigué)</li>
-<li><strong>Durée totale estimée</strong> de sommeil</li>
+<li>Écrans (téléphone, ordi, TV) dans l'heure avant le coucher</li>
+<li>Caféine après 14h (café, thé noir, cola, boissons énergisantes)</li>
+<li>Alcool le soir (effet &quot;faux ami&quot; : facilite l'endormissement mais fragmente le sommeil)</li>
+<li>Repas tardif ou copieux (moins de 2h avant le coucher)</li>
+<li>Activité physique intense tard le soir</li>
 </ul>
-<h2>Étape 2 — Facteurs perturbateurs</h2>
-<p>Repère dans le récit :</p>
+<p><strong>Environnement</strong></p>
 <ul>
-<li>Écrans avant le coucher</li>
-<li>Caféine, thé, alcool</li>
-<li>Repas tardif ou lourd</li>
-<li>Stress, anxiété, ruminations</li>
-<li>Bruit, lumière, température</li>
-<li>Médicaments ou compléments</li>
-<li>Douleurs physiques</li>
-<li>Siestes en journée</li>
+<li>Bruit extérieur ou partenaire qui ronfle</li>
+<li>Lumière (stores insuffisants, veilleuses)</li>
+<li>Température de la chambre (idéal : 18-20°C)</li>
+<li>Matelas ou literie inconfortable</li>
 </ul>
-<h2>Étape 3 — Tableau de suivi</h2>
-<table><thead><tr><th>Date</th><th>Coucher</th><th>Réveil</th><th>Endormissement (min)</th><th>Réveils nocturnes</th><th>Qualité (1-10)</th><th>Facteur perturbateur</th><th>Notes</th></tr></thead><tbody></tbody></table>
-<h2>Étape 4 — Identification des schémas</h2>
-<p>Si l'utilisateur fournit plusieurs nuits :</p>
+<p><strong>État interne</strong></p>
 <ul>
-<li>Repère les tendances (jours de semaine vs week-end, lien avec un facteur)</li>
-<li>Signale les schémas récurrents comme hypothèses</li>
+<li>Stress professionnel, ruminations, anxiété anticipatoire</li>
+<li>Douleurs physiques (dos, migraines, inconfort)</li>
+<li>Médicaments ou compléments (certains bêtabloquants, corticoïdes, diurétiques perturbent le sommeil)</li>
+<li>Pathologies associées (reflux, asthme, douleurs chroniques)</li>
 </ul>
-<h2>Étape 5 — Conclusion</h2>
-<h3>Ce qu'il faut surveiller</h3>
-<p>Durée, dette de sommeil, impact sur la journée.</p>
-<h3>Pistes d'amélioration possibles</h3>
-<p>Suggestions d'hygiène du sommeil basées sur les facteurs identifiés (sans prescrire).</p>
-<h3>Questions pour un médecin</h3>
-<p>5 questions personnalisées si les troubles persistent.</p>
-<h2>Règles</h2>
+<p><strong>Rythme de vie</strong></p>
 <ul>
-<li>Ne prescris jamais de somnifère ni de complément.</li>
-<li>Ne pose pas de diagnostic (apnée, insomnie chronique…).</li>
-<li>Reste factuel et encourageant.</li>
+<li>Siestes longues ou tardives (après 15h, plus de 20 min)</li>
+<li>Horaires de coucher très variables entre semaine et week-end (&quot;social jet lag&quot;)</li>
+<li>Travail posté ou décalé</li>
 </ul>
+<hr>
+<h2>Étape 4 — Tableau de suivi multi-nuits</h2>
+<p>Quand l'utilisateur veut suivre son sommeil sur plusieurs jours, génère ce tableau vierge :</p>
+<pre><code class="lang-markdown">| Date       | Coucher | Réveil | Latence (min) | Réveils nocturnes | Durée effective | Qualité (1-10) | Facteur principal | Notes libres |
+|------------|---------|--------|--------------|-------------------|-----------------|---------------|------------------|--------------|
+| 2026-06-24 | 23:30   | 07:00  | 30           | 1 × 20 min        | 6h40            | 5             | Stress travail    |              |
+| 2026-06-25 |         |        |              |                   |                 |               |                  |              |</code></pre>
+<p>Propose-lui de remplir ce tableau chaque matin à la même heure, idéalement dans les 15 minutes après le réveil (les souvenirs s'estompent vite).</p>
+<hr>
+<h2>Étape 5 — Identification des schémas</h2>
+<p>Quand au moins 3-5 nuits sont disponibles, analyse :</p>
+<p><strong>Tendances temporelles</strong></p>
+<ul>
+<li>Semaine vs week-end : un décalage de &gt;1h de l'heure de coucher/réveil suggère un &quot;social jet lag&quot;</li>
+<li>Nuits avant un événement stressant vs nuits neutres</li>
+</ul>
+<p><strong>Corrélations facteur ↔ qualité</strong></p>
+<ul>
+<li>Nuits avec alcool vs sans alcool → qualité moyenne comparée</li>
+<li>Nuits avec écrans vs sans → latence comparée</li>
+</ul>
+<p><strong>Signaux d'alerte à signaler</strong> (sans diagnostiquer) :</p>
+<ul>
+<li>Durée effective &lt; 6h de façon répétée</li>
+<li>Réveils nocturnes systématiques au même créneau horaire</li>
+<li>Fatigue persistante malgré 8h de temps au lit (peut suggérer un sommeil non réparateur)</li>
+<li>Ronflement signalé ou pauses respiratoires → orienter vers un médecin</li>
+</ul>
+<hr>
+<h2>Étape 6 — Pistes d'hygiène du sommeil</h2>
+<p>Propose uniquement les pistes <strong>directement liées aux facteurs identifiés</strong>. Ne pas tout lister en vrac.</p>
+<p><strong>Si latence longue (&gt;30 min) :</strong></p>
+<ul>
+<li>Ritual de déconnexion : arrêter les écrans 45-60 min avant le coucher</li>
+<li>Lumière tamisée le soir (limiter la lumière bleue)</li>
+<li>Technique 4-7-8 : inspirer 4s, retenir 7s, expirer 8s (aide à calmer le système nerveux)</li>
+</ul>
+<p><strong>Si réveils nocturnes :</strong></p>
+<ul>
+<li>Éviter l'alcool le soir ; il fragmente le sommeil en 2e partie de nuit</li>
+<li>Température de chambre : essayer de descendre à 18-19°C</li>
+<li>En cas de réveil avec ruminations : noter les pensées sur un carnet pour &quot;vider&quot; l'esprit</li>
+</ul>
+<p><strong>Si fatigue au réveil malgré une durée suffisante :</strong></p>
+<ul>
+<li>Vérifier la régularité des horaires (même heure de réveil les week-ends)</li>
+<li>Éviter les siestes longues ; privilégier un &quot;power nap&quot; de 15-20 min avant 15h</li>
+</ul>
+<p><strong>Si anxiété ou ruminations :</strong></p>
+<ul>
+<li>Journal de préoccupations : écrire 5 min avant le coucher tout ce qui &quot;tourne en boucle&quot;</li>
+<li>Ne pas rester au lit éveillé plus de 20 min ; se lever, faire une activité calme, revenir quand le sommeil revient</li>
+</ul>
+<hr>
+<h2>Étape 7 — Questions à poser à un médecin</h2>
+<p>Si les troubles persistent (&gt;3 semaines) ou impactent la journée, propose ces questions personnalisées :</p>
+<ol>
+<li>&quot;Mes symptômes peuvent-ils être liés à un trouble du sommeil comme l'apnée du sommeil ?&quot;</li>
+<li>&quot;Est-ce qu'un médicament que je prends pourrait perturber mon sommeil ?&quot;</li>
+<li>&quot;Suis-je candidat à une thérapie cognitivo-comportementale pour l'insomnie (TCC-I) ?&quot;</li>
+<li>&quot;Vaut-il la peine de faire une polysomnographie dans mon cas ?&quot;</li>
+<li>(Question personnalisée selon le facteur dominant identifié)</li>
+</ol>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne jamais faire :</strong></p>
+<ul>
+<li>Suggérer ou nommer un somnifère, un anxiolytique ou un complément spécifique (mélatonine incluse, sauf si l'utilisateur évoque déjà son usage)</li>
+<li>Poser un diagnostic : &quot;vous avez une insomnie chronique&quot; / &quot;c'est probablement de l'apnée&quot;</li>
+<li>Minimiser les troubles : &quot;c'est normal de mal dormir parfois&quot;</li>
+<li>Recommander de l'alcool pour s'endormir (piège courant)</li>
+</ul>
+<p><strong>Pièges fréquents :</strong></p>
+<ul>
+<li>Confondre &quot;temps au lit&quot; et &quot;durée de sommeil effective&quot; — toujours calculer la durée effective</li>
+<li>L'utilisateur qui dit &quot;je dors 8h&quot; mais se réveille épuisé : insister pour connaître la qualité et les réveils, pas juste la durée</li>
+<li>Ne pas supposer que plus de sommeil est toujours mieux : &gt;10h chez l'adulte peut aussi être un signal</li>
+<li>Le week-end &quot;rattrapant&quot; la dette de sommeil est partiellement inefficace — informer sans culpabiliser</li>
+</ul>
+<hr>
 <h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce journal est un outil d'observation. Si vos troubles du sommeil persistent ou affectent votre quotidien, consultez un médecin.</blockquote>
+<blockquote>Ce journal est un outil d'observation personnelle. Si vos troubles du sommeil persistent plus de 3 semaines, affectent votre concentration, votre humeur ou votre santé, ou si vous suspectez un trouble médical (apnée, syndrome des jambes sans repos…), consultez un médecin ou un spécialiste du sommeil. Ce journal ne remplace pas un avis médical.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

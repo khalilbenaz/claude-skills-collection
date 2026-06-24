@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>health-post-surgery-tracker — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Suit la récupération après une opération chirurgicale avec suivi des symptômes, douleurs, cicatrisation et rendez-vous.">
+<meta name="description" content="Suit la récupération après une opération chirurgicale avec suivi structuré des symptômes, douleurs, cicatrisation, médicaments et rendez-vous.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🩺 Santé</span>
 <h1 class="skill-title">health-post-surgery-tracker</h1>
-<p class="lead">Suit la récupération après une opération chirurgicale avec suivi des symptômes, douleurs, cicatrisation et rendez-vous.</p>
+<p class="lead">Suit la récupération après une opération chirurgicale avec suivi structuré des symptômes, douleurs, cicatrisation, médicaments et rendez-vous.</p>
 
 
 
@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/health-post-surgery-tracker</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">après mon opération</span><span class="trigger">post-opératoire</span><span class="trigger">convalescence</span><span class="trigger">ma cicatrice</span><span class="trigger">j'ai été opéré</span></div></div>
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">après mon opération</span><span class="trigger">post-opératoire</span><span class="trigger">convalescence</span><span class="trigger">ma cicatrice</span><span class="trigger">j'ai été opéré</span><span class="trigger">je suis en convalescence</span><span class="trigger">récupération après chirurgie</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>
@@ -96,55 +96,121 @@ cp -r claude-skills-collection/skills/health-post-surgery-tracker ~/.claude/skil
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Post-Surgery Tracker</h1>
-<p>Quand l'utilisateur mentionne une récupération post-opératoire, suis ce workflow.</p>
-<h2>Étape 1 — Contexte chirurgical</h2>
-<p>Clarifie :</p>
+<p>Outil d'organisation pour la convalescence chirurgicale. Ne pose pas de diagnostic, ne modifie pas les consignes médicales, et signale clairement ce qui justifie un contact avec l'équipe soignante.</p>
+<blockquote>⚠️ Ce suivi est un outil d'organisation uniquement. Suivez toujours les consignes de votre chirurgien ou équipe soignante. En cas de signe d'alerte, contactez votre chirurgien ou les urgences sans attendre.</blockquote>
+<hr>
+<h2>Étape 1 — Recueil du contexte chirurgical</h2>
+<p>Commence par poser ces questions (en une seule fois, pas en rafale) :</p>
+<ol>
+<li><strong>Type d'intervention</strong> — quelle opération, quelle partie du corps ?</li>
+<li><strong>Date de l'opération</strong> — combien de jours se sont écoulés ?</li>
+<li><strong>Mode chirurgical</strong> — ambulatoire (retour le jour même) ou hospitalisation avec durée ?</li>
+<li><strong>Consignes reçues</strong> — document de sortie, restrictions de mouvement, soins de plaie ?</li>
+<li><strong>Traitements prescrits</strong> — antidouleurs, antibiotiques, anticoagulants, autres ?</li>
+<li><strong>Contexte de santé</strong> — antécédents notables si l'utilisateur souhaite les mentionner ?</li>
+</ol>
+<p>Si l'utilisateur ne connaît pas certaines réponses, continue sans les forcer.</p>
+<hr>
+<h2>Étape 2 — Saisie du suivi quotidien</h2>
+<p>Pour chaque journée ou période mentionnée, recueille :</p>
+<table><thead><tr><th>Champ</th><th>Ce qu'on cherche à savoir</th></tr></thead><tbody><tr><td><strong>Douleur</strong></td><td>Note de 0 (nulle) à 10 (insupportable), localisation, type (sourde, lancinante, brûlure)</td></tr><tr><td><strong>Cicatrice / plaie</strong></td><td>Aspect visuel : fermée, rouge, gonflée, suintante, croûte, ecchymose</td></tr><tr><td><strong>Température</strong></td><td>Si mesurée ; sinon noter &quot;non mesurée&quot;</td></tr><tr><td><strong>Mobilité</strong></td><td>Debout, marche, escaliers, position assise, exercices kiné prescrits</td></tr><tr><td><strong>Sommeil / appétit</strong></td><td>Qualité du sommeil, retour de l'appétit normal</td></tr><tr><td><strong>Médicaments pris</strong></td><td>Conformité avec les prescriptions (oublis, effets ressentis)</td></tr><tr><td><strong>Événement notable</strong></td><td>Rendez-vous, visite de soins, changement de pansement, incident</td></tr></tbody></table>
+<p>Exemple de saisie utilisateur : <em>&quot;J4 post-op genou : douleur 5/10 le matin, 3/10 après kiné. Cicatrice un peu rouge sur 2 cm. Pas de fièvre. J'ai marché 15 min.&quot;</em></p>
+<p>Exemple de tableau généré :</p>
+<table><thead><tr><th>Jour</th><th>Douleur</th><th>Cicatrice</th><th>Temp.</th><th>Mobilité</th><th>Médicaments</th><th>Notes</th></tr></thead><tbody><tr><td>J4</td><td>5→3/10</td><td>Légèrement rouge 2 cm</td><td>Non mesurée</td><td>Marche 15 min</td><td>Conformes</td><td>Post-kiné</td></tr></tbody></table>
+<hr>
+<h2>Étape 3 — Analyse de progression (si plusieurs jours disponibles)</h2>
+<p>Quand l'utilisateur fournit des données sur au moins 3 jours, synthétise :</p>
 <ul>
-<li><strong>Type d'opération</strong> réalisée</li>
-<li><strong>Date</strong> de l'intervention</li>
-<li><strong>Jours écoulés</strong> depuis</li>
-<li><strong>Consignes post-opératoires</strong> données par le chirurgien (si connues)</li>
-<li><strong>Traitements prescrits</strong> (antidouleurs, antibiotiques, anticoagulants…)</li>
+<li><strong>Tendance douleur</strong> : diminution attendue, plateau, ou augmentation anormale ?</li>
+<li><strong>Cicatrisation</strong> : évolution visible (fermeture, changement de couleur) ?</li>
+<li><strong>Reprise d'activité</strong> : conforme au calendrier de récupération habituel pour ce type de chirurgie ?</li>
+<li><strong>Observance médicamenteuse</strong> : signaler les oublis d'anticoagulants ou d'antibiotiques (risque réel).</li>
 </ul>
-<h2>Étape 2 — Suivi quotidien</h2>
-<p>Pour chaque jour mentionné, note :</p>
+<p>Donne une lecture factuelle de l'évolution, sans conclure à &quot;normal&quot; ou &quot;anormal&quot;. Exemple : <em>&quot;La douleur a diminué de 7/10 à 3/10 sur 5 jours, ce qui est une évolution encourageante. La rougeur signalée mérite d'être mentionnée au prochain contrôle.&quot;</em></p>
+<hr>
+<h2>Étape 4 — Signes d'alerte à rappeler systématiquement</h2>
+<p>Rappelle ces signes à chaque session. S'ils sont présents, recommande de contacter le chirurgien ou les urgences <strong>sans délai</strong> :</p>
+<p><strong>Infection potentielle</strong></p>
 <ul>
-<li><strong>Douleur</strong> (0-10)</li>
-<li><strong>État de la cicatrice</strong> (propre, rouge, gonflée, suintante…)</li>
-<li><strong>Température</strong> si mesurée</li>
-<li><strong>Mobilité</strong> (progrès, limitations)</li>
-<li><strong>Sommeil et appétit</strong></li>
-<li><strong>Effets secondaires</strong> des traitements</li>
-<li><strong>Activités reprises</strong></li>
-</ul>
-<h2>Étape 3 — Tableau de suivi</h2>
-<table><thead><tr><th>Jour post-op</th><th>Douleur (0-10)</th><th>Cicatrice</th><th>Température</th><th>Mobilité</th><th>Médicaments pris</th><th>Notes</th></tr></thead><tbody></tbody></table>
-<h2>Étape 4 — Signes d'alerte post-opératoires</h2>
-<p>Rappelle les signes qui nécessitent un contact médical rapide :</p>
-<ul>
-<li>Fièvre persistante (&gt;38.5°C)</li>
-<li>Rougeur, chaleur ou gonflement croissant autour de la cicatrice</li>
+<li>Fièvre &gt; 38,5 °C persistante plus de 24 h</li>
+<li>Rougeur, chaleur ou gonflement <strong>croissant</strong> autour de la cicatrice</li>
 <li>Écoulement purulent ou malodorant</li>
-<li>Douleur qui augmente au lieu de diminuer</li>
-<li>Saignement inhabituel</li>
-<li>Essoufflement ou douleur thoracique</li>
-<li>Mollet gonflé ou douloureux</li>
+<li>Cicatrice qui s'ouvre (déhiscence)</li>
 </ul>
-<h2>Étape 5 — Conclusion</h2>
-<h3>Progression observée</h3>
-<p>Résumé de l'évolution si plusieurs jours sont fournis.</p>
-<h3>Rendez-vous à planifier</h3>
-<p>Rappels des consultations de suivi habituelles.</p>
-<h3>Questions pour le chirurgien</h3>
-<p>5 questions personnalisées pour le prochain rendez-vous de contrôle.</p>
-<h2>Règles</h2>
+<p><strong>Douleur anormale</strong></p>
 <ul>
-<li>Ne modifie jamais les consignes post-opératoires du chirurgien.</li>
-<li>Signale clairement les signes d'alerte sans minimiser.</li>
-<li>N'évalue pas la normalité d'une cicatrisation — seul le chirurgien peut le faire.</li>
+<li>Douleur qui augmente nettement après avoir diminué</li>
+<li>Douleur thoracique ou difficulté à respirer</li>
 </ul>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce suivi est un outil d'organisation. Respectez les consignes de votre chirurgien. En cas de signe d'alerte (fièvre, infection, saignement), contactez votre équipe chirurgicale ou les urgences.</blockquote>
+<p><strong>Complications vasculaires (surtout chirurgie des membres)</strong></p>
+<ul>
+<li>Mollet gonflé, chaud ou douloureux (signe de phlébite)</li>
+<li>Essoufflement soudain (embolie pulmonaire possible)</li>
+</ul>
+<p><strong>Saignement</strong></p>
+<ul>
+<li>Saignement actif qui ne s'arrête pas après 10 min de compression</li>
+<li>Pansement trempé de sang rouge vif</li>
+</ul>
+<p>Si l'utilisateur décrit l'un de ces signes : <strong>ne pas minimiser, recommander le contact médical immédiat et ne pas poursuivre le suivi comme si tout allait bien.</strong></p>
+<hr>
+<h2>Étape 5 — Préparation du prochain rendez-vous</h2>
+<p>Génère automatiquement :</p>
+<h3>Questions personnalisées pour le chirurgien</h3>
+<p>Basées sur ce qui a été noté, propose 5 questions concrètes. Exemples :</p>
+<ul>
+<li><em>&quot;La rougeur autour de ma cicatrice est-elle normale à ce stade ?&quot;</em></li>
+<li><em>&quot;Puis-je reprendre la conduite automobile à partir de quand ?&quot;</em></li>
+<li><em>&quot;Mon niveau d'activité actuel (marche 20 min/j) est-il adapté ?&quot;</em></li>
+<li><em>&quot;Quand puis-je arrêter les bas de contention ?&quot;</em></li>
+<li><em>&quot;Dois-je continuer le traitement antidouleur ou puis-je le réduire ?&quot;</em></li>
+</ul>
+<h3>Checklist rendez-vous de suivi habituel</h3>
+<ul>
+<li>J8–J15 : retrait des fils ou agrafes (si non résorbables)</li>
+<li>J30 : consultation de contrôle chirurgicale standard</li>
+<li>J45–J90 : reprise kiné ou bilan fonctionnel selon type d'opération</li>
+<li>Au-delà : suivi médecin traitant</li>
+</ul>
+<hr>
+<h2>Étape 6 — Export / résumé de suivi</h2>
+<p>Si l'utilisateur veut partager le suivi avec son médecin, génère un résumé structuré :</p>
+<pre><code>SUIVI POST-OPÉRATOIRE — [Prénom optionnel]
+Intervention : [type]  |  Date : [date]  |  Jours écoulés : [N]
+
+ÉVOLUTION
+- Douleur : [min]-[max]/10, tendance [↓ / stable / ↑]
+- Cicatrice : [description dernière observation]
+- Mobilité : [état actuel]
+- Médicaments : [conformité]
+
+POINTS À ABORDER AU PROCHAIN RENDEZ-VOUS
+1. ...
+2. ...
+
+Suivi généré le [date] via outil d'organisation — ne remplace pas l'avis médical.</code></pre>
+<hr>
+<h2>Garde-fous et pièges à éviter</h2>
+<p><strong>Ne jamais faire</strong></p>
+<ul>
+<li>Dire qu'une cicatrice &quot;semble normale&quot; ou &quot;semble infectée&quot; — seul le soignant peut juger.</li>
+<li>Modifier ou relativiser les consignes du chirurgien (&quot;vous pouvez probablement faire X même si ce n'est pas indiqué&quot;).</li>
+<li>Recommander une automédication non prescrite.</li>
+<li>Minimiser un signe d'alerte pour ne pas inquiéter.</li>
+</ul>
+<p><strong>Pièges fréquents utilisateurs</strong></p>
+<ul>
+<li>Comparer leur récupération à celle d'un proche : la variabilité individuelle est grande, éviter la comparaison.</li>
+<li>Arrêter prématurément les anticoagulants ou antibiotiques parce qu'ils &quot;se sentent mieux&quot; — rappeler l'importance de terminer le traitement prescrit.</li>
+<li>Négliger la kiné prescrite parce que c'est douloureux — noter et encourager d'en parler au kinésithérapeute.</li>
+<li>Reprendre une activité physique trop tôt (sport, port de charges) — s'en tenir au calendrier fourni par le chirurgien.</li>
+</ul>
+<p><strong>Bonnes pratiques 2026</strong></p>
+<ul>
+<li>Proposer de générer un fichier texte ou tableau copiable pour les utilisateurs qui veulent montrer leur suivi à leur équipe soignante.</li>
+<li>Si l'utilisateur mentionne une application de suivi fournie par son établissement de santé (ex. Sillage, Lifen, Doctolib post-op), ne pas se substituer — compléter.</li>
+<li>Les plateformes de téléconsultation permettent un avis rapide sur photo de cicatrice : suggérer cette option si disponible et si un signe inquiète sans être urgent.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

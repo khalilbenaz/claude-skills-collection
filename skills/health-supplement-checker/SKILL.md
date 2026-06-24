@@ -5,52 +5,142 @@ description: Analyse de façon prudente l'usage d'un supplément, ses objectifs,
 
 # Supplement Checker
 
-Quand l'utilisateur parle d'un supplément, suis ce workflow.
+Analyse bienveillante et prudente d'un complément alimentaire. Suis les étapes dans l'ordre.
 
-## Étape 1 — Identification
-Identifie :
-- **Nom** du supplément
-- **Dose** prise
-- **Fréquence** (quotidienne, occasionnelle…)
-- **Objectif recherché** (énergie, digestion, immunité…)
-- **Effets indésirables ressentis** le cas échéant
+---
 
-Si des informations manquent, pose des questions ciblées.
+## Étape 1 — Collecte du contexte
 
-## Étape 2 — Bénéfices en langage simple
-Résume les bénéfices recherchés de manière accessible, sans jargon.
+Commence par identifier ces éléments. Si l'un est manquant, pose une question ciblée avant d'aller plus loin :
 
-## Étape 3 — Classement par niveau de certitude
-Sépare clairement :
-- **Plausible** : soutenu par des données cliniques raisonnables.
-- **Incertain** : données limitées, contradictoires ou préliminaires.
-- **À valider médicalement** : nécessite un avis professionnel avant de continuer ou d'ajuster.
+| Info | Exemple |
+|------|---------|
+| Nom exact du supplément | Magnésium bisglycinate, Ashwagandha KSM-66… |
+| Dose prise | 300 mg/j, 2 gélules le soir… |
+| Durée/fréquence | Depuis 3 semaines, tous les matins… |
+| Objectif principal | Sommeil, énergie, immunité, digestion… |
+| Contexte médical | Traitement en cours, grossesse, pathologie connue |
+| Effets ressentis (pos. ou nég.) | Mieux dormi / diarrhées légères / rien de notable |
 
-## Étape 4 — Liens symptômes/supplément
-Si l'utilisateur a des symptômes gênants, dresse la liste des liens possibles **sans conclure**. Formule avec prudence (ex. "il est possible que…", "certains utilisateurs rapportent…").
+> Si l'utilisateur mentionne un **traitement médicamenteux en cours**, avertis immédiatement qu'une interaction est possible et oriente vers un pharmacien avant d'aller plus loin.
 
-## Étape 5 — Format de suivi
-Propose un tableau de suivi :
+---
 
-| Date | Supplément | Dose | Heure de prise | Effet perçu | Effet secondaire |
-|------|-----------|------|----------------|-------------|-----------------|
+## Étape 2 — Bénéfices vulgarisés et niveau de certitude
 
-## Étape 6 — Conclusion
-Termine par :
+Pour chaque bénéfice évoqué, classe-le explicitement :
 
-### Drapeaux jaunes à surveiller
-Signes qui devraient amener à reconsulter ou arrêter temporairement.
+- **Plausible** — soutenu par des essais cliniques randomisés ou méta-analyses (ex. magnésium et qualité du sommeil, vitamine D et immunité hivernale).
+- **Incertain** — données préliminaires, études observationnelles ou résultats contradictoires (ex. collagène oral et peau, BCAA et performance chez le non-sportif).
+- **Non établi / marketing** — allégation sans base scientifique solide à ce jour.
 
-### Questions à poser au médecin ou pharmacien
-5 questions concrètes et personnalisées.
+Exemple de formulation neutre :
+> « La mélatonine à faible dose (0,5–1 mg) est reconnue pour faciliter l'endormissement lors de décalages horaires (plausible). Son effet sur la qualité globale du sommeil chronique est plus débattu (incertain). »
 
-## Règles
-- N'affirme **jamais** qu'un supplément traite ou guérit une maladie sans source clinique solide.
-- Ne recommande jamais d'arrêter ou modifier une prise sans avis professionnel.
-- Reste factuel et mesuré.
+---
+
+## Étape 3 — Interactions et contre-indications connues
+
+Vérifie ces catégories systématiquement :
+
+### Interactions médicamenteuses fréquentes à signaler
+- **Anticoagulants** (warfarine, rivaroxaban) : oméga-3, gingembre, vitamine E, ail → potentiel effet additif.
+- **Antidépresseurs (ISRS)** : millepertuis → syndrome sérotoninergique.
+- **Immunosuppresseurs** : échinacée, curcuma haute dose → modulation immunitaire.
+- **Antidiabétiques** : berbérine, cannelle → hypoglycémie additive.
+- **Médicaments thyroïdiens** : sélénium, iode → interférence avec dosage.
+
+### Populations à risque accru
+- Grossesse / allaitement : quasi tout supplément à vérifier.
+- Insuffisance rénale : magnésium, potassium, vitamine D à haute dose.
+- Enfants : dosages non transposables depuis l'adulte.
+- Personnes âgées : interactions et élimination ralenties.
+
+---
+
+## Étape 4 — Analyse des effets ressentis
+
+Si l'utilisateur décrit des effets indésirables, dresse la liste des liens **possibles** sans conclure :
+
+Formulation recommandée :
+> « Certains utilisateurs rapportent des troubles digestifs lors d'une prise de magnésium oxyde à jeun. Passer au bisglycinate ou au malate, pris au repas, peut limiter ce désagrément — à vérifier avec votre pharmacien. »
+
+Ne jamais formuler : « C'est causé par… » ou « Arrêtez ce supplément. »
+
+---
+
+## Étape 5 — Tableau de suivi personnel
+
+Propose ce tableau à copier-coller dans un carnet ou une app :
+
+```
+| Date       | Supplément         | Dose   | Heure  | Effet positif noté | Effet gênant | Note |
+|------------|--------------------|--------|--------|--------------------|--------------|------|
+| 2026-06-24 | Magnésium bisgly.  | 300 mg | 21h00  | Endormissement +   | Aucun        |      |
+| ...        |                    |        |        |                    |              |      |
+```
+
+Conseil pratique : tenir ce journal **au moins 4 semaines** avant d'évaluer l'efficacité d'un supplément.
+
+---
+
+## Étape 6 — Drapeaux rouges et jaunes
+
+### Drapeaux rouges — arrêt et consultation urgente
+- Réaction allergique (urticaire, gonflement, dyspnée).
+- Douleurs thoraciques, palpitations inhabituelles.
+- Jaunisse, urines foncées (signe hépatique).
+- Symptômes neurologiques nouveaux (vertiges intenses, tremblements).
+
+### Drapeaux jaunes — reconsulter sans urgence
+- Effet persistant sans amélioration après 4–6 semaines.
+- Apparition d'un nouveau symptôme dans les jours suivant le début de la prise.
+- Changement de marque ou de forme galénique du même supplément.
+- Ajout d'un nouveau médicament au traitement en cours.
+
+---
+
+## Étape 7 — Questions à poser au médecin ou pharmacien
+
+Génère 5 questions personnalisées. Structure type :
+
+1. **Indication** : « Ce supplément est-il adapté à mon objectif de [X] compte tenu de mon traitement par [Y] ? »
+2. **Dose** : « La dose de [Z mg] est-elle appropriée pour moi, ou faut-il l'ajuster ? »
+3. **Durée** : « Combien de temps dois-je en prendre avant d'évaluer l'effet ? »
+4. **Interaction** : « Y a-t-il un risque d'interaction avec [médicament actuel] ? »
+5. **Surveillance** : « Faut-il faire un bilan sanguin avant ou pendant la prise ? »
+
+---
+
+## Garde-fous et anti-patterns
+
+**À ne jamais faire :**
+- Affirmer qu'un supplément "traite", "guérit" ou "prévient" une maladie sans référence clinique solide.
+- Recommander d'arrêter ou d'augmenter une dose sans avis professionnel.
+- Extrapoler des bénéfices d'études animales à l'humain sans le signaler.
+- Minimiser un effet indésirable signalé par l'utilisateur.
+- Comparer l'efficacité à un médicament prescrit.
+
+**Pièges courants :**
+- Les "études" citées sur les emballages sont souvent des financements fabricants — préciser cette limite.
+- La forme galénique change radicalement la biodisponibilité (ex. magnésium oxyde ~4% vs bisglycinate ~40%).
+- Les dosages "naturels" ne signifient pas sans risque à haute dose (ex. vitamine A, fer, vitamine D).
+- Un supplément "sans ordonnance" peut interagir avec des médicaments sur ordonnance.
+
+---
+
+## Bonnes pratiques 2026
+
+- **Vérifier les allégations** via les bases reconnues : EFSA (Europe), NIH Office of Dietary Supplements (USA), ANSES (France).
+- Privilégier les marques avec **certification tierce partie** (NSF, Informed Sport, USP) pour la pureté et le dosage réel.
+- Espacer la prise de minéraux (fer, calcium, zinc) d'au moins 2 h pour éviter la compétition d'absorption.
+- Ne pas dépasser les **VNR (Valeurs Nutritionnelles de Référence)** sans suivi médical pour les vitamines liposolubles (A, D, E, K).
+
+---
 
 ## Rappel obligatoire
-> ⚠️ Cette analyse est informative. Consultez un médecin ou pharmacien avant de modifier vos prises de compléments, surtout en cas de traitement en cours.
+
+> Cette analyse est purement informative et ne constitue pas un avis médical. Consultez un médecin ou un pharmacien avant de modifier vos prises de compléments alimentaires, en particulier si vous avez un traitement en cours, une pathologie chronique, ou si vous êtes enceinte ou allaitante.
 
 
 ## Communication Rules

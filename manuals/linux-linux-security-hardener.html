@@ -96,36 +96,150 @@ cp -r claude-skills-collection/skills/linux-linux-security-hardener ~/.claude/sk
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Linux Security Hardener</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Audit de sécurité initial</strong> — scanner le système avec <code>lynis audit system</code> pour obtenir un score de sécurité global, identifier les points faibles, vérifier les ports ouverts avec <code>ss -tulnp</code>, et lister les utilisateurs avec des shells interactifs dans <code>/etc/passwd</code>.</li>
-</ol>
-<ol>
-<li><strong>Durcissement SSH</strong> — modifier <code>/etc/ssh/sshd_config</code> pour désactiver l'accès root (<code>PermitRootLogin no</code>), imposer l'authentification par clé (<code>PasswordAuthentication no</code>), changer le port par défaut, limiter les utilisateurs autorisés (<code>AllowUsers</code>), et configurer <code>MaxAuthTries</code>, <code>ClientAliveInterval</code> et <code>ClientAliveCountMax</code>.</li>
-</ol>
-<ol>
-<li><strong>Configuration fail2ban</strong> — installer et configurer fail2ban pour protéger SSH et autres services, définir les paramètres <code>maxretry</code>, <code>bantime</code>, <code>findtime</code> dans <code>/etc/fail2ban/jail.local</code>, créer des filtres personnalisés si nécessaire, et vérifier les bans actifs avec <code>fail2ban-client status sshd</code>.</li>
-</ol>
-<ol>
-<li><strong>Gestion des utilisateurs et privilèges</strong> — appliquer le principe du moindre privilège, configurer <code>sudo</code> avec des règles granulaires dans <code>/etc/sudoers.d/</code>, désactiver les comptes inutilisés (<code>usermod -L</code>), imposer des politiques de mots de passe forts avec <code>pam_pwquality</code>, et configurer l'expiration avec <code>chage</code>.</li>
-</ol>
-<ol>
-<li><strong>Configuration SELinux/AppArmor</strong> — activer SELinux en mode <code>enforcing</code> (ou AppArmor sur Ubuntu), vérifier les contextes avec <code>ls -Z</code>, résoudre les AVC denials avec <code>ausearch -m AVC</code> et <code>audit2allow</code>, créer des politiques personnalisées si nécessaire, et utiliser <code>sestatus</code> pour vérifier l'état.</li>
-</ol>
-<ol>
-<li><strong>Audit et surveillance</strong> — configurer <code>auditd</code> avec des règles dans <code>/etc/audit/rules.d/</code> pour surveiller les fichiers critiques (<code>/etc/passwd</code>, <code>/etc/shadow</code>, <code>/etc/sudoers</code>), les commandes privilégiées, et les accès réseau, puis analyser avec <code>ausearch</code> et <code>aureport</code>.</li>
-</ol>
-<ol>
-<li><strong>Mises à jour et gestion des vulnérabilités</strong> — configurer les mises à jour automatiques de sécurité avec <code>unattended-upgrades</code> (Debian) ou <code>dnf-automatic</code> (RHEL), vérifier les CVE avec <code>apt list --upgradable</code> ou <code>yum updateinfo</code>, et planifier les redémarrages pour les mises à jour noyau.</li>
-</ol>
-<h2>Règles</h2>
-<ul>
-<li>Appliquer le principe de défense en profondeur — ne jamais compter sur une seule mesure de sécurité, combiner pare-feu, contrôle d'accès, chiffrement et surveillance.</li>
-<li>Tester chaque modification de sécurité avant de verrouiller l'accès — garder toujours une session SSH ouverte pendant la modification de <code>sshd_config</code> pour éviter de se retrouver exclu.</li>
-<li>Ne jamais désactiver SELinux/AppArmor pour résoudre un problème — identifier et corriger la politique plutôt que de contourner la protection.</li>
-<li>Automatiser les audits de sécurité avec des scans réguliers (Lynis, OpenSCAP) et alerter sur les régressions.</li>
-<li>Documenter toutes les exceptions de sécurité avec une justification, un responsable et une date de révision.</li>
-</ul>
+<h2>Étape 1 — Audit initial (baseline)</h2>
+<p>Avant toute modification, mesurer l'état de sécurité actuel.</p>
+<pre><code class="lang-bash"># Score global Lynis
+lynis audit system --quick 2&gt;/dev/null | grep -E &quot;Hardening index|Warning|Suggestion&quot;
+
+# Ports en écoute
+ss -tulnp
+
+# Comptes avec shell interactif (hors root et comptes système)
+awk -F: '$7 ~ /bash|sh|zsh/ &amp;&amp; $3 &gt;= 1000' /etc/passwd
+
+# Services actifs
+systemctl list-units --type=service --state=running
+
+# SUID/SGID non attendus
+find / -xdev \( -perm -4000 -o -perm -2000 \) -type f 2&gt;/dev/null | sort</code></pre>
+<p><strong>Critère de décision :</strong> Lynis score &lt; 65 = hardening prioritaire. Score 65-80 = corrections ciblées. &gt; 80 = maintenance continue.</p>
+<hr>
+<h2>Étape 2 — Durcissement SSH</h2>
+<p><strong>Toujours garder une session SSH ouverte avant de modifier <code>sshd_config</code>.</strong></p>
+<pre><code class="lang-bash"># /etc/ssh/sshd_config — paramètres minimaux (2026)
+Port 2222                          # changer le port par défaut
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+AuthorizedKeysFile .ssh/authorized_keys
+AllowUsers deployer ops-user       # liste blanche explicite
+MaxAuthTries 3
+LoginGraceTime 30
+ClientAliveInterval 300
+ClientAliveCountMax 2
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding no
+Banner /etc/ssh/banner.txt
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com
+KexAlgorithms curve25519-sha256,diffie-hellman-group16-sha512</code></pre>
+<pre><code class="lang-bash"># Valider la config avant reload
+sshd -t &amp;&amp; systemctl reload sshd</code></pre>
+<hr>
+<h2>Étape 3 — fail2ban</h2>
+<pre><code class="lang-bash"># /etc/fail2ban/jail.local
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 4
+backend  = systemd
+
+[sshd]
+enabled  = true
+port     = 2222
+logpath  = %(sshd_log)s
+
+[nginx-http-auth]
+enabled  = true</code></pre>
+<pre><code class="lang-bash"># Statut et bans actifs
+fail2ban-client status sshd
+fail2ban-client banned          # liste toutes les IP bannies
+fail2ban-client set sshd unbanip 1.2.3.4   # débannir manuellement</code></pre>
+<hr>
+<h2>Étape 4 — Gestion utilisateurs et privilèges</h2>
+<pre><code class="lang-bash"># Verrouiller un compte inutilisé
+usermod -L -e 1 ancien-user     # -e 1 = date expiration passée
+
+# Politique mots de passe (pam_pwquality)
+# /etc/security/pwquality.conf
+minlen = 14
+dcredit = -1
+ucredit = -1
+lcredit = -1
+ocredit = -1
+maxrepeat = 3
+
+# Expiration des mots de passe
+chage -M 90 -W 14 -I 30 username
+chage -l username               # vérifier
+
+# Sudoers granulaire (jamais éditer /etc/sudoers directement)
+# /etc/sudoers.d/deployer
+deployer ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart nginx, /usr/bin/systemctl reload nginx</code></pre>
+<hr>
+<h2>Étape 5 — SELinux / AppArmor</h2>
+<p><strong>SELinux (RHEL/CentOS/Fedora)</strong></p>
+<pre><code class="lang-bash">sestatus                        # vérifier le mode
+setenforce 1                    # enforcing temporairement
+# /etc/selinux/config : SELINUX=enforcing
+
+# Diagnostiquer un AVC denial
+ausearch -m AVC -ts recent | audit2why
+# Générer une politique minimale
+ausearch -m AVC -ts recent | audit2allow -M mypolicy
+semodule -i mypolicy.pp</code></pre>
+<p><strong>AppArmor (Debian/Ubuntu)</strong></p>
+<pre><code class="lang-bash">aa-status                       # profils actifs
+aa-enforce /etc/apparmor.d/*    # passer en enforce
+aa-logprof                      # générer profil depuis les logs</code></pre>
+<p><strong>Critère :</strong> Toujours enforcing en prod. <code>complain</code> uniquement pendant le test d'un nouveau service.</p>
+<hr>
+<h2>Étape 6 — auditd (traçabilité)</h2>
+<pre><code class="lang-bash"># /etc/audit/rules.d/hardening.rules
+-w /etc/passwd -p wa -k identity
+-w /etc/shadow -p wa -k identity
+-w /etc/sudoers -p wa -k sudoers
+-w /etc/ssh/sshd_config -p wa -k sshd_config
+-a always,exit -F arch=b64 -S execve -F euid=0 -k root_commands
+-a always,exit -F arch=b64 -S open,openat -F exit=-EACCES -k access_denied</code></pre>
+<pre><code class="lang-bash">augenrules --load               # appliquer les règles
+auditctl -l                     # lister les règles actives
+ausearch -k sudoers -ts today   # recherche par clé
+aureport --summary              # rapport synthétique</code></pre>
+<hr>
+<h2>Étape 7 — Firewall (nftables / firewalld)</h2>
+<pre><code class="lang-bash"># nftables — exemple minimal
+nft add table inet filter
+nft add chain inet filter input  '{ type filter hook input priority 0; policy drop; }'
+nft add rule inet filter input iif lo accept
+nft add rule inet filter input ct state established,related accept
+nft add rule inet filter input tcp dport 2222 ct state new limit rate 5/minute accept
+nft list ruleset &gt; /etc/nftables.conf</code></pre>
+<hr>
+<h2>Étape 8 — Mises à jour automatiques</h2>
+<pre><code class="lang-bash"># Debian/Ubuntu
+apt install unattended-upgrades
+dpkg-reconfigure -plow unattended-upgrades
+# /etc/apt/apt.conf.d/50unattended-upgrades : activer &quot;security&quot; uniquement
+
+# RHEL/CentOS
+dnf install dnf-automatic
+# /etc/dnf/automatic.conf : apply_updates = yes, upgrade_type = security
+systemctl enable --now dnf-automatic-install.timer</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Solution</th></tr></thead><tbody><tr><td><code>setenforce 0</code> pour débloquer un service</td><td>Désactive toute isolation SELinux</td><td>Utiliser <code>audit2allow</code> pour créer une politique ciblée</td></tr><tr><td><code>PermitRootLogin yes</code> &quot;temporairement&quot;</td><td>Oubli fréquent, vecteur d'attaque majeur</td><td>Créer un compte dédié avec sudo limité</td></tr><tr><td>Modifier <code>sshd_config</code> sans session ouverte</td><td>Exclusion complète du serveur</td><td>Garder 2 sessions actives, valider avec <code>sshd -t</code></td></tr><tr><td><code>NOPASSWD: ALL</code> dans sudoers</td><td>Escalade de privilèges triviale</td><td>Lister les commandes exactes autorisées</td></tr><tr><td>Désactiver <code>auditd</code> pour les perfs</td><td>Aucune traçabilité forensique</td><td>Tuner <code>backlog_limit</code> dans <code>/etc/audit/auditd.conf</code></td></tr><tr><td>fail2ban sans <code>backend = systemd</code></td><td>Faux négatifs si journald utilisé</td><td>Toujours préciser le backend</td></tr><tr><td>Oublier les mises à jour du noyau</td><td>Vulnérabilités persistantes</td><td><code>needrestart -r a</code> post-upgrade, planifier reboot maintenance</td></tr></tbody></table>
+<hr>
+<h2>Checklist finale</h2>
+<pre><code class="lang-bash"># Vérifications post-hardening
+lynis audit system --quick | grep &quot;Hardening index&quot;
+sshd -T | grep -E &quot;permitrootlogin|passwordauthentication|port&quot;
+fail2ban-client status
+sestatus || aa-status
+auditctl -l | wc -l
+ss -tulnp | grep -v &quot;127.0.0.1\|::1&quot;
+awk -F: '$2 == &quot;&quot; {print $1}' /etc/shadow  # comptes sans mot de passe</code></pre>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

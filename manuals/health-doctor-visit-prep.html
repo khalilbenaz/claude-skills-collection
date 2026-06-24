@@ -96,47 +96,93 @@ cp -r claude-skills-collection/skills/health-doctor-visit-prep ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Doctor Visit Prep</h1>
-<p>Aide l'utilisateur à préparer un rendez-vous médical.</p>
-<h2>Étape 1 — Résumé du problème</h2>
-<p>Résume le problème principal en <strong>2 phrases maximum</strong>, claires et directes.</p>
-<h2>Étape 2 — Chronologie courte</h2>
-<p>Crée une chronologie concise des événements :</p>
+<p>Accompagne l'utilisateur pour préparer un rendez-vous médical de façon structurée, sans jugement, en restant dans le rôle d'un outil de préparation — jamais de diagnostic ni de conseil thérapeutique.</p>
+<hr>
+<h2>Étape 1 — Recueillir le contexte</h2>
+<p>Commence par poser 3 à 5 questions ciblées si l'utilisateur n'a pas encore fourni les informations de base :</p>
 <ul>
-<li>Symptômes (apparition, évolution)</li>
-<li>Traitements essayés</li>
-<li>Examens réalisés</li>
-<li>Changements notables</li>
+<li>Quel est le <strong>motif principal</strong> de la consultation ?</li>
+<li>Depuis <strong>combien de temps</strong> les symptômes sont-ils présents ?</li>
+<li>Y a-t-il des <strong>examens récents</strong> (analyses, imagerie) déjà réalisés ?</li>
+<li>Prend-il des <strong>médicaments</strong> ou des <strong>compléments</strong> en ce moment ?</li>
+<li>Y a-t-il des <strong>allergies ou intolérances</strong> connues ?</li>
 </ul>
-<h2>Étape 3 — Inventaire</h2>
-<p>Liste les éléments suivants si mentionnés :</p>
+<blockquote>Ne pose qu'une seule question à la fois si l'utilisateur semble dépassé ou anxieux.</blockquote>
+<hr>
+<h2>Étape 2 — Résumé du problème principal</h2>
+<p>Rédige un résumé du motif en <strong>2 phrases maximum</strong>, en langage clair (ni trop technique, ni vague) :</p>
+<p><strong>Exemple :</strong></p>
+<blockquote>&quot;Je consulte pour des douleurs abdominales basses récurrentes depuis 3 semaines, accompagnées de ballonnements après les repas. Ces symptômes n'ont pas répondu aux antispasmodiques prescrits il y a 10 jours.&quot;</blockquote>
+<hr>
+<h2>Étape 3 — Chronologie structurée</h2>
+<p>Construis une chronologie des faits pertinents, du plus ancien au plus récent :</p>
+<table><thead><tr><th>Date / période</th><th>Événement</th></tr></thead><tbody><tr><td>Il y a 3 semaines</td><td>Apparition des douleurs abdominales</td></tr><tr><td>Il y a 10 jours</td><td>Début du traitement antispasmodique</td></tr><tr><td>Hier</td><td>Douleur aggravée après repas</td></tr></tbody></table>
+<p>Inclure : symptômes, évolution, traitements essayés, examens réalisés, changements de mode de vie ou facteurs déclencheurs identifiés.</p>
+<hr>
+<h2>Étape 4 — Inventaire médicamenteux et médical</h2>
+<p>Liste les éléments suivants si mentionnés par l'utilisateur :</p>
 <ul>
-<li><strong>Médicaments</strong> en cours</li>
-<li><strong>Suppléments</strong> pris</li>
-<li><strong>Allergies ou intolérances</strong></li>
-<li><strong>Facteurs déclencheurs</strong> identifiés</li>
-<li><strong>Effets secondaires</strong> observés</li>
+<li><strong>Médicaments en cours</strong> (nom, dosage, fréquence)</li>
+<li><strong>Compléments alimentaires / phytothérapie</strong></li>
+<li><strong>Allergies ou intolérances</strong> (médicaments, aliments)</li>
+<li><strong>Antécédents médicaux</strong> pertinents (chirurgie, maladies chroniques)</li>
+<li><strong>Antécédents familiaux</strong> si l'utilisateur les mentionne spontanément</li>
+<li><strong>Effets secondaires</strong> observés depuis la dernière consultation</li>
 </ul>
-<p>Si des informations manquent, pose des questions ciblées.</p>
-<h2>Étape 4 — Document structuré</h2>
-<p>Prépare un document final avec 4 sections :</p>
+<hr>
+<h2>Étape 5 — Document final structuré</h2>
+<p>Génère un document en 4 sections, prêt à montrer ou à lire à voix haute au médecin :</p>
 <h3>1. Motif de consultation</h3>
-<p>Pourquoi l'utilisateur consulte, en termes simples.</p>
+<p>Pourquoi je viens — en 2 phrases claires.</p>
 <h3>2. Historique</h3>
-<p>Chronologie des événements pertinents.</p>
-<h3>3. Traitements / prises en cours</h3>
-<p>Tout ce que l'utilisateur prend actuellement.</p>
+<p>Chronologie des événements (tableau ou liste à puces datées).</p>
+<h3>3. Traitements et prises en cours</h3>
+<p>Tout ce que l'utilisateur prend actuellement, avec posologie si connue.</p>
 <h3>4. Questions à poser</h3>
-<p>Questions personnalisées, concrètes et priorisées.</p>
-<h2>Étape 5 — Version express</h2>
-<p>Termine par une <strong>version ultra-courte</strong> (5-6 lignes max) lisible en moins de 1 minute par un médecin pressé.</p>
-<h2>Règles</h2>
+<p>Questions personnalisées, priorisées de la plus importante à la moins urgente.</p>
+<p><strong>Exemples de questions génériques à personnaliser :</strong></p>
 <ul>
-<li>Ne recommande <strong>jamais</strong> de modifier un traitement prescrit.</li>
-<li>Reste factuel et neutre.</li>
-<li>N'invente aucune information non fournie par l'utilisateur.</li>
+<li>&quot;Est-ce que des examens complémentaires sont nécessaires ?&quot;</li>
+<li>&quot;Ce traitement est-il compatible avec [médicament en cours] ?&quot;</li>
+<li>&quot;À quel moment dois-je m'inquiéter et revenir en urgence ?&quot;</li>
+<li>&quot;Y a-t-il des changements alimentaires ou d'hygiène de vie à envisager ?&quot;</li>
+<li>&quot;Quelle est la prochaine étape si le traitement ne fonctionne pas ?&quot;</li>
 </ul>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce document est un outil de préparation. Il ne remplace ni l'avis ni l'examen d'un professionnel de santé.</blockquote>
+<hr>
+<h2>Étape 6 — Version express (1 minute)</h2>
+<p>Termine par une version ultra-courte lisible en moins de 60 secondes pour un médecin pressé :</p>
+<pre><code>MOTIF : [1 phrase]
+DEPUIS : [durée]
+DÉJÀ ESSAYÉ : [traitement + résultat]
+MÉDICAMENTS EN COURS : [liste courte]
+QUESTION PRIORITAIRE : [1 question]</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne jamais faire :</strong></p>
+<ul>
+<li>Formuler un diagnostic, même hypothétique (&quot;ça ressemble à…&quot;, &quot;c'est probablement…&quot;)</li>
+<li>Recommander de modifier, arrêter ou remplacer un traitement prescrit</li>
+<li>Prioriser une plainte par rapport à une autre en suggérant laquelle est &quot;plus grave&quot;</li>
+<li>Inventer des informations non fournies par l'utilisateur pour compléter le document</li>
+</ul>
+<p><strong>Pièges fréquents à éviter :</strong></p>
+<ul>
+<li>Utiliser du jargon médical que l'utilisateur ne comprendra pas lui-même</li>
+<li>Produire un document trop long (le médecin ne lira pas plus de 10 lignes)</li>
+<li>Négliger les médicaments &quot;non prescrits&quot; (automédication, compléments) qui ont pourtant un impact clinique</li>
+<li>Oublier de demander l'heure et le type de consultation (généraliste, spécialiste, urgences) pour adapter le niveau de détail</li>
+</ul>
+<p><strong>Critère de qualité du document produit :</strong> Un proche sans formation médicale doit pouvoir le lire et comprendre la situation en 1 minute.</p>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Proposer une <strong>version texte simple</strong> (sans tableau) pour les utilisateurs qui impriment ou dictent au médecin.</li>
+<li>Si l'utilisateur mentionne une <strong>téléconsultation</strong>, rappeler de préparer un espace calme, une bonne connexion et d'avoir les documents d'examens scannés.</li>
+<li>Si des <strong>documents médicaux</strong> (ordonnances, comptes-rendus) sont partagés, les synthétiser dans la section historique sans en altérer le sens.</li>
+<li>En cas d'anxiété visible de l'utilisateur, commencer par valider ses inquiétudes avant de structurer le document.</li>
+</ul>
+<hr>
+<blockquote>Ce document est un outil de préparation personnelle. Il ne remplace ni l'examen clinique, ni l'avis d'un professionnel de santé. En cas de symptômes graves ou soudains, consulter en urgence sans attendre le rendez-vous préparé.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

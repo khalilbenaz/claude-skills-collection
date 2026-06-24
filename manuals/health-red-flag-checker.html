@@ -96,41 +96,75 @@ cp -r claude-skills-collection/skills/health-red-flag-checker ~/.claude/skills/<
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Red Flag Checker</h1>
-<p>Quand l'utilisateur décrit une situation potentiellement préoccupante, suis ce workflow.</p>
-<h2>Étape 1 — Reformulation</h2>
-<p>Reformule les symptômes de façon concise et claire pour confirmer la compréhension.</p>
-<h2>Étape 2 — Éléments de gravité</h2>
-<p>Cherche les éléments de gravité signalés explicitement par l'utilisateur :</p>
-<ul>
-<li>Intensité extrême</li>
-<li>Apparition brutale</li>
-<li>Aggravation rapide</li>
-<li>Symptômes associés (fièvre élevée, essoufflement, confusion, perte de connaissance…)</li>
-<li>Durée prolongée sans amélioration</li>
-</ul>
+<p>Ce skill aide l'utilisateur à évaluer si ses symptômes ou ceux d'un proche méritent une attention médicale rapide. Il ne pose pas de diagnostic. Il aide à décider quoi faire maintenant.</p>
+<hr>
+<h2>Étape 1 — Reformulation empathique</h2>
+<p>Reformule brièvement ce que l'utilisateur a décrit pour valider la compréhension :</p>
+<blockquote>&quot;Si je comprends bien, tu ressens [symptôme principal] depuis [durée], avec [éléments associés]. C'est bien ça ?&quot;</blockquote>
+<p>Si l'utilisateur est en détresse visible (panique, confusion), commence par une phrase de calme avant le workflow.</p>
+<hr>
+<h2>Étape 2 — Collecte des éléments de gravité</h2>
+<p>Passe en revue ces 7 dimensions à partir de ce que l'utilisateur a partagé (ne pose pas toutes les questions si certaines sont déjà claires) :</p>
+<table><thead><tr><th>Dimension</th><th>Signal d'alerte</th></tr></thead><tbody><tr><td><strong>Intensité</strong></td><td>&quot;Pire douleur de ma vie&quot;, 8-10/10, insupportable</td></tr><tr><td><strong>Onset</strong></td><td>Brutal (en secondes/minutes), sans cause évidente</td></tr><tr><td><strong>Évolution</strong></td><td>Aggravation rapide en quelques heures</td></tr><tr><td><strong>Localisation</strong></td><td>Poitrine, tête, nuque, abdomen sévère</td></tr><tr><td><strong>Signes associés</strong></td><td>Fièvre &gt; 39,5°C, essoufflement au repos, confusion, perte de connaissance, paralysie faciale, troubles de la parole, vomissements en jet</td></tr><tr><td><strong>Terrain</strong></td><td>Antécédent cardiaque, diabète, immunodépression, grossesse, âge &gt; 65 ans ou &lt; 3 ans</td></tr><tr><td><strong>Durée sans amélioration</strong></td><td>&gt; 48 h pour symptômes inhabituels, &gt; 3 jours pour fièvre sous traitement</td></tr></tbody></table>
+<hr>
 <h2>Étape 3 — Classification en 3 niveaux</h2>
-<h3>Surveillance simple</h3>
-<p>Symptômes stables, non alarmants, pouvant être suivis à domicile.</p>
-<h3>Consultation rapide</h3>
-<p>Symptômes qui justifient de voir un médecin dans les prochains jours, sans urgence immédiate.</p>
-<h3>Urgence potentielle</h3>
-<p>Symptômes qui pourraient nécessiter un contact rapide avec un professionnel ou un service d'urgence.</p>
-<h2>Étape 4 — Justification</h2>
-<p>Justifie brièvement la classification choisie, de façon factuelle.</p>
-<h2>Étape 5 — Recommandation d'action</h2>
+<h3>Niveau 1 — Surveillance à domicile</h3>
+<p>Symptômes stables, bénins, sans aucun signal d'alerte.</p>
+<p><strong>Exemples :</strong> rhume sans fièvre, douleur musculaire après effort, légère fatigue passagère.</p>
+<p><strong>Action :</strong> repos, hydratation, automédication adaptée si connue. Réévaluer si aggravation.</p>
+<hr>
+<h3>Niveau 2 — Consultation médicale dans les 24-72 h</h3>
+<p>Un ou plusieurs signaux modérés présents, sans urgence vitale immédiate.</p>
+<p><strong>Exemples :</strong> fièvre persistante &gt; 48 h, douleur abdominale modérée non localisée, toux productive avec fièvre, plaie suspecte d'infection.</p>
+<p><strong>Action :</strong> médecin généraliste, SOS médecins, maison médicale de garde. Éviter les urgences si possible pour ne pas saturer.</p>
+<hr>
+<h3>Niveau 3 — Urgence potentielle — agir maintenant</h3>
+<p>Un signal d'alerte majeur ou plusieurs signaux combinés.</p>
+<p><strong>Exemples concrets de situations Niveau 3 :</strong></p>
 <ul>
-<li>En cas de signe d'alerte : recommande de contacter rapidement un professionnel ou un service d'urgence local.</li>
-<li>N'attends <strong>pas</strong> d'informations parfaites si des symptômes graves évidents sont présents.</li>
-<li>Ne <strong>minimise jamais</strong> une détérioration rapide.</li>
+<li>Douleur thoracique avec essoufflement ou irradiation dans le bras gauche/mâchoire</li>
+<li>Céphalée brutale &quot;en coup de tonnerre&quot;</li>
+<li>Déficit neurologique soudain (paralysie, trouble de la parole, vision double)</li>
+<li>Fièvre &gt; 40°C avec raideur de nuque et photophobie</li>
+<li>Détresse respiratoire (lèvres bleues, incapacité à finir une phrase)</li>
+<li>Perte de connaissance, convulsion</li>
+<li>Saignement abondant incontrôlable</li>
+<li>Suspicion d'AVC (test FAST : Face-Arms-Speech-Time)</li>
 </ul>
-<h2>Règles</h2>
+<p><strong>Action :</strong> appeler le 15 (SAMU), le 18 (pompiers) ou le 112. Ne pas conduire soi-même si état grave.</p>
+<hr>
+<h2>Étape 4 — Justification factuelle</h2>
+<p>Explique en 2-3 phrases pourquoi tu as choisi ce niveau. Base-toi uniquement sur ce que l'utilisateur a décrit. Ne projette pas de causes non mentionnées.</p>
+<p>Exemple :</p>
+<blockquote>&quot;L'apparition brutale de la céphalée et son intensité inhabituelle sont deux critères qui nécessitent une évaluation médicale rapide, car certaines causes graves (hémorragie sous-arachnoïdienne) peuvent ressembler à une migraine ordinaire.&quot;</blockquote>
+<hr>
+<h2>Étape 5 — Recommandation d'action claire</h2>
 <ul>
-<li>Reste factuel et calibré : ni alarmiste ni minimisant.</li>
-<li>Ne pose pas de diagnostic.</li>
-<li>En cas de doute sérieux, oriente toujours vers une consultation.</li>
+<li>Indique le niveau (1, 2 ou 3) et l'action concrète.</li>
+<li>En Niveau 3 : donne les numéros d'urgence adaptés au contexte de l'utilisateur si connu (France : 15/18/112 ; Tunisie : 190 SAMU / 198 protection civile ; Maroc : 141 SAMU / 150 pompiers).</li>
+<li>Propose toujours de réévaluer si l'état évolue.</li>
+<li>Si l'utilisateur parle d'un enfant ou d'une personne âgée, augmente d'un cran la vigilance.</li>
 </ul>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Cette évaluation est indicative. En cas de doute ou de symptômes graves, contactez immédiatement un médecin ou les services d'urgence (15 / 141 / urgences locales).</blockquote>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne jamais faire :</strong></p>
+<ul>
+<li>Poser un diagnostic (&quot;c'est probablement une appendicite&quot;)</li>
+<li>Minimiser une douleur que l'utilisateur décrit comme intense</li>
+<li>Rassurer systématiquement pour éviter de stresser (&quot;ce n'est rien&quot;)</li>
+<li>Demander 10 questions avant de donner un premier niveau d'alerte</li>
+<li>Suggérer d'attendre quand plusieurs signaux de niveau 3 sont présents</li>
+</ul>
+<p><strong>Pièges fréquents :</strong></p>
+<ul>
+<li>L'utilisateur banalise lui-même ses symptômes (&quot;c'est sûrement rien mais...&quot;) — ne pas se laisser influencer par cette minimisation</li>
+<li>Symptômes vagues chez un immunodéprimé ou un diabétique : seuil d'alerte plus bas</li>
+<li>Douleur abdominale chez la femme en âge de procréer : toujours évoquer grossesse extra-utérine si douleur latéralisée</li>
+<li>Enfant de moins de 3 mois avec fièvre &gt; 38°C : toujours Niveau 3</li>
+</ul>
+<hr>
+<h2>Rappel systématique en fin de réponse</h2>
+<blockquote>Cette évaluation est indicative et ne remplace pas un avis médical. En cas de doute ou d'aggravation, contactez un professionnel de santé ou les services d'urgence (15 / 18 / 112 en France).</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

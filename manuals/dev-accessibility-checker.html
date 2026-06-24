@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-accessibility-checker — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Vérifie et améliore l'accessibilité web (WCAG 2.1).">
+<meta name="description" content="Vérifie et améliore l'accessibilité web (WCAG 2.1/2.2).">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-accessibility-checker</h1>
-<p class="lead">Vérifie et améliore l'accessibilité web (WCAG 2.1).</p>
+<p class="lead">Vérifie et améliore l'accessibilité web (WCAG 2.1/2.2).</p>
 
 
 
@@ -96,39 +96,141 @@ cp -r claude-skills-collection/skills/dev-accessibility-checker ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Accessibility Checker</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Audit des critères WCAG 2.1 niveau AA</strong> : parcourir les quatre principes — Perceivable (contenu perceptible), Operable (interface utilisable), Understandable (contenu compréhensible), Robust (compatible technologies d'assistance) — et identifier les violations par niveau de criticité.</li>
-</ol>
-<ol>
-<li><strong>Navigation clavier</strong> : vérifier l'ordre de tabulation logique (tab order suit le flux visuel), que le focus est toujours visible (<code>outline</code> non supprimé), que des skip links existent pour sauter la navigation, et qu'aucune keyboard trap ne bloque l'utilisateur.</li>
-</ol>
-<ol>
-<li><strong>Sémantique HTML</strong> : contrôler l'utilisation correcte des landmarks (<code>&lt;main&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;header&gt;</code>, <code>&lt;footer&gt;</code>), la hiérarchie des titres (h1 &gt; h2 &gt; h3 sans saut), les labels associés aux champs, et les rôles implicites des éléments natifs.</li>
-</ol>
-<ol>
-<li><strong>ARIA correctement utilisé</strong> : s'assurer que <code>aria-label</code>, <code>aria-describedby</code>, <code>aria-expanded</code>, <code>aria-controls</code> et les live regions (<code>aria-live</code>) sont appliqués uniquement là où le HTML natif ne suffit pas — pas d'ARIA redondant ou incorrect.</li>
-</ol>
-<ol>
-<li><strong>Contrastes et couleurs</strong> : vérifier le ratio de contraste (minimum 4.5:1 pour le texte normal, 3:1 pour les grands textes ≥18px), s'assurer que l'information n'est jamais transmise par la couleur seule, et tester en mode daltonien.</li>
-</ol>
-<ol>
-<li><strong>Images et médias</strong> : valider les textes alternatifs (<code>alt</code>) informatifs pour les images porteuses de sens, <code>alt=&quot;&quot;</code> pour les images décoratives, sous-titres pour les vidéos, audio descriptions pour les contenus visuels complexes, et transcriptions pour les podcasts.</li>
-</ol>
-<ol>
-<li><strong>Formulaires accessibles</strong> : associer chaque champ à son <code>&lt;label&gt;</code> via <code>for</code>/<code>id</code>, fournir des messages d'erreur clairs liés au champ (<code>aria-describedby</code>), ne pas bloquer la validation sur le seul format visuel, et permettre la correction avant soumission.</li>
-</ol>
-<ol>
-<li><strong>Tests avec outils</strong> : intégrer axe-core ou Lighthouse pour les tests automatisés, tester manuellement avec NVDA (Windows) et VoiceOver (macOS/iOS), et ajouter pa11y-ci dans la pipeline CI/CD pour prévenir les régressions.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en étapes</h2>
+<h3>1. Audit automatisé — base de départ</h3>
+<p>Lancer les outils automatisés pour couvrir ~30-40 % des problèmes détectables :</p>
+<pre><code class="lang-bash"># axe-core CLI (Node)
+npx axe http://localhost:3000 --tags wcag2aa --reporter json &gt; axe-report.json
+
+# pa11y (CI-friendly)
+npx pa11y http://localhost:3000 --standard WCAG2AA --reporter json
+
+# Lighthouse (headless)
+npx lighthouse http://localhost:3000 --only-categories=accessibility --output json --quiet</code></pre>
+<p>Critère de décision : score Lighthouse &gt;= 90 ET zéro violation axe <code>critical</code>/<code>serious</code> avant merge.</p>
+<h3>2. Navigation clavier (manuelle, ~5 min)</h3>
+<p>Parcourir la page <strong>uniquement au clavier</strong> (Tab / Shift+Tab / Enter / Espace / Flèches).</p>
+<p>Checklist :</p>
 <ul>
-<li>L'accessibilité est une exigence légale dans de nombreux pays : traiter chaque violation comme un bug critique.</li>
-<li>Préférer le HTML sémantique natif à ARIA — un <code>&lt;button&gt;</code> vaut mieux qu'un <code>&lt;div role=&quot;button&quot;&gt;</code>.</li>
-<li>Tester avec de vrais lecteurs d'écran, pas uniquement des outils automatisés (qui ne détectent que ~30% des problèmes).</li>
-<li>Fournir des exemples de code corrigé, pas seulement la liste des problèmes.</li>
-<li>Documenter le niveau WCAG (A, AA, AAA) et le critère exact (ex. 1.4.3 Contrast) pour chaque point soulevé.</li>
+<li>[ ] Focus visible sur chaque élément interactif (ne pas faire <code>outline: none</code> sans alternative)</li>
+<li>[ ] Ordre de tab logique — suit le flux visuel de gauche à droite, haut en bas</li>
+<li>[ ] Skip link présent et fonctionnel (<code>&lt;a href=&quot;#main-content&quot; class=&quot;skip-link&quot;&gt;Aller au contenu&lt;/a&gt;</code>)</li>
+<li>[ ] Aucun keyboard trap (modale fermable avec Echap, focus retourné à l'élément déclencheur)</li>
+<li>[ ] Composants custom (datepicker, slider) utilisables sans souris</li>
 </ul>
+<pre><code class="lang-css">/* Focus visible minimal — ne jamais supprimer sans remplacement */
+:focus-visible {
+  outline: 3px solid #005fcc;
+  outline-offset: 2px;
+}</code></pre>
+<h3>3. Sémantique HTML et landmarks</h3>
+<pre><code class="lang-html">&lt;!-- Structure minimale correcte --&gt;
+&lt;header role=&quot;banner&quot;&gt;…&lt;/header&gt;
+&lt;nav aria-label=&quot;Navigation principale&quot;&gt;…&lt;/nav&gt;
+&lt;main id=&quot;main-content&quot;&gt;
+  &lt;h1&gt;Titre de la page&lt;/h1&gt;   &lt;!-- Un seul h1 par page --&gt;
+  …
+&lt;/main&gt;
+&lt;footer role=&quot;contentinfo&quot;&gt;…&lt;/footer&gt;</code></pre>
+<p>Pièges fréquents :</p>
+<ul>
+<li>Sauts de niveau de titre (<code>h1</code> → <code>h3</code>) : interdit</li>
+<li>Plusieurs <code>&lt;main&gt;</code> sans <code>hidden</code> sur les inactifs</li>
+<li><code>&lt;div&gt;</code> et <code>&lt;span&gt;</code> cliquables sans <code>role</code> ni <code>tabindex</code></li>
+</ul>
+<h3>4. ARIA — règle d'or</h3>
+<blockquote>Utiliser ARIA uniquement si le HTML natif ne peut pas exprimer le comportement.</blockquote>
+<pre><code class="lang-html">&lt;!-- MAL : ARIA redondant --&gt;
+&lt;button role=&quot;button&quot; aria-label=&quot;Envoyer&quot;&gt;Envoyer&lt;/button&gt;
+
+&lt;!-- BIEN : HTML natif seul --&gt;
+&lt;button type=&quot;submit&quot;&gt;Envoyer&lt;/button&gt;
+
+&lt;!-- BIEN : ARIA nécessaire (état dynamique) --&gt;
+&lt;button aria-expanded=&quot;false&quot; aria-controls=&quot;menu-id&quot;&gt;Menu&lt;/button&gt;
+&lt;ul id=&quot;menu-id&quot; hidden&gt;…&lt;/ul&gt;
+
+&lt;!-- Live region pour les notifications --&gt;
+&lt;div role=&quot;status&quot; aria-live=&quot;polite&quot; aria-atomic=&quot;true&quot;&gt;
+  &lt;!-- Injecté dynamiquement par JS après action utilisateur --&gt;
+&lt;/div&gt;</code></pre>
+<h3>5. Contraste et couleurs</h3>
+<p>Ratios WCAG 2.1 AA :</p>
+<table><thead><tr><th>Contexte</th><th>Ratio minimum</th></tr></thead><tbody><tr><td>Texte normal (&lt; 18px / &lt; 14px bold)</td><td><strong>4.5:1</strong></td></tr><tr><td>Grand texte (≥ 18px ou ≥ 14px bold)</td><td><strong>3:1</strong></td></tr><tr><td>Composants UI, bordures de champs</td><td><strong>3:1</strong></td></tr><tr><td>Texte décoratif / logo</td><td>exempt</td></tr></tbody></table>
+<p>Outils rapides :</p>
+<pre><code class="lang-bash"># Vérification couleur via CLI
+npx color-contrast-checker &quot;#ffffff&quot; &quot;#767676&quot;  # retourne le ratio
+
+# Extension VS Code : axe Accessibility Linter
+# Extension Chrome : Colour Contrast Analyser</code></pre>
+<p>Anti-pattern : transmettre une information uniquement par la couleur (ex. champ en erreur affiché uniquement en rouge sans icône ni texte).</p>
+<h3>6. Images et médias</h3>
+<pre><code class="lang-html">&lt;!-- Image porteuse de sens --&gt;
+&lt;img src=&quot;graph.png&quot; alt=&quot;Évolution du CA Q1-Q2 2025 : +12%&quot;&gt;
+
+&lt;!-- Image décorative --&gt;
+&lt;img src=&quot;separator.png&quot; alt=&quot;&quot; role=&quot;presentation&quot;&gt;
+
+&lt;!-- Icône SVG inline cliquable --&gt;
+&lt;button&gt;
+  &lt;svg aria-hidden=&quot;true&quot; focusable=&quot;false&quot;&gt;…&lt;/svg&gt;
+  &lt;span class=&quot;visually-hidden&quot;&gt;Fermer la modale&lt;/span&gt;
+&lt;/button&gt;</code></pre>
+<pre><code class="lang-css">/* Classe utilitaire — masque visuellement mais accessible aux AT */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+}</code></pre>
+<h3>7. Formulaires accessibles</h3>
+<pre><code class="lang-html">&lt;!-- Association explicite label / champ --&gt;
+&lt;label for=&quot;email&quot;&gt;Adresse email &lt;span aria-hidden=&quot;true&quot;&gt;*&lt;/span&gt;&lt;/label&gt;
+&lt;input type=&quot;email&quot; id=&quot;email&quot; name=&quot;email&quot;
+       required aria-required=&quot;true&quot;
+       aria-describedby=&quot;email-error&quot;&gt;
+&lt;p id=&quot;email-error&quot; role=&quot;alert&quot; hidden&gt;
+  Veuillez saisir un email valide.
+&lt;/p&gt;</code></pre>
+<p>Critères de validation :</p>
+<ul>
+<li>Message d'erreur lié au champ via <code>aria-describedby</code></li>
+<li><code>role=&quot;alert&quot;</code> ou <code>aria-live=&quot;assertive&quot;</code> pour les erreurs dynamiques</li>
+<li>Ne pas désactiver le bouton Submit — préférer valider après tentative</li>
+<li>Grouper les champs liés dans <code>&lt;fieldset&gt;</code> + <code>&lt;legend&gt;</code></li>
+</ul>
+<h3>8. Intégration CI/CD</h3>
+<pre><code class="lang-yaml"># GitHub Actions — pa11y-ci
+- name: Accessibility tests
+  run: |
+    npx pa11y-ci --sitemap http://localhost:3000/sitemap.xml \
+      --config .pa11yci.json</code></pre>
+<pre><code class="lang-json">// .pa11yci.json
+{
+  &quot;standard&quot;: &quot;WCAG2AA&quot;,
+  &quot;timeout&quot;: 30000,
+  &quot;ignore&quot;: [],
+  &quot;runners&quot;: [&quot;axe&quot;]
+}</code></pre>
+<h3>9. Tests avec lecteurs d'écran (manuel)</h3>
+<table><thead><tr><th>OS</th><th>Lecteur</th><th>Raccourci navigation</th></tr></thead><tbody><tr><td>Windows</td><td>NVDA (gratuit)</td><td><code>H</code> = titres, <code>F</code> = formulaires, <code>B</code> = boutons</td></tr><tr><td>macOS/iOS</td><td>VoiceOver</td><td><code>VO+U</code> = rotor, <code>VO+Cmd+H</code> = titres</td></tr><tr><td>Android</td><td>TalkBack</td><td>Swipe droite = élément suivant</td></tr></tbody></table>
+<p>Scénario minimal à tester : chargement page → navigation landmarks → remplissage formulaire → soumission → lecture du message de confirmation.</p>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correction</th></tr></thead><tbody><tr><td><code>outline: none</code> sans alternative</td><td>focus invisible</td><td>utiliser <code>:focus-visible</code> avec style custom</td></tr><tr><td><code>&lt;div onclick&gt;</code> sans <code>role</code>/<code>tabindex</code></td><td>inaccessible au clavier</td><td>remplacer par <code>&lt;button&gt;</code></td></tr><tr><td><code>aria-label</code> dupliquant le texte visible</td><td>redondance verbale</td><td>supprimer l'attribut</td></tr><tr><td>Placeholder comme seul label</td><td>disparaît à la saisie</td><td>ajouter un vrai <code>&lt;label&gt;</code></td></tr><tr><td><code>tabindex &gt; 0</code></td><td>ordre de focus imprévisible</td><td>utiliser uniquement <code>tabindex=&quot;0&quot;</code> ou <code>-1</code></td></tr><tr><td>Alt text = nom du fichier</td><td>inutile pour les AT</td><td>décrire le sens de l'image</td></tr><tr><td>Contraste validé en light mode seulement</td><td>échec en dark mode</td><td>tester les deux thèmes</td></tr></tbody></table>
+<h2>Référence critères WCAG</h2>
+<p>Critères AA les plus souvent violés en pratique :</p>
+<ul>
+<li><strong>1.1.1</strong> Alternatives textuelles (alt, aria-label)</li>
+<li><strong>1.3.1</strong> Info et relations (sémantique HTML)</li>
+<li><strong>1.4.3</strong> Contraste (minimum)</li>
+<li><strong>2.1.1</strong> Clavier</li>
+<li><strong>2.4.3</strong> Ordre du focus</li>
+<li><strong>2.4.7</strong> Focus visible</li>
+<li><strong>3.3.1</strong> Identification des erreurs</li>
+<li><strong>4.1.2</strong> Nom, rôle, valeur (ARIA correct)</li>
+</ul>
+<p>Toujours citer le critère exact (ex. WCAG 2.1 — 1.4.3 AA) dans les rapports.</p>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

@@ -96,23 +96,90 @@ cp -r claude-skills-collection/skills/travel-local-phrase-book ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Local Phrase Book</h1>
-<h2>Étape 1 — Contexte</h2>
-<p>Destination, langue cible, niveau actuel (zéro / quelques mots / conversationnel).</p>
-<h2>Étape 2 — Phrases essentielles par catégorie</h2>
-<h3>Bases</h3>
-<p>Bonjour, merci, s'il vous plaît, excusez-moi, oui/non, au revoir.</p>
-<h3>Se déplacer</h3>
-<p>Où est…, combien ça coûte, à gauche/droite, l'aéroport, la gare.</p>
-<h3>Manger</h3>
-<p>L'addition, menu, eau, sans viande/gluten, c'est délicieux.</p>
-<h3>Urgences</h3>
-<p>Aide, police, hôpital, je suis perdu, je ne comprends pas.</p>
-<h3>Social</h3>
-<p>Comment vous appelez-vous, je viens de…, parlez-vous français/anglais.</p>
-<h2>Étape 3 — Format</h2>
-<table><thead><tr><th>Français</th><th>Langue locale</th><th>Prononciation approximative</th></tr></thead><tbody></tbody></table>
-<h2>Étape 4 — Notes culturelles</h2>
-<p>Gestes, coutumes, faux-amis, politesse locale.</p>
+<h2>Workflow</h2>
+<h3>Étape 1 — Collecter le contexte</h3>
+<p>Demander (ou inférer du message) :</p>
+<ul>
+<li><strong>Destination</strong> : pays + ville si pertinent (ex : Japon / Tokyo vs Osaka = même langue, mais dialecte différent)</li>
+<li><strong>Langue cible</strong> : si plusieurs langues coexistent (ex : Maroc → darija, français, amazigh), préciser laquelle est utile en pratique</li>
+<li><strong>Niveau actuel</strong> : zéro / quelques mots / conversationnel → calibre la densité du guide</li>
+<li><strong>Durée et type de voyage</strong> : backpacker solo, famille, voyage d'affaires → adapte les catégories prioritaires</li>
+<li><strong>Contraintes spéciales</strong> : régime alimentaire, handicap, voyage avec enfants → phrases ciblées</li>
+</ul>
+<p>Critère de décision — si la destination est anglophone (UK, Australie, etc.) : proposer des expressions d'argot local plutôt qu'une traduction.</p>
+<hr>
+<h3>Étape 2 — Sélectionner les catégories pertinentes</h3>
+<table><thead><tr><th>Catégorie</th><th>Toujours incluse</th><th>Conditionnelle</th></tr></thead><tbody><tr><td>Bases (salutation, politesse)</td><td>✅</td><td></td></tr><tr><td>Se déplacer (transports, directions)</td><td>✅</td><td></td></tr><tr><td>Restauration &amp; alimentation</td><td>✅</td><td></td></tr><tr><td>Urgences &amp; santé</td><td>✅</td><td></td></tr><tr><td>Shopping &amp; prix</td><td></td><td>voyage loisir / backpacker</td></tr><tr><td>Hébergement</td><td></td><td>séjour &gt; 3 jours</td></tr><tr><td>Affaires &amp; réunions</td><td></td><td>voyage pro</td></tr><tr><td>Enfants &amp; familles</td><td></td><td>voyage en famille</td></tr><tr><td>Régimes alimentaires</td><td></td><td>si contrainte détectée</td></tr></tbody></table>
+<p>Ne pas surcharger : <strong>max 8-10 phrases par catégorie</strong>, les plus actionnables en priorité.</p>
+<hr>
+<h3>Étape 3 — Générer le guide en tableau</h3>
+<p>Format standard — une ligne par phrase :</p>
+<pre><code>| Français | Langue locale | Prononciation approx. | Niveau urgence |
+|----------|--------------|----------------------|----------------|
+| Où sont les toilettes ? | 어디에 화장실이 있어요? | Eodi-e hwajangshil-i isseoyo? | 🔴 Critique |
+| L'addition, s'il vous plaît | 계산서 주세요 | Gyesan-seo juseyo | 🟡 Important |
+| Merci | 감사합니다 | Gamsahamnida | 🟢 Utile |</code></pre>
+<p>Niveaux d'urgence :</p>
+<ul>
+<li>🔴 <strong>Critique</strong> : urgences, santé, se perdre</li>
+<li>🟡 <strong>Important</strong> : paiement, transport, commande</li>
+<li>🟢 <strong>Utile</strong> : politesse, social, confort</li>
+</ul>
+<p>Règles de prononciation :</p>
+<ul>
+<li>Simplifier au maximum pour un locuteur francophone : <code>th</code> anglais → <code>d</code> ou <code>z</code>, tons mandarin notés avec accent (mā, má, mǎ, mà)</li>
+<li>Pour les langues à tons ou script non-latin : ajouter une colonne translittération + la phrase en script natif (pour montrer à un local)</li>
+<li>Pour l'arabe/hébreu : toujours inclure l'écriture native, essentielle pour pointer du doigt</li>
+</ul>
+<hr>
+<h3>Étape 4 — Ajouter les notes culturelles critiques</h3>
+<p>Structurer en trois sous-sections :</p>
+<p><strong>Gestes et coutumes</strong></p>
+<ul>
+<li>Ex : en Thaïlande, toucher la tête d'un inconnu est offensant ; pointer du doigt est impoli au Moyen-Orient</li>
+<li>Ex : en Japon, parler fort dans les transports est mal vu, souffler le nez en public aussi</li>
+</ul>
+<p><strong>Faux-amis et pièges linguistiques</strong></p>
+<ul>
+<li>Ex : &quot;embarazada&quot; en espagnol = enceinte (pas &quot;embarrassée&quot;)</li>
+<li>Ex : &quot;gift&quot; en allemand = poison</li>
+<li>Mentionner si le &quot;non&quot; peut être exprimé par silence ou détournement du regard (Japon, Corée)</li>
+</ul>
+<p><strong>Registres et politesse</strong></p>
+<ul>
+<li>Signaler si la langue a un registre formel obligatoire avec inconnus (coréen, japonais, thaï, javanais)</li>
+<li>Indiquer si le vouvoiement change la conjugaison (espagnol usted, arabe, allemand Sie)</li>
+<li>Tipping culture : commun / rare / offensant selon pays</li>
+</ul>
+<hr>
+<h3>Étape 5 — Bonus situationnel (si niveau zéro ou voyage imminent)</h3>
+<p>Générer une <strong>carte de survie imprimable</strong> : 5-7 phrases absolument critiques, police grande, avec script natif — destinée à être montrée à un local.</p>
+<p>Exemple pour le Japon :</p>
+<pre><code>🆘 CARTE DE SURVIE — Japon
+
+Hôpital → 病院 (Byōin)
+Police → 警察 (Keisatsu)
+Je suis perdu → 迷子になりました (Maigo ni narimashita)
+Appelez une ambulance → 救急車を呼んでください (Kyūkyūsha o yonde kudasai)
+Je suis allergique à [X] → [X]アレルギーがあります ([X] arerugī ga arimasu)</code></pre>
+<hr>
+<h2>Anti-patterns — Ce qu'il ne faut pas faire</h2>
+<ul>
+<li><strong>Ne pas translittérer phonétiquement sans le script natif</strong> : le voyageur ne pourra pas montrer le mot à un local qui ne lit pas le latin</li>
+<li><strong>Ne pas surcharger avec 50 phrases</strong> : au-delà de 40-50 phrases, le guide n'est plus utilisable en situation réelle</li>
+<li><strong>Ne pas ignorer le registre</strong> : donner la forme trop familière pour une langue à niveaux (japonais, coréen) peut être perçu comme irrespectueux</li>
+<li><strong>Ne pas inventer la prononciation</strong> : si incertain, indiquer &quot;à vérifier&quot; plutôt que de donner une approximation trompeuse</li>
+<li><strong>Ne pas oublier les phrases d'incompréhension</strong> : &quot;Je ne comprends pas&quot;, &quot;Pouvez-vous répéter lentement ?&quot; sont souvent les plus utiles</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Recommander <strong>Google Translate mode appareil photo</strong> (scan de menus) et <strong>mode hors-ligne</strong> (télécharger la langue avant départ)</li>
+<li>Signaler si <strong>Duolingo / Pimsleur</strong> a un cours court adapté (langues populaires)</li>
+<li>Pour les pays à faible connectivité : suggérer l'app <strong>iTranslate</strong> ou <strong>SayHi</strong> en cache local</li>
+<li>Mentionner <strong>Papago</strong> pour coréen/japonais/chinois (meilleure que Google Translate sur ces langues en 2026)</li>
+<li>Si le voyage inclut des zones rurales : les phrases en script natif sont encore plus critiques que la translittération latine</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

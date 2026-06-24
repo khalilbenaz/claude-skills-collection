@@ -96,35 +96,148 @@ cp -r claude-skills-collection/skills/security-soc-analyst-guide ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide Analyste SOC</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Trier les alertes</strong> — Recevoir et prioriser les alertes SIEM selon la sévérité (critique, haute, moyenne, basse), le contexte métier de l'asset impacté, et la fiabilité de la source de détection. Éliminer les faux positifs récurrents en ajustant les règles de corrélation.</li>
-</ol>
-<ol>
-<li><strong>Qualifier l'incident</strong> — Analyser l'alerte pour déterminer s'il s'agit d'un vrai positif : vérifier les logs sources, corréler avec d'autres événements dans la fenêtre temporelle, enrichir avec les données de threat intelligence (réputation IP, hash de fichier, domaine malveillant).</li>
-</ol>
-<ol>
-<li><strong>Investiguer en profondeur</strong> — Collecter les artefacts forensiques : logs réseau (NetFlow, DNS, proxy), logs système (authentification, processus, registre), captures mémoire si nécessaire. Reconstituer la timeline de l'attaque et identifier le vecteur d'entrée initial.</li>
-</ol>
-<ol>
-<li><strong>Identifier les indicateurs de compromission</strong> — Extraire les IoCs de l'investigation : adresses IP malveillantes, domaines C2, hashes de malware, chemins de fichiers suspects, commandes exécutées, et comptes compromis. Alimenter la base de threat intelligence interne.</li>
-</ol>
-<ol>
-<li><strong>Appliquer le playbook de réponse</strong> — Exécuter le playbook adapté au type d'incident : isoler les systèmes compromis, bloquer les IoCs identifiés (firewall, proxy, EDR), réinitialiser les credentials compromis, et notifier les parties prenantes selon la matrice d'escalade.</li>
-</ol>
-<ol>
-<li><strong>Documenter et clôturer</strong> — Rédiger le rapport d'incident avec la timeline complète, les actions prises, l'impact évalué, les IoCs partagés, et les recommandations de remédiation. Mettre à jour les règles SIEM et les playbooks en fonction des enseignements.</li>
-</ol>
-<ol>
-<li><strong>Améliorer la détection</strong> — Créer ou affiner les règles de détection SIEM/EDR basées sur les techniques MITRE ATT&amp;CK observées, réduire les faux positifs par tuning des seuils, et développer de nouvelles alertes pour les gaps de couverture identifiés.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Triage initial (&lt; 5 min)</h2>
+<p><strong>Critères de priorisation</strong> — Appliquer un score composite :</p>
+<table><thead><tr><th>Facteur</th><th>Poids</th></tr></thead><tbody><tr><td>Sévérité SIEM (critique/haute/moyenne/basse)</td><td>40 %</td></tr><tr><td>Criticité de l'asset (DC, prod, PII)</td><td>30 %</td></tr><tr><td>Fiabilité de la règle (% faux positifs historique)</td><td>20 %</td></tr><tr><td>Contexte horaire (heures ouvrées vs nuit/weekend)</td><td>10 %</td></tr></tbody></table>
+<p><strong>Commandes rapides de qualification :</strong></p>
+<pre><code class="lang-bash"># Réputation IP en ligne de commande
+curl -s &quot;https://api.abuseipdb.com/api/v2/check?ipAddress=&lt;IP&gt;&amp;maxAgeInDays=30&quot; \
+  -H &quot;Key: $ABUSEIPDB_KEY&quot; | jq '.data | {score: .abuseConfidenceScore, country: .countryCode}'
+
+# Hash VirusTotal CLI
+vt file &lt;sha256_hash&gt;
+
+# Résolution inverse + ASN
+whois &lt;IP&gt; | grep -E 'OrgName|CIDR|country'
+dig -x &lt;IP&gt; +short</code></pre>
+<p><strong>Décision faux positif vs vrai positif :</strong></p>
 <ul>
-<li>Documente chaque étape de l'investigation avec horodatage pour constituer une chaîne de preuves exploitable.</li>
-<li>Corrèle toujours les alertes avec le framework MITRE ATT&amp;CK pour identifier les tactiques, techniques et procédures (TTPs) de l'attaquant.</li>
-<li>N'agis jamais sur un système compromis sans avoir préalablement collecté les artefacts forensiques nécessaires à l'investigation.</li>
-<li>Applique la matrice d'escalade définie — certains incidents nécessitent une notification immédiate au management ou aux autorités.</li>
-<li>Partage les IoCs et les lessons learned avec la communauté SOC pour renforcer la détection collective.</li>
+<li>Même alerte sur le même asset &gt; 3 fois en 24 h sans activité suspecte corrélée → tuning, pas escalade</li>
+<li>Asset non-critique, IP privée interne, comportement connu → close/informational</li>
+<li>Asset critique OU IoC confirmé VirusTotal/MISP → ouvrir un ticket incident</li>
+</ul>
+<hr>
+<h2>2. Qualification de l'incident</h2>
+<p>Corréler dans la fenêtre -1 h / +1 h autour de l'alerte :</p>
+<pre><code class="lang-spl"># Splunk — corrélation par host
+index=security sourcetype=* host=&quot;&lt;HOSTNAME&gt;&quot;
+  earliest=-1h latest=+1h
+| eval _time=strptime(_time, &quot;%Y-%m-%d %H:%M:%S&quot;)
+| sort _time
+| table _time, sourcetype, EventCode, user, src_ip, dest_ip, process, message</code></pre>
+<pre><code class="lang-kql">// Microsoft Sentinel — timeline host
+SecurityEvent
+| where Computer == &quot;&lt;HOSTNAME&gt;&quot;
+| where TimeGenerated between (ago(1h) .. now())
+| project TimeGenerated, EventID, Account, Process, CommandLine, IpAddress
+| order by TimeGenerated asc</code></pre>
+<p><strong>Mapping MITRE ATT&amp;CK rapide :</strong></p>
+<table><thead><tr><th>Observation</th><th>Tactique ATT&amp;CK</th><th>Technique</th></tr></thead><tbody><tr><td>Connexion RDP depuis IP étrangère</td><td>Initial Access</td><td>T1133 External Remote Services</td></tr><tr><td><code>powershell -enc</code> ou <code>cmd /c</code></td><td>Execution</td><td>T1059.001 / T1059.003</td></tr><tr><td><code>net user /add</code> en dehors heures bureau</td><td>Persistence</td><td>T1136.001</td></tr><tr><td>Beacon régulier vers IP externe</td><td>C2</td><td>T1071 Application Layer Protocol</td></tr><tr><td>Exfiltration DNS (TXT records longs)</td><td>Exfiltration</td><td>T1048.003</td></tr></tbody></table>
+<hr>
+<h2>3. Collecte forensique (ne pas contaminer)</h2>
+<p><strong>Ordre de volatilité (RFC 3227) — collecter du plus volatile au moins volatile :</strong></p>
+<ol>
+<li>RAM / processus actifs</li>
+<li>Connexions réseau actives</li>
+<li>Logs système en mémoire</li>
+<li>Fichiers temporaires</li>
+<li>Logs sur disque</li>
+<li>Images disque</li>
+</ol>
+<pre><code class="lang-powershell"># Windows — snapshot processus et connexions réseau
+Get-Process | Select-Object Name,Id,CPU,WorkingSet,Path | Export-Csv proc_snapshot.csv
+netstat -ano | Out-File netstat_snapshot.txt
+Get-NetTCPConnection | Where-Object State -eq 'Established' | Export-Csv tcp_connections.csv
+
+# Dump mémoire processus suspect (PID connu)
+&amp; &quot;C:\Program Files\Sysinternals\procdump.exe&quot; -ma &lt;PID&gt; C:\forensics\proc_&lt;PID&gt;.dmp</code></pre>
+<pre><code class="lang-bash"># Linux — collecte rapide
+ss -tnap &gt; /tmp/ir/connections.txt
+ps auxf &gt; /tmp/ir/processes.txt
+find /tmp /var/tmp /dev/shm -type f -newer /proc/1 2&gt;/dev/null &gt; /tmp/ir/new_files.txt
+last -n 50 &gt; /tmp/ir/logins.txt
+journalctl --since &quot;2h ago&quot; &gt; /tmp/ir/journal.txt</code></pre>
+<hr>
+<h2>4. Extraction et partage des IoCs</h2>
+<p><strong>Format STIX 2.1 minimal pour partage MISP :</strong></p>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;indicator&quot;,
+  &quot;spec_version&quot;: &quot;2.1&quot;,
+  &quot;id&quot;: &quot;indicator--&lt;uuid&gt;&quot;,
+  &quot;created&quot;: &quot;2026-06-24T00:00:00Z&quot;,
+  &quot;name&quot;: &quot;C2 domain observé incident IR-2026-042&quot;,
+  &quot;pattern&quot;: &quot;[domain-name:value = 'malicious-domain.example']&quot;,
+  &quot;pattern_type&quot;: &quot;stix&quot;,
+  &quot;valid_from&quot;: &quot;2026-06-24T00:00:00Z&quot;,
+  &quot;labels&quot;: [&quot;malicious-activity&quot;],
+  &quot;confidence&quot;: 85
+}</code></pre>
+<p><strong>Push MISP via CLI :</strong></p>
+<pre><code class="lang-bash"># Ajouter un attribut IP à un event MISP existant
+misp-modules -m add_attribute --event-id &lt;EVENT_ID&gt; --type ip-dst --value &lt;IP&gt; \
+  --comment &quot;C2 identifié IR-2026-042&quot; --to_ids 1</code></pre>
+<hr>
+<h2>5. Playbooks de réponse type</h2>
+<h3>Phishing confirmé</h3>
+<ol>
+<li>Isoler la boîte mail concernée (O365 : <code>Set-Mailbox -Identity user -AccountDisabled $true</code>)</li>
+<li>Purger le mail de toutes les boîtes : <code>Search-UnifiedAuditLog</code> → Compliance Center purge</li>
+<li>Bloquer le domaine expéditeur dans le proxy/MTA</li>
+<li>Rechercher les clics sur le lien dans les logs proxy</li>
+<li>Réinitialiser MFA de l'utilisateur si clic confirmé</li>
+</ol>
+<h3>Ransomware détecté</h3>
+<ol>
+<li><strong>Isoler immédiatement</strong> (couper le réseau, pas éteindre — préserver la RAM)</li>
+<li>Identifier le patient zéro via les logs de partage SMB</li>
+<li>Snapshot VM avant toute action</li>
+<li>Contacter le CERT si impact &gt; 10 assets ou données sensibles</li>
+<li>Ne jamais payer sans analyse légale préalable</li>
+</ol>
+<h3>Brute force SSH/RDP réussi</h3>
+<ol>
+<li>Vérifier les connexions actives depuis la session suspecte</li>
+<li>Killer la session : <code>kill -9 &lt;PID&gt;</code> ou <code>logoff &lt;SESSION_ID&gt;</code></li>
+<li>Bloquer l'IP source (firewall + fail2ban / Conditional Access)</li>
+<li>Analyser les actions post-authentification (sudo, cron, fichiers créés)</li>
+<li>Forcer rotation credentials du compte ciblé</li>
+</ol>
+<hr>
+<h2>6. Documentation et clôture</h2>
+<p><strong>Template rapport d'incident (champs minimaux) :</strong></p>
+<pre><code>Incident ID : IR-YYYY-NNN
+Date/Heure détection : 
+Date/Heure clôture : 
+Analyste : 
+Sévérité finale : [P1/P2/P3/P4]
+Assets impactés : 
+Vecteur initial : 
+Timeline (UTC) :
+  - HH:MM — [action/observation]
+IoCs extraits : [IP, hash, domaine, compte]
+Actions de remédiation :
+Recommandations :
+MITRE ATT&amp;CK : [Tactic — Technique ID]</code></pre>
+<hr>
+<h2>7. Tuning et amélioration continue</h2>
+<pre><code class="lang-spl"># Splunk — identifier les règles les plus bruyantes (faux positifs)
+index=notable | stats count, dc(host) as hosts by search_name
+| sort -count | head 20</code></pre>
+<ul>
+<li>Règle &gt; 95 % faux positifs sur 30 jours → désactiver ou restreindre le scope</li>
+<li>Règle jamais déclenchée en 90 jours → revalider la pertinence</li>
+<li>Nouvel IoC confirmé → créer une règle de détection dans les 24 h</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<ul>
+<li><strong>Ne jamais triage depuis la mémoire</strong> — documenter dans le SIEM/ticketing, pas dans ta tête</li>
+<li><strong>Ne pas éteindre un système compromis</strong> avant d'avoir dumpé la RAM (perte d'artefacts volatils)</li>
+<li><strong>Éviter les faux urgences</strong> — une alerte CRITICAL automatique sans corrélation n'est pas un incident P1</li>
+<li><strong>Ne pas partager d'IoCs bruts</strong> sans les valider (IP privées, faux positifs = pollution threat intel)</li>
+<li><strong>Ne jamais investiguer seul un P1</strong> — toujours un binôme, trail d'audit complet</li>
+<li><strong>Pas d'action corrective sans snapshot/backup</strong> de l'état actuel</li>
+<li><strong>Méfiance envers les logins &quot;légitimes&quot;</strong> — Living-off-the-land (LOLBins) : <code>wmic</code>, <code>certutil</code>, <code>mshta</code> utilisés à des fins malveillantes</li>
 </ul>
 </article>
 </main>

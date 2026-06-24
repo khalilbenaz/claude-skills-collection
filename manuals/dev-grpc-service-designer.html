@@ -96,142 +96,182 @@ cp -r claude-skills-collection/skills/dev-grpc-service-designer ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Concepteur de Services gRPC</h1>
-<h2>Workflow</h2>
+<h2>Workflow en étapes</h2>
 <ol>
-<li><strong>Comprendre le besoin</strong> : identifier le type de communication (unaire, streaming serveur, streaming client, bidirectionnel).</li>
-<li><strong>Concevoir le contrat</strong> : définir les messages et services dans un fichier <code>.proto</code>.</li>
-<li><strong>Implémenter</strong> : proposer le code serveur et client adapté au langage.</li>
-<li><strong>Valider</strong> : vérifier la compatibilité, la gestion d'erreurs et la performance.</li>
+<li><strong>Qualifier la communication</strong> — choisir le bon pattern (voir tableau ci-dessous) avant d'ouvrir un éditeur.</li>
+<li><strong>Concevoir le contrat <code>.proto</code></strong> — package versionné, messages dédiés par RPC, enums avec valeur 0 <code>UNSPECIFIED</code>.</li>
+<li><strong>Générer le code</strong> — <code>protoc</code> ou plugin SDK ; vérifier que le code généré ne doit jamais être édité manuellement.</li>
+<li><strong>Implémenter serveur puis client</strong> — gestion d'erreurs gRPC status codes, deadlines, idempotence.</li>
+<li><strong>Sécuriser et observer</strong> — TLS mutuel, intercepteurs logging/métriques, health checks.</li>
+<li><strong>Valider la compatibilité</strong> — tester la rétrocompatibilité binaire avant tout déploiement.</li>
 </ol>
-<h2>Types de communication gRPC</h2>
-<table><thead><tr><th>Type</th><th>Usage</th><th>Exemple</th></tr></thead><tbody><tr><td><strong>Unaire</strong></td><td>Requête/réponse classique</td><td>CRUD, authentification</td></tr><tr><td><strong>Server streaming</strong></td><td>Serveur envoie un flux</td><td>Notifications, feeds temps réel</td></tr><tr><td><strong>Client streaming</strong></td><td>Client envoie un flux</td><td>Upload de fichiers, logs batch</td></tr><tr><td><strong>Bidirectionnel</strong></td><td>Flux dans les deux sens</td><td>Chat, jeux en ligne, monitoring</td></tr></tbody></table>
-<h2>Conception de contrats Protobuf</h2>
-<h3>Structure d'un fichier .proto</h3>
+<h2>Critère de choix du pattern de communication</h2>
+<table><thead><tr><th>Pattern</th><th>Quand l'utiliser</th><th>Exemple concret</th></tr></thead><tbody><tr><td><strong>Unaire</strong></td><td>Requête/réponse atomique, latence faible</td><td>CRUD, auth, paiement ponctuel</td></tr><tr><td><strong>Server streaming</strong></td><td>Serveur pousse un volume inconnu</td><td>Notifications, export CSV/JSON</td></tr><tr><td><strong>Client streaming</strong></td><td>Client envoie un flux puis attend le résultat</td><td>Upload fichiers, ingestion de logs</td></tr><tr><td><strong>Bidirectionnel</strong></td><td>Dialogue continu, ordre important</td><td>Chat temps réel, monitoring interactif</td></tr></tbody></table>
+<p>Règle heuristique : si la réponse tient dans une seule trame TCP et que le serveur répond immédiatement → unaire. Dès qu'une des parties envoie plusieurs messages → streaming.</p>
+<h2>Conception du contrat Protobuf</h2>
+<h3>Structure de référence</h3>
 <pre><code class="lang-protobuf">syntax = &quot;proto3&quot;;
 
 package myapp.payments.v1;
 
 option csharp_namespace = &quot;MyApp.Payments.V1&quot;;
+option go_package = &quot;github.com/myapp/payments/v1;paymentsv1&quot;;
 
 import &quot;google/protobuf/timestamp.proto&quot;;
-import &quot;google/protobuf/empty.proto&quot;;
 
-// Service de gestion des paiements
 service PaymentService {
-  // Créer un paiement (unaire)
-  rpc CreatePayment(CreatePaymentRequest) returns (PaymentResponse);
-
-  // Suivre le statut en temps réel (server streaming)
-  rpc WatchPaymentStatus(WatchPaymentRequest) returns (stream PaymentStatusUpdate);
-
-  // Envoyer des transactions par lot (client streaming)
-  rpc BatchTransactions(stream TransactionRequest) returns (BatchTransactionResponse);
+  // Unaire
+  rpc CreatePayment(CreatePaymentRequest) returns (CreatePaymentResponse);
+  // Server streaming
+  rpc WatchStatus(WatchStatusRequest) returns (stream PaymentStatusEvent);
+  // Client streaming
+  rpc BatchImport(stream ImportTransactionRequest) returns (BatchImportResponse);
+  // Bidirectionnel
+  rpc SyncLedger(stream LedgerEntry) returns (stream LedgerAck);
 }
 
 message CreatePaymentRequest {
-  string idempotency_key = 1;
-  int64 amount_cents = 2;
-  string currency = 3;
-  string recipient_id = 4;
+  string idempotency_key = 1;  // UUID v4, obligatoire
+  int64  amount_cents    = 2;
+  string currency        = 3;  // ISO 4217
+  string recipient_id    = 4;
   map&lt;string, string&gt; metadata = 5;
 }
 
-message PaymentResponse {
+message CreatePaymentResponse {
   string payment_id = 1;
   PaymentStatus status = 2;
   google.protobuf.Timestamp created_at = 3;
 }
 
 enum PaymentStatus {
-  PAYMENT_STATUS_UNSPECIFIED = 0;
-  PAYMENT_STATUS_PENDING = 1;
-  PAYMENT_STATUS_PROCESSING = 2;
-  PAYMENT_STATUS_COMPLETED = 3;
-  PAYMENT_STATUS_FAILED = 4;
-}</code></pre>
+  PAYMENT_STATUS_UNSPECIFIED = 0;  // obligatoire
+  PAYMENT_STATUS_PENDING     = 1;
+  PAYMENT_STATUS_PROCESSING  = 2;
+  PAYMENT_STATUS_COMPLETED   = 3;
+  PAYMENT_STATUS_FAILED      = 4;
+}
+
+// Champs supprimés → reserved, jamais effacés
+// reserved 6, 7;
+// reserved &quot;old_field_name&quot;;</code></pre>
 <h3>Conventions de nommage</h3>
-<table><thead><tr><th>Élément</th><th>Convention</th><th>Exemple</th></tr></thead><tbody><tr><td>Package</td><td><code>company.service.v1</code></td><td><code>myapp.payments.v1</code></td></tr><tr><td>Service</td><td>PascalCase + <code>Service</code></td><td><code>PaymentService</code></td></tr><tr><td>RPC</td><td>PascalCase, verbe d'action</td><td><code>CreatePayment</code></td></tr><tr><td>Message</td><td>PascalCase + <code>Request</code>/<code>Response</code></td><td><code>CreatePaymentRequest</code></td></tr><tr><td>Champ</td><td>snake_case</td><td><code>payment_id</code></td></tr><tr><td>Enum</td><td>SCREAMING_SNAKE_CASE avec préfixe</td><td><code>PAYMENT_STATUS_PENDING</code></td></tr><tr><td>Enum valeur 0</td><td>Toujours <code>UNSPECIFIED</code></td><td><code>PAYMENT_STATUS_UNSPECIFIED</code></td></tr></tbody></table>
-<h2>Implémentation C# / ASP.NET</h2>
-<h3>Serveur gRPC</h3>
-<pre><code class="lang-csharp">public class PaymentServiceImpl : PaymentService.PaymentServiceBase
+<table><thead><tr><th>Élément</th><th>Convention</th><th>Exemple</th></tr></thead><tbody><tr><td>Package</td><td><code>company.service.v1</code></td><td><code>myapp.payments.v1</code></td></tr><tr><td>Service</td><td>PascalCase + <code>Service</code></td><td><code>PaymentService</code></td></tr><tr><td>RPC</td><td>PascalCase, verbe d'action</td><td><code>CreatePayment</code></td></tr><tr><td>Request/Response</td><td>Propre à chaque RPC</td><td><code>CreatePaymentRequest</code></td></tr><tr><td>Champ</td><td>snake_case</td><td><code>payment_id</code></td></tr><tr><td>Enum</td><td>SCREAMING_SNAKE_CASE avec préfixe enum</td><td><code>PAYMENT_STATUS_PENDING</code></td></tr><tr><td>Enum valeur 0</td><td>Toujours <code>UNSPECIFIED</code></td><td><code>PAYMENT_STATUS_UNSPECIFIED</code></td></tr></tbody></table>
+<h3>Génération du code</h3>
+<pre><code class="lang-bash"># Installer protoc + plugins
+brew install protobuf          # macOS
+apt install -y protobuf-compiler   # Debian/Ubuntu
+
+# Go
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# Générer
+protoc --proto_path=proto \
+       --go_out=gen --go_opt=paths=source_relative \
+       --go-grpc_out=gen --go-grpc_opt=paths=source_relative \
+       proto/payments/v1/payment.proto
+
+# C# / .NET : via NuGet Grpc.Tools (MSBuild auto-génère à la build)
+# Java : via grpc-java plugin Maven/Gradle</code></pre>
+<h2>Implémentation C# / ASP.NET Core</h2>
+<h3>Serveur</h3>
+<pre><code class="lang-csharp">public sealed class PaymentServiceImpl : PaymentService.PaymentServiceBase
 {
     private readonly IPaymentRepository _repo;
+    private readonly ILogger&lt;PaymentServiceImpl&gt; _log;
 
-    public override async Task&lt;PaymentResponse&gt; CreatePayment(
-        CreatePaymentRequest request, ServerCallContext context)
+    public override async Task&lt;CreatePaymentResponse&gt; CreatePayment(
+        CreatePaymentRequest req, ServerCallContext ctx)
     {
-        // Vérifier l'idempotence
-        var existing = await _repo.FindByIdempotencyKey(request.IdempotencyKey);
-        if (existing != null)
-            return MapToResponse(existing);
+        // Idempotence
+        var existing = await _repo.FindByIdempotencyKeyAsync(req.IdempotencyKey, ctx.CancellationToken);
+        if (existing is not null) return Map(existing);
 
-        var payment = new Payment
-        {
-            Amount = request.AmountCents,
-            Currency = request.Currency,
-            RecipientId = request.RecipientId
-        };
+        if (req.AmountCents &lt;= 0)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, &quot;amount_cents must be &gt; 0&quot;));
 
-        await _repo.CreateAsync(payment);
-        return MapToResponse(payment);
+        var payment = await _repo.CreateAsync(req.AmountCents, req.Currency, req.RecipientId, ctx.CancellationToken);
+        _log.LogInformation(&quot;Payment {Id} created&quot;, payment.Id);
+        return Map(payment);
     }
 
-    public override async Task WatchPaymentStatus(
-        WatchPaymentRequest request,
-        IServerStreamWriter&lt;PaymentStatusUpdate&gt; responseStream,
-        ServerCallContext context)
+    public override async Task WatchStatus(
+        WatchStatusRequest req,
+        IServerStreamWriter&lt;PaymentStatusEvent&gt; stream,
+        ServerCallContext ctx)
     {
-        while (!context.CancellationToken.IsCancellationRequested)
+        while (!ctx.CancellationToken.IsCancellationRequested)
         {
-            var status = await _repo.GetStatus(request.PaymentId);
-            await responseStream.WriteAsync(new PaymentStatusUpdate
-            {
-                PaymentId = request.PaymentId,
-                Status = status
-            });
+            var status = await _repo.GetStatusAsync(req.PaymentId, ctx.CancellationToken);
+            await stream.WriteAsync(new PaymentStatusEvent { PaymentId = req.PaymentId, Status = status });
 
-            if (status is PaymentStatus.Completed or PaymentStatus.Failed)
-                break;
+            if (status is PaymentStatus.Completed or PaymentStatus.Failed) break;
 
-            await Task.Delay(1000, context.CancellationToken);
+            await Task.Delay(TimeSpan.FromSeconds(1), ctx.CancellationToken);
         }
     }
 }</code></pre>
-<h3>Enregistrement dans ASP.NET</h3>
+<h3>Enregistrement ASP.NET Core</h3>
 <pre><code class="lang-csharp">// Program.cs
-builder.Services.AddGrpc(options =&gt;
+builder.Services.AddGrpc(opt =&gt;
 {
-    options.MaxReceiveMessageSize = 4 * 1024 * 1024; // 4 MB
-    options.EnableDetailedErrors = builder.Environment.IsDevelopment();
-    options.Interceptors.Add&lt;LoggingInterceptor&gt;();
+    opt.MaxReceiveMessageSize = 4 * 1024 * 1024; // 4 MB
+    opt.EnableDetailedErrors  = builder.Environment.IsDevelopment();
+    opt.Interceptors.Add&lt;ServerLoggingInterceptor&gt;();
+    opt.Interceptors.Add&lt;ServerMetricsInterceptor&gt;();
+});
+builder.Services.AddGrpcHealthChecks();
+
+app.MapGrpcService&lt;PaymentServiceImpl&gt;();
+app.MapGrpcHealthChecksService();</code></pre>
+<h3>Client avec deadline et retry</h3>
+<pre><code class="lang-csharp">var channel = GrpcChannel.ForAddress(&quot;https://payments.internal:5001&quot;, new GrpcChannelOptions
+{
+    ServiceConfig = new ServiceConfig
+    {
+        MethodConfigs = { new MethodConfig
+        {
+            Names = { MethodName.Default },
+            RetryPolicy = new RetryPolicy
+            {
+                MaxAttempts        = 3,
+                InitialBackoff     = TimeSpan.FromMilliseconds(100),
+                MaxBackoff         = TimeSpan.FromSeconds(2),
+                BackoffMultiplier  = 2,
+                RetryableStatusCodes = { StatusCode.Unavailable }
+            }
+        }}
+    }
 });
 
-app.MapGrpcService&lt;PaymentServiceImpl&gt;();</code></pre>
-<h2>Bonnes pratiques</h2>
-<h3>Versionning</h3>
+var client = new PaymentService.PaymentServiceClient(channel);
+
+var reply = await client.CreatePaymentAsync(
+    new CreatePaymentRequest { IdempotencyKey = Guid.NewGuid().ToString(), AmountCents = 1500, Currency = &quot;TND&quot; },
+    deadline: DateTime.UtcNow.AddSeconds(5));</code></pre>
+<h2>Gestion des erreurs — Status codes à utiliser</h2>
+<table><thead><tr><th>Situation</th><th>Status code gRPC</th></tr></thead><tbody><tr><td>Champ manquant / invalide</td><td><code>INVALID_ARGUMENT</code></td></tr><tr><td>Ressource introuvable</td><td><code>NOT_FOUND</code></td></tr><tr><td>Conflit (doublon)</td><td><code>ALREADY_EXISTS</code></td></tr><tr><td>Non authentifié</td><td><code>UNAUTHENTICATED</code></td></tr><tr><td>Accès refusé</td><td><code>PERMISSION_DENIED</code></td></tr><tr><td>Timeout / deadline dépassée</td><td><code>DEADLINE_EXCEEDED</code></td></tr><tr><td>Service indisponible</td><td><code>UNAVAILABLE</code></td></tr><tr><td>Erreur interne</td><td><code>INTERNAL</code></td></tr></tbody></table>
+<p>Toujours lever <code>RpcException</code> côté serveur — ne jamais laisser remonter une exception .NET brute.</p>
+<h2>Versionning et compatibilité</h2>
 <ul>
-<li>Utiliser des packages versionnés (<code>v1</code>, <code>v2</code>)</li>
-<li>Ne jamais supprimer ou renommer des champs — les marquer comme <code>reserved</code></li>
-<li>Ajouter de nouveaux champs avec des numéros incrémentaux</li>
+<li><strong>Rétrocompatible</strong> : ajouter de nouveaux champs (numéros supérieurs), nouvelles valeurs d'enum.</li>
+<li><strong>Breaking change</strong> : changer le type d'un champ, renommer, supprimer → nouvelle version (<code>v2</code>).</li>
+<li>Champs supprimés : <code>reserved 5; reserved &quot;old_name&quot;;</code> — jamais effacés.</li>
+<li>Déployer les deux versions en parallèle pendant la période de migration.</li>
 </ul>
-<h3>Performance</h3>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td>Réutiliser <code>Request</code> entre plusieurs RPCs</td><td>Couplage fort, évolution impossible</td><td>Un <code>Request</code>/<code>Response</code> par RPC</td></tr><tr><td>Champ <code>string</code> pour les montants monétaires</td><td>Arrondi, parsing</td><td><code>int64 amount_cents</code></td></tr><tr><td>Pas de deadline côté client</td><td>Appels pendants indéfinis</td><td>Toujours passer <code>deadline:</code></td></tr><tr><td>Écrire dans le code généré</td><td>Perdu à la prochaine génération</td><td>Ne toucher qu'aux fichiers <code>.proto</code></td></tr><tr><td>Enum sans valeur 0</td><td>Decode incohérent protobuf3</td><td>Toujours <code>FOO_UNSPECIFIED = 0</code></td></tr><tr><td>Message <code>google.protobuf.Empty</code> en réponse</td><td>Pas d'évolution possible</td><td>Toujours un message dédié <code>XxxResponse</code></td></tr><tr><td>Streaming pour des requêtes unitaires simples</td><td>Complexité inutile</td><td>Unaire si un message suffit</td></tr><tr><td>TLS désactivé en prod</td><td>Données en clair</td><td>mTLS obligatoire hors cluster privé</td></tr></tbody></table>
+<h2>Checklist avant livraison</h2>
 <ul>
-<li>Utiliser le streaming pour les gros volumes de données</li>
-<li>Configurer les deadlines côté client (pas de requêtes infinies)</li>
-<li>Implémenter des intercepteurs pour logging et métriques</li>
-</ul>
-<h3>Gestion d'erreurs</h3>
-<ul>
-<li>Utiliser les status codes gRPC standards (<code>NOT_FOUND</code>, <code>ALREADY_EXISTS</code>, etc.)</li>
-<li>Inclure des détails d'erreur structurés via <code>Status.DebugException</code></li>
-<li>Implémenter des retry policies côté client</li>
-</ul>
-<h2>Règles</h2>
-<ul>
-<li>Toujours commencer la valeur 0 d'un enum par <code>UNSPECIFIED</code>.</li>
-<li>Chaque RPC doit avoir son propre message Request/Response (pas de réutilisation).</li>
-<li>Les champs supprimés doivent être marqués <code>reserved</code>, jamais supprimés.</li>
-<li>Configurer des deadlines sur chaque appel client.</li>
+<li>[ ] <code>.proto</code> dans un package versionné (<code>v1</code>)</li>
+<li>[ ] Chaque RPC a son propre <code>Request</code> et <code>Response</code></li>
+<li>[ ] Enum valeur 0 = <code>UNSPECIFIED</code></li>
+<li>[ ] Champs supprimés marqués <code>reserved</code></li>
+<li>[ ] Deadlines configurées côté client</li>
+<li>[ ] Intercepteurs logging + métriques côté serveur</li>
+<li>[ ] Health check gRPC exposé</li>
+<li>[ ] Tests de compatibilité binaire (ex : <code>buf breaking</code>)</li>
 </ul>
 </article>
 </main>

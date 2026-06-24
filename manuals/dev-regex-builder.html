@@ -96,38 +96,127 @@ cp -r claude-skills-collection/skills/dev-regex-builder ~/.claude/skills/</div><
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Regex Builder</h1>
-<h2>Étape 1 — Comprendre le besoin</h2>
+<h2>Étape 1 — Cadrage rapide</h2>
+<p>Avant d'écrire quoi que ce soit, collecter :</p>
+<table><thead><tr><th>Question</th><th>Pourquoi</th></tr></thead><tbody><tr><td>Exemples <strong>valides</strong> (≥3)</td><td>Définir le périmètre positif</td></tr><tr><td>Exemples <strong>invalides</strong> (≥3)</td><td>Éviter les faux positifs</td></tr><tr><td><strong>Langage</strong> cible</td><td>Dialecte regex différent (PCRE, RE2, Java…)</td></tr><tr><td><strong>Opération</strong> : validation / extraction / remplacement / split</td><td>Impact sur les groupes et flags</td></tr><tr><td>Données <strong>unicode</strong> ? Multilignes ?</td><td>Flags <code>u</code>, <code>s</code>, <code>m</code> à activer</td></tr></tbody></table>
+<p>Si le besoin n'est pas précis, poser exactement ces questions — pas plus.</p>
+<hr>
+<h2>Étape 2 — Choisir le bon dialecte</h2>
+<table><thead><tr><th>Langage</th><th>Moteur</th><th>Particularités</th></tr></thead><tbody><tr><td>Python <code>re</code></td><td>PCRE-like</td><td><code>(?P&lt;name&gt;…)</code> pour groupes nommés ; pas de lookbehind variable</td></tr><tr><td>Python <code>regex</code> (tiers)</td><td>PCRE2</td><td>Lookbehind variable, Unicode complet</td></tr><tr><td>JavaScript</td><td>RE2-like</td><td>Pas de lookbehind avant ES2018 ; flag <code>v</code> (ES2024) pour sets</td></tr><tr><td>PHP <code>preg_*</code></td><td>PCRE</td><td><code>\K</code> reset match, lookbehind variable</td></tr><tr><td>Java</td><td><code>java.util.regex</code></td><td><code>\p{L}</code> pour lettres Unicode, possessifs <code>++</code></td></tr><tr><td>Go</td><td>RE2</td><td><strong>Pas</strong> de lookahead/lookbehind, pas de backreferences</td></tr><tr><td>.NET</td><td>.NET Regex</td><td>Groupes balancés <code>(?&lt;n-m&gt;)</code>, LINQ <code>Regex.Matches</code></td></tr></tbody></table>
+<blockquote><strong>Règle</strong> : si le moteur est RE2 (Go, Rust <code>regex</code> crate), oublier lookahead et backreferences.</blockquote>
+<hr>
+<h2>Étape 3 — Construction par blocs</h2>
+<p>Construire <strong>incrémentalement</strong> : commencer par le cas le plus simple, ajouter la complexité.</p>
+<h3>Briques de base</h3>
+<pre><code># Ancres
+^           début de chaîne (ou de ligne avec /m)
+$           fin de chaîne
+\b          frontière de mot
+
+# Classes
+\d          [0-9]
+\w          [a-zA-Z0-9_]
+\s          espace, tab, newline
+[a-z]       classe personnalisée
+[^abc]      négation
+
+# Quantificateurs
+?           0 ou 1   (greedy)
+*           0+       (greedy)
++           1+       (greedy)
+{n,m}       entre n et m
+?? *? +?    lazy (prend le moins possible)
+?+ *+ ++    possessif (jamais backtrack) — PCRE uniquement
+
+# Groupes
+(abc)       groupe capturant
+(?:abc)     groupe non-capturant  ← préférer si pas besoin de capture
+(?&lt;name&gt;…)  groupe nommé
+(?=…)       lookahead positif
+(?!…)       lookahead négatif
+(?&lt;=…)      lookbehind positif
+(?&lt;!…)      lookbehind négatif</code></pre>
+<h3>Exemples concrets copiables</h3>
+<p><strong>Email simple (validation formulaire)</strong></p>
+<pre><code class="lang-regex">^[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}$</code></pre>
 <ul>
-<li><strong>Ce qu'il faut matcher</strong> (exemples concrets de chaînes valides)</li>
-<li><strong>Ce qu'il faut rejeter</strong> (exemples de chaînes invalides)</li>
-<li><strong>Langage</strong> d'utilisation (Python, JavaScript, PHP, Java…)</li>
-<li><strong>Contexte</strong> (validation, extraction, remplacement)</li>
+<li><code>[\w.+-]+</code> : partie locale (pas de vrai RFC 5321, suffisant pour 99 % des cas)</li>
+<li>Ne valide pas les TLD exotiques <code>.museum</code> → utiliser <code>{2,10}</code> si besoin</li>
 </ul>
-<h2>Étape 2 — Construction progressive</h2>
-<p>Construis la regex étape par étape en expliquant chaque composant :</p>
+<p><strong>Numéro de téléphone tunisien</strong></p>
+<pre><code class="lang-regex">^(?:\+?216)?[2-9]\d{7}$</code></pre>
 <ul>
-<li>Caractères littéraux</li>
-<li>Classes de caractères <code>[a-z]</code>, <code>\d</code>, <code>\w</code></li>
-<li>Quantificateurs <code>+</code>, <code>*</code>, <code>?</code>, <code>{n,m}</code></li>
-<li>Groupes <code>()</code> et alternatives <code>|</code></li>
-<li>Ancres <code>^</code>, <code>$</code>, <code>\b</code></li>
-<li>Lookahead/lookbehind si nécessaire</li>
+<li>Préfixe <code>+216</code> ou <code>216</code> optionnel</li>
+<li>8 chiffres, premier entre 2 et 9</li>
 </ul>
-<h2>Étape 3 — Regex finale</h2>
-<p>Présente la regex complète avec explication annotée de chaque partie.</p>
-<h2>Étape 4 — Tests</h2>
-<table><thead><tr><th>Entrée</th><th>Attendu</th><th>Résultat</th></tr></thead><tbody></tbody></table>
-<h2>Étape 5 — Variantes</h2>
+<p><strong>UUID v4</strong></p>
+<pre><code class="lang-regex">^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$</code></pre>
+<p><strong>Extraction d'un montant (ex. <code>12 345,67 TND</code>)</strong></p>
+<pre><code class="lang-regex">(\d{1,3}(?:[  ]\d{3})*(?:[,.]\d{2})?)(?:\s*(?:TND|EUR|USD))?</code></pre>
+<p><strong>Remplacement de variables <code>${VAR}</code> dans un template</strong></p>
+<pre><code class="lang-python">import re
+result = re.sub(r'\$\{(\w+)\}', lambda m: env.get(m.group(1), m.group(0)), template)</code></pre>
+<hr>
+<h2>Étape 4 — Table de tests systématique</h2>
+<p>Toujours présenter avec résultat attendu ET résultat réel :</p>
+<table><thead><tr><th>Entrée</th><th>Attendu</th><th>Match ?</th><th>Remarque</th></tr></thead><tbody><tr><td>cas valide 1</td><td>✅</td><td></td><td>cas nominal</td></tr><tr><td>cas valide 2</td><td>✅</td><td></td><td>variante</td></tr><tr><td>cas limite</td><td>✅/❌</td><td></td><td>edge case</td></tr><tr><td>cas invalide 1</td><td>❌</td><td></td><td>faux positif potentiel</td></tr></tbody></table>
+<p>Commande de test rapide :</p>
+<pre><code class="lang-bash"># Python
+python3 -c &quot;import re; pattern=r'^…$'; tests=['ok','ko']; [print(t, bool(re.fullmatch(pattern,t))) for t in tests]&quot;
+
+# Node.js
+node -e &quot;const r=/^…$/; ['ok','ko'].forEach(t=&gt;console.log(t, r.test(t)))&quot;
+
+# grep (POSIX ERE)
+echo &quot;test_string&quot; | grep -E '^…$'</code></pre>
+<hr>
+<h2>Étape 5 — Variantes et alternatives</h2>
+<p>Proposer systématiquement :</p>
+<ol>
+<li><strong>Version stricte</strong> : anchors <code>^…$</code>, pas de quantificateurs greedy larges</li>
+<li><strong>Version extraction</strong> : groupes nommés, pas d'anchors</li>
+<li><strong>Alternative non-regex</strong> : si la logique peut être plus claire avec du code</li>
+</ol>
+<pre><code class="lang-python"># Préférer ça plutôt qu'une regex monstrueuse :
+def is_valid_iban(s):
+    s = s.replace(' ', '').upper()
+    return len(s) &gt;= 15 and s[:2].isalpha() and s[2:4].isdigit()</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<h3>Pièges classiques</h3>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Greedy <code>.*</code></td><td>Capture trop (jusqu'au dernier match)</td><td>Utiliser <code>.*?</code> (lazy) ou <code>[^X]+</code></td></tr><tr><td>Oublier d'échapper <code>.</code></td><td><code>.</code> matche n'importe quel caractère</td><td><code>\.</code> pour un point littéral</td></tr><tr><td>Backtracking catastrophique</td><td>Timeout / freeze sur longues chaînes</td><td>Éviter <code>(a+)+</code>, utiliser possessif ou atomic group</td></tr><tr><td>Négliger les flags</td><td>Case-sensitive par défaut</td><td>Ajouter <code>re.IGNORECASE</code> / <code>/i</code> explicitement</td></tr><tr><td>Backreference dans RE2/Go</td><td>Erreur runtime</td><td>Réécrire sans backreference</td></tr><tr><td>Valider un email avec RFC complète</td><td>Regex de 6 Ko, maintenable zéro</td><td>Valider format basique + vérifier MX côté serveur</td></tr><tr><td><code>^</code> et <code>$</code> en multiline</td><td>Comportement différent avec flag <code>m</code></td><td>Utiliser <code>\A</code> / <code>\Z</code> (Python) pour vrai début/fin de chaîne</td></tr></tbody></table>
+<h3>Backtracking catastrophique — détection</h3>
+<pre><code class="lang-regex"># DANGEREUX — éviter
+(a|aa)+$
+(\w+\s?)+$
+
+# SÛRS — préférer
+\w+(\s\w+)*$</code></pre>
+<h3>Quand ne PAS utiliser une regex</h3>
 <ul>
-<li>Version stricte (validation précise)</li>
-<li>Version souple (capture large)</li>
-<li>Pièges courants à éviter</li>
+<li>Parser du HTML/XML → utiliser un parser DOM (<code>BeautifulSoup</code>, <code>lxml</code>)</li>
+<li>Valider du JSON → <code>json.loads()</code> + schema</li>
+<li>Extraire des données de PDF → lib dédiée (<code>pdfplumber</code>)</li>
+<li>Logique avec état (imbrication arbitraire) → PEG parser ou grammaire formelle</li>
 </ul>
-<h2>Règles</h2>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Explique toujours pourquoi chaque partie est nécessaire.</li>
-<li>Signale les cas limites (Unicode, multilignes…).</li>
-<li>Propose des alternatives plus simples si la regex devient trop complexe.</li>
+<li><strong>Nommer les groupes</strong> : <code>(?P&lt;year&gt;\d{4})</code> plutôt que <code>(\d{4})</code> — lisibilité et refactoring</li>
+<li><strong>Commenter</strong> les regex longues avec le flag verbose (<code>re.VERBOSE</code> / <code>/x</code>) :</li>
+</ul>
+<pre><code class="lang-python">pattern = re.compile(r&quot;&quot;&quot;
+    ^                   # début
+    (?P&lt;country&gt;\+?\d{1,3})?  # indicatif pays optionnel
+    [\s\-.]?            # séparateur optionnel
+    (?P&lt;local&gt;\d{8,10}) # numéro local
+    $
+&quot;&quot;&quot;, re.VERBOSE)</code></pre>
+<ul>
+<li><strong>Compiler</strong> les regex réutilisées (<code>re.compile(...)</code>) — gain x5 sur boucles</li>
+<li><strong>Tester avec un outil visuel</strong> : regex101.com (PCRE/JS/Python), regexr.com</li>
+<li><strong>Versionner</strong> les regex critiques avec leurs cas de test dans le repo</li>
+<li><strong>Limiter la longueur d'entrée</strong> avant d'appliquer la regex en prod (protection ReDoS)</li>
 </ul>
 </article>
 </main>

@@ -97,22 +97,124 @@ cp -r claude-skills-collection/skills/management-stakeholder-communicator ~/.cla
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Stakeholder Communicator</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Cartographie des parties prenantes</strong> — Identifier toutes les parties prenantes, leur niveau d'influence et d'intérêt (matrice pouvoir/intérêt), et définir la fréquence de communication adaptée à chacune.</li>
-<li><strong>Collecte des informations</strong> — Rassembler l'avancement du projet (% completion, jalons atteints), les risques actifs, les décisions en attente et les métriques clés.</li>
-<li><strong>Rédaction du rapport</strong> — Structurer le rapport avec : résumé exécutif (3 lignes max), statut RAG (Rouge/Ambre/Vert), avancement par lot/épic, risques et mitigations, demandes de décision.</li>
-<li><strong>Adaptation du message</strong> — Adapter le niveau de détail au public : direction générale (vision stratégique, budget, ROI), management intermédiaire (planning, ressources), équipe technique (détails d'implémentation).</li>
-<li><strong>Préparation COPIL</strong> — Préparer le support de présentation avec les points de décision clairement identifiés, les options proposées et les recommandations argumentées.</li>
-<li><strong>Gestion des escalades</strong> — Identifier les blocages nécessitant une escalade, documenter le problème, l'impact, les solutions envisagées et la recommandation avant d'escalader.</li>
-<li><strong>Suivi des décisions</strong> — Tenir un registre des décisions prises, par qui, quand, et les actions qui en découlent.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Cartographie des parties prenantes</h3>
+<p>Avant d'écrire quoi que ce soit, remplir la matrice pouvoir/intérêt :</p>
+<table><thead><tr><th>Partie prenante</th><th>Pouvoir (1-5)</th><th>Intérêt (1-5)</th><th>Stratégie</th><th>Fréquence</th></tr></thead><tbody><tr><td>DG / sponsor</td><td>5</td><td>3</td><td>Garder informé</td><td>Bi-mensuel</td></tr><tr><td>Chef de projet</td><td>3</td><td>5</td><td>Collaboration</td><td>Hebdo</td></tr><tr><td>Équipe tech</td><td>2</td><td>5</td><td>Consulter</td><td>Quotidien</td></tr><tr><td>Client métier</td><td>4</td><td>4</td><td>Gérer activement</td><td>Hebdo</td></tr><tr><td>DSI</td><td>4</td><td>2</td><td>Satisfaire</td><td>Mensuel</td></tr></tbody></table>
+<p><strong>Règle de décision :</strong></p>
 <ul>
-<li>Toujours commencer par la conclusion et les demandes de décision (pyramide inversée).</li>
-<li>Ne jamais surprendre un stakeholder en COPIL : pré-aligner en amont sur les sujets sensibles.</li>
-<li>Utiliser le format RAG de manière honnête : un faux vert est pire qu'un vrai rouge signalé tôt.</li>
-<li>Documenter toutes les décisions et les diffuser dans les 24h suivant la réunion.</li>
-<li>Adapter la fréquence de communication à la criticité du projet (hebdomadaire minimum en phase critique).</li>
+<li>Pouvoir ≥ 4 ET Intérêt ≥ 4 → gestion active, communication directe</li>
+<li>Pouvoir ≥ 4 ET Intérêt &lt; 3 → satisfaire sans sur-communiquer</li>
+<li>Pouvoir &lt; 3 ET Intérêt ≥ 4 → tenir informé, source de feedback</li>
+<li>Pouvoir &lt; 3 ET Intérêt &lt; 3 → surveiller, communication minimale</li>
+</ul>
+<hr>
+<h3>2. Collecte des informations — checklist avant rédaction</h3>
+<pre><code>[ ] % avancement global et par lot/épic (outil : Jira, Azure DevOps, GitHub Projects)
+[ ] Jalons atteints / manqués depuis dernier reporting
+[ ] Risques actifs (probabilité, impact, mitigation en cours)
+[ ] Décisions en attente (qui doit décider, deadline)
+[ ] Dépenses vs budget (burn rate, forecast)
+[ ] Blocages technique ou organisationnel
+[ ] Actions ouvertes du COPIL précédent</code></pre>
+<hr>
+<h3>3. Rapport de statut — structure type</h3>
+<p>Utiliser la pyramide inversée : <strong>conclusion en premier</strong>.</p>
+<pre><code class="lang-markdown"># Rapport de statut — [Nom Projet] — [Date]
+
+## Résumé exécutif (3 lignes max)
+Statut global : 🔴 ROUGE / 🟡 AMBRE / 🟢 VERT
+Point critique : [une phrase]
+Décision requise : [une phrase ou AUCUNE]
+
+## Avancement
+| Lot / Épic      | Statut | % Fait | Delta vs plan |
+|----------------|--------|--------|---------------|
+| Authentification | 🟢    | 95%    | +0j           |
+| Module paiement  | 🟡    | 60%    | -5j           |
+| Intégration SFTP | 🔴    | 20%    | -15j          |
+
+## Risques actifs
+| # | Risque                        | Proba | Impact | Mitigation              | Owner  |
+|---|-------------------------------|-------|--------|-------------------------|--------|
+| 1 | Livraison API partenaire tardive | H   | H      | POC alternative lancé   | Tech   |
+| 2 | Congés équipe juillet         | M     | M      | Plan de continuité actif| PM     |
+
+## Décisions requises
+1. **[Sujet]** — Options : A / B / C — Recommandation : A — Deadline : [date]
+
+## Actions ouvertes
+| Action            | Owner  | Due    | Statut  |
+|------------------|--------|--------|---------|
+| Valider maquette  | Client | 27/06  | En cours|</code></pre>
+<hr>
+<h3>4. Adaptation du message par audience</h3>
+<table><thead><tr><th>Audience</th><th>Focus</th><th>Format</th><th>Durée/longueur</th></tr></thead><tbody><tr><td>DG / Sponsor</td><td>ROI, risques stratégiques, budget</td><td>Slide 1 page</td><td>3 min pitch</td></tr><tr><td>Management métier</td><td>Planning, livraisons, impacts</td><td>Rapport 1 page</td><td>5 min</td></tr><tr><td>Équipe technique</td><td>Détails tâches, blocages, dette</td><td>Ticket / Readme</td><td>Sans limite</td></tr><tr><td>Client externe</td><td>Fonctionnalités livrées, roadmap</td><td>Release notes</td><td>1 page max</td></tr></tbody></table>
+<p><strong>Règle :</strong> plus le pouvoir est élevé, moins il y a de texte. Un DG lit 3 lignes.</p>
+<hr>
+<h3>5. Préparation COPIL — template slide</h3>
+<pre><code>Slide 1 — Statut global (RAG) + 1 message clé
+Slide 2 — Avancement jalons (tableau ou Gantt simplifié)
+Slide 3 — Risques TOP 3 (tableau : risque / impact / mitigation)
+Slide 4 — Décisions requises (une par slide si nécessaire)
+          Format : Contexte → Options → Recommandation → Vote
+Slide 5 — Prochaines étapes + date du prochain COPIL</code></pre>
+<p><strong>Pré-alignement obligatoire :</strong> Envoyer le draft aux décideurs clés 48h avant pour éviter les surprises. Format du mail de pré-alignement :</p>
+<pre><code>Objet : [Projet] COPIL [date] — Points sensibles à valider en amont
+
+Bonsoir [prénom],
+
+Avant notre COPIL de [date], je souhaitais vous partager un point sensible :
+[Description en 2 phrases].
+
+Options envisagées : A) … B) …
+Ma recommandation : A, car [raison].
+
+Besoin de votre validation ou d'un échange de 10 min avant jeudi ?</code></pre>
+<hr>
+<h3>6. Gestion des escalades</h3>
+<p><strong>Critères d'escalade :</strong></p>
+<ul>
+<li>Blocage non résolu &gt; 3 jours ouvrés</li>
+<li>Risque passant en criticité HAUTE</li>
+<li>Dérapage planning &gt; 10% de la durée du lot</li>
+<li>Décision hors périmètre PM non prise sous 5 jours</li>
+</ul>
+<p><strong>Template d'escalade (email/ticket) :</strong></p>
+<pre><code>Objet : [ESCALADE] [Projet] — [Sujet court]
+
+Contexte     : [1 phrase]
+Problème     : [ce qui bloque]
+Impact       : [délai / budget / qualité — chiffré si possible]
+Déjà tentés  : [actions menées]
+Options      : A) … B) …
+Recommandation : [laquelle et pourquoi]
+Décision requise avant : [date]</code></pre>
+<p>Ne jamais escalader sans avoir tenté au moins une résolution au niveau actuel.</p>
+<hr>
+<h3>7. Registre des décisions (Decision Log)</h3>
+<p>Tenir un fichier versionné (<code>decisions.md</code> ou colonne dans Notion/Azure DevOps) :</p>
+<pre><code class="lang-markdown">| # | Date   | Décision                        | Décideur     | Contexte              | Actions déclenchées         |
+|---|--------|---------------------------------|--------------|-----------------------|-----------------------------|
+| 1 | 2026-06-10 | Adoption API REST v2 (abandon SOAP) | DSI + PM | Migration coût élevé | Ticket #1234 créé, plan mis à jour |</code></pre>
+<p>Diffuser le decision log dans les 24h post-réunion à tous les stakeholders concernés.</p>
+<hr>
+<h2>Anti-patterns / Pièges</h2>
+<ul>
+<li><strong>Faux vert</strong> — signaler VERT sous pression pour éviter des questions. Un rouge signalé tôt est gérable ; un rouge surpris en COPIL est un incident politique.</li>
+<li><strong>Over-reporting</strong> — envoyer trop d'informations tue l'attention. Une slide = un message.</li>
+<li><strong>Escalade sans préparation</strong> — arriver sans options ni recommandation transforme l'escalade en problème supplémentaire pour le décideur.</li>
+<li><strong>Décisions orales non tracées</strong> — toute décision prise en couloir doit être confirmée par écrit dans les 24h.</li>
+<li><strong>Communication uniforme</strong> — envoyer le même rapport à la DG et à l'équipe technique est inefficace pour les deux.</li>
+<li><strong>Absence de pre-alignment</strong> — surprendre un sponsor en COPIL crée de la méfiance ; les décisions importantes se prennent en amont, pas en réunion.</li>
+<li><strong>Registre de décisions absent</strong> — sans trace, les décisions sont contestées, dupliquées ou oubliées.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Async-first</strong> : utiliser Teams/Slack pour les status updates hebdos ; réserver le COPIL aux décisions et arbitrages uniquement.</li>
+<li><strong>One-pager executif</strong> : généré automatiquement depuis les données du projet (Jira/ADO export → template Markdown → PDF).</li>
+<li><strong>Dashboard live</strong> : un lien vers un board Jira/ADO filtré remplace avantageusement les tableaux d'avancement statiques dans les rapports récurrents.</li>
+<li><strong>OKR alignment</strong> : chaque rapport de statut doit référencer l'OKR ou l'objectif stratégique auquel le projet contribue — cela renforce la légitimité des demandes de ressources.</li>
+<li><strong>RACI explicite</strong> : pour chaque lot, identifier clairement R (Responsible), A (Accountable), C (Consulted), I (Informed) avant le lancement pour éviter les flous lors des escalades.</li>
 </ul>
 </article>
 </main>

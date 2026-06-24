@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-microservices-designer — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Conception et découpage d'architecture microservices.">
+<meta name="description" content="Conception et découpage d'architecture microservices — DDD, bounded contexts, patterns de communication, migration de monolithe.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-microservices-designer</h1>
-<p class="lead">Conception et découpage d'architecture microservices.</p>
+<p class="lead">Conception et découpage d'architecture microservices — DDD, bounded contexts, patterns de communication, migration de monolithe.</p>
 
 
 
@@ -96,24 +96,123 @@ cp -r claude-skills-collection/skills/dev-microservices-designer ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Microservices Designer</h1>
-<h2>Workflow</h2>
-<ol>
-<li>Analyse du domaine métier (Domain-Driven Design, bounded contexts, ubiquitous language) — identifier les sous-domaines core, supporting et generic</li>
-<li>Identification des services (un service = un bounded context, responsabilité unique) — valider la cohésion forte et le couplage faible entre services</li>
-<li>Définition des contrats d'API inter-services (REST, gRPC, GraphQL federation) — documenter chaque interface avec versioning et contrat de stabilité</li>
-<li>Choix du pattern de communication (synchrone vs asynchrone, saga, choreography vs orchestration) — évaluer les besoins de cohérence et de latence</li>
-<li>Conception de la gestion des données (database per service, event sourcing, CQRS) — éviter le partage de base de données entre services</li>
-<li>Définition de la résilience (circuit breaker, retry, timeout, bulkhead, fallback) — chaque service doit survivre à la défaillance de ses dépendances</li>
-<li>Observabilité (distributed tracing, centralized logging, health checks, metrics) — mettre en place correlation IDs et un stack ELK/Prometheus/Jaeger</li>
-<li>Plan de migration si monolithe existant (strangler fig, branch by abstraction) — migrer service par service sans big bang, en préservant la stabilité</li>
-</ol>
-<h2>Règles</h2>
+<h2>Workflow en 8 étapes</h2>
+<h3>1. Cartographier le domaine (Event Storming / DDD)</h3>
 <ul>
-<li>Adapte l'architecture au stack de l'utilisateur (.NET, Node, Python, Java, Go...) avec des exemples de code concrets dans ce langage</li>
-<li>Privilégie la simplicité : ne découper en microservices que si la complexité métier ou les besoins de scalabilité le justifient réellement</li>
-<li>Justifie chaque choix technique (pourquoi ce pattern de communication, pourquoi ce broker) avec les trade-offs associés</li>
-<li>Les services ne doivent jamais partager de base de données ; toute communication passe par les APIs ou les événements</li>
-<li>Documente toujours les décisions d'architecture sous forme d'ADR (Architecture Decision Records)</li>
+<li>Réunir les experts métier et tech ; lister tous les <strong>domain events</strong> (faits métier passés).</li>
+<li>Regrouper en <strong>bounded contexts</strong> : chaque contexte a son propre modèle, son langage ubiquitaire.</li>
+<li>Classer : core domain (avantage concurrentiel), supporting, generic (candidat à l'externalisation/SaaS).</li>
+</ul>
+<pre><code>Exemple — e-commerce :
+  Core      : Catalogue, Commande, Pricing
+  Supporting: Notification, Inventaire
+  Generic   : Paiement (Stripe), Auth (Keycloak)</code></pre>
+<h3>2. Définir les services (règle de taille)</h3>
+<p>Critères de découpage — un service par bounded context SI :</p>
+<ul>
+<li>≥ 2 équipes différentes ont besoin de déployer indépendamment</li>
+<li>La scalabilité requise diffère significativement (ex: Catalogue ×10 vs Commande ×2)</li>
+<li>Les exigences de sécurité/compliance diffèrent (PCI-DSS isolé)</li>
+</ul>
+<p>Signaux de sur-découpage : appels synchrones en chaîne &gt; 3 sauts, transactions distribuées partout, équipe &lt; 5 devs.</p>
+<h3>3. Définir les contrats d'API</h3>
+<ul>
+<li><strong>REST</strong> : OpenAPI 3.1, versionning via URL (<code>/v1/</code>) ou <code>Accept: application/vnd.api+json;version=2</code></li>
+<li><strong>gRPC</strong> : Protobuf <code>.proto</code> versionné, backward-compatible (ne jamais supprimer un field)</li>
+<li><strong>Events</strong> : AsyncAPI 3.0, schema registry (Confluent, AWS Glue)</li>
+</ul>
+<pre><code class="lang-yaml"># asyncapi snippet — OrderCreated
+channels:
+  order.created:
+    publish:
+      message:
+        payload:
+          type: object
+          properties:
+            orderId: { type: string, format: uuid }
+            total:   { type: number }
+          required: [orderId, total]</code></pre>
+<h3>4. Choisir le pattern de communication</h3>
+<table><thead><tr><th>Besoin</th><th>Pattern</th><th>Outil</th></tr></thead><tbody><tr><td>Requête/réponse immédiate</td><td>REST / gRPC</td><td>Axios, Feign, grpc-go</td></tr><tr><td>Faible couplage, tolérance à la latence</td><td>Message async</td><td>Kafka, RabbitMQ, Azure SB</td></tr><tr><td>Workflow long multi-services</td><td>Saga orchestrée</td><td>Temporal, MassTransit Saga</td></tr><tr><td>Cohérence éventuelle acceptable</td><td>Saga chorégraphiée</td><td>Events Kafka + handlers</td></tr><tr><td>Agrégation de données cross-services</td><td>GraphQL federation</td><td>Apollo Federation v2</td></tr></tbody></table>
+<p><strong>Règle</strong> : préférer l'asynchrone par défaut ; n'utiliser le synchrone que pour les cas UX qui exigent une réponse immédiate.</p>
+<h3>5. Données — database per service</h3>
+<pre><code>❌ Service A ──┐
+               ├── shared DB   (couplage fort, migration impossible indépendamment)
+❌ Service B ──┘
+
+✅ Service A ── DB A (Postgres)
+✅ Service B ── DB B (MongoDB)
+✅ Service C ── DB C (Redis)</code></pre>
+<p>Patterns avancés :</p>
+<ul>
+<li><strong>CQRS</strong> : séparer Command model (write) et Query model (read-optimized, répliqué via events)</li>
+<li><strong>Event Sourcing</strong> : stocker les events bruts (EventStoreDB, Kafka compacted topic) ; reconstruire l'état à la demande</li>
+<li><strong>Saga</strong> : chaque step publie un event de succès ou compensation en cas d'échec</li>
+</ul>
+<h3>6. Résilience — checklist obligatoire</h3>
+<pre><code class="lang-csharp">// .NET — Polly v8 (2026)
+services.AddHttpClient&lt;IOrderClient, OrderClient&gt;()
+    .AddResilienceHandler(&quot;order-pipeline&quot;, builder =&gt;
+    {
+        builder.AddRetry(new HttpRetryStrategyOptions
+        {
+            MaxRetryAttempts = 3,
+            BackoffType = DelayBackoffType.Exponential
+        });
+        builder.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+        {
+            SamplingDuration = TimeSpan.FromSeconds(30),
+            FailureRatio = 0.5
+        });
+        builder.AddTimeout(TimeSpan.FromSeconds(5));
+    });</code></pre>
+<ul>
+<li><strong>Bulkhead</strong> : thread pool séparé par dépendance critique</li>
+<li><strong>Fallback</strong> : retourner une réponse dégradée plutôt qu'une erreur 500</li>
+<li><strong>Idempotency key</strong> : toujours sur les endpoints mutatifs (<code>Idempotency-Key: &lt;uuid&gt;</code>)</li>
+</ul>
+<h3>7. Observabilité — stack minimale 2026</h3>
+<pre><code>Traces  → OpenTelemetry SDK → Jaeger / Tempo
+Métriques → Prometheus → Grafana
+Logs    → structured JSON → Loki / ELK
+Alertes → Alertmanager / PagerDuty</code></pre>
+<pre><code class="lang-python"># Python — OTel auto-instrumentation FastAPI
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+FastAPIInstrumentor.instrument_app(app, tracer_provider=tracer_provider)</code></pre>
+<p>Règles :</p>
+<ul>
+<li><strong>Correlation ID</strong> propagé dans tous les headers (<code>traceparent</code> W3C standard)</li>
+<li>Health checks : <code>/healthz/live</code> (process up) + <code>/healthz/ready</code> (dépendances OK)</li>
+<li>SLO défini par service : ex. p99 &lt; 200 ms, error rate &lt; 0.1 %</li>
+</ul>
+<h3>8. Migration d'un monolithe — Strangler Fig</h3>
+<pre><code>Phase 1 : Façade devant le monolithe (reverse proxy / API Gateway)
+Phase 2 : Extraire Service X derrière la façade, redirections progressives
+Phase 3 : Supprimer le code correspondant du monolithe
+Phase 4 : Répéter par service, jamais de big bang</code></pre>
+<p>Outils : Kong / YARP en façade, feature flags pour basculer le trafic, canary deployment (1 % → 10 % → 100 %).</p>
+<hr>
+<h2>Anti-patterns &amp; pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Distributed monolith</td><td>Déploiement coordonné obligatoire</td><td>Revoir les bounded contexts</td></tr><tr><td>Nano-services</td><td>&gt; 20 services, équipe &lt; 5 devs</td><td>Fusionner les services trop fins</td></tr><tr><td>Shared DB</td><td>Migration impossible, couplage fort</td><td>Database per service + events</td></tr><tr><td>Appels synchrones en cascade</td><td>Latence additive, failure amplification</td><td>Async + cache local</td></tr><tr><td>Pas d'idempotence</td><td>Doublons en cas de retry</td><td>Idempotency key systématique</td></tr><tr><td>Contrats implicites</td><td>Breaking changes non détectés</td><td>Contract testing (Pact) en CI</td></tr></tbody></table>
+<hr>
+<h2>Critères de décision — monolithe vs microservices</h2>
+<pre><code>Microservices recommandés si ≥ 3 critères :
+  ☐ Équipes &gt; 2 squads avec ownership distinct
+  ☐ Exigences de scalabilité très différentes par domaine
+  ☐ Besoin de déploiements indépendants fréquents (&gt; 2×/semaine par domaine)
+  ☐ Technologies différentes justifiées par domaine
+  ☐ Compliance / isolation sécurité obligatoire par périmètre
+
+Sinon : Modulith d'abord (modules bien isolés dans un monolithe),
+        migration service par service quand un critère se déclenche.</code></pre>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Service mesh</strong> (Istio, Linkerd, Dapr) : mTLS automatique, observabilité L7, traffic management sans code applicatif.</li>
+<li><strong>GitOps</strong> : un repo par service, ArgoCD/Flux pour les déploiements Kubernetes.</li>
+<li><strong>Contract testing</strong> avec Pact en CI : valider que producer et consumer restent compatibles avant merge.</li>
+<li><strong>Platform engineering</strong> : fournir un Internal Developer Portal (Backstage) avec templates de service pré-configurés (OTel, health, Dockerfile, CI).</li>
+<li>Chaque ADR dans <code>docs/adr/NNNN-titre.md</code> (format Nygard) ; lier depuis le README du service.</li>
 </ul>
 </article>
 </main>

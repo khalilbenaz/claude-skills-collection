@@ -96,26 +96,103 @@ cp -r claude-skills-collection/skills/writing-blog-post-writer ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Blog Post Writer</h1>
-<h2>Workflow</h2>
+<h2>Étape 0 — Brief (obligatoire avant de rédiger)</h2>
+<p>Collecte ces informations avant de produire quoi que ce soit :</p>
+<table><thead><tr><th>Info</th><th>Question directe</th></tr></thead><tbody><tr><td>Sujet</td><td>De quoi parle l'article exactement ?</td></tr><tr><td>Audience</td><td>Qui lit ? (dev senior, décideur, débutant, non-tech…)</td></tr><tr><td>Objectif</td><td>Informer / convaincre / générer des leads / fidéliser</td></tr><tr><td>Ton</td><td>Formel, neutre, casual, technique, humoristique</td></tr><tr><td>Longueur cible</td><td>Court (600-900 mots), moyen (1 000-1 800), long (2 000+)</td></tr><tr><td>Plateforme</td><td>Blog perso, Medium, LinkedIn, doc interne, newsletter</td></tr><tr><td>SEO</td><td>Mot-clé principal visé ? Oui/non</td></tr></tbody></table>
+<p>Si l'utilisateur fournit déjà toutes ces infos, passe directement à l'Étape 1.</p>
+<hr>
+<h2>Étape 1 — Choix d'angle (3 options)</h2>
+<p>Propose 3 angles distincts avant de rédiger. Exemples pour le sujet &quot;Git rebase&quot; :</p>
 <ol>
-<li><strong>Brief</strong> : sujet, audience cible, ton souhaité, longueur, objectif (informer, convaincre, divertir).</li>
-<li><strong>Recherche d'angle</strong> : proposer 3 angles uniques avant de rédiger.</li>
-<li><strong>Structure</strong> :</li>
-<ul>
-<li>Titre accrocheur (3 options)</li>
-<li>Introduction (hook + contexte + promesse)</li>
-<li>Sections avec sous-titres clairs</li>
-<li>Conclusion avec CTA (call to action)</li>
-</ul>
-<li><strong>Rédaction</strong> : contenu engageant, concret, avec exemples.</li>
-<li><strong>SEO basique</strong> : suggestions de mots-clés, méta-description.</li>
-<li><strong>Checklist finale</strong> : lisibilité, flow, CTA, longueur.</li>
+<li><strong>Pédagogique</strong> : &quot;Rebase vs Merge : quand utiliser lequel et pourquoi ton équipe se trompe&quot;</li>
+<li><strong>Récit</strong> : &quot;J'ai cassé la branche main en production — voilà ce que le rebase m'a appris&quot;</li>
+<li><strong>Référence</strong> : &quot;Cheatsheet rebase interactif : 8 commandes que tout dev devrait maîtriser&quot;</li>
 </ol>
-<h2>Règles</h2>
+<p>Critères de sélection :</p>
 <ul>
-<li>Adapte le ton à l'audience (pro, casual, technique…).</li>
-<li>Privilégie la valeur au remplissage.</li>
-<li>Propose des titres testables (pas un seul choix).</li>
+<li>Audience novice → angle pédagogique ou récit</li>
+<li>Audience experte → angle référence ou opinion tranchée</li>
+<li>Objectif SEO fort → angle qui colle exactement à l'intention de recherche (informationnelle, comparaison, how-to)</li>
+</ul>
+<hr>
+<h2>Étape 2 — Structure standard</h2>
+<pre><code>TITRE (3 options A/B/C)
+  → Format : [Chiffre] + [Bénéfice concret] | Question | &quot;Comment [faire X] sans [problème Y]&quot;
+
+INTRODUCTION (150-200 mots)
+  → Hook    : stat choc, anecdote, question directe, constat contre-intuitif
+  → Contexte : pourquoi ce sujet maintenant
+  → Promesse : ce que le lecteur sait/peut faire à la fin
+
+CORPS
+  → H2 : Section principale (250-400 mots chacune)
+     → H3 : sous-point si besoin
+     → Exemples concrets, code, captures, listes
+
+CONCLUSION (100-150 mots)
+  → Synthèse en 2-3 phrases
+  → CTA unique et clair
+
+META-DESCRIPTION (150-160 caractères)
+  → Mot-clé principal en début, bénéfice, verbe d'action</code></pre>
+<hr>
+<h2>Étape 3 — Rédaction</h2>
+<h3>Règles de rédaction par ton</h3>
+<p><strong>Technique/dev</strong> :</p>
+<ul>
+<li>Phrase courte (max 20 mots), voix active</li>
+<li>Code dans des blocs fencés avec langage précisé</li>
+<li>Évite le vocabulaire marketing (&quot;révolutionnaire&quot;, &quot;disruptif&quot;)</li>
+<li>Exemple concret &gt; définition abstraite</li>
+</ul>
+<p><strong>Professionnel/B2B</strong> :</p>
+<ul>
+<li>Commence par le problème métier, pas la solution</li>
+<li>Données chiffrées avec source entre parenthèses : <code>(McKinsey, 2025)</code></li>
+<li>CTA = démo, téléchargement, prise de RDV</li>
+</ul>
+<p><strong>Casual/grand public</strong> :</p>
+<ul>
+<li>Tutoie si la plateforme le permet (Medium, blog perso)</li>
+<li>Analogies du quotidien pour les concepts abstraits</li>
+<li>Paragraphes courts (3-4 lignes max)</li>
+</ul>
+<h3>Longueur recommandée par objectif</h3>
+<table><thead><tr><th>Objectif</th><th>Longueur</th><th>Format dominant</th></tr></thead><tbody><tr><td>SEO organique</td><td>1 500-2 500 mots</td><td>H2/H3 + listes</td></tr><tr><td>Partage réseaux</td><td>600-900 mots</td><td>Récit + une idée forte</td></tr><tr><td>Newsletter</td><td>400-700 mots</td><td>Paragraphes denses</td></tr><tr><td>Documentation</td><td>800-2 000 mots</td><td>Blocs de code + tableaux</td></tr></tbody></table>
+<hr>
+<h2>Étape 4 — SEO (si demandé)</h2>
+<ol>
+<li><strong>Mot-clé principal</strong> : présent dans le H1, dans les 100 premiers mots, dans la méta-description.</li>
+<li><strong>Mots-clés secondaires</strong> : 3-5 variantes sémantiques réparties naturellement dans le corps.</li>
+<li><strong>Slug</strong> : court, tirets, sans stopwords — ex. <code>/git-rebase-interactif-guide</code></li>
+<li><strong>Balises alt</strong> : décrire les images avec le mot-clé si pertinent.</li>
+<li><strong>Liens internes</strong> : pointer vers 2-3 articles existants du même domaine.</li>
+</ol>
+<p>Méta-description type :</p>
+<pre><code>Découvrez comment [faire X] sans [problème Y]. Guide complet avec exemples et [bonus] — [site name].</code></pre>
+<hr>
+<h2>Étape 5 — Checklist de livraison</h2>
+<p>Avant de livrer l'article, valider :</p>
+<ul>
+<li>[ ] Titre : accrocheur, pas clickbait vide, mot-clé présent si SEO</li>
+<li>[ ] Hook : les 3 premières lignes donnent envie de continuer</li>
+<li>[ ] Promesse tenue : tout ce qui est annoncé en intro est traité</li>
+<li>[ ] Exemples : au moins un exemple concret par section principale</li>
+<li>[ ] CTA : un seul, clair, en fin d'article</li>
+<li>[ ] Longueur : dans la cible fixée (±10 %)</li>
+<li>[ ] Lisibilité : pas de paragraphe &gt; 5 lignes, listes si &gt; 3 items</li>
+<li>[ ] Méta-description : rédigée et dans les 160 caractères</li>
+</ul>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Correction</th></tr></thead><tbody><tr><td>Introduction de 400 mots avant le sujet</td><td>Hook + contexte en 2 paragraphes max</td></tr><tr><td>Un seul titre proposé</td><td>Toujours 3 options testables</td></tr><tr><td>Conclusion = copie de l'introduction</td><td>Synthèse + projection ou CTA concret</td></tr><tr><td>Remplissage (&quot;Il est important de noter que…&quot;)</td><td>Supprimer ; aller directement au fait</td></tr><tr><td>SEO forcé (répétition mécanique du mot-clé)</td><td>Synonymes, reformulations naturelles</td></tr><tr><td>Listes à puces pour tout</td><td>Garder les listes pour les énumérations &gt; 3 items</td></tr><tr><td>CTA multiple (&quot;abonne-toi, partage, commente, achète&quot;)</td><td>Un seul CTA prioritaire par article</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>GEO (Generative Engine Optimization)</strong> : structurer pour que les LLMs citent l'article — définitions claires, réponses directes en début de section, format Q&amp;A pour les points clés.</li>
+<li><strong>Contenu E-E-A-T</strong> : afficher l'auteur, la date, les sources — les moteurs pénalisent le contenu anonyme sans expertise démontrée.</li>
+<li><strong>Multiformat natif</strong> : prévoir une adaptation LinkedIn (1 200 caractères) ou newsletter en même temps que l'article principal.</li>
+<li><strong>Longueur utile &gt; longueur totale</strong> : un article de 800 mots dense surperforme un article de 2 000 mots dilué.</li>
 </ul>
 </article>
 </main>

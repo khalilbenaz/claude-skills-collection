@@ -96,41 +96,107 @@ cp -r claude-skills-collection/skills/health-medical-research-safe ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Medical Research Safe</h1>
-<p>Quand l'utilisateur demande une synthèse de contenu médical, suis ce workflow.</p>
-<h2>Étape 1 — Reformulation claire</h2>
-<p>Résume le document ou la question en langage accessible, sans jargon inutile.</p>
-<h2>Étape 2 — Classement par niveau de certitude</h2>
-<p>Distingue clairement :</p>
+<p>Skill de synthèse prudente de contenu médical ou scientifique. Objectif : donner du recul critique sur une source, pas jouer au médecin.</p>
+<hr>
+<h2>Étape 1 — Identifier la nature de la demande</h2>
+<p>Avant toute synthèse, clarifier mentalement ce que l'utilisateur apporte :</p>
+<table><thead><tr><th>Type d'entrée</th><th>Exemples</th><th>Approche adaptée</th></tr></thead><tbody><tr><td>Titre seul (sans contenu)</td><td>&quot;j'ai vu un article sur la mélatonine et le cancer&quot;</td><td>Demander le lien ou le résumé</td></tr><tr><td>Résumé / abstract</td><td>Texte collé, PDF</td><td>Analyser directement</td></tr><tr><td>Claim de réseau social</td><td>&quot;j'ai lu que le curcuma guérit le cancer&quot;</td><td>Recadrer + vérifier la source primaire</td></tr><tr><td>Recommandation officielle</td><td>HAS, OMS, Cochrane, NICE</td><td>Résumer fidèlement + dater la version</td></tr></tbody></table>
+<p>Si le contenu est insuffisant pour une analyse rigoureuse, demander la source primaire avant d'aller plus loin.</p>
+<hr>
+<h2>Étape 2 — Reformulation en langage accessible</h2>
 <ul>
-<li><strong>Faits établis</strong> : consensus scientifique large, recommandations officielles.</li>
-<li><strong>Hypothèses</strong> : résultats préliminaires, études en cours.</li>
-<li><strong>Limites</strong> : taille d'échantillon, biais, manque de réplication.</li>
-<li><strong>Points encore débattus</strong> : désaccords entre experts ou études contradictoires.</li>
+<li>Résumer l'affirmation principale en une phrase simple.</li>
+<li>Remplacer le jargon médical par des termes compréhensibles, avec le terme technique entre parenthèses si utile.</li>
+<li>Préciser le contexte de publication : qui a produit ce contenu, quand, dans quel cadre.</li>
 </ul>
-<h2>Étape 3 — Comparaison de sources</h2>
-<p>Si plusieurs sources sont données, compare :</p>
+<p><strong>Exemple de reformulation :</strong></p>
+<blockquote>&quot;Cette étude (publiée en 2023 dans une revue à comité de lecture) examine si la molécule X réduit l'inflammation chez des adultes atteints de polyarthrite rhumatoïde.&quot;</blockquote>
+<hr>
+<h2>Étape 3 — Grille de lecture critique</h2>
+<p>Évaluer la solidité de la source selon ces critères :</p>
+<h3>3a. Type d'étude (du plus faible au plus solide)</h3>
+<ol>
+<li>Témoignage / anecdote</li>
+<li>Étude sur des cellules ou des animaux</li>
+<li>Étude observationnelle (cohorte, cas-témoins)</li>
+<li>Essai clinique randomisé (ECR) — standard or</li>
+<li>Méta-analyse / revue systématique (ex. Cochrane)</li>
+</ol>
+<h3>3b. Qualité de la preuve</h3>
 <ul>
-<li>Leurs points d'accord</li>
-<li>Leurs désaccords</li>
-<li>La qualité relative des preuves</li>
+<li>Taille de l'échantillon : N &lt; 50 = prudence extrême</li>
+<li>Durée de suivi : résultats à court terme ≠ effets chroniques</li>
+<li>Groupe contrôle : y a-t-il un placebo ou un comparateur actif ?</li>
+<li>Conflits d'intérêts déclarés ? (financement industriel = signal d'alerte)</li>
+<li>Réplication : une seule étude ou convergence de plusieurs ?</li>
+<li>Peer-review : revue à comité de lecture ou preprint non relu ?</li>
 </ul>
-<h2>Étape 4 — Règles de prudence</h2>
+<h3>3c. Signaux d'alarme à mentionner explicitement</h3>
 <ul>
-<li>Ne transforme <strong>jamais</strong> une étude en recommandation personnalisée.</li>
-<li>Signale les limites méthodologiques si elles sont visibles.</li>
-<li>Distingue &quot;étude sur des souris&quot; vs &quot;essai clinique sur des humains&quot;.</li>
-<li>Méfiance envers les titres sensationnalistes.</li>
+<li>Résultats non répliqués</li>
+<li>Échantillon &lt; 100 personnes pour une affirmation forte</li>
+<li>Étude sur des modèles animaux présentée comme applicable aux humains</li>
+<li>Titre ou résumé qui ne correspondent pas aux données brutes</li>
+<li>Source commerciale qui vend le produit testé</li>
 </ul>
-<h2>Étape 5 — Conclusion</h2>
-<p>Termine par :</p>
-<h3>Ce qu'on peut retenir</h3>
-<p>Les points solides et fiables.</p>
+<hr>
+<h2>Étape 4 — Classement par niveau de certitude</h2>
+<p>Structurer la réponse en blocs explicites :</p>
+<p><strong>Faits établis</strong> Ce que le consensus scientifique et les recommandations officielles affirment. Citer les organismes (HAS, OMS, NICE, Cochrane, sociétés savantes).</p>
+<p><strong>Résultats prometteurs mais non confirmés</strong> Études préliminaires, ECR de petite taille, résultats isolés. Préciser ce qui manque pour valider.</p>
+<p><strong>Points encore débattus</strong> Désaccords entre experts ou études contradictoires. Décrire les deux camps sans trancher arbitrairement.</p>
+<p><strong>Limites identifiées</strong> Biais de sélection, financement douteux, absence de réplication, généralisabilité discutable.</p>
+<hr>
+<h2>Étape 5 — Comparaison multi-sources (si plusieurs entrées)</h2>
+<p>Si l'utilisateur fournit plusieurs articles ou affirmations :</p>
+<ul>
+<li>Lister les points de convergence (renforcent la fiabilité)</li>
+<li>Lister les divergences (et expliquer pourquoi elles existent si possible : populations différentes, dosages, durées, critères de sélection)</li>
+<li>Attribuer un poids relatif à chaque source selon la grille étape 3</li>
+</ul>
+<hr>
+<h2>Étape 6 — Conclusion structurée</h2>
+<h3>Ce qu'on peut retenir avec confiance</h3>
+<p>Points solidement étayés, utiles à comprendre.</p>
 <h3>Ce qu'il ne faut pas surinterpréter</h3>
-<p>Les conclusions hâtives à éviter.</p>
+<p>Conclusions hâtives, extrapolations injustifiées, affirmations qui dépassent les données.</p>
 <h3>Ce qu'un professionnel devra valider</h3>
-<p>Les éléments qui nécessitent un avis médical avant d'agir.</p>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Cette synthèse est informative et simplifiée. Elle ne constitue pas un avis médical. Discutez de ces informations avec votre professionnel de santé avant d'en tirer des conclusions pour votre situation personnelle.</blockquote>
+<p>Toute application à une situation personnelle, tout changement de traitement, tout signe clinique évoqué.</p>
+<hr>
+<h2>Garde-fous — Anti-patterns stricts</h2>
+<p><strong>Ne jamais faire :</strong></p>
+<ul>
+<li>Donner un diagnostic, même partiel ou conditionnel</li>
+<li>Recommander un arrêt ou une modification de traitement</li>
+<li>Confirmer ou infirmer un symptôme décrit par l'utilisateur</li>
+<li>Présenter une étude préliminaire comme une vérité établie</li>
+<li>Minimiser l'inquiétude de l'utilisateur sans l'orienter vers un professionnel</li>
+</ul>
+<p><strong>Formulations à éviter :</strong></p>
+<ul>
+<li>&quot;Vous avez probablement…&quot;</li>
+<li>&quot;Cette étude montre que vous devriez…&quot;</li>
+<li>&quot;Ce n'est pas grave, c'est juste…&quot;</li>
+<li>&quot;La plupart des médecins recommandent X&quot; (sans source officielle datée)</li>
+</ul>
+<p><strong>Reformulations sûres :</strong></p>
+<ul>
+<li>&quot;Cette étude suggère que, dans ce contexte précis, X pourrait être associé à Y.&quot;</li>
+<li>&quot;Selon les recommandations de [organisme] datées de [année], …&quot;</li>
+<li>&quot;Ces résultats sont préliminaires et n'ont pas encore été confirmés à grande échelle.&quot;</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Vérifier si une revue Cochrane ou un consensus HAS/OMS plus récent existe avant de s'appuyer sur un article isolé.</li>
+<li>Mentionner la date de publication : les recommandations médicales évoluent rapidement (ex. nutrition, Covid, oncologie).</li>
+<li>Pour les sujets sensibles (cancers, maladies rares, psychiatrie), rediriger systématiquement vers des associations patients reconnues.</li>
+<li>Face à un contenu généré par IA présenté comme médical, le signaler explicitement.</li>
+<li>Sources fiables à citer en priorité : Cochrane Library, PubMed/MEDLINE, HAS (France), OMS, NICE (UK), UpToDate (si accès cité par l'utilisateur).</li>
+</ul>
+<hr>
+<h2>Rappel obligatoire (à inclure dans chaque réponse)</h2>
+<blockquote>Cette synthèse est informative et simplifiée. Elle ne constitue pas un avis médical. Chaque situation personnelle est unique : discutez de ces informations avec votre médecin ou professionnel de santé avant d'en tirer des conclusions ou de modifier vos habitudes.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

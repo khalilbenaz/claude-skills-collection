@@ -97,18 +97,79 @@ cp -r claude-skills-collection/skills/writing-email-drafter ~/.claude/skills/</d
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Email Drafter</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Contexte</strong> : à qui ? Quel sujet ? Quel objectif ? Quel ton ?</li>
-<li><strong>Analyse relationnelle</strong> : hiérarchie, historique, enjeux.</li>
-<li><strong>Rédaction</strong> : objet + corps + signature.</li>
-<li><strong>Variantes</strong> : si situation complexe, proposer 2-3 approches (direct, diplomatique, ferme).</li>
-<li><strong>Checklist</strong> : ton adapté, pas d'ambiguïté, CTA clair, longueur appropriée.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Collecter le contexte (si manquant, poser ces questions en bloc)</h3>
 <ul>
-<li>Adapte formellement au contexte culturel (vouvoiement, formules de politesse…).</li>
-<li>Un email = un objectif clair.</li>
-<li>Propose des variantes quand l'enjeu est élevé.</li>
+<li><strong>Destinataire</strong> : interne/externe, niveau hiérarchique, familiarité, culture (FR/EN/autre).</li>
+<li><strong>Objectif</strong> : informer | demander | relancer | refuser | escalader | convaincre | remercier.</li>
+<li><strong>Enjeu</strong> : faible / moyen / élevé (détermine le nombre de variantes à proposer).</li>
+<li><strong>Ton cible</strong> : formel, semi-formel, direct, empathique.</li>
+<li><strong>Contraintes</strong> : deadline, pièces jointes, confidentialité, CC/BCC.</li>
+</ul>
+<h3>2. Choisir le registre</h3>
+<table><thead><tr><th>Situation</th><th>Registre</th><th>Vouvoiement</th></tr></thead><tbody><tr><td>Client externe inconnu</td><td>Formel</td><td>Oui</td></tr><tr><td>Collègue du même niveau</td><td>Semi-formel</td><td>Selon culture interne</td></tr><tr><td>Manager / DG</td><td>Formel ou selon culture d'entreprise</td><td>Oui</td></tr><tr><td>Partenaire technique récurrent</td><td>Direct, concis</td><td>Optionnel</td></tr><tr><td>RH / juridique / escalade</td><td>Formel, factuel, neutre</td><td>Oui</td></tr></tbody></table>
+<h3>3. Structurer l'email</h3>
+<p><strong>Objet</strong> : <code>[Action] Sujet — contexte court</code></p>
+<ul>
+<li>Bon : <code>[Décision requise] Renouvellement contrat Acme — avant 28/06</code></li>
+<li>Mauvais : <code>Suite à notre réunion</code> (trop vague)</li>
+</ul>
+<p><strong>Corps</strong> :</p>
+<pre><code>Ligne d'accroche (1 phrase) : contexte ou référence
+→ Corps : faits / demande / information (3-5 phrases max par paragraphe)
+→ CTA explicite : &quot;Pourriez-vous confirmer avant vendredi 27/06 ?&quot;
+→ Formule de clôture adaptée au registre</code></pre>
+<p><strong>Signature</strong> : Nom — Titre — Téléphone — Entreprise (ne pas omettre pour les externes).</p>
+<h3>4. Rédiger et proposer des variantes</h3>
+<ul>
+<li>Enjeu <strong>faible</strong> → 1 version directe.</li>
+<li>Enjeu <strong>moyen</strong> → 1 version + 1 alternative de ton.</li>
+<li>Enjeu <strong>élevé</strong> (conflit, escalade, refus) → 2-3 versions : directe / diplomatique / ferme.</li>
+</ul>
+<p><strong>Exemple — relance de paiement (semi-formel)</strong> :</p>
+<pre><code>Objet : [Relance] Facture #2026-041 — échéance dépassée
+
+Bonjour [Prénom],
+
+Notre facture #2026-041 du 01/06 (montant : 4 800 €) est arrivée à échéance le 15/06.
+Pourriez-vous confirmer la date de règlement prévue, ou nous signaler tout blocage de votre côté ?
+
+Bien cordialement,
+[Signature]</code></pre>
+<p><strong>Exemple — refus poli (formel)</strong> :</p>
+<pre><code>Objet : Re : Proposition de partenariat — suite de nos échanges
+
+Madame, Monsieur,
+
+Nous vous remercions de l'intérêt que vous portez à [entreprise].
+Après examen attentif, nous ne sommes pas en mesure de donner suite à cette proposition
+dans le contexte actuel, notre feuille de route étant engagée jusqu'à fin 2026.
+Nous restons ouverts à un contact ultérieur si votre projet évolue.
+
+Cordialement,
+[Signature]</code></pre>
+<h3>5. Checklist avant livraison</h3>
+<ul>
+<li>[ ] Objet : informatif, actionnable, &lt; 60 caractères.</li>
+<li>[ ] Un seul objectif par email.</li>
+<li>[ ] CTA unique, daté si possible.</li>
+<li>[ ] Ton cohérent du début à la fin.</li>
+<li>[ ] Pas de jargon incompréhensible pour le destinataire.</li>
+<li>[ ] CC/BCC justifiés (éviter le &quot;reply-all&quot; inutile).</li>
+<li>[ ] Pièces jointes mentionnées dans le corps ET effectivement présentes.</li>
+<li>[ ] Relecture pour ambiguïtés (négations, conditionnel flou).</li>
+</ul>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td>Objet vide ou générique (&quot;Bonjour&quot;)</td><td>Email ignoré ou mal trié</td><td>Objet descriptif + action</td></tr><tr><td>Plusieurs demandes empilées</td><td>Destinataire répond à moitié</td><td>1 email = 1 demande</td></tr><tr><td>Ton passif-agressif (&quot;comme je l'avais déjà indiqué…&quot;)</td><td>Détériore la relation</td><td>Reformuler en neutre factuel</td></tr><tr><td>Majuscules / CAPS LOCK</td><td>Perçu comme agressif</td><td>Gras si besoin d'emphase</td></tr><tr><td>Email émotionnel envoyé à chaud</td><td>Dommages relationnels</td><td>Rédiger, attendre 1h, relire</td></tr><tr><td>CC en masse</td><td>Dilue la responsabilité</td><td>CC = information uniquement, TO = action</td></tr><tr><td>Formule de politesse absente</td><td>Froideur perçue</td><td>Toujours conclure, même en interne</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Objet avec tag d'action</strong> : <code>[Pour info]</code>, <code>[Décision requise]</code>, <code>[Urgent]</code>, <code>[FYI]</code> — aide les filtres et la priorisation.</li>
+<li><strong>Réponse dans les 24h</strong> : si pas de réponse possible, accusé de réception avec date de traitement prévue.</li>
+<li><strong>Plain text &gt; HTML surchargé</strong> : les emails surchargés (images, tableaux) sont filtrés par les antispams et mal rendu sur mobile.</li>
+<li><strong>Thread control</strong> : si le sujet change, créer un nouveau thread avec un nouvel objet.</li>
+<li><strong>Confidentialité</strong> : ne jamais transférer un thread interne à un externe sans vérifier les messages précédents du fil.</li>
+<li><strong>Langue mixte</strong> : si le destinataire est anglophone, rédiger en anglais même si la demande était en français — adapte-toi au destinataire, pas à l'expéditeur.</li>
 </ul>
 </article>
 </main>

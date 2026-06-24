@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-ai-agent-builder — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Conception et implémentation d'agents IA autonomes avec outils et mémoire.">
+<meta name="description" content="Conception et implémentation d'agents IA autonomes avec outils, mémoire et orchestration.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-ai-agent-builder</h1>
-<p class="lead">Conception et implémentation d'agents IA autonomes avec outils et mémoire.</p>
+<p class="lead">Conception et implémentation d'agents IA autonomes avec outils, mémoire et orchestration.</p>
 
 
 
@@ -96,44 +96,191 @@ cp -r claude-skills-collection/skills/dev-ai-agent-builder ~/.claude/skills/</di
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>AI Agent Builder</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Définition de l'agent</strong> — Clarifier l'objectif principal, les capacités attendues, les limites (domaine, périmètre), et rédiger un system prompt structuré : rôle, ton, règles de comportement, ce que l'agent doit refuser. Exemple : <code>&quot;Tu es un agent d'analyse financière. Tu réponds uniquement sur les données fournies. Tu ne fais pas de prédictions.&quot;</code>)</li>
-</ol>
-<ol>
-<li><strong>Architecture de l'agent</strong> — Choisir le pattern selon la complexité : <strong>ReAct</strong> (Reasoning + Acting, idéal pour tâches simples), <strong>Plan-and-Execute</strong> (décomposer avant d'agir, pour tâches longues), <strong>Tree of Thoughts</strong> (exploration multi-chemins, pour problèmes complexes), <strong>Multi-agent</strong> (sous-agents spécialisés orchestrés). Documenter le flow décisionnel avec un schéma.</li>
-</ol>
-<ol>
-<li><strong>Définition des outils</strong> — Créer les tool schemas au format JSON Schema (OpenAI function calling, Anthropic tools). Chaque outil doit avoir : nom snake_case, description précise, paramètres typés avec descriptions. Exemples : <code>search_web(query: str)</code>, <code>run_python(code: str)</code>, <code>read_file(path: str)</code>. Wrapper les APIs tierces avec gestion d'erreur uniforme.</li>
-</ol>
-<p>   ```python    tools = [{        &quot;type&quot;: &quot;function&quot;,        &quot;function&quot;: {            &quot;name&quot;: &quot;search_web&quot;,            &quot;description&quot;: &quot;Recherche des informations sur le web&quot;,            &quot;parameters&quot;: {                &quot;type&quot;: &quot;object&quot;,                &quot;properties&quot;: {                    &quot;query&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;description&quot;: &quot;Requête de recherche&quot;}                },                &quot;required&quot;: [&quot;query&quot;]            }        }    }]    ```</p>
-<ol>
-<li><strong>Mémoire de l'agent</strong> — Implémenter les couches mémoire adaptées : <strong>short-term</strong> (contexte de la conversation, sliding window), <strong>long-term</strong> (vector store avec embeddings, retrieval sémantique), <strong>episodic</strong> (historique des tâches passées, succès/échecs), <strong>working memory</strong> (résultats intermédiaires de la tâche courante). Utiliser <code>langchain.memory</code>, <code>mem0</code>, ou une implémentation custom avec pgvector.</li>
-</ol>
-<p>   ```python    from langchain.memory import ConversationSummaryBufferMemory    memory = ConversationSummaryBufferMemory(        llm=llm, max_token_limit=2000, return_messages=True    )    ```</p>
-<ol>
-<li><strong>Boucle d'exécution</strong> — Implémenter le cycle <strong>Observe → Think → Act → Reflect</strong> avec un compteur <code>max_iterations</code> (défaut : 10-20) pour éviter les boucles infinies. Gérer les erreurs d'outils (retry x3, fallback), détecter les états bloqués (même outil appelé 3 fois de suite), et implémenter un mécanisme de finalisation explicite (<code>FINAL_ANSWER:</code>).</li>
-</ol>
-<p>   ```python    async def agent_loop(task: str, max_iter: int = 15):        messages = [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: task}]        for i in range(max_iter):            response = await llm.invoke(messages, tools=tools)            if response.stop_reason == &quot;end_turn&quot;:                return response.content            tool_result = await execute_tool(response.tool_use)            messages.append(tool_result)        return &quot;Max iterations atteintes&quot;    ```</p>
-<ol>
-<li><strong>Multi-agent systems</strong> — Définir les rôles : <strong>Orchestrator</strong> (décompose, délègue, synthétise), <strong>Workers</strong> (agents spécialisés : recherche, code, analyse). Utiliser <strong>CrewAI</strong> pour des équipes déclaratives, <strong>AutoGen</strong> pour des conversations multi-agents, <strong>LangGraph</strong> pour des workflows avec état et branchements conditionnels. Définir les protocoles de communication (messages structurés JSON).</li>
-</ol>
-<p>   ```python    from crewai import Agent, Task, Crew    researcher = Agent(role=&quot;Researcher&quot;, goal=&quot;...&quot;, tools=[search_tool])    writer = Agent(role=&quot;Writer&quot;, goal=&quot;...&quot;, tools=[])    crew = Crew(agents=[researcher, writer], tasks=[...], verbose=True)    ```</p>
-<ol>
-<li><strong>Guardrails et sécurité</strong> — Valider les outputs (JSON schema validation, content filtering), imposer des limites de coût (<code>max_cost_usd</code> par session), du rate limiting (tokens/min), et des timeouts par outil. Intégrer <strong>human-in-the-loop</strong> pour les actions irréversibles (envoi d'email, suppression). Loguer toutes les décisions pour audit. Utiliser Guardrails AI ou NeMo Guardrails.</li>
-</ol>
-<p>   ```python    if tool_name in HIGH_RISK_TOOLS:        confirmation = await ask_human(f&quot;Confirmer: {tool_name}({args})?&quot;)        if not confirmation:            return &quot;Action annulée par l'utilisateur&quot;    ```</p>
-<ol>
-<li><strong>Évaluation et monitoring</strong> — Tracker : taux de succès des tâches, nombre moyen d'itérations, coût moyen par tâche, taux d'erreur par outil. Utiliser <strong>LangSmith</strong> pour le tracing complet, <strong>Phoenix (Arize)</strong> pour l'observabilité, ou OpenTelemetry custom. Créer un dataset de benchmarks représentatifs et lancer des évaluations régulières (evals automatisés + human eval).</li>
-</ol>
-<p>   ```python    from langsmith import Client    client = Client()    # Chaque run est tracé automatiquement avec @traceable    @traceable(run_type=&quot;chain&quot;)    async def run_agent(task: str): ...    ```</p>
-<h2>Règles</h2>
+<h2>Critères de choix du pattern</h2>
+<table><thead><tr><th>Complexité</th><th>Pattern recommandé</th><th>Framework</th></tr></thead><tbody><tr><td>Tâche unique, 1-5 outils</td><td>ReAct (Reasoning + Acting)</td><td>LangChain, SDK natif</td></tr><tr><td>Tâche longue multi-étapes</td><td>Plan-and-Execute</td><td>LangGraph</td></tr><tr><td>Exploration de solutions alternatives</td><td>Tree of Thoughts</td><td>LangGraph + custom</td></tr><tr><td>Équipe de spécialistes</td><td>Multi-agent orchestré</td><td>CrewAI, AutoGen, LangGraph</td></tr><tr><td>Workflow avec état persistant et branchements</td><td>Stateful graph</td><td>LangGraph</td></tr></tbody></table>
+<p>Règle de base : commencer par ReAct. Passer à Plan-and-Execute si l'agent doit coordonner plus de 5 étapes séquentielles. Passer au multi-agent si les domaines de compétence sont orthogonaux (ex : code + recherche + rédaction).</p>
+<h2>Workflow en étapes</h2>
+<h3>1. Rédiger le system prompt de l'agent</h3>
+<p>Structure minimale :</p>
+<pre><code>Tu es [RÔLE]. Tu [OBJECTIF PRINCIPAL].
+Règles :
+- Tu réponds uniquement sur [DOMAINE].
+- Tu n'inventes pas de données.
+- Si tu manques d'information, utilise l'outil [NOM_OUTIL] avant de répondre.
+Finalisation : quand tu as la réponse, utilise l'outil `final_answer`.</code></pre>
+<p>Inclure : rôle, périmètre, règles de refus, format de sortie attendu, condition d'arrêt explicite.</p>
+<h3>2. Définir les outils (tool schemas)</h3>
+<p>Format Anthropic (compatible aussi OpenAI avec adaptation mineure) :</p>
+<pre><code class="lang-python">tools = [
+    {
+        &quot;name&quot;: &quot;search_web&quot;,
+        &quot;description&quot;: &quot;Recherche des informations récentes sur le web. Utiliser si la question porte sur des faits susceptibles d'avoir changé récemment.&quot;,
+        &quot;input_schema&quot;: {
+            &quot;type&quot;: &quot;object&quot;,
+            &quot;properties&quot;: {
+                &quot;query&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;description&quot;: &quot;Requête de recherche optimisée&quot;}
+            },
+            &quot;required&quot;: [&quot;query&quot;]
+        }
+    },
+    {
+        &quot;name&quot;: &quot;run_python&quot;,
+        &quot;description&quot;: &quot;Exécute du code Python et retourne stdout + stderr. Utiliser pour calculs, transformations de données.&quot;,
+        &quot;input_schema&quot;: {
+            &quot;type&quot;: &quot;object&quot;,
+            &quot;properties&quot;: {
+                &quot;code&quot;: {&quot;type&quot;: &quot;string&quot;, &quot;description&quot;: &quot;Code Python à exécuter&quot;}
+            },
+            &quot;required&quot;: [&quot;code&quot;]
+        }
+    }
+]</code></pre>
+<p>Bonnes pratiques outil :</p>
 <ul>
-<li><strong>Toujours définir <code>max_iterations</code></strong> : sans limite, un agent peut boucler indéfiniment et générer des coûts non maîtrisés. Commencer à 10, ajuster selon la complexité.</li>
-<li><strong>Outils idempotents et sûrs</strong> : chaque outil doit gérer ses propres erreurs et retourner un résultat structuré (succès/échec + données). Ne jamais laisser une exception non gérée remonter à l'agent.</li>
-<li><strong>Tracer toutes les décisions</strong> : logguer chaque appel d'outil, chaque raisonnement intermédiaire, chaque erreur. Indispensable pour déboguer et améliorer l'agent.</li>
-<li><strong>Séparer la logique agent de la logique métier</strong> : les outils sont des wrappers fins sur les fonctions métier existantes — facilite les tests unitaires et le remplacement du LLM.</li>
-<li><strong>Tester avec des cas adversariaux</strong> : tenter de faire boucler l'agent, lui donner des instructions contradictoires, simuler des échecs d'outils — la robustesse se construit par les edge cases.</li>
+<li>Description orientée <strong>quand utiliser</strong>, pas seulement <strong>ce que ça fait</strong></li>
+<li>Toujours retourner <code>{&quot;success&quot;: bool, &quot;result&quot;: ..., &quot;error&quot;: str | None}</code></li>
+<li>Timeout par outil (ex : 30s web, 10s DB, 60s code)</li>
+<li>Idempotent ou documenté comme non-idempotent</li>
+</ul>
+<h3>3. Implémenter la boucle agent</h3>
+<p>Boucle ReAct minimaliste avec Anthropic SDK :</p>
+<pre><code class="lang-python">import anthropic
+
+client = anthropic.Anthropic()
+
+async def agent_loop(task: str, tools: list, max_iter: int = 15) -&gt; str:
+    messages = [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: task}]
+
+    for iteration in range(max_iter):
+        response = client.messages.create(
+            model=&quot;claude-sonnet-4-5&quot;,
+            max_tokens=4096,
+            tools=tools,
+            messages=messages
+        )
+
+        # Arrêt naturel
+        if response.stop_reason == &quot;end_turn&quot;:
+            return next(b.text for b in response.content if hasattr(b, &quot;text&quot;))
+
+        # Exécution des outils
+        if response.stop_reason == &quot;tool_use&quot;:
+            messages.append({&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: response.content})
+            tool_results = []
+            for block in response.content:
+                if block.type == &quot;tool_use&quot;:
+                    result = await execute_tool(block.name, block.input)
+                    tool_results.append({
+                        &quot;type&quot;: &quot;tool_result&quot;,
+                        &quot;tool_use_id&quot;: block.id,
+                        &quot;content&quot;: str(result)
+                    })
+            messages.append({&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: tool_results})
+
+    return f&quot;[TIMEOUT] Max itérations ({max_iter}) atteintes sans réponse finale.&quot;
+
+async def execute_tool(name: str, args: dict) -&gt; dict:
+    try:
+        handler = TOOL_REGISTRY[name]
+        return {&quot;success&quot;: True, &quot;result&quot;: await handler(**args)}
+    except Exception as e:
+        return {&quot;success&quot;: False, &quot;result&quot;: None, &quot;error&quot;: str(e)}</code></pre>
+<h3>4. Mémoire — choisir la couche adaptée</h3>
+<table><thead><tr><th>Besoin</th><th>Solution</th></tr></thead><tbody><tr><td>Contexte de session (&lt; 200k tokens)</td><td>Passer tout le fil dans <code>messages</code></td></tr><tr><td>Historique long / multi-session</td><td>Résumé LLM + vector store (pgvector, Chroma)</td></tr><tr><td>Faits persistants sur l'utilisateur/projet</td><td>mem0, Zep, ou table SQL simple</td></tr><tr><td>Cache de résultats d'outils</td><td>Redis avec TTL</td></tr></tbody></table>
+<p>Mémoire avec résumé automatique (LangChain) :</p>
+<pre><code class="lang-python">from langchain.memory import ConversationSummaryBufferMemory
+from langchain_anthropic import ChatAnthropic
+
+llm = ChatAnthropic(model=&quot;claude-sonnet-4-5&quot;)
+memory = ConversationSummaryBufferMemory(
+    llm=llm,
+    max_token_limit=3000,
+    return_messages=True
+)</code></pre>
+<h3>5. Multi-agent avec LangGraph</h3>
+<pre><code class="lang-python">from langgraph.graph import StateGraph, END
+from typing import TypedDict, Annotated
+import operator
+
+class AgentState(TypedDict):
+    task: str
+    plan: list[str]
+    results: Annotated[list, operator.add]
+    final_answer: str
+
+def orchestrator_node(state: AgentState) -&gt; AgentState:
+    # Décompose la tâche en sous-tâches
+    plan = decompose_task(state[&quot;task&quot;])
+    return {&quot;plan&quot;: plan}
+
+def worker_node(state: AgentState) -&gt; AgentState:
+    # Exécute la prochaine sous-tâche
+    result = execute_subtask(state[&quot;plan&quot;][0])
+    return {&quot;results&quot;: [result], &quot;plan&quot;: state[&quot;plan&quot;][1:]}
+
+def should_continue(state: AgentState) -&gt; str:
+    return &quot;worker&quot; if state[&quot;plan&quot;] else &quot;synthesizer&quot;
+
+graph = StateGraph(AgentState)
+graph.add_node(&quot;orchestrator&quot;, orchestrator_node)
+graph.add_node(&quot;worker&quot;, worker_node)
+graph.add_conditional_edges(&quot;worker&quot;, should_continue, {&quot;worker&quot;: &quot;worker&quot;, &quot;synthesizer&quot;: END})</code></pre>
+<h3>6. Monitoring et observabilité</h3>
+<p>LangSmith (tracing complet) :</p>
+<pre><code class="lang-bash">export LANGCHAIN_TRACING_V2=true
+export LANGCHAIN_API_KEY=ls__...
+export LANGCHAIN_PROJECT=mon-agent-prod</code></pre>
+<p>Avec le décorateur <code>@traceable</code> :</p>
+<pre><code class="lang-python">from langsmith import traceable
+
+@traceable(run_type=&quot;chain&quot;, name=&quot;agent_loop&quot;)
+async def run_agent(task: str) -&gt; str:
+    return await agent_loop(task, tools)</code></pre>
+<p>Métriques à tracker :</p>
+<ul>
+<li>Taux de succès des tâches (objectif : &gt; 90%)</li>
+<li>Itérations moyennes par tâche (signal de complexité ou de boucle)</li>
+<li>Coût moyen par tâche (tokens * prix modèle)</li>
+<li>Taux d'erreur par outil (identifier les outils fragiles)</li>
+<li>Latence P95 (pour les agents synchrones)</li>
+</ul>
+<h2>Garde-fous et sécurité</h2>
+<pre><code class="lang-python">HIGH_RISK_TOOLS = {&quot;send_email&quot;, &quot;delete_file&quot;, &quot;execute_sql_write&quot;, &quot;deploy&quot;}
+
+async def safe_execute_tool(name: str, args: dict) -&gt; dict:
+    # Human-in-the-loop pour actions irréversibles
+    if name in HIGH_RISK_TOOLS:
+        confirmation = await ask_human(
+            f&quot;L'agent veut exécuter `{name}` avec les args : {args}\nConfirmer ? [o/N]&quot;
+        )
+        if not confirmation:
+            return {&quot;success&quot;: False, &quot;error&quot;: &quot;Action refusée par l'opérateur&quot;}
+
+    # Rate limiting
+    if rate_limiter.is_exceeded(name):
+        return {&quot;success&quot;: False, &quot;error&quot;: &quot;Rate limit dépassé pour cet outil&quot;}
+
+    return await execute_tool(name, args)</code></pre>
+<p>Checklist sécurité avant mise en prod :</p>
+<ul>
+<li>[ ] <code>max_iterations</code> défini (recommandé : 10-20)</li>
+<li>[ ] <code>max_cost_usd</code> par session (ex : 0.50$)</li>
+<li>[ ] Timeout par outil (évite les blocages)</li>
+<li>[ ] Validation des inputs outils (types, longueur max)</li>
+<li>[ ] Human-in-the-loop sur toute action irréversible</li>
+<li>[ ] Logs de toutes les décisions et appels d'outils</li>
+<li>[ ] Pas de secrets dans les prompts ou tool results</li>
+</ul>
+<h2>Anti-patterns à éviter</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Impact</th><th>Correctif</th></tr></thead><tbody><tr><td>Pas de <code>max_iterations</code></td><td>Boucle infinie, coût incontrôlé</td><td>Toujours borner la boucle</td></tr><tr><td>Outil qui lève une exception raw</td><td>L'agent crashe ou hallucine</td><td><code>try/except</code> systématique, retourner <code>{&quot;success&quot;: false}</code></td></tr><tr><td>Trop d'outils (&gt; 15)</td><td>L'agent choisit mal</td><td>Limiter à 7±2 par rôle, regrouper par domaine</td></tr><tr><td>System prompt flou sur la condition d'arrêt</td><td>L'agent ne sait jamais quand s'arrêter</td><td>Définir explicitement <code>final_answer</code> ou un outil de finalisation</td></tr><tr><td>Multi-agent sans protocole de message</td><td>Messages incompréhensibles entre agents</td><td>Définir un format JSON structuré pour chaque échange inter-agent</td></tr><tr><td>Mémoire illimitée dans les messages</td><td>Context window explosée, coût élevé</td><td>Sliding window + résumé automatique</td></tr><tr><td>Outil non-idempotent appelé plusieurs fois</td><td>Effets de bord multiples</td><td>Documenter, détecter les appels répétés</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Prefer native SDK over framework</strong> : pour les agents simples, l'Anthropic SDK directement est plus maintenable que LangChain. Utiliser LangGraph uniquement si le workflow est un graphe réel.</li>
+<li><strong>Structured outputs</strong> : forcer le format de réponse finale avec un tool <code>final_answer</code> plutôt que de parser du texte libre.</li>
+<li><strong>Prompt caching</strong> : utiliser <code>cache_control: {&quot;type&quot;: &quot;ephemeral&quot;}</code> sur les blocs statiques (system prompt, tools) pour réduire les coûts de 70-90% sur les agents longue durée.</li>
+<li><strong>Model routing</strong> : utiliser <code>claude-haiku-3-5</code> pour les sous-tâches de classification/routing, <code>claude-sonnet-4-5</code> pour le raisonnement principal.</li>
+<li><strong>Parallel tool calls</strong> : Anthropic retourne plusieurs <code>tool_use</code> dans un seul message — les exécuter en parallèle avec <code>asyncio.gather()</code>.</li>
+<li><strong>Eval-driven development</strong> : créer un dataset de 20-50 cas de test représentatifs avant de déployer. Relancer les evals à chaque modification du system prompt ou des outils.</li>
 </ul>
 </article>
 </main>

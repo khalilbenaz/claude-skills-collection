@@ -96,38 +96,204 @@ cp -r claude-skills-collection/skills/dev-svelte-guide ~/.claude/skills/</div><b
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Guide Svelte / SvelteKit</h1>
+<h2>Critères de décision : Svelte vs SvelteKit</h2>
+<table><thead><tr><th>Besoin</th><th>Solution</th></tr></thead><tbody><tr><td>Composant UI isolé, widget embarqué</td><td>Svelte seul, build library</td></tr><tr><td>SPA avec routing côté client</td><td>SvelteKit + <code>adapter-static</code></td></tr><tr><td>Site statique / blog / docs</td><td>SvelteKit + prerender + <code>adapter-static</code></td></tr><tr><td>Application full-stack (API + DB + auth)</td><td>SvelteKit + <code>adapter-node</code> ou <code>adapter-vercel</code></td></tr><tr><td>SSR obligatoire (SEO, données fraîches)</td><td>SvelteKit, SSR activé par défaut</td></tr></tbody></table>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le besoin</strong> — Identifier le type de projet (SPA, site statique, application full-stack) et choisir entre Svelte seul ou SvelteKit pour le SSR, le routing basé sur le système de fichiers et les API endpoints.</li>
-</ol>
-<ol>
-<li><strong>Structurer le projet SvelteKit</strong> — Organiser l'arborescence <code>src/routes/</code> avec les conventions de fichiers : <code>+page.svelte</code>, <code>+layout.svelte</code>, <code>+page.server.ts</code>, <code>+server.ts</code>. Créer <code>src/lib/</code> pour les composants, utilitaires et stores partagés avec l'alias <code>$lib</code>.</li>
-</ol>
-<ol>
-<li><strong>Exploiter la réactivité native</strong> — Utiliser les déclarations réactives <code>$:</code> pour les valeurs dérivées et les effets de bord, le binding bidirectionnel avec <code>bind:</code>, et les runes Svelte 5 (<code>$state</code>, <code>$derived</code>, <code>$effect</code>) pour la réactivité fine.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les stores</strong> — Créer des writable, readable et derived stores pour l'état partagé entre composants. Utiliser la syntaxe <code>$store</code> pour l'auto-souscription dans les templates, et développer des custom stores avec des méthodes encapsulées.</li>
-</ol>
-<ol>
-<li><strong>Configurer le data loading</strong> — Implémenter les fonctions <code>load()</code> dans <code>+page.server.ts</code> pour le data fetching côté serveur, les form actions pour les mutations, et utiliser <code>invalidateAll()</code> pour le revalidation des données après les actions.</li>
-</ol>
-<ol>
-<li><strong>Gérer les transitions et animations</strong> — Appliquer les directives de transition (<code>fade</code>, <code>slide</code>, <code>fly</code>, <code>scale</code>), les animations avec <code>animate:flip</code>, les actions custom avec <code>use:action</code>, et les transitions de page avec <code>onNavigate</code>.</li>
-</ol>
-<ol>
-<li><strong>Créer les composants avancés</strong> — Utiliser les slots nommés pour la composition, <code>svelte:component</code> pour le rendu dynamique, les event dispatchers avec <code>createEventDispatcher</code>, et les context API avec <code>setContext/getContext</code> pour le partage de données.</li>
-</ol>
-<ol>
-<li><strong>Tester et déployer</strong> — Écrire des tests avec Vitest et Testing Library Svelte, configurer les adapters SvelteKit (node, static, vercel, cloudflare), et optimiser avec le prerendering sélectif et le code splitting automatique.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Initialiser le projet</h3>
+<pre><code class="lang-bash"># SvelteKit (recommandé)
+npx sv create my-app
+cd my-app &amp;&amp; npm install
+npm run dev
+
+# Svelte seul (lib ou widget)
+npx degit sveltejs/template my-widget</code></pre>
+<p>Choisir TypeScript dès le début — la migration ultérieure est coûteuse.</p>
+<h3>2. Structurer les routes SvelteKit</h3>
+<pre><code>src/
+  routes/
+    +layout.svelte          # layout racine (nav, providers)
+    +layout.server.ts       # load() partagé (session, user)
+    +page.svelte            # page /
+    blog/
+      +page.svelte          # /blog
+      [slug]/
+        +page.svelte        # /blog/:slug
+        +page.server.ts     # load({ params }) côté serveur
+  lib/
+    components/             # composants réutilisables
+    stores/                 # stores partagés
+    utils/                  # helpers purs
+  app.html                  # template HTML racine</code></pre>
+<p>Règle : tout ce qui touche DB, secrets ou sessions va dans <code>+page.server.ts</code> ou <code>+server.ts</code>, jamais dans <code>+page.ts</code> (exécuté côté client aussi).</p>
+<h3>3. Réactivité — Svelte 4 vs Svelte 5</h3>
+<p><strong>Svelte 4 (legacy)</strong></p>
+<pre><code class="lang-svelte">&lt;script&gt;
+  let count = 0;
+  $: doubled = count * 2;
+  $: if (count &gt; 10) console.log('high');
+&lt;/script&gt;</code></pre>
+<p><strong>Svelte 5 — Runes (recommandé pour tout nouveau projet)</strong></p>
+<pre><code class="lang-svelte">&lt;script&gt;
+  let count = $state(0);
+  const doubled = $derived(count * 2);
+
+  $effect(() =&gt; {
+    if (count &gt; 10) console.log('high');
+    return () =&gt; { /* cleanup */ };
+  });
+&lt;/script&gt;
+
+&lt;button onclick={() =&gt; count++}&gt;{count} × 2 = {doubled}&lt;/button&gt;</code></pre>
+<p>Avantages runes : réactivité fine (pas de réexécution du composant entier), cleanup explicite, lisibilité accrue, compatible composants universels.</p>
+<h3>4. Stores — état partagé</h3>
+<pre><code class="lang-ts">// src/lib/stores/cart.ts
+import { writable, derived } from 'svelte/store';
+
+const items = writable&lt;CartItem[]&gt;([]);
+
+export const cart = {
+  subscribe: items.subscribe,
+  add: (item: CartItem) =&gt; items.update(i =&gt; [...i, item]),
+  remove: (id: string) =&gt; items.update(i =&gt; i.filter(x =&gt; x.id !== id)),
+  clear: () =&gt; items.set([]),
+};
+
+export const total = derived(items, $items =&gt;
+  $items.reduce((sum, i) =&gt; sum + i.price, 0)
+);</code></pre>
+<pre><code class="lang-svelte">&lt;!-- Auto-souscription avec $store --&gt;
+&lt;script&gt;
+  import { cart, total } from '$lib/stores/cart';
+&lt;/script&gt;
+&lt;p&gt;Total : {$total} €&lt;/p&gt;</code></pre>
+<p>Préférer le context API (<code>setContext/getContext</code>) quand le store n'est utile qu'à un sous-arbre — évite les fuites entre utilisateurs en SSR.</p>
+<h3>5. Data loading et form actions</h3>
+<pre><code class="lang-ts">// src/routes/products/[id]/+page.server.ts
+import type { PageServerLoad, Actions } from './$types';
+import { error, fail, redirect } from '@sveltejs/kit';
+
+export const load: PageServerLoad = async ({ params, locals }) =&gt; {
+  const product = await db.product.findUnique({ where: { id: params.id } });
+  if (!product) error(404, 'Produit introuvable');
+  return { product };
+};
+
+export const actions: Actions = {
+  addToCart: async ({ request, locals }) =&gt; {
+    const data = await request.formData();
+    const qty = Number(data.get('qty'));
+    if (!qty || qty &lt; 1) return fail(422, { error: 'Quantité invalide' });
+    await cartService.add(locals.user.id, params.id, qty);
+    redirect(303, '/cart');
+  }
+};</code></pre>
+<pre><code class="lang-svelte">&lt;!-- +page.svelte --&gt;
+&lt;script&gt;
+  import { enhance } from '$app/forms';
+  let { data, form } = $props();
+&lt;/script&gt;
+
+&lt;h1&gt;{data.product.name}&lt;/h1&gt;
+{#if form?.error}&lt;p class=&quot;error&quot;&gt;{form.error}&lt;/p&gt;{/if}
+
+&lt;form method=&quot;POST&quot; action=&quot;?/addToCart&quot; use:enhance&gt;
+  &lt;input name=&quot;qty&quot; type=&quot;number&quot; value=&quot;1&quot; min=&quot;1&quot; /&gt;
+  &lt;button&gt;Ajouter au panier&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+<p><code>use:enhance</code> : soumission progressive — fonctionne sans JS, AJAX avec JS.</p>
+<h3>6. Transitions et animations</h3>
+<pre><code class="lang-svelte">&lt;script&gt;
+  import { fade, fly, slide } from 'svelte/transition';
+  import { flip } from 'svelte/animate';
+  let visible = $state(true);
+  let items = $state(['a', 'b', 'c']);
+&lt;/script&gt;
+
+{#if visible}
+  &lt;div transition:fly={{ y: 20, duration: 300 }}&gt;Contenu&lt;/div&gt;
+{/if}
+
+{#each items as item (item)}
+  &lt;div animate:flip={{ duration: 250 }}&gt;{item}&lt;/div&gt;
+{/each}</code></pre>
+<p>Pour les transitions de page (SvelteKit 2+) :</p>
+<pre><code class="lang-ts">// src/hooks.client.ts
+import { onNavigate } from '$app/navigation';
+onNavigate(navigation =&gt; {
+  if (!document.startViewTransition) return;
+  return new Promise(resolve =&gt; {
+    document.startViewTransition(async () =&gt; {
+      resolve();
+      await navigation.complete;
+    });
+  });
+});</code></pre>
+<h3>7. Composants avancés</h3>
+<pre><code class="lang-svelte">&lt;!-- Slot nommé --&gt;
+&lt;Card&gt;
+  &lt;svelte:fragment slot=&quot;header&quot;&gt;Titre&lt;/svelte:fragment&gt;
+  Contenu par défaut
+&lt;/Card&gt;
+
+&lt;!-- Composant dynamique --&gt;
+&lt;svelte:component this={selectedComponent} {props} /&gt;
+
+&lt;!-- Context API (évite prop drilling) --&gt;
+&lt;script&gt;
+  import { setContext, getContext } from 'svelte';
+  setContext('theme', { primary: '#3b82f6' });
+  // Dans un enfant :
+  const theme = getContext('theme');
+&lt;/script&gt;</code></pre>
+<h3>8. Tester</h3>
+<pre><code class="lang-bash">npm install -D @testing-library/svelte vitest jsdom</code></pre>
+<pre><code class="lang-ts">// src/lib/Counter.test.ts
+import { render, fireEvent } from '@testing-library/svelte';
+import Counter from './Counter.svelte';
+
+test('incrémente au clic', async () =&gt; {
+  const { getByRole } = render(Counter);
+  const btn = getByRole('button');
+  await fireEvent.click(btn);
+  expect(btn.textContent).toBe('1');
+});</code></pre>
+<p>Pour les routes SvelteKit, utiliser Playwright pour les tests E2E :</p>
+<pre><code class="lang-bash">npx playwright test</code></pre>
+<h3>9. Déployer</h3>
+<pre><code class="lang-bash"># Node.js (serveur autonome)
+npm install -D @sveltejs/adapter-node
+
+# Static (Netlify, GitHub Pages)
+npm install -D @sveltejs/adapter-static
+
+# Vercel / Cloudflare (auto-detect)
+npm install -D @sveltejs/adapter-vercel
+npm install -D @sveltejs/adapter-cloudflare</code></pre>
+<pre><code class="lang-ts">// svelte.config.js
+import adapter from '@sveltejs/adapter-node';
+export default { kit: { adapter: adapter() } };</code></pre>
+<p>Prerender sélectif :</p>
+<pre><code class="lang-ts">// +page.ts
+export const prerender = true;   // page statique
+export const ssr = false;        // SPA shell uniquement
+export const csr = false;        // HTML pur sans hydratation</code></pre>
+<h2>Garde-fous / Anti-patterns</h2>
 <ul>
-<li>Privilégie les runes Svelte 5 (<code>$state</code>, <code>$derived</code>, <code>$effect</code>) pour les nouveaux projets plutôt que la syntaxe réactive <code>$:</code> classique.</li>
-<li>Utilise toujours <code>+page.server.ts</code> pour les données sensibles et les accès base de données — ne charge jamais de secrets côté client.</li>
-<li>Évite les stores globaux quand le context API (<code>setContext/getContext</code>) suffit pour le partage de données entre composants parent-enfant.</li>
-<li>Valide systématiquement les données des form actions côté serveur avant toute mutation en base de données.</li>
-<li>Exploite le SSR et le prerendering de SvelteKit par défaut — ne désactive le SSR que si explicitement nécessaire.</li>
+<li><strong>Stores globaux + SSR</strong> : un store module-level est partagé entre toutes les requêtes serveur — utiliser <code>setContext</code> ou initialiser le store dans <code>load()</code>.</li>
+<li><strong>Secrets dans <code>+page.ts</code></strong> : ce fichier s'exécute client ET serveur ; les clés API fuient dans le bundle. Toujours <code>+page.server.ts</code> pour les données sensibles.</li>
+<li><strong>Réactivité perdue sur objets</strong> : en Svelte 4, <code>obj.prop = x</code> ne déclenche pas la réactivité si <code>obj</code> n'est pas réassigné — faire <code>obj = { ...obj, prop: x }</code>. En Svelte 5 avec <code>$state</code>, la réactivité profonde est native.</li>
+<li><strong><code>invalidateAll()</code> trop large</strong> : relance tous les <code>load()</code> de la page ; préférer <code>invalidate(url)</code> ciblé pour éviter des waterfalls réseau.</li>
+<li><strong>Mixage Svelte 4 et 5</strong> : les runes (<code>$state</code>, <code>$derived</code>) ne sont disponibles qu'en mode rune (fichiers <code>.svelte</code> avec <code>&lt;svelte:options runes /&gt;</code> ou projet créé avec Svelte 5). Ne pas mélanger <code>$:</code> et runes dans le même composant.</li>
+<li><strong>Oublier <code>use:enhance</code></strong> : sans lui, un <code>&lt;form&gt;</code> SvelteKit fait un rechargement complet de page — rend les actions inutilisables sans JS.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Svelte 5 + runes</strong> pour tout nouveau code : réactivité fine, meilleure DX, composants universels (SSR + client sans divergence).</li>
+<li><strong>TypeScript strict</strong> + <code>$types</code> générés automatiquement par SvelteKit pour <code>PageData</code>, <code>ActionData</code>, <code>LayoutData</code>.</li>
+<li><strong><code>$app/state</code></strong> (SvelteKit 2.12+) remplace certains stores comme <code>$page</code> : <code>import { page } from '$app/state'</code> sans souscription.</li>
+<li><strong>Skeleton CSS / UnoCSS / Tailwind</strong> : utiliser Tailwind via le preset officiel <code>@skeletonlabs/skeleton</code> ou <code>@tailwindcss/vite</code>.</li>
+<li><strong>Vite 6 / Rolldown</strong> : SvelteKit 2.x supporte Rolldown-Vite pour des builds significativement plus rapides — activer via <code>vite.config.ts</code> quand disponible.</li>
+<li><strong>Progressive enhancement</strong> systématique : forms avec <code>use:enhance</code>, navigation sans JS avec <code>&lt;a&gt;</code> standards, JS comme amélioration et non prérequis.</li>
 </ul>
 </article>
 </main>

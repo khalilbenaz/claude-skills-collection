@@ -96,38 +96,173 @@ cp -r claude-skills-collection/skills/dev-typescript-mastery ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>TypeScript Mastery</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Configuration stricte</strong> : Activer <code>&quot;strict&quot;: true</code> dans <code>tsconfig.json</code> (active <code>strictNullChecks</code>, <code>noImplicitAny</code>, <code>strictFunctionTypes</code>), configurer <code>paths</code> pour les alias d'imports (<code>@/components</code>), choisir le bon <code>moduleResolution</code> (<code>bundler</code> pour Vite/esbuild, <code>node16</code> pour Node), définir <code>target</code> selon l'environnement cible, utiliser <code>references</code> pour les monorepos.</li>
-</ol>
-<ol>
-<li><strong>Types fondamentaux</strong> : Maîtriser les union types (<code>string | number</code>), intersection types (<code>A &amp; B</code>), literal types (<code>&quot;GET&quot; | &quot;POST&quot;</code>), tuple types (<code>[string, number]</code>), enums (préférer <code>const enum</code> ou union de literals), branded types (<code>type UserId = string &amp; { readonly _brand: &quot;UserId&quot; }</code>) pour éviter les confusions de primitives.</li>
-</ol>
-<ol>
-<li><strong>Generics avancés</strong> : Écrire des génériques avec constraints (<code>&lt;T extends object&gt;</code>), utiliser les conditional types (<code>T extends U ? X : Y</code>), le mot-clé <code>infer</code> pour extraire des types (<code>infer R</code>), les mapped types (<code>{ [K in keyof T]: ... }</code>), les template literal types (<code>\</code>${string}Id\``), combiner pour des types puissants et expressifs.</li>
-</ol>
-<ol>
-<li><strong>Utility types</strong> : Maîtriser les built-ins (<code>Partial&lt;T&gt;</code>, <code>Required&lt;T&gt;</code>, <code>Pick&lt;T, K&gt;</code>, <code>Omit&lt;T, K&gt;</code>, <code>Record&lt;K, V&gt;</code>, <code>Readonly&lt;T&gt;</code>, <code>ReturnType&lt;F&gt;</code>, <code>Parameters&lt;F&gt;</code>, <code>Awaited&lt;T&gt;</code>), créer des utilities custom réutilisables (<code>DeepPartial&lt;T&gt;</code>, <code>NonNullableFields&lt;T&gt;</code>), documenter leur usage avec des exemples.</li>
-</ol>
-<ol>
-<li><strong>Type guards et narrowing</strong> : Utiliser <code>typeof</code>, <code>instanceof</code>, <code>in</code> pour le narrowing automatique, créer des user-defined type guards (<code>function isUser(x): x is User</code>), exploiter les discriminated unions (<code>type Shape = Circle | Square</code> avec <code>kind</code> discriminant), écrire des assertion functions (<code>function assert(cond): asserts cond</code>), éviter les <code>as</code> casts non justifiés.</li>
-</ol>
-<ol>
-<li><strong>Patterns TypeScript</strong> : Implémenter le builder pattern typé avec méthodes chaînées, le Result type (<code>type Result&lt;T, E&gt; = { ok: true; value: T } | { ok: false; error: E }</code>), les branded types pour les IDs métier, la validation runtime avec <code>zod</code> (inférence du schema vers type TS), le pattern Repository typé avec generics.</li>
-</ol>
-<ol>
-<li><strong>Types pour les APIs</strong> : Créer des clients API type-safe avec <code>fetch</code> + types générés, utiliser <code>tRPC</code> pour les APIs full-stack typées end-to-end, <code>Zodios</code> pour les clients REST avec validation, générer des types depuis OpenAPI avec <code>openapi-typescript</code>, typer les réponses avec des discriminated unions selon le status HTTP.</li>
-</ol>
-<ol>
-<li><strong>Debugging des types</strong> : Lire les messages d'erreur TS (déplier les types complexes dans l'IDE), utiliser <code>type Debug&lt;T&gt; = { [K in keyof T]: T[K] }</code> pour &quot;aplatir&quot; les types, tester les types avec <code>@ts-expect-error</code> et <code>tsd</code>, activer <code>&quot;verbatimModuleSyntax&quot;</code> pour clarifier les imports de types, utiliser <code>satisfies</code> pour valider sans widening.</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Configuration — point de départ obligatoire</h2>
+<p><strong>tsconfig.json minimal recommandé (2026) :</strong></p>
+<pre><code class="lang-json">{
+  &quot;compilerOptions&quot;: {
+    &quot;strict&quot;: true,
+    &quot;target&quot;: &quot;ES2022&quot;,
+    &quot;moduleResolution&quot;: &quot;bundler&quot;,   // Vite/esbuild/webpack5
+    // &quot;moduleResolution&quot;: &quot;node16&quot;, // Node pur (CJS/ESM hybride)
+    &quot;verbatimModuleSyntax&quot;: true,    // clarifie import type vs import
+    &quot;exactOptionalPropertyTypes&quot;: true,
+    &quot;noUncheckedIndexedAccess&quot;: true,
+    &quot;paths&quot;: { &quot;@/*&quot;: [&quot;./src/*&quot;] }
+  }
+}</code></pre>
+<p><strong>Critères de choix <code>moduleResolution</code> :</strong></p>
+<table><thead><tr><th>Contexte</th><th>Valeur</th></tr></thead><tbody><tr><td>Vite, esbuild, webpack 5</td><td><code>bundler</code></td></tr><tr><td>Node 18+ natif (ESM)</td><td><code>node16</code> ou <code>nodenext</code></td></tr><tr><td>Lib publiée NPM</td><td><code>node16</code></td></tr><tr><td>Legacy CJS</td><td><code>node</code></td></tr></tbody></table>
+<p><strong>Monorepo :</strong> utiliser <code>references</code> + <code>composite: true</code> par package pour éviter que tsc recompile tout.</p>
+<hr>
+<h2>2. Types fondamentaux — choisir la bonne construction</h2>
+<pre><code class="lang-typescript">// Union + literal types — préférer aux enums
+type HttpMethod = &quot;GET&quot; | &quot;POST&quot; | &quot;PUT&quot; | &quot;DELETE&quot;;
+
+// Branded types — évite les confusions de primitives
+type UserId = string &amp; { readonly _brand: &quot;UserId&quot; };
+type OrderId = string &amp; { readonly _brand: &quot;OrderId&quot; };
+const toUserId = (s: string): UserId =&gt; s as UserId; // cast unique et localisé
+
+// Tuple typé
+type Pair&lt;A, B&gt; = [A, B];
+const pair: Pair&lt;string, number&gt; = [&quot;age&quot;, 30];
+
+// Discriminated union — exhaustivité vérifiée par TS
+type Shape =
+  | { kind: &quot;circle&quot;; radius: number }
+  | { kind: &quot;rect&quot;; w: number; h: number };
+
+function area(s: Shape): number {
+  switch (s.kind) {
+    case &quot;circle&quot;: return Math.PI * s.radius ** 2;
+    case &quot;rect&quot;:   return s.w * s.h;
+    // TS erreur si un cas manque (avec noImplicitReturns)
+  }
+}</code></pre>
+<p><strong><code>type</code> vs <code>interface</code> :</strong></p>
 <ul>
-<li>Activer <code>strict: true</code> sans exception ; les raccourcis type-unsafe (<code>any</code>, <code>as</code>, <code>!</code>) créent des dettes techniques qui explosent en production.</li>
-<li>Préférer les <code>type</code> aliases pour les unions/intersections et les <code>interface</code> pour les shapes extensibles ; utiliser <code>interface</code> quand on anticipe le merging de déclarations.</li>
-<li>Ne jamais utiliser <code>any</code> : remplacer par <code>unknown</code> avec narrowing, <code>never</code> pour les branches impossibles, ou des generics pour la flexibilité.</li>
-<li>Générer les types depuis la source de vérité (schéma DB, OpenAPI, Zod schema) plutôt que les écrire manuellement pour éviter la désynchro.</li>
-<li>Expliquer les types complexes avec des commentaires JSDoc (<code>/** */</code>) ; un type bien nommé avec un commentaire vaut mieux qu'un type inline incompréhensible.</li>
+<li><code>interface</code> → shape d'objet qu'on va étendre ou merger (lib publique, OOP).</li>
+<li><code>type</code> → union, intersection, mapped type, alias de primitive. Par défaut utiliser <code>type</code>.</li>
+</ul>
+<hr>
+<h2>3. Generics avancés</h2>
+<pre><code class="lang-typescript">// Constraint + conditional type + infer
+type UnwrapPromise&lt;T&gt; = T extends Promise&lt;infer R&gt; ? R : T;
+// UnwrapPromise&lt;Promise&lt;User&gt;&gt; =&gt; User
+
+// Mapped type : rendre tous les champs optionnels et readonly
+type DeepReadonly&lt;T&gt; = {
+  readonly [K in keyof T]: T[K] extends object ? DeepReadonly&lt;T[K]&gt; : T[K];
+};
+
+// Template literal type
+type EventName&lt;T extends string&gt; = `on${Capitalize&lt;T&gt;}`;
+// EventName&lt;&quot;click&quot;&gt; =&gt; &quot;onClick&quot;
+
+// NoUndefined sur les clés optionnelles
+type RequiredFields&lt;T, K extends keyof T&gt; = Omit&lt;T, K&gt; &amp; Required&lt;Pick&lt;T, K&gt;&gt;;</code></pre>
+<hr>
+<h2>4. Utility types — référence rapide</h2>
+<table><thead><tr><th>Built-in</th><th>Usage concret</th></tr></thead><tbody><tr><td><code>Partial&lt;T&gt;</code></td><td>Formulaire de mise à jour partielle</td></tr><tr><td><code>Required&lt;T&gt;</code></td><td>Forcer tous les champs après validation</td></tr><tr><td><code>Pick&lt;T, K&gt;</code></td><td>Projeter une sous-forme</td></tr><tr><td><code>Omit&lt;T, K&gt;</code></td><td>Exclure password d'un DTO user</td></tr><tr><td><code>Record&lt;K, V&gt;</code></td><td>Map statique clé-valeur</td></tr><tr><td><code>Readonly&lt;T&gt;</code></td><td>Config immuable</td></tr><tr><td><code>ReturnType&lt;F&gt;</code></td><td>Typer le retour d'une fonction inconnue</td></tr><tr><td><code>Awaited&lt;T&gt;</code></td><td>Déballer le type d'une Promise</td></tr><tr><td><code>Parameters&lt;F&gt;</code></td><td>Forwarding d'arguments</td></tr><tr><td><code>NonNullable&lt;T&gt;</code></td><td>Après un guard null</td></tr></tbody></table>
+<pre><code class="lang-typescript">// Utility custom DeepPartial
+type DeepPartial&lt;T&gt; = { [K in keyof T]?: T[K] extends object ? DeepPartial&lt;T[K]&gt; : T[K] };</code></pre>
+<hr>
+<h2>5. Type guards et narrowing</h2>
+<pre><code class="lang-typescript">// User-defined type guard
+function isUser(x: unknown): x is User {
+  return typeof x === &quot;object&quot; &amp;&amp; x !== null &amp;&amp; &quot;id&quot; in x &amp;&amp; &quot;email&quot; in x;
+}
+
+// Assertion function (throw si faux)
+function assertDefined&lt;T&gt;(val: T | undefined, msg: string): asserts val is T {
+  if (val === undefined) throw new Error(msg);
+}
+
+// Exhaustive check avec never
+function assertNever(x: never): never {
+  throw new Error(`Unhandled case: ${JSON.stringify(x)}`);
+}
+// Placer en default d'un switch sur discriminated union</code></pre>
+<hr>
+<h2>6. Patterns métier</h2>
+<p><strong>Result type (gestion d'erreurs sans exception) :</strong></p>
+<pre><code class="lang-typescript">type Result&lt;T, E = Error&gt; =
+  | { ok: true;  value: T }
+  | { ok: false; error: E };
+
+async function fetchUser(id: UserId): Promise&lt;Result&lt;User&gt;&gt; {
+  try {
+    const data = await api.get(`/users/${id}`);
+    return { ok: true, value: data };
+  } catch (e) {
+    return { ok: false, error: e as Error };
+  }
+}
+// Consommateur forcé de gérer les deux cas</code></pre>
+<p><strong>Validation runtime → types TS avec Zod :</strong></p>
+<pre><code class="lang-typescript">import { z } from &quot;zod&quot;;
+
+const UserSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  role: z.enum([&quot;admin&quot;, &quot;user&quot;]),
+});
+type User = z.infer&lt;typeof UserSchema&gt;; // source de vérité unique
+
+const user = UserSchema.parse(rawJson); // throw si invalide
+const safe  = UserSchema.safeParse(rawJson); // safe.success / safe.data</code></pre>
+<p><strong>Repository générique typé :</strong></p>
+<pre><code class="lang-typescript">interface Repository&lt;T, Id&gt; {
+  findById(id: Id): Promise&lt;T | null&gt;;
+  save(entity: T): Promise&lt;T&gt;;
+  delete(id: Id): Promise&lt;void&gt;;
+}
+class UserRepo implements Repository&lt;User, UserId&gt; { ... }</code></pre>
+<hr>
+<h2>7. APIs type-safe</h2>
+<pre><code class="lang-typescript">// Génération depuis OpenAPI (zero runtime overhead)
+// npx openapi-typescript openapi.yaml -o src/api.d.ts
+
+import type { paths } from &quot;./api&quot;;
+import createClient from &quot;openapi-fetch&quot;;
+
+const client = createClient&lt;paths&gt;({ baseUrl: &quot;/api&quot; });
+const { data, error } = await client.GET(&quot;/users/{id}&quot;, {
+  params: { path: { id: &quot;123&quot; } },
+});
+// data est typé automatiquement selon le schéma OpenAPI</code></pre>
+<hr>
+<h2>8. Debugging des types</h2>
+<pre><code class="lang-typescript">// &quot;Aplatir&quot; un type complexe pour le lire dans l'IDE
+type Prettify&lt;T&gt; = { [K in keyof T]: T[K] } &amp; {};
+
+// satisfies — valide sans widening (TS 4.9+)
+const config = {
+  port: 3000,
+  host: &quot;localhost&quot;,
+} satisfies Record&lt;string, string | number&gt;;
+// config.port reste number (pas string | number)
+
+// Tester les types à la compilation
+import { expectType, expectError } from &quot;tsd&quot;;
+expectType&lt;User&gt;(parseUser(raw));
+expectError(parseUser(123));
+
+// @ts-expect-error — documenter une erreur intentionnelle
+// @ts-expect-error — version legacy de l'API
+legacyCall();</code></pre>
+<hr>
+<h2>9. Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Remède</th></tr></thead><tbody><tr><td><code>any</code> partout</td><td>Désactive le type checker</td><td><code>unknown</code> + narrowing</td></tr><tr><td><code>as Type</code> sans validation</td><td>Cast dangereux silencieux</td><td>Zod parse ou type guard</td></tr><tr><td><code>!</code> non-null assertion</td><td>Exception runtime non détectée</td><td><code>assertDefined()</code> ou <code>?.</code></td></tr><tr><td><code>enum</code> standard</td><td>Génère du JS runtime, tree-shaking difficile</td><td><code>const enum</code> ou union de literals</td></tr><tr><td>Types écrits manuellement dupliquant le schéma DB/API</td><td>Désynchronisation garantie</td><td>Générer depuis OpenAPI / Prisma / Zod</td></tr><tr><td><code>noUncheckedIndexedAccess: false</code></td><td><code>arr[0]</code> peut être <code>undefined</code> sans avertissement</td><td>Activer et gérer le `T \</td><td>undefined`</td></tr><tr><td>Ignorer <code>exactOptionalPropertyTypes</code></td><td><code>{ a?: string }</code> accepte <code>{ a: undefined }</code></td><td>Activer pour distinguer absent vs undefined</td></tr><tr><td><code>Object</code> ou <code>{}</code> comme type générique</td><td>Trop permissif, accepte tout</td><td><code>object</code>, <code>Record&lt;string, unknown&gt;</code></td></tr></tbody></table>
+<hr>
+<h2>10. Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Générer, ne pas écrire</strong> les types depuis la source de vérité : Prisma → types DB, OpenAPI → types API, Zod schema → types métier.</li>
+<li><strong><code>satisfies</code></strong> plutôt que <code>: Type</code> quand on veut garder le type inféré précis tout en le validant.</li>
+<li><strong><code>verbatimModuleSyntax</code></strong> obligatoire : sépare clairement <code>import type</code> (zéro runtime) de <code>import</code> (runtime).</li>
+<li><strong>Commenter avec JSDoc</strong> (<code>/** */</code>) les types publics : les IDE affichent le commentaire au hover, indispensable pour les libs internes.</li>
+<li><strong><code>tsd</code></strong> ou <code>@vitest/expect-type</code> pour les tests de types dans la CI : évite les régressions silencieuses.</li>
+<li><strong><code>ts-reset</code></strong> (Matt Pocock) pour corriger les types stdlib surprenants (<code>JSON.parse</code> → <code>unknown</code>, <code>Array.isArray</code> correct, etc.).</li>
 </ul>
 </article>
 </main>

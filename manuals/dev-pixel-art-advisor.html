@@ -96,38 +96,106 @@ cp -r claude-skills-collection/skills/dev-pixel-art-advisor ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Pixel Art Advisor</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Canvas et résolution</strong> : Choisir la taille du canvas en fonction du style visuel cible (8x8 pour NES-like, 16x16 ou 32x32 pour 16-bit, 48x48+ pour les personnages détaillés), définir le bon aspect ratio selon la plateforme cible, et établir une grille de travail cohérente avant de commencer tout asset.</li>
-</ol>
-<ol>
-<li><strong>Palette de couleurs</strong> : Limiter volontairement la palette (4 couleurs par NES, 16 par Game Boy Color, 32 pour SNES-style) pour une cohérence visuelle forte, créer des color ramps (du plus sombre au plus clair) pour chaque couleur principale, appliquer le hue shifting pour des ramps plus vivantes, et maîtriser le dithering pour simuler des couleurs intermédiaires.</li>
-</ol>
-<ol>
-<li><strong>Formes et contours</strong> : Dessiner des formes lisibles avec un minimum de pixels, maîtriser l'anti-aliasing manuel pour les courbes (doubles pixels, jaggies corrigés), choisir entre outline dur (contour noir) ou outline coloré selon l'ambiance, et explorer le sub-pixel art pour un mouvement plus fluide à basse résolution.</li>
-</ol>
-<ol>
-<li><strong>Animation sprite</strong> : Construire des walk cycles convaincants en 4 à 8 frames (anticipation, contact, passage, levée), créer des animations idle expressives avec un minimum de frames, concevoir des attaques et effets lisibles (smear frames, impact frames), et appliquer le squash and stretch pour donner de la vie aux personnages.</li>
-</ol>
-<ol>
-<li><strong>Tilesets</strong> : Créer des tiles seamless qui se répètent sans rupture visible, implémenter des systèmes d'autotile pour les transitions de terrain (bitmask à 47 ou 256 variations), concevoir les transitions entre biomes ou types de surface, et structurer le tilemap pour la lisibilité dans l'éditeur de niveaux.</li>
-</ol>
-<ol>
-<li><strong>Character design</strong> : Travailler la silhouette en premier (reconnaissable en noir et blanc), maximiser la lisibilité à petite taille avec des éléments distinctifs clairs, respecter des proportions cohérentes avec le style du jeu (tête plus grande pour chibi, proportions réalistes pour JRPG), et concevoir des expressions faciales expressives malgré la contrainte de résolution.</li>
-</ol>
-<ol>
-<li><strong>Lighting et shading</strong> : Définir une source lumineuse unique et cohérente pour tous les assets du projet, appliquer l'ambient occlusion pour donner de la profondeur aux formes, utiliser le rim lighting pour détacher les personnages du fond, et maîtriser le cel shading pixel pour un rendu stylisé net et lisible.</li>
-</ol>
-<ol>
-<li><strong>Export et intégration</strong> : Packager les sprites en spritesheets optimisées (atlas texture power-of-two), exporter en PNG sans perte avec transparence, configurer l'import dans Unity (Sprite Editor, pixels per unit, filter mode Point) ou Godot (import settings, snap), et paramétrer les animations dans le moteur en référençant les frames de la spritesheet.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de décision — Résolution et style</h2>
+<table><thead><tr><th>Contexte cible</th><th>Canvas sprite</th><th>Palette max</th><th>Outil recommandé</th></tr></thead><tbody><tr><td>NES / 8-bit strict</td><td>8×8 à 16×16</td><td>4 couleurs/sprite</td><td>Aseprite, LibreSprite</td></tr><tr><td>Game Boy (mono)</td><td>8×8 à 16×16</td><td>4 niveaux de gris</td><td>Aseprite</td></tr><tr><td>SNES / 16-bit</td><td>16×16 à 32×32</td><td>16–32 couleurs</td><td>Aseprite, Pyxel Edit</td></tr><tr><td>Moderne pixel art</td><td>32×32 à 64×64</td><td>Illimité (palette cohérente)</td><td>Aseprite</td></tr><tr><td>Interface UI rétro</td><td>8×8 à 24×24</td><td>8–16 couleurs</td><td>Aseprite, Shoebox</td></tr></tbody></table>
+<p><strong>Règle de départ</strong> : choisir la plus petite résolution qui rend la silhouette lisible. Agrandir plus tard est coûteux.</p>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Canvas et grille</h3>
+<pre><code>Aseprite &gt; File &gt; New
+  Width:  32  Height: 32
+  Color mode: Indexed  (limite la palette dès le début)
+  Background: Transparent</code></pre>
 <ul>
-<li>Fournis des conseils concrets adaptés à la résolution et au style demandés (8-bit, 16-bit, moderne pixel art).</li>
-<li>Adapte les recommandations au moteur de jeu utilisé pour l'intégration (Unity, Godot, GameMaker, RPG Maker).</li>
-<li>Priorise la lisibilité et la cohérence visuelle de la palette sur le détail : moins de couleurs bien choisies valent mieux que beaucoup de couleurs incohérentes.</li>
-<li>Mentionne les outils recommandés : Aseprite (principal), LibreSprite (gratuit), Pyxel Edit (tilesets), GraphicsGale.</li>
-<li>Inclus des exemples de techniques spécifiques (dithering, color ramp, bitmask autotile) avec des explications étape par étape.</li>
+<li>Activer la grille (<code>View &gt; Grid &gt; Grid Settings</code> → 8×8 ou 16×16 selon le tile size).</li>
+<li>Travailler à 400–800 % de zoom ; toujours vérifier à 100 % pour la lisibilité réelle.</li>
+<li>Définir le <strong>pixels per unit</strong> avant toute création : ex. 16 px = 1 unité de jeu → facilite l'import moteur.</li>
+</ul>
+<h3>2. Palette de couleurs</h3>
+<p>Construire des <strong>color ramps</strong> (minimum 3 teintes par couleur principale) avec hue shifting :</p>
+<pre><code>Couleur base : H=30, S=70, V=80   (brun chaud)
+Ombre       : H=240, S=40, V=40   (bleu froid — pas de gris pur)
+Lumière     : H=50,  S=30, V=95   (jaune chaud)</code></pre>
+<ul>
+<li>Utiliser le mode <strong>HSV</strong> dans Aseprite (<code>Edit &gt; Preferences &gt; Color</code> → HSV).</li>
+<li>Limiter la palette totale du projet dans un fichier <code>.pal</code> partagé entre tous les assets.</li>
+<li>Importer une palette de référence : <code>Palette &gt; Load Palette &gt; fichier.pal</code>.</li>
+<li><strong>Dithering</strong> pour simuler une couleur intermédiaire sans l'ajouter à la palette :</li>
+</ul>
+<pre><code>Pattern checkerboard 2×2 :
+  ▓░▓░      = 50 % mélange entre couleur A et B
+  ░▓░▓</code></pre>
+<h3>3. Formes et contours</h3>
+<ul>
+<li>Dessiner la <strong>silhouette en noir</strong> avant d'ajouter couleurs ou détails.</li>
+<li>Anti-aliasing manuel sur les courbes : intercaler 1–2 pixels de teinte intermédiaire sur les jaggies prononcés (<code>&gt; 45°</code>).</li>
+<li>Choisir le type d'outline selon l'ambiance :</li>
+<ul>
+<li><strong>Outline noir dur</strong> → action, lisibilité maximale, style cartoon.</li>
+<li><strong>Outline coloré</strong> (version assombrie de la couleur adjacente) → style doux, RPG.</li>
+<li><strong>Pas d'outline</strong> → décors, éléments d'arrière-plan.</li>
+</ul>
+<li>Éviter les <strong>lone pixels</strong> (pixel isolé sans voisin de même couleur) : ils créent du bruit visuel.</li>
+</ul>
+<h3>4. Animation sprite — Walk cycle (exemple 4 frames)</h3>
+<pre><code>Frame 1 : Contact  — pied gauche à terre, pied droit levé
+Frame 2 : Passage  — poids au centre, corps légèrement bas
+Frame 3 : Contact  — pied droit à terre, pied gauche levé
+Frame 4 : Passage  — poids au centre (miroir F2)</code></pre>
+<p>Paramètres Aseprite :</p>
+<pre><code>Timeline &gt; Frame duration : 100–120 ms (8–10 fps) pour walk
+Timeline &gt; Frame duration : 60–80 ms (12–16 fps) pour effets rapides</code></pre>
+<ul>
+<li><strong>Squash &amp; stretch</strong> : compresser verticalement de 1–2 px à l'impact, étirer à la montée.</li>
+<li><strong>Smear frame</strong> : 1 frame de flou directionnel (pixels étirés) sur les attaques rapides.</li>
+<li>Toujours tester l'animation en boucle continue dans Aseprite (<code>&gt; Play</code>) avant export.</li>
+</ul>
+<h3>5. Tilesets et autotile</h3>
+<p>Structure bitmask 4-bit (16 tiles, transitions simples) :</p>
+<pre><code>Tile ID  Voisins (N S E O)   Usage
+  0       0000               Isolé
+  15      1111               Plein entouré
+  5       0101               Corridor horizontal
+  10      1010               Corridor vertical</code></pre>
+<ul>
+<li>Pour autotile 47 tuiles (RPG Maker / Godot <code>TileMap</code> autotile) : regrouper les tiles dans l'ordre bitmask attendu par le moteur.</li>
+<li><strong>Seamless</strong> : les 4 bords d'une tile doivent être identiques à leurs voisins → vérifier avec <code>View &gt; Tiled Mode</code> dans Aseprite.</li>
+</ul>
+<h3>6. Export et intégration moteur</h3>
+<p><strong>Spritesheet Aseprite CLI</strong> (automatisable en CI) :</p>
+<pre><code class="lang-bash">aseprite -b character.aseprite \
+  --sheet character_sheet.png \
+  --sheet-type packed \
+  --data character_sheet.json \
+  --format json-array \
+  --trim</code></pre>
+<p><strong>Unity — paramètres d'import PNG</strong> :</p>
+<pre><code>Texture Type      : Sprite (2D and UI)
+Sprite Mode       : Multiple
+Pixels Per Unit   : 16   (ou la valeur projet)
+Filter Mode       : Point (no filter)   ← CRITIQUE pour pixel art net
+Compression       : None
+Max Size          : 2048  (power-of-two)</code></pre>
+<p><strong>Godot 4 — import settings</strong> :</p>
+<pre><code>[importer = &quot;texture&quot;]
+params/filter = false          # Point filtering
+params/compress/mode = 0       # Lossless
+params/mipmaps/generate = false</code></pre>
+<p><strong>GameMaker</strong> : <code>Sprite Editor &gt; Import Strip</code> → définir <code>Frame Width</code>, <code>Frame Height</code>, <code>Number of Frames</code>.</p>
+<hr>
+<h2>Anti-patterns et pièges fréquents</h2>
+<table><thead><tr><th>Piège</th><th>Symptôme</th><th>Correction</th></tr></thead><tbody><tr><td>Palette trop grande</td><td>Incohérence visuelle entre assets</td><td>Créer une palette maître <code>.pal</code>, l'imposer à tous les sprites</td></tr><tr><td>Outline noir uniforme</td><td>Personnages collés au fond</td><td>Passer en outline coloré ou supprimer l'outline sur les décors</td></tr><tr><td>Filter Mode Bilinear</td><td>Sprites flous en jeu</td><td>Forcer <code>Point (no filter)</code> dans l'import moteur</td></tr><tr><td>Canvas non power-of-two</td><td>Artefacts GPU, atlas fragmenté</td><td>Toujours exporter en 256×256, 512×512, 1024×512, etc.</td></tr><tr><td>Lone pixels</td><td>Bruit, manque de lisibilité</td><td>Regel : chaque pixel doit avoir ≥ 1 voisin de même famille</td></tr><tr><td>Animation trop fluide</td><td>Perd le charme rétro</td><td>Réduire à 6–8 fps et ajouter un hold explicite sur les frames clés</td></tr><tr><td>Ignorer la silhouette</td><td>Design illisible à petite taille</td><td>Toujours valider en noir et blanc à 100 % avant de coloriser</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Aseprite scripts Lua</strong> : automatiser le recoloring de palette pour les variantes de personnage.</li>
+</ul>
+<p>  ```lua   -- Exemple : swap palette slot 3 (rouge) → bleu   local sprite = app.activeSprite   local pal = sprite.palettes[1]   pal:setColor(3, Color{r=30, g=80, b=200})   ```</p>
+<ul>
+<li><strong>Version control</strong> : commiter les fichiers <code>.aseprite</code> (format binaire versionnable) + les PNG exportés générés en CI.</li>
+<li><strong>Figma / Excalidraw</strong> pour le moodboard de palette avant de commencer ; éviter l'itération palette en cours de production.</li>
+<li><strong>Accessibilité</strong> : tester la palette avec un simulateur daltonisme (<code>Colour Oracle</code>, plugin Aseprite <code>Color Blindness Simulator</code>) ; les jeux indés sont concernés.</li>
+<li><strong>Pixel art IA-assisté</strong> : les générateurs (Midjourney, Stable Diffusion pixel art LoRA) produisent du non-pixel-art à nettoyer manuellement ; ne pas utiliser en production sans audit pixel par pixel.</li>
 </ul>
 </article>
 </main>

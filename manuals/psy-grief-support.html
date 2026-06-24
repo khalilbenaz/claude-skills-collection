@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>psy-grief-support — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Accompagne le deuil ou une perte significative avec écoute structurée et orientation vers du soutien.">
+<meta name="description" content="Accompagne le deuil ou une perte significative avec écoute structurée, validation émotionnelle et orientation vers du soutien professionnel quand nécessaire.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🧘 Bien-être</span>
 <h1 class="skill-title">psy-grief-support</h1>
-<p class="lead">Accompagne le deuil ou une perte significative avec écoute structurée et orientation vers du soutien.</p>
+<p class="lead">Accompagne le deuil ou une perte significative avec écoute structurée, validation émotionnelle et orientation vers du soutien professionnel quand nécessaire.</p>
 
 
 
@@ -96,71 +96,107 @@ cp -r claude-skills-collection/skills/psy-grief-support ~/.claude/skills/</div><
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Grief Support</h1>
-<p>Quand l'utilisateur évoque un deuil ou une perte, suis ce workflow.</p>
-<h2>Étape 1 — Accueil avec respect</h2>
+<p>Accompagnement d'un deuil ou d'une perte significative. Suis ce workflow en adaptant le rythme à ce que l'utilisateur partage.</p>
+<blockquote><strong>Rappel préalable</strong> : Ce skill est un espace d'écoute bienveillant. Il ne remplace en aucun cas un accompagnement par un psychologue, un médecin ou un groupe de soutien spécialisé. Si des pensées suicidaires ou un danger immédiat apparaissent, bascule immédiatement vers le skill <code>crisis-escalation</code>.</blockquote>
+<hr>
+<h2>Étape 1 — Accueil sans filtres</h2>
+<p><strong>Ce que tu fais :</strong></p>
 <ul>
-<li>Accueille ce que l'utilisateur partage avec douceur et respect.</li>
-<li>Nomme la perte telle qu'il la décrit, sans reformuler de façon clinique.</li>
-<li>Ne cherche pas immédiatement à &quot;structurer&quot; — écoute d'abord.</li>
+<li>Accueille ce que l'utilisateur partage avec douceur, sans chercher à structurer immédiatement.</li>
+<li>Nomme la perte telle qu'elle est décrite (« la perte de ta mère », « la rupture avec… »), jamais en termes cliniques.</li>
+<li>Valide la légitimité de sa présence ici : il n'a pas besoin de « raisons suffisantes » pour parler.</li>
 </ul>
+<p><strong>Ce que tu dis :</strong></p>
+<blockquote>« Merci de me faire confiance avec ça. Je t'écoute, prends le temps dont tu as besoin. »</blockquote>
+<p><strong>Ne dis jamais :</strong></p>
+<ul>
+<li>« Je comprends exactement ce que tu ressens. » (tu ne peux pas)</li>
+<li>« Courage, ça ira mieux. » (minimise la douleur)</li>
+<li>« Il est dans un meilleur endroit. » (présuppose des croyances)</li>
+</ul>
+<hr>
 <h2>Étape 2 — Comprendre la situation</h2>
-<p>Si l'utilisateur est prêt à en dire plus, clarifie doucement :</p>
+<p>Pose des questions doucement, une à la fois, seulement si l'utilisateur semble prêt :</p>
+<table><thead><tr><th>Question clé</th><th>Pourquoi</th></tr></thead><tbody><tr><td>Qui ou quoi a été perdu (personne, animal, relation, emploi, santé) ?</td><td>Calibrer le type de deuil</td></tr><tr><td>Depuis combien de temps ?</td><td>Identifier la phase du deuil</td></tr><tr><td>Quel était le lien (proximité, ambivalence, dépendance) ?</td><td>Comprendre la complexité</td></tr><tr><td>Y a-t-il du soutien autour de toi (famille, amis, professionnel) ?</td><td>Évaluer l'isolement</td></tr><tr><td>Y a-t-il eu des circonstances difficiles (mort soudaine, violence, non-dits) ?</td><td>Repérer un deuil compliqué</td></tr></tbody></table>
+<p><strong>Ne pas poser toutes les questions d'un coup.</strong> Laisse la conversation progresser naturellement.</p>
+<hr>
+<h2>Étape 3 — Accueil des émotions présentes</h2>
+<p>Aide à mettre des mots sans forcer ni interpréter :</p>
+<p><strong>Émotions fréquentes dans le deuil — toutes sont normales :</strong></p>
 <ul>
-<li><strong>Qui ou quoi</strong> a été perdu (personne, animal, relation, emploi, santé…)</li>
-<li><strong>Depuis quand</strong></li>
-<li><strong>Le lien</strong> avec la personne ou la chose perdue</li>
-<li><strong>Le soutien actuel</strong> (entourage, professionnel, solitude…)</li>
+<li>Tristesse profonde, vide, nostalgie</li>
+<li>Colère (contre le défunt, contre soi, contre la vie)</li>
+<li>Culpabilité et regrets (« j'aurais dû… »)</li>
+<li>Soulagement (surtout après une longue maladie) — qui génère souvent une culpabilité secondaire</li>
+<li>Engourdissement, sentiment d'irréalité (déréalisation)</li>
+<li>Anxiété, peur de l'avenir sans cette personne</li>
 </ul>
-<h2>Étape 3 — Ce que l'utilisateur vit</h2>
-<p>Aide à nommer sans forcer :</p>
+<p><strong>Manifestations physiques à reconnaître :</strong></p>
 <ul>
-<li><strong>Émotions</strong> présentes (tristesse, colère, culpabilité, vide, soulagement — tout est normal)</li>
-<li><strong>Sensations physiques</strong> (fatigue, oppression, insomnie, perte d'appétit…)</li>
-<li><strong>Pensées récurrentes</strong> (ruminations, regrets, &quot;et si…&quot;)</li>
-<li><strong>Impact sur le quotidien</strong> (travail, relations, motivation)</li>
+<li>Fatigue intense, troubles du sommeil</li>
+<li>Perte ou augmentation d'appétit</li>
+<li>Oppression thoracique, impression de ne pas respirer normalement</li>
+<li>Pleurs incontrôlables ou au contraire incapacité à pleurer</li>
 </ul>
-<h2>Étape 4 — Normalisation</h2>
-<p>Rappelle avec délicatesse :</p>
+<p><strong>Formulation utile :</strong></p>
+<blockquote>« Est-ce que tu reconnais certaines de ces sensations ? Tu n'es pas obligé(e) de tout nommer, juste ce qui te parle. »</blockquote>
+<hr>
+<h2>Étape 4 — Normalisation sans banalisation</h2>
+<p>Rappelle avec délicatesse — sans jamais minimiser :</p>
 <ul>
-<li>Le deuil n'est pas linéaire — il y a des allers-retours</li>
-<li>Il n'y a pas de &quot;bonne façon&quot; de faire son deuil</li>
-<li>La durée varie d'une personne à l'autre</li>
-<li>Toutes les émotions ressenties sont légitimes, y compris la colère ou le soulagement</li>
+<li>Le deuil n'est <strong>pas linéaire</strong> : il y a des allers-retours entre des phases de mieux et des rechutes.</li>
+<li>Il n'existe <strong>pas de calendrier universel</strong> : six semaines ou deux ans, aucune durée n'est anormale en soi.</li>
+<li>Les modèles de deuil (Kübler-Ross, Worden) sont des repères, <strong>pas des cases à cocher</strong>.</li>
+<li>Un anniversaire, une odeur, une chanson peuvent <strong>rouvrir la douleur</strong> des années après — c'est normal.</li>
+<li>Faire des activités agréables <strong>n'est pas une trahison</strong> du défunt.</li>
 </ul>
-<h2>Étape 5 — Journal de deuil (optionnel)</h2>
-<p>Si l'utilisateur le souhaite, propose un format :</p>
-<h3>Ce que je vis aujourd'hui</h3>
-<p>État émotionnel du jour.</p>
-<h3>Ce qui me manque</h3>
-<p>Ce que la perte représente concrètement.</p>
-<h3>Ce qui m'a aidé aujourd'hui</h3>
-<p>Un petit moment, une personne, un geste.</p>
-<h3>Ce que j'aimerais dire</h3>
-<p>Mots non dits, adressés à la personne ou à soi-même.</p>
-<h2>Étape 6 — Orientation</h2>
-<h3>Quand chercher du soutien professionnel</h3>
+<p><strong>Piège à éviter :</strong> ne jamais comparer les deuils entre eux (« d'autres ont vécu pire »). Chaque perte est singulière.</p>
+<hr>
+<h2>Étape 5 — Journal de deuil (optionnel, propose-le sans insister)</h2>
+<p>Si l'utilisateur cherche un outil concret, propose ce format de journal :</p>
+<pre><code>## Journal du [date]
+
+### Ce que je vis aujourd'hui
+(émotions, sensations, moments difficiles)
+
+### Ce qui me manque concrètement
+(habitudes, présence, rôle qu'il/elle jouait dans ma vie)
+
+### Ce qui m'a aidé aujourd'hui
+(une personne, un geste, un moment — même minuscule)
+
+### Ce que j'aimerais lui dire
+(mots non dits, adressés librement à la personne perdue ou à soi-même)
+
+### Ce que je m'autorise demain
+(une petite chose, sans pression)</code></pre>
+<p>Ce format peut être utilisé quotidiennement ou occasionnellement, sans obligation de régularité.</p>
+<hr>
+<h2>Étape 6 — Orientation vers un soutien professionnel</h2>
+<h3>Signes indiquant qu'un suivi professionnel est nécessaire</h3>
+<p>Recommande <strong>avec bienveillance et sans jugement</strong> de consulter un professionnel si :</p>
 <ul>
-<li>Le deuil empêche de fonctionner depuis plusieurs semaines</li>
-<li>Isolement total</li>
-<li>Idées noires ou sentiment de ne pas vouloir continuer</li>
-<li>Consommation d'alcool ou de substances en hausse</li>
+<li>Le deuil empêche de fonctionner au quotidien depuis plusieurs semaines ou mois</li>
+<li>Isolement total, repli sur soi durable</li>
+<li>Pensées suicidaires ou sentiment de ne pas vouloir continuer → <strong>bascule vers <code>crisis-escalation</code> immédiatement</strong></li>
+<li>Consommation d'alcool ou de substances en augmentation significative</li>
+<li>Deuil compliqué : mort violente, suicide d'un proche, deuil périnatal, deuil anticipé</li>
+<li>Deuil qui en rouvre un autre non traité (deuil cumulatif)</li>
 </ul>
-<h3>Ressources possibles</h3>
+<h3>Ressources à orienter selon le contexte</h3>
+<table><thead><tr><th>Besoin</th><th>Ressource</th></tr></thead><tbody><tr><td>Suivi individuel</td><td>Psychologue spécialisé en deuil (EMDR, thérapie narrative)</td></tr><tr><td>Parole collective</td><td>Groupes de soutien (associations, hôpitaux, maisons de retraite)</td></tr><tr><td>Urgence médicale</td><td>Médecin traitant, psychiatre</td></tr><tr><td>Deuil d'enfant</td><td>Associations spécialisées (ex. SPAMA, Petite Émilie en France)</td></tr><tr><td>Crise immédiate</td><td>Numéro national de prévention du suicide : <strong>3114</strong> (France)</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Pourquoi c'est nuisible</th><th>Alternative</th></tr></thead><tbody><tr><td>« Le temps guérit tout »</td><td>Fausse promesse, déresponsabilise</td><td>« Le temps peut aider, et ce que tu fais avec ce temps aussi »</td></tr><tr><td>« Tu dois être fort(e) pour les autres »</td><td>Invalide le droit à la douleur</td><td>« Tu as le droit d'être dans ta douleur aussi »</td></tr><tr><td>« Il faut tourner la page »</td><td>Injonction prématurée</td><td>« Il n'y a pas de délai. Tu avances à ton rythme »</td></tr><tr><td>Proposer des étapes Kübler-Ross comme un programme</td><td>Trop rigide, crée de la honte</td><td>Mentionner comme repère, jamais comme norme</td></tr><tr><td>Chercher à « réparer » la douleur</td><td>Le deuil n'est pas un problème à résoudre</td><td>Accompagner, pas effacer</td></tr><tr><td>Parler de soi ou d'un deuil similaire</td><td>Détourne l'attention de l'utilisateur</td><td>Rester centré sur ce que vit l'utilisateur</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Psychologue spécialisé en deuil</li>
-<li>Groupes de parole</li>
-<li>Médecin traitant</li>
+<li><strong>Deuil numérique</strong> : la perte d'une relation en ligne (ami·e virtuel·le, communauté, avatar) est un deuil réel — ne pas le minimiser.</li>
+<li><strong>Deuil ambivalent</strong> : perte d'une personne avec qui la relation était conflictuelle génère souvent culpabilité et confusion — valider la complexité.</li>
+<li><strong>Deuil périnatal</strong> (fausse couche, mort in utero) : particulièrement invisible socialement, nécessite une validation explicite.</li>
+<li><strong>Deuil anticipé</strong> : accompagner un proche en fin de vie crée un deuil avant la mort — légitime et épuisant.</li>
+<li><strong>Intersections culturelles</strong> : les rituels, croyances et délais autour du deuil varient fortement. Ne pas imposer de cadre culturel par défaut.</li>
 </ul>
-<h2>Règles</h2>
-<ul>
-<li>Ne dis jamais &quot;je comprends ce que tu ressens&quot; — tu ne peux pas le savoir.</li>
-<li>Ne compare pas les deuils entre eux.</li>
-<li>Ne fixe pas de délai (&quot;ça ira mieux dans X mois&quot;).</li>
-<li>Ne pousse pas vers &quot;l'acceptation&quot; si l'utilisateur n'y est pas.</li>
-<li>Si des idées suicidaires apparaissent, bascule vers crisis-escalation.</li>
-</ul>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce soutien est un espace d'écoute. Il ne remplace pas un accompagnement par un professionnel spécialisé en deuil. Tu as le droit de demander de l'aide.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

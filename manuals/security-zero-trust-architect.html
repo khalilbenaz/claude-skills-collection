@@ -97,37 +97,171 @@ cp -r claude-skills-collection/skills/security-zero-trust-architect ~/.claude/sk
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Zero Trust Architect</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Évaluer la posture actuelle</strong> — Auditer l'architecture existante pour identifier les zones de confiance implicite : réseau plat sans segmentation, VPN comme unique barrière, accès basés sur la localisation réseau plutôt que l'identité, et permissions trop larges.</li>
-</ol>
-<ol>
-<li><strong>Définir les principes Zero Trust</strong> — Établir les fondations : ne jamais faire confiance par défaut (never trust, always verify), appliquer le moindre privilège (least privilege), supposer la compromission (assume breach), et vérifier explicitement chaque accès (identité, device, contexte).</li>
-</ol>
-<ol>
-<li><strong>Implémenter l'identity-centric access</strong> — Migrer vers un modèle centré sur l'identité : authentification forte (MFA obligatoire), SSO avec un IdP centralisé (Azure AD, Okta), accès conditionnel basé sur le risque (localisation, device compliance, comportement), et sessions à durée limitée.</li>
-</ol>
-<ol>
-<li><strong>Segmenter le réseau</strong> — Appliquer la micro-segmentation : isoler chaque workload dans son segment réseau, définir des politiques de communication explicites entre segments, utiliser des firewalls de nouvelle génération (NGFW) et des service meshes (Istio, Linkerd) pour le contrôle est-ouest.</li>
-</ol>
-<ol>
-<li><strong>Sécuriser les endpoints</strong> — Vérifier la conformité des devices avant d'accorder l'accès : MDM enrollment, patch level, antivirus actif, chiffrement du disque, et évaluation continue de la posture du device (device trust score).</li>
-</ol>
-<ol>
-<li><strong>Protéger les données</strong> — Classifier les données par niveau de sensibilité, appliquer le chiffrement en transit et au repos, implémenter le DLP (Data Loss Prevention), contrôler l'accès aux données par politiques granulaires, et auditer tous les accès aux données sensibles.</li>
-</ol>
-<ol>
-<li><strong>Automatiser la détection et la réponse</strong> — Déployer le monitoring continu avec SIEM/SOAR, analyser les comportements anormaux (UEBA), automatiser la révocation d'accès en cas de compromission détectée, et intégrer les signaux de threat intelligence.</li>
-</ol>
-<ol>
-<li><strong>Mesurer et itérer</strong> — Définir les métriques de maturité Zero Trust (pourcentage d'accès vérifié, couverture MFA, segmentation réseau), réaliser des assessments réguliers, et prioriser les améliorations par impact sur la réduction du risque.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Évaluer la maturité actuelle</h3>
+<p>Avant tout design, auditer l'existant sur 5 axes :</p>
+<table><thead><tr><th>Axe</th><th>Signe de confiance implicite (à corriger)</th></tr></thead><tbody><tr><td>Réseau</td><td>VPN = accès total, réseau plat, pas de segmentation est-ouest</td></tr><tr><td>Identité</td><td>Pas de MFA, sessions longues, comptes de service partagés</td></tr><tr><td>Devices</td><td>Pas de vérification de conformité à la connexion</td></tr><tr><td>Données</td><td>Chiffrement absent ou partiel, accès en masse non audités</td></tr><tr><td>Visibilité</td><td>Logs insuffisants, pas de détection comportementale</td></tr></tbody></table>
+<p>Outil de référence : <strong>CISA Zero Trust Maturity Model v2</strong> (5 piliers, 4 niveaux : Traditional → Initial → Advanced → Optimal).</p>
+<hr>
+<h3>2. Poser les fondations Identity-Centric</h3>
+<p><strong>Objectif</strong> : L'identité remplace le réseau comme périmètre de confiance.</p>
+<pre><code class="lang-yaml"># Politique d'accès conditionnel — exemple Azure AD / Entra ID
+conditions:
+  users: [all]
+  cloud_apps: [all]
+  device_platforms: [all]
+grant_controls:
+  operator: AND
+  built_in_controls:
+    - mfa
+    - compliant_device       # Intune enrollment + patch level
+    - approved_client_app
+session_controls:
+  sign_in_frequency: 4h      # pas de session éternelle
+  persistent_browser: never</code></pre>
+<p>Actions concrètes :</p>
 <ul>
-<li>Applique systématiquement le principe du moindre privilège — chaque accès doit être justifié, limité dans le temps et révocable.</li>
-<li>Ne considère jamais le réseau interne comme un périmètre de confiance — vérifie chaque requête comme si elle venait d'un réseau hostile.</li>
-<li>Propose une feuille de route progressive : commence par les quick wins (MFA, segmentation critique) avant les transformations profondes.</li>
-<li>Intègre toujours la vérification du device (compliance, santé) dans les décisions d'accès, pas seulement l'identité de l'utilisateur.</li>
-<li>Documente les politiques d'accès conditionnel de manière lisible par les équipes non techniques pour faciliter l'adhésion organisationnelle.</li>
+<li>Activer MFA sur <strong>tous</strong> les comptes (commencer par admins, 100% coverage obligatoire)</li>
+<li>Centraliser l'IdP (Azure AD Entra ID, Okta, PingFederate) — fédérer les apps legacy via SAML/OIDC</li>
+<li>Définir des groupes d'accès par rôle métier, pas par département réseau</li>
+<li>Implémenter RBAC + ABAC (attribute-based) pour les données sensibles</li>
+</ul>
+<hr>
+<h3>3. Micro-segmentation réseau</h3>
+<p><strong>Règle</strong> : zéro communication implicite est-ouest ; chaque flux doit être déclaré.</p>
+<pre><code class="lang-bash"># Kubernetes NetworkPolicy — isoler un namespace par workload
+kubectl apply -f - &lt;&lt;EOF
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-ingress
+  namespace: payments
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-to-db
+  namespace: payments
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: payment-api
+    ports:
+    - port: 5432
+EOF</code></pre>
+<p>Pour les environnements non-Kubernetes (VMs, bare metal) :</p>
+<ul>
+<li><strong>Illumio / Guardicore / Akamai Guardicore</strong> : micro-segmentation agentless ou agent-based</li>
+<li><strong>AWS</strong> : Security Groups + VPC endpoints + PrivateLink (pas de trafic public entre services internes)</li>
+<li><strong>Azure</strong> : NSG + Azure Firewall Premium + Private Endpoints</li>
+</ul>
+<p>Critère de décision segmentation :</p>
+<ul>
+<li>Workloads critiques (PCI-DSS, données santé) → segment dédié dès J1</li>
+<li>Workloads internes standard → macro-segmentation par BU puis affiner</li>
+<li>Legacy non-patchable → quarantaine réseau + accès par bastion uniquement</li>
+</ul>
+<hr>
+<h3>4. ZTNA — Remplacer le VPN</h3>
+<p><strong>Zero Trust Network Access</strong> : accès granulaire par application, pas par réseau.</p>
+<p>Comparatif rapide :</p>
+<table><thead><tr><th>Solution</th><th>Usage typique</th><th>Notes</th></tr></thead><tbody><tr><td>Cloudflare Access</td><td>SaaS/web apps, équipes distribuées</td><td>Simple, rapide à déployer</td></tr><tr><td>Zscaler ZPA</td><td>Enterprise, apps internes</td><td>Tunnel chiffré sans exposition IP</td></tr><tr><td>Tailscale</td><td>Infra devops, équipes techniques</td><td>WireGuard overlay, PKI automatique</td></tr><tr><td>Azure AD App Proxy</td><td>Apps on-prem exposées via Entra</td><td>Sans VPN, MFA intégré</td></tr></tbody></table>
+<pre><code class="lang-bash"># Tailscale — accès ZTNA en 3 commandes
+curl -fsSL https://tailscale.com/install.sh | sh
+tailscale up --auth-key=&lt;tskey-auth-xxx&gt; --advertise-tags=tag:prod-server
+# Côté client : tailscale up → accès SSH direct sans VPN, avec MFA Tailscale</code></pre>
+<hr>
+<h3>5. Device Trust &amp; Endpoint Compliance</h3>
+<p>La décision d'accès doit inclure la santé du device, pas seulement l'identité.</p>
+<p>Signaux à évaluer (en temps réel) :</p>
+<ul>
+<li>OS version + patch level (ex : Windows &lt; 22H2 → blocage ou session restreinte)</li>
+<li>MDM enrollment (Intune, Jamf)</li>
+<li>Disk encryption actif (BitLocker, FileVault)</li>
+<li>EDR présent et actif (CrowdStrike, Defender for Endpoint)</li>
+<li>Certificat machine émis par la PKI interne</li>
+</ul>
+<pre><code class="lang-powershell"># Vérifier la conformité Intune via Graph API
+$headers = @{ Authorization = &quot;Bearer $token&quot; }
+Invoke-RestMethod `
+  -Uri &quot;https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?`$filter=complianceState eq 'noncompliant'&quot; `
+  -Headers $headers | Select-Object -ExpandProperty value | Format-Table deviceName, userPrincipalName, lastSyncDateTime</code></pre>
+<hr>
+<h3>6. Protéger les données (Data-Centric ZT)</h3>
+<pre><code class="lang-bash"># Exemple : chiffrement S3 + policy de refus sans clé KMS
+aws s3api put-bucket-policy --bucket mon-bucket-sensible --policy '{
+  &quot;Version&quot;: &quot;2012-10-17&quot;,
+  &quot;Statement&quot;: [{
+    &quot;Effect&quot;: &quot;Deny&quot;,
+    &quot;Principal&quot;: &quot;*&quot;,
+    &quot;Action&quot;: &quot;s3:PutObject&quot;,
+    &quot;Resource&quot;: &quot;arn:aws:s3:::mon-bucket-sensible/*&quot;,
+    &quot;Condition&quot;: {
+      &quot;StringNotEquals&quot;: { &quot;s3:x-amz-server-side-encryption&quot;: &quot;aws:kms&quot; }
+    }
+  }]
+}'</code></pre>
+<p>Actions :</p>
+<ul>
+<li>Classifier les données (Public / Internal / Confidential / Restricted) — outil : Microsoft Purview, Varonis</li>
+<li>DLP : bloquer exfiltration via email, upload cloud non autorisé</li>
+<li>Chiffrement au repos obligatoire pour Confidential+</li>
+<li>Audit log de chaque accès aux données Restricted (SIEM integration)</li>
+</ul>
+<hr>
+<h3>7. Monitoring Continu &amp; Réponse</h3>
+<p><strong>Assume breach</strong> : détecter vite, répondre automatiquement.</p>
+<pre><code class="lang-yaml"># Règle SIEM — détection accès anormal (pseudo-Sigma)
+title: ZT - Accès depuis pays non autorisé
+status: production
+detection:
+  selection:
+    EventID: 4624          # Logon success
+    LogonType: 3
+  filter_allowed_countries:
+    country|contains:
+      - FR
+      - TN
+      - MA
+  condition: selection and not filter_allowed_countries
+action:
+  - block_session
+  - revoke_refresh_tokens  # via Graph API / Okta API
+  - alert_soc</code></pre>
+<p>Intégrations clés :</p>
+<ul>
+<li><strong>SIEM</strong> : Microsoft Sentinel, Splunk, Elastic SIEM</li>
+<li><strong>SOAR</strong> : playbook automatique révocation token sur anomalie comportementale (UEBA)</li>
+<li><strong>Threat Intel</strong> : enrichir les décisions d'accès avec les IOC connus</li>
+</ul>
+<hr>
+<h3>8. Feuille de route (Quick Wins → Transformation)</h3>
+<table><thead><tr><th>Phase</th><th>Délai</th><th>Actions prioritaires</th></tr></thead><tbody><tr><td><strong>P0 — Quick Wins</strong></td><td>0–4 sem</td><td>MFA 100% comptes privilégiés, inventaire des accès, désactivation comptes dormants</td></tr><tr><td><strong>P1 — Fondations</strong></td><td>1–3 mois</td><td>IdP centralisé, accès conditionnel, segmentation DMZ / prod / dev</td></tr><tr><td><strong>P2 — ZTNA</strong></td><td>3–6 mois</td><td>Remplacement VPN, device compliance, RBAC granulaire</td></tr><tr><td><strong>P3 — Maturité</strong></td><td>6–12 mois</td><td>Micro-segmentation complète, DLP, UEBA, automatisation réponse</td></tr><tr><td><strong>P4 — Optimal</strong></td><td>12 mois+</td><td>Continuous verification, AI-driven access decisions, least-privilege automatisé</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns &amp; Pièges</h2>
+<ul>
+<li><strong>ZT = projet réseau uniquement</strong> — Erreur : ZT est d'abord un projet identité. Sans IdP solide, la micro-segmentation ne suffit pas.</li>
+<li><strong>MFA par SMS</strong> — MITM/SIM-swap possible. Préférer TOTP (Authenticator) ou passkeys/FIDO2.</li>
+<li><strong>Segmentation sans inventaire complet</strong> — Segmenter sans connaître tous les flux crée des coupures en production. Toujours commencer par un mode observe-only (audit mode).</li>
+<li><strong>Politique trop restrictive dès le départ</strong> — Génère du shadow IT et du contournement. Déployer en mode report-only, analyser, puis enforcer.</li>
+<li><strong>Confiance au device seul</strong> — Un device conforme avec un credential volé reste dangereux. Croiser device + identité + contexte (heure, géoloc, comportement).</li>
+<li><strong>Sessions infinies</strong> — Token refresh sans réévaluation de la posture. Configurer sign-in frequency + re-authentication sur actions sensibles.</li>
+<li><strong>PKI interne négligée</strong> — Certificats machine auto-signés ou expirés invalident la chaîne de confiance device. Automatiser avec ACME/Vault.</li>
+</ul>
+<h2>Bonnes Pratiques 2026</h2>
+<ul>
+<li><strong>Passkeys / FIDO2</strong> : standard de facto — éliminer les mots de passe là où c'est possible (support natif Windows Hello, iOS, Android)</li>
+<li><strong>Continuous Access Evaluation (CAE)</strong> : révocation de token quasi-temps-réel sur événement (changement de localisation, révocation admin) — activer dans Entra ID et Okta</li>
+<li><strong>Service Mesh mTLS</strong> : tout trafic service-à-service chiffré + authentifié via certificat (Istio / Linkerd / Consul Connect)</li>
+<li><strong>SPIFFE/SPIRE</strong> : identité cryptographique des workloads (remplace les comptes de service et les clés API statiques entre microservices)</li>
+<li><strong>AI-assisted policy</strong> : Entra ID Identity Protection + Defender XDR pour décisions d'accès adaptatives basées sur le risque calculé en temps réel</li>
 </ul>
 </article>
 </main>

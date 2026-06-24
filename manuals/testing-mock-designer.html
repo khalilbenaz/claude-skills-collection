@@ -96,23 +96,122 @@ cp -r claude-skills-collection/skills/testing-mock-designer ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Mock Designer</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identifier les dépendances à simuler</strong> — Analyser le code sous test pour repérer les dépendances externes (bases de données, APIs, systèmes de fichiers, services tiers). Déterminer le type de test double approprié : mock, stub, fake ou spy.</li>
-<li><strong>Choisir le framework de mocking</strong> — Sélectionner l'outil adapté au langage : Moq ou NSubstitute pour .NET, Mockito pour Java, jest.mock ou sinon pour JavaScript/TypeScript, unittest.mock pour Python. Configurer le framework dans le projet.</li>
-<li><strong>Concevoir les stubs pour les données</strong> — Créer des stubs qui retournent des données prédéfinies pour isoler le comportement du code sous test. Définir les valeurs de retour pour chaque scénario (succès, erreur, cas limites).</li>
-<li><strong>Implémenter les mocks avec vérifications</strong> — Configurer les mocks pour vérifier les interactions : nombre d'appels, arguments passés, ordre d'appel. Utiliser <code>Verify()</code> (Moq), <code>verify()</code> (Mockito) ou <code>expect().toHaveBeenCalledWith()</code> (Jest).</li>
-<li><strong>Créer des fakes pour les tests d'intégration</strong> — Développer des implémentations in-memory (repositories, caches, file systems) pour les tests d'intégration légers. Implémenter les mêmes interfaces que les dépendances réelles.</li>
-<li><strong>Gérer les scénarios d'erreur</strong> — Configurer les test doubles pour simuler les exceptions, timeouts, réponses HTTP en erreur et états incohérents. Vérifier que le code sous test gère correctement ces cas.</li>
-<li><strong>Organiser et réutiliser les test doubles</strong> — Centraliser les builders et factories de mocks dans des fichiers partagés. Utiliser le pattern Builder pour créer des configurations de mocks lisibles et réutilisables.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de décision — quel test double choisir ?</h2>
+<table><thead><tr><th>Besoin</th><th>Type</th><th>Exemple</th></tr></thead><tbody><tr><td>Fournir une valeur de retour fixe</td><td><strong>Stub</strong></td><td><code>repo.GetById()</code> retourne un objet préconfiguré</td></tr><tr><td>Vérifier qu'un appel a eu lieu</td><td><strong>Mock</strong></td><td><code>emailSender.Send()</code> appelé exactement 1 fois</td></tr><tr><td>Remplacer une dépendance lourde</td><td><strong>Fake</strong></td><td><code>InMemoryRepository</code> à la place d'une vraie BDD</td></tr><tr><td>Capturer les arguments d'un appel</td><td><strong>Spy</strong></td><td>Logger — lire le message qui a été loggué</td></tr><tr><td>Remplacer une fonction globale</td><td><strong>Monkey patch</strong></td><td><code>Date.now</code>, <code>Math.random</code> en JS</td></tr></tbody></table>
+<p>Règle simple : <strong>stub si tu consommes, mock si tu produis un effet observable.</strong></p>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Identifier les dépendances à simuler</h3>
 <ul>
-<li>Ne mocker que les dépendances externes et les frontières du système ; ne jamais mocker le code sous test lui-même ni les value objects.</li>
-<li>Préférer les stubs aux mocks quand seule la valeur de retour importe ; réserver les mocks avec vérification aux cas où l'interaction est le comportement à tester.</li>
-<li>Limiter le nombre de mocks par test à 2-3 maximum ; un excès de mocks signale un couplage excessif dans le code de production.</li>
-<li>Toujours vérifier que les interfaces mockées correspondent aux contrats réels ; mettre à jour les mocks quand les interfaces évoluent.</li>
-<li>Éviter les mocks partiels (partial mocks) qui testent un mélange de code réel et simulé, source fréquente de faux positifs.</li>
+<li>Lister toutes les dépendances injectées dans le constructeur / méthode sous test.</li>
+<li>Ne cibler que les <strong>frontières du système</strong> : I/O, BDD, HTTP, horloge, générateur d'ID.</li>
+<li>Ignorer les value objects, DTOs, services purement fonctionnels (pas d'état, pas d'I/O).</li>
+</ul>
+<pre><code>Code sous test : OrderService(IOrderRepository, IPaymentGateway, IClock)
+→ mocker : IOrderRepository, IPaymentGateway, IClock
+→ NE PAS mocker : Money, OrderId, OrderStatus</code></pre>
+<h3>2. Choisir le framework et configurer</h3>
+<p><strong>.NET — Moq</strong></p>
+<pre><code class="lang-csharp">// Installer : dotnet add package Moq
+var repo = new Mock&lt;IOrderRepository&gt;();
+repo.Setup(r =&gt; r.GetById(42)).ReturnsAsync(new Order { Id = 42 });</code></pre>
+<p><strong>.NET — NSubstitute</strong> (plus lisible, préféré en Arrange/Act/Assert pur)</p>
+<pre><code class="lang-csharp">// Installer : dotnet add package NSubstitute
+var repo = Substitute.For&lt;IOrderRepository&gt;();
+repo.GetById(42).Returns(new Order { Id = 42 });</code></pre>
+<p><strong>Java — Mockito</strong></p>
+<pre><code class="lang-java">// Maven : org.mockito:mockito-core
+OrderRepository repo = mock(OrderRepository.class);
+when(repo.findById(42L)).thenReturn(Optional.of(new Order(42L)));</code></pre>
+<p><strong>JavaScript/TypeScript — Jest</strong></p>
+<pre><code class="lang-ts">jest.mock('../services/emailService');
+const emailService = emailService as jest.Mocked&lt;typeof emailService&gt;;
+emailService.send.mockResolvedValue({ messageId: 'abc' });</code></pre>
+<p><strong>Python — unittest.mock</strong></p>
+<pre><code class="lang-python">from unittest.mock import MagicMock, patch
+
+repo = MagicMock()
+repo.get_by_id.return_value = Order(id=42)</code></pre>
+<h3>3. Configurer les stubs (données)</h3>
+<p>Couvrir systématiquement <strong>trois scénarios</strong> :</p>
+<pre><code class="lang-csharp">// Succès nominal
+repo.Setup(r =&gt; r.GetById(1)).ReturnsAsync(ValidOrder());
+
+// Cas limite (entité inexistante)
+repo.Setup(r =&gt; r.GetById(0)).ReturnsAsync((Order?)null);
+
+// Erreur infrastructure
+repo.Setup(r =&gt; r.GetById(99)).ThrowsAsync(new DbException(&quot;timeout&quot;));</code></pre>
+<p>Utiliser un <strong>Object Mother</strong> pour factoriser les données de test :</p>
+<pre><code class="lang-csharp">public static class OrderMother
+{
+    public static Order Valid() =&gt; new Order { Id = 1, Amount = 100m, Status = OrderStatus.Pending };
+    public static Order Expired() =&gt; Valid() with { CreatedAt = DateTime.UtcNow.AddDays(-31) };
+}</code></pre>
+<h3>4. Implémenter les mocks avec vérifications d'interaction</h3>
+<p>Ne vérifier les interactions <strong>que si l'interaction est le comportement à tester</strong> (effet de bord observable).</p>
+<pre><code class="lang-csharp">// Moq — vérifier qu'un email a été envoyé exactement une fois
+emailSender.Verify(e =&gt; e.Send(It.Is&lt;Email&gt;(m =&gt; m.To == &quot;user@example.com&quot;)), Times.Once);
+
+// NSubstitute
+emailSender.Received(1).Send(Arg.Is&lt;Email&gt;(m =&gt; m.To == &quot;user@example.com&quot;));</code></pre>
+<pre><code class="lang-java">// Mockito
+verify(emailSender, times(1)).send(argThat(e -&gt; e.getTo().equals(&quot;user@example.com&quot;)));</code></pre>
+<pre><code class="lang-ts">// Jest
+expect(emailService.send).toHaveBeenCalledTimes(1);
+expect(emailService.send).toHaveBeenCalledWith(expect.objectContaining({ to: 'user@example.com' }));</code></pre>
+<h3>5. Créer des fakes pour tests d'intégration légers</h3>
+<p>Un fake est une vraie implémentation simplifiée, préférable aux mocks pour les tests qui couvrent plusieurs couches.</p>
+<pre><code class="lang-csharp">public class InMemoryOrderRepository : IOrderRepository
+{
+    private readonly Dictionary&lt;int, Order&gt; _store = new();
+
+    public Task&lt;Order?&gt; GetById(int id) =&gt;
+        Task.FromResult(_store.TryGetValue(id, out var o) ? o : null);
+
+    public Task Save(Order order) { _store[order.Id] = order; return Task.CompletedTask; }
+}</code></pre>
+<pre><code class="lang-python">class FakeEmailService:
+    def __init__(self):
+        self.sent: list[Email] = []
+
+    def send(self, email: Email) -&gt; None:
+        self.sent.append(email)</code></pre>
+<h3>6. Pattern Builder pour mocks réutilisables</h3>
+<pre><code class="lang-csharp">public class OrderRepositoryMockBuilder
+{
+    private readonly Mock&lt;IOrderRepository&gt; _mock = new();
+
+    public OrderRepositoryMockBuilder WithOrder(Order order)
+    {
+        _mock.Setup(r =&gt; r.GetById(order.Id)).ReturnsAsync(order);
+        return this;
+    }
+
+    public OrderRepositoryMockBuilder ThatThrowsOnSave()
+    {
+        _mock.Setup(r =&gt; r.Save(It.IsAny&lt;Order&gt;())).ThrowsAsync(new DbException());
+        return this;
+    }
+
+    public Mock&lt;IOrderRepository&gt; Build() =&gt; _mock;
+}
+
+// Usage dans le test
+var repo = new OrderRepositoryMockBuilder().WithOrder(OrderMother.Valid()).Build();</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td>Mocker le code sous test</td><td>Test circulaire, aucune valeur</td><td>Ne tester que les dépendances</td></tr><tr><td>Plus de 3 mocks par test</td><td>Couplage excessif, test fragile</td><td>Refactorer le SUT (ex: Facade)</td></tr><tr><td><code>It.IsAny&lt;T&gt;()</code> partout</td><td>Assertions trop laxistes</td><td>Matcher sur les valeurs pertinentes</td></tr><tr><td>Partial mock (Spy sur classe concrète)</td><td>Mélange réel/simulé → faux positifs</td><td>Extraire une interface</td></tr><tr><td>Mock sans <code>Verify</code></td><td>Interaction non testée, mock inutile</td><td>Supprimer ou ajouter <code>Verify</code></td></tr><tr><td>Setup non utilisé</td><td>Test trompeur</td><td>Activer <code>MockBehavior.Strict</code> (Moq)</td></tr><tr><td>Fake avec logique complexe</td><td>Le fake devient un bug en lui-même</td><td>Tester le fake séparément</td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Préférer les fakes aux mocks</strong> pour les repositories : plus stables, moins de fragmentation setup/verify.</li>
+<li><strong>MockBehavior.Strict</strong> (Moq) ou <code>NSubstitute.CheckCallsFor</code> : faire échouer les appels non configurés — évite les silences trompeurs.</li>
+<li><strong>Contract tests</strong> : valider que les fakes respectent le même contrat que les vraies implémentations (ex: Pact, Spring Contract).</li>
+<li><strong>Horloge injectable</strong> : ne jamais appeler <code>DateTime.UtcNow</code> en direct ; injecter <code>IClock</code> / <code>TimeProvider</code> (.NET 8+) pour contrôler le temps dans les tests.</li>
+<li><strong>Éviter <code>Thread.Sleep</code> / délais réels</strong> : mocker les timers, utiliser <code>FakeTimeProvider</code> (.NET 8).</li>
+<li><strong>Un fichier de mocks partagé par domaine</strong> : <code>Mocks/OrderMocks.cs</code>, pas de setup inline dupliqué dans chaque test.</li>
+<li><strong>Réinitialiser les mocks entre les tests</strong> : <code>MockRepository.VerifyAll()</code> dans <code>TearDown</code>, ou <code>jest.clearAllMocks()</code> dans <code>afterEach</code>.</li>
 </ul>
 </article>
 </main>

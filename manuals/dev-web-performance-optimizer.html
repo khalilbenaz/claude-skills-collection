@@ -96,39 +96,166 @@ cp -r claude-skills-collection/skills/dev-web-performance-optimizer ~/.claude/sk
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Web Performance Optimizer</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Audit avec Lighthouse et WebPageTest</strong> : lancer un audit Lighthouse (mode navigation, desktop et mobile) pour obtenir les scores et métriques, puis WebPageTest pour le waterfall détaillé, le Time to First Byte, et l'analyse des requêtes bloquantes.</li>
-</ol>
-<ol>
-<li><strong>Core Web Vitals</strong> : viser les seuils &quot;Good&quot; définis par Google — LCP (Largest Contentful Paint) &lt; 2.5s pour le chargement perçu, FID (First Input Delay) &lt; 100ms / INP (Interaction to Next Paint) &lt; 200ms pour la réactivité, CLS (Cumulative Layout Shift) &lt; 0.1 pour la stabilité visuelle.</li>
-</ol>
-<ol>
-<li><strong>Optimisation du chargement JavaScript</strong> : implémenter le code splitting par route (dynamic <code>import()</code>), le tree shaking pour éliminer le code mort, les dynamic imports pour les fonctionnalités non critiques, et <code>&lt;link rel=&quot;preload&quot;&gt;</code> / <code>&lt;link rel=&quot;prefetch&quot;&gt;</code> pour les ressources prioritaires.</li>
-</ol>
-<ol>
-<li><strong>Optimisation des images</strong> : convertir en formats modernes WebP et AVIF (30-50% plus légers), appliquer le lazy loading (<code>loading=&quot;lazy&quot;</code>) aux images hors écran, utiliser des images responsives (<code>srcset</code>/<code>sizes</code>), et servir via un CDN avec redimensionnement à la volée.</li>
-</ol>
-<ol>
-<li><strong>Optimisation du CSS</strong> : extraire et inliner le CSS critique (above-the-fold) dans le <code>&lt;head&gt;</code>, charger le reste en asynchrone (<code>media=&quot;print&quot; onload</code>), purger le CSS inutilisé avec PurgeCSS ou le purge intégré de Tailwind, et éviter les imports CSS en cascade.</li>
-</ol>
-<ol>
-<li><strong>Optimisation JavaScript</strong> : utiliser <code>defer</code> ou <code>async</code> sur les scripts non critiques, analyser le bundle avec webpack-bundle-analyzer ou Rollup Visualizer, déplacer les tâches lourdes vers des Web Workers, et réduire le main thread blocking time.</li>
-</ol>
-<ol>
-<li><strong>Stratégie de cache</strong> : configurer les headers HTTP Cache-Control (immutable pour les assets versionnés, stale-while-revalidate pour les pages), implémenter un Service Worker pour le cache offline et les stratégies cache-first/network-first, et invalider le cache via content hashing.</li>
-</ol>
-<ol>
-<li><strong>Infrastructure et livraison</strong> : déployer les assets statiques sur un CDN (Cloudflare, Fastly, AWS CloudFront), activer HTTP/2 ou HTTP/3 pour le multiplexage des requêtes, activer la compression Brotli (meilleur que gzip), et explorer l'edge computing pour réduire la latence réseau.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Étape 1 — Mesurer d'abord</h2>
+<p><strong>Règle absolue : jamais d'optimisation sans baseline mesurée.</strong></p>
+<pre><code class="lang-bash"># CLI Lighthouse (headless)
+npx lighthouse https://example.com --output=json --output-path=./lh-report.json \
+  --form-factor=mobile --throttling-method=simulate
+
+# CrUX field data (données réelles utilisateurs)
+npx crux-api --origin https://example.com --key YOUR_API_KEY
+
+# WebPageTest en CLI
+npx webpagetest test https://example.com --key YOUR_KEY --location ec2-eu-west-1</code></pre>
+<p>Collecter <strong>avant</strong> et <strong>après</strong> chaque changement. Utiliser CrUX (données terrain) et non seulement Lighthouse (labo).</p>
+<hr>
+<h2>Étape 2 — Diagnostiquer par métrique</h2>
+<h3>Seuils &quot;Good&quot; 2026</h3>
+<table><thead><tr><th>Métrique</th><th>Good</th><th>Needs Improvement</th><th>Poor</th></tr></thead><tbody><tr><td>LCP</td><td>&lt; 2.5 s</td><td>2.5 – 4 s</td><td>&gt; 4 s</td></tr><tr><td>INP</td><td>&lt; 200 ms</td><td>200 – 500 ms</td><td>&gt; 500 ms</td></tr><tr><td>CLS</td><td>&lt; 0.1</td><td>0.1 – 0.25</td><td>&gt; 0.25</td></tr><tr><td>TTFB</td><td>&lt; 800 ms</td><td>800 ms – 1.8 s</td><td>&gt; 1.8 s</td></tr><tr><td>FCP</td><td>&lt; 1.8 s</td><td>1.8 – 3 s</td><td>&gt; 3 s</td></tr></tbody></table>
+<blockquote>FID est remplacé par <strong>INP</strong> depuis mars 2024. Ne pas cibler FID dans les nouveaux rapports.</blockquote>
+<h3>Arbre de décision rapide</h3>
 <ul>
-<li>Mesurer avant et après chaque optimisation : ne jamais optimiser sans données (Lighthouse, RUM, CrUX).</li>
-<li>Prioriser les optimisations par impact/effort : les images et le JS sont généralement les gains les plus rapides.</li>
-<li>Ne pas sacrifier l'expérience développeur pour des gains marginaux de performance.</li>
-<li>Documenter chaque optimisation appliquée et son gain mesuré pour justifier les choix techniques.</li>
-<li>Adapter les recommandations au stack technique existant — ne pas préconiser un remplacement complet d'infrastructure.</li>
+<li><strong>LCP élevé</strong> → image LCP non preloadée ? TTFB élevé ? police bloquante ? → voir Étape 3</li>
+<li><strong>INP élevé</strong> → main thread bloqué ? long tasks (&gt; 50 ms) ? → voir Étape 5</li>
+<li><strong>CLS élevé</strong> → images/vidéos sans dimensions ? fonts swap ? iframes dynamiques ? → voir Étape 6</li>
+<li><strong>TTFB élevé</strong> → problème serveur/CDN/DB → résoudre côté infra avant tout le reste</li>
 </ul>
+<hr>
+<h2>Étape 3 — Optimiser le chargement des ressources critiques</h2>
+<h3>Images</h3>
+<pre><code class="lang-html">&lt;!-- LCP image : preload + fetchpriority --&gt;
+&lt;link rel=&quot;preload&quot; as=&quot;image&quot; href=&quot;/hero.avif&quot;
+      fetchpriority=&quot;high&quot; type=&quot;image/avif&quot;&gt;
+
+&lt;!-- Responsive + lazy hors écran --&gt;
+&lt;img src=&quot;photo.avif&quot; srcset=&quot;photo-400.avif 400w, photo-800.avif 800w&quot;
+     sizes=&quot;(max-width: 600px) 400px, 800px&quot;
+     loading=&quot;lazy&quot; decoding=&quot;async&quot; width=&quot;800&quot; height=&quot;600&quot; alt=&quot;...&quot;&gt;</code></pre>
+<pre><code class="lang-bash"># Convertir en AVIF/WebP (Sharp CLI)
+npx sharp -i input.jpg -o output.avif --format avif --quality 60
+npx sharp -i input.jpg -o output.webp --format webp --quality 75</code></pre>
+<p><strong>Critères de format</strong> : AVIF = meilleure compression (–50 % vs JPEG), mais encodage lent → générer au build. WebP = fallback universel.</p>
+<h3>Fonts</h3>
+<pre><code class="lang-html">&lt;!-- Preconnect + preload font critique --&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link rel=&quot;preload&quot; as=&quot;font&quot; href=&quot;/fonts/inter.woff2&quot;
+      type=&quot;font/woff2&quot; crossorigin&gt;</code></pre>
+<pre><code class="lang-css">/* Éviter FOIT : swap immédiat */
+@font-face {
+  font-family: &quot;Inter&quot;;
+  src: url(&quot;/fonts/inter.woff2&quot;) format(&quot;woff2&quot;);
+  font-display: swap; /* ou 'optional' si CLS est prioritaire */
+}</code></pre>
+<p><strong>Anti-pattern</strong> : <code>font-display: block</code> = invisible jusqu'à 3 s → toujours <code>swap</code> ou <code>optional</code>.</p>
+<hr>
+<h2>Étape 4 — Optimiser JavaScript (bundle)</h2>
+<pre><code class="lang-bash"># Analyser le bundle webpack
+npx webpack-bundle-analyzer stats.json
+
+# Analyser bundle Vite/Rollup
+npx vite-bundle-visualizer
+
+# Trouver les dépendances lourdes
+npx bundlephobia-cli react-pdf</code></pre>
+<pre><code class="lang-js">// Code splitting par route (React / Vue / Svelte)
+const Dashboard = lazy(() =&gt; import('./Dashboard'));
+
+// Éviter l'import en masse depuis une lib
+// ❌ import _ from 'lodash'           // importe 70 KB
+// ✅
+import debounce from 'lodash/debounce'; // importe 2 KB</code></pre>
+<pre><code class="lang-html">&lt;!-- Scripts non critiques : defer ou type=&quot;module&quot; --&gt;
+&lt;script src=&quot;analytics.js&quot; defer&gt;&lt;/script&gt;
+&lt;!-- async uniquement si totalement indépendant du DOM --&gt;
+&lt;script src=&quot;chat.js&quot; async&gt;&lt;/script&gt;</code></pre>
+<p><strong>Critères</strong> : <code>defer</code> = exécuté après parsing HTML ; <code>async</code> = exécuté dès téléchargé (peut bloquer). Préférer <code>defer</code> dans 90 % des cas.</p>
+<hr>
+<h2>Étape 5 — Réduire le blocage du main thread (INP)</h2>
+<pre><code class="lang-js">// Découper les long tasks avec scheduler
+async function processItems(items) {
+  for (const item of items) {
+    await scheduler.yield(); // libère le thread régulièrement
+    process(item);
+  }
+}
+
+// Déléguer aux Web Workers
+const worker = new Worker('./heavy-computation.js', { type: 'module' });
+worker.postMessage({ data: bigArray });
+worker.onmessage = ({ data }) =&gt; updateUI(data);</code></pre>
+<pre><code class="lang-js">// Debouncer les événements fréquents
+input.addEventListener('input', debounce(handleSearch, 150));
+
+// Éviter layout thrashing
+// ❌
+elements.forEach(el =&gt; { el.style.width = el.offsetWidth + 'px'; });
+// ✅
+const widths = elements.map(el =&gt; el.offsetWidth);
+elements.forEach((el, i) =&gt; { el.style.width = widths[i] + 'px'; });</code></pre>
+<hr>
+<h2>Étape 6 — Corriger le CLS</h2>
+<pre><code class="lang-css">/* Réserver l'espace pour images et vidéos */
+img, video { aspect-ratio: 16 / 9; width: 100%; }
+
+/* Skeleton loader au lieu de contenu dynamique injecté */
+.skeleton { background: #e0e0e0; min-height: 200px; border-radius: 4px; }</code></pre>
+<p><strong>Causes fréquentes de CLS</strong> :</p>
+<ul>
+<li>Images sans <code>width</code>/<code>height</code> explicites</li>
+<li>Ads ou embeds injectés sans espace réservé</li>
+<li>Fonts qui swappent et changent la hauteur de ligne</li>
+<li>Animations qui modifient <code>top</code>/<code>left</code> (utiliser <code>transform</code> à la place)</li>
+</ul>
+<hr>
+<h2>Étape 7 — Cache et livraison</h2>
+<pre><code class="lang-nginx"># Cache immuable pour assets versionnés (hash dans le nom de fichier)
+location ~* \.(js|css|woff2|avif|webp)$ {
+  add_header Cache-Control &quot;public, max-age=31536000, immutable&quot;;
+}
+
+# Pages HTML : revalidation rapide
+location / {
+  add_header Cache-Control &quot;public, max-age=0, must-revalidate&quot;;
+}</code></pre>
+<pre><code class="lang-js">// Service Worker : cache-first pour assets statiques
+self.addEventListener('fetch', (event) =&gt; {
+  if (event.request.destination === 'script') {
+    event.respondWith(
+      caches.match(event.request).then(r =&gt; r || fetch(event.request))
+    );
+  }
+});</code></pre>
+<p><strong>Checklist infra</strong> :</p>
+<ul>
+<li>[ ] Brotli activé (–15 % vs gzip)</li>
+<li>[ ] HTTP/2 ou HTTP/3 (multiplexage)</li>
+<li>[ ] CDN avec edge caching (Cloudflare, Fastly, CloudFront)</li>
+<li>[ ] TTFB &lt; 200 ms depuis le CDN edge</li>
+</ul>
+<hr>
+<h2>Étape 8 — CSS critique</h2>
+<pre><code class="lang-bash"># Extraire le CSS above-the-fold avec Critical
+npx critical index.html --base dist/ --inline --width 1300 --height 900
+
+# Purger le CSS inutilisé
+npx purgecss --css dist/styles.css --content dist/**/*.html dist/**/*.js \
+  --output dist/styles.purged.css</code></pre>
+<pre><code class="lang-html">&lt;!-- Charger le CSS non-critique sans bloquer le rendu --&gt;
+&lt;link rel=&quot;preload&quot; href=&quot;/styles.css&quot; as=&quot;style&quot;
+      onload=&quot;this.onload=null;this.rel='stylesheet'&quot;&gt;
+&lt;noscript&gt;&lt;link rel=&quot;stylesheet&quot; href=&quot;/styles.css&quot;&gt;&lt;/noscript&gt;</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Problème</th><th>Solution</th></tr></thead><tbody><tr><td>Optimiser sans mesurer</td><td>Gains imaginaires, régressions réelles</td><td>Baseline CrUX/Lighthouse systématique</td></tr><tr><td><code>loading=&quot;lazy&quot;</code> sur l'image LCP</td><td>LCP explose car téléchargement retardé</td><td><code>fetchpriority=&quot;high&quot;</code> + pas de lazy sur LCP</td></tr><tr><td><code>async</code> sur scripts qui lisent le DOM</td><td>Race condition, erreurs runtime</td><td><code>defer</code> par défaut</td></tr><tr><td>Inliner tout le CSS</td><td>Impossible à mettre en cache</td><td>Inliner seulement le CSS critique (&lt; 14 KB)</td></tr><tr><td>Compresser en gzip quand Brotli dispo</td><td>–15 % de ratio perdus</td><td>Brotli level 6 en production</td></tr><tr><td>Ignorer les données CrUX terrain</td><td>Lighthouse labo ≠ expérience réelle</td><td>Toujours valider avec CrUX API ou Search Console</td></tr><tr><td>Font <code>font-display: block</code></td><td>FOIT 3 s pour les utilisateurs lents</td><td><code>swap</code> ou <code>optional</code></td></tr></tbody></table>
+<hr>
+<h2>Règles de priorité</h2>
+<ol>
+<li><strong>TTFB d'abord</strong> : si &gt; 800 ms, toute optimisation frontend est marginale.</li>
+<li><strong>LCP image</strong> : précharger, dimensionner, AVIF — gain le plus rapide et le plus visible.</li>
+<li><strong>JS inutile</strong> : tree shaking + code splitting avant toute micro-optimisation.</li>
+<li><strong>Mesurer en terrain</strong> : CrUX + RUM (Real User Monitoring) prime sur Lighthouse labo.</li>
+<li><strong>Ne pas sur-optimiser</strong> : un score Lighthouse 90+ en mobile est une cible saine ; passer de 95 à 100 a peu d'impact réel.</li>
+</ol>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

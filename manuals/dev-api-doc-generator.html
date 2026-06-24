@@ -97,25 +97,129 @@ cp -r claude-skills-collection/skills/dev-api-doc-generator ~/.claude/skills/</d
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>API Doc Generator</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Détection</strong> : identifie le framework (Express, FastAPI, Django, Laravel…) et le type d'API.</li>
-<li><strong>Extraction</strong> : pour chaque endpoint, documente :</li>
+<h3>Étape 1 — Détection du contexte</h3>
+<p>Identifie avant tout :</p>
 <ul>
-<li>Méthode HTTP + URL</li>
-<li>Description courte</li>
-<li>Paramètres (path, query, body) avec types et obligatoire/optionnel</li>
-<li>Headers requis</li>
-<li>Réponses possibles (200, 400, 401, 404, 500) avec exemples JSON</li>
-<li>Authentification requise</li>
+<li><strong>Framework</strong> : Express/NestJS, FastAPI, Django REST, Laravel, ASP.NET Core, Spring Boot, etc.</li>
+<li><strong>Type d'API</strong> : REST, GraphQL, gRPC, WebSocket</li>
+<li><strong>Auth</strong> : Bearer JWT, API Key, OAuth2, Basic, aucune</li>
+<li><strong>Format cible</strong> : OpenAPI 3.1 YAML, Markdown, Postman Collection v2.1</li>
 </ul>
-<li><strong>Format de sortie</strong> : tableau Markdown structuré ou format OpenAPI simplifié.</li>
-<li><strong>Exemples</strong> : génère des exemples de requêtes cURL pour chaque endpoint.</li>
-<li><strong>Résumé</strong> : table des routes avec méthode, URL et description.</li>
-</ol>
-<h2>Règles</h2>
+<p>Si aucun format cible n'est précisé, utilise <strong>OpenAPI 3.1 YAML</strong> pour une API REST, <strong>Markdown structuré</strong> sinon.</p>
+<hr>
+<h3>Étape 2 — Extraction des endpoints</h3>
+<p>Pour chaque endpoint, collecte :</p>
+<table><thead><tr><th>Champ</th><th>Contenu attendu</th></tr></thead><tbody><tr><td>Méthode + URL</td><td><code>POST /api/v1/payments</code></td></tr><tr><td>Description</td><td>Action métier claire, pas le nom de la fonction</td></tr><tr><td>Path params</td><td><code>{id}</code> → type, exemple, contraintes</td></tr><tr><td>Query params</td><td>nom, type, requis/optionnel, valeur par défaut</td></tr><tr><td>Request body</td><td>schéma JSON avec types, requis, exemples</td></tr><tr><td>Headers requis</td><td><code>Authorization</code>, <code>Content-Type</code>, custom headers</td></tr><tr><td>Réponses</td><td>200/201/204 succès + 400/401/403/404/422/500 erreurs</td></tr><tr><td>Auth</td><td>scope/rôle requis si applicable</td></tr></tbody></table>
+<hr>
+<h3>Étape 3 — Format de sortie</h3>
+<h4>OpenAPI 3.1 YAML (format recommandé)</h4>
+<pre><code class="lang-yaml">openapi: 3.1.0
+info:
+  title: Payments API
+  version: 1.0.0
+paths:
+  /api/v1/payments:
+    post:
+      summary: Créer un paiement
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, currency, recipient_id]
+              properties:
+                amount:
+                  type: integer
+                  description: Montant en centimes
+                  example: 5000
+                currency:
+                  type: string
+                  enum: [TND, EUR, USD]
+                  example: TND
+                recipient_id:
+                  type: string
+                  format: uuid
+      responses:
+        &quot;201&quot;:
+          description: Paiement créé
+          content:
+            application/json:
+              example:
+                id: &quot;pay_abc123&quot;
+                status: &quot;pending&quot;
+        &quot;422&quot;:
+          description: Validation échouée
+          content:
+            application/json:
+              example:
+                error: &quot;amount must be positive&quot;
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT</code></pre>
+<h4>Markdown structuré (si OpenAPI non requis)</h4>
+<pre><code class="lang-markdown">## POST /api/v1/payments
+
+Crée un nouveau paiement.
+
+**Auth** : Bearer JWT requis (`role: operator`)
+
+**Body** (application/json) :
+| Champ | Type | Requis | Description |
+|---|---|---|---|
+| amount | integer | oui | Montant en centimes |
+| currency | string | oui | `TND`, `EUR`, `USD` |
+| recipient_id | uuid | oui | ID du destinataire |
+
+**Réponses** :
+- `201` — Paiement créé : `{ &quot;id&quot;: &quot;pay_abc123&quot;, &quot;status&quot;: &quot;pending&quot; }`
+- `401` — Token manquant ou expiré
+- `422` — Champ invalide : `{ &quot;error&quot;: &quot;amount must be positive&quot; }`</code></pre>
+<hr>
+<h3>Étape 4 — Exemples cURL copiables</h3>
+<p>Génère un cURL par endpoint avec variables d'environnement :</p>
+<pre><code class="lang-bash"># Créer un paiement
+curl -X POST &quot;https://api.example.com/api/v1/payments&quot; \
+  -H &quot;Authorization: Bearer $TOKEN&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;amount&quot;: 5000,
+    &quot;currency&quot;: &quot;TND&quot;,
+    &quot;recipient_id&quot;: &quot;550e8400-e29b-41d4-a716-446655440000&quot;
+  }'</code></pre>
+<hr>
+<h3>Étape 5 — Table de synthèse</h3>
+<p>Produit toujours une table des routes en introduction :</p>
+<table><thead><tr><th>Méthode</th><th>Endpoint</th><th>Auth</th><th>Description</th></tr></thead><tbody><tr><td>GET</td><td><code>/api/v1/payments</code></td><td>JWT</td><td>Lister les paiements</td></tr><tr><td>POST</td><td><code>/api/v1/payments</code></td><td>JWT</td><td>Créer un paiement</td></tr><tr><td>GET</td><td><code>/api/v1/payments/{id}</code></td><td>JWT</td><td>Détail d'un paiement</td></tr><tr><td>DELETE</td><td><code>/api/v1/payments/{id}</code></td><td>JWT + admin</td><td>Annuler un paiement</td></tr></tbody></table>
+<hr>
+<h2>Critères de décision — format</h2>
+<table><thead><tr><th>Situation</th><th>Format recommandé</th></tr></thead><tbody><tr><td>API publique / SDK tiers</td><td>OpenAPI 3.1 YAML + Swagger UI</td></tr><tr><td>Documentation interne équipe</td><td>Markdown structuré</td></tr><tr><td>Tests manuels / QA</td><td>Postman Collection v2.1</td></tr><tr><td>API GraphQL</td><td>SDL + descriptions de champs</td></tr><tr><td>Micro-service interne</td><td>OpenAPI minimal (pas de UI)</td></tr></tbody></table>
+<hr>
+<h2>Pièges et anti-patterns</h2>
 <ul>
-<li>Si le code est incomplet, documente ce qui est visible et signale les trous.</li>
-<li>Adapte le format au besoin (Markdown, OpenAPI YAML, Postman collection).</li>
+<li><strong>Ne pas documenter les erreurs</strong> : documenter uniquement le 200 est insuffisant. Inclus systématiquement 401, 403, 422, 500.</li>
+<li><strong>Exemples irréalistes</strong> : évite <code>&quot;string&quot;</code>, <code>0</code>, <code>&quot;id&quot;</code>. Utilise des exemples métier (<code>&quot;pay_abc123&quot;</code>, <code>5000</code>, <code>&quot;TND&quot;</code>).</li>
+<li><strong>Oublier la pagination</strong> : si un endpoint retourne une liste, documente <code>page</code>, <code>limit</code>, <code>total</code> dans la réponse.</li>
+<li><strong>Nommer les paramètres ambigus</strong> : <code>id</code> seul est flou ; préfère <code>payment_id</code>, <code>user_id</code>.</li>
+<li><strong>Mélanger versions</strong> : OpenAPI 2.0 (Swagger) ≠ OpenAPI 3.0 ≠ 3.1. Reste cohérent dans tout le fichier.</li>
+<li><strong>Omettre les Content-Type</strong> : toujours préciser <code>application/json</code> ou <code>multipart/form-data</code> explicitement.</li>
+<li><strong>Description = nom de la fonction</strong> : <code>createPayment()</code> n'est pas une description ; écris l'action métier.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Utilise <strong>OpenAPI 3.1</strong> (aligné JSON Schema 2020-12) plutôt que 3.0.</li>
+<li>Ajoute <code>x-stability: stable | beta | deprecated</code> sur chaque path pour signaler le niveau de maturité.</li>
+<li>Génère des <strong>exemples nommés</strong> (<code>examples:</code>) plutôt que <code>example:</code> quand plusieurs cas existent (succès, erreur partielle, edge case).</li>
+<li>Documente le <strong>rate limiting</strong> si présent : header <code>X-RateLimit-Limit</code>, <code>X-RateLimit-Remaining</code>.</li>
+<li>Si code incomplet : documente ce qui est visible, marque les trous avec <code># TODO: à compléter</code> dans le YAML.</li>
+<li>Pour GraphQL : documente chaque Query/Mutation avec les arguments, types retournés et directives (<code>@auth</code>, <code>@deprecated</code>).</li>
 </ul>
 </article>
 </main>

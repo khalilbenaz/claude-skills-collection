@@ -97,22 +97,95 @@ cp -r claude-skills-collection/skills/management-retro-facilitator ~/.claude/ski
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Retro Facilitator</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Choix du format</strong> — Proposer un format adapté au contexte de l'équipe (Start/Stop/Continue, 4L - Liked/Learned/Lacked/Longed for, Mad/Sad/Glad, Sailboat, KALM).</li>
-<li><strong>Préparation</strong> — Définir la durée (45-90 min), préparer le board (physique ou digital : Miro, FigJam, Retrium), rappeler les règles de bienveillance.</li>
-<li><strong>Collecte individuelle</strong> — Laisser 5-10 minutes de réflexion silencieuse pour que chaque membre note ses observations sans influence du groupe.</li>
-<li><strong>Partage et regroupement</strong> — Tour de table pour présenter les points, regrouper les thèmes similaires et voter sur les sujets prioritaires (dot voting).</li>
-<li><strong>Discussion approfondie</strong> — Creuser les 2-3 sujets les plus votés avec la technique des 5 Pourquoi pour identifier les causes racines.</li>
-<li><strong>Définition d'actions</strong> — Formuler des actions SMART (Spécifique, Mesurable, Atteignable, Réaliste, Temporel) avec un responsable et une échéance pour chaque action.</li>
-<li><strong>Suivi des actions précédentes</strong> — Revoir les actions de la rétrospective précédente et évaluer leur avancement avant de conclure.</li>
-</ol>
-<h2>Règles</h2>
+<h3>Étape 1 — Choisir le format (avant la session)</h3>
+<table><thead><tr><th>Format</th><th>Quand l'utiliser</th><th>Durée conseillée</th></tr></thead><tbody><tr><td>Start / Stop / Continue</td><td>Équipe stable, besoin d'actions rapides</td><td>45 min</td></tr><tr><td>4L (Liked / Learned / Lacked / Longed for)</td><td>Post-release, bilan complet</td><td>60 min</td></tr><tr><td>Mad / Sad / Glad</td><td>Tension émotionnelle dans l'équipe</td><td>60 min</td></tr><tr><td>Sailboat (ancres / vents)</td><td>Vision long terme, obstacles systémiques</td><td>75 min</td></tr><tr><td>KALM (Keep / Add / Less / More)</td><td>Rétro de calibration fine</td><td>60 min</td></tr><tr><td>Timeline</td><td>Sprint avec beaucoup d'événements</td><td>90 min</td></tr></tbody></table>
+<p>Critère de décision : si la rétro précédente n'a produit aucune action clôturée, choisir un format <strong>Mad/Sad/Glad</strong> pour rouvrir le canal émotionnel avant d'aller aux actions.</p>
+<h3>Étape 2 — Préparer le board (J-1)</h3>
+<p><strong>Outils digitaux :</strong></p>
+<pre><code>Miro        → Template &quot;Sprint Retrospective&quot; intégré
+FigJam      → Section Retro → format au choix
+Retrium     → Retrium.com, spécialisé retro, export PDF natif
+EasyRetro   → easyretro.io, accès invité sans compte</code></pre>
+<p><strong>Board physique :</strong></p>
 <ul>
-<li>La rétrospective est un espace sûr : pas de blâme, pas de jugement, directive première de la rétro.</li>
-<li>Limiter les actions à 2-3 maximum par rétro pour garantir leur réalisation.</li>
-<li>Varier les formats régulièrement pour éviter la lassitude et stimuler la créativité.</li>
-<li>Les managers non-membres de l'équipe ne participent pas sauf invitation explicite de l'équipe.</li>
-<li>Toujours commencer par le positif avant d'aborder les points d'amélioration.</li>
+<li>Post-its de 3 couleurs (1 couleur / colonne)</li>
+<li>Dots autocollants pour le vote (3 par personne)</li>
+<li>Minuterie visible de tous</li>
+</ul>
+<h3>Étape 3 — Ouvrir la session (5 min)</h3>
+<p>Rappeler les trois règles à chaque rétro :</p>
+<ol>
+<li><strong>Règle de Vegas</strong> : ce qui est dit ici reste ici.</li>
+<li><strong>Bonne foi assumée</strong> : on part du principe que chacun a fait de son mieux.</li>
+<li><strong>Faits, pas jugements</strong> : &quot;le déploiement a échoué 3 fois&quot; et non &quot;tu as mal déployé&quot;.</li>
+</ol>
+<p>Annoncer le timing à voix haute :</p>
+<pre><code>Réflexion silencieuse : 7 min
+Partage + regroupement : 15 min
+Vote                  : 3 min
+Discussion top sujets : 20 min
+Définition d'actions  : 10 min
+Revue actions passées : 5 min</code></pre>
+<h3>Étape 4 — Collecte individuelle (5-10 min, silencieux)</h3>
+<p>Chaque membre écrit ses points <strong>seul, sans voir les autres</strong>. Sur Miro : activer &quot;Private mode&quot; pour masquer les notes avant reveal. Sur FigJam : sticky notes cachées jusqu'au partage.</p>
+<p>Prompt suggéré à projeter pendant ce temps :</p>
+<blockquote>&quot;Pense aux 2 dernières semaines : qu'est-ce qui t'a aidé à livrer ? qu'est-ce qui t'a ralenti ? qu'aimerais-tu changer ?&quot;</blockquote>
+<h3>Étape 5 — Partage et regroupement (15 min)</h3>
+<ul>
+<li>Tour de table : chaque personne lit ses notes à voix haute (sans débat).</li>
+<li>Le facilitateur regroupe les doublons en temps réel.</li>
+<li>Règle : si 2 notes se ressemblent, demander aux auteurs si elles sont identiques avant de fusionner.</li>
+</ul>
+<h3>Étape 6 — Vote (dot voting, 3 min)</h3>
+<p>Chaque participant dispose de <strong>3 votes</strong> (peut tous les mettre sur un seul sujet).</p>
+<pre><code>Comptage manuel   : dots autocollants
+Miro              : clic droit → &quot;Voting session&quot;
+EasyRetro         : bouton &quot;Start voting&quot; intégré
+Retrium           : vote anonyme natif</code></pre>
+<p>Prendre les <strong>2-3 thèmes les plus votés</strong> pour la discussion.</p>
+<h3>Étape 7 — Analyse causes racines (20 min)</h3>
+<p>Appliquer les <strong>5 Pourquoi</strong> sur chaque sujet retenu :</p>
+<pre><code>Problème : &quot;Les PRs restent ouvertes &gt; 2 jours&quot;
+Pourquoi 1 : Pas de temps dédié aux reviews
+Pourquoi 2 : Aucun slot dans l'agenda de l'équipe
+Pourquoi 3 : On n'a jamais formalisé de SLA de review
+→ Cause racine : pas de convention d'équipe sur le délai de review</code></pre>
+<p>Ne pas s'arrêter à &quot;manque de communication&quot; — c'est un symptôme, pas une cause.</p>
+<h3>Étape 8 — Définition d'actions SMART (10 min)</h3>
+<p>Format obligatoire pour chaque action :</p>
+<pre><code>Quoi    : Ajouter un slot &quot;Review PRs&quot; de 15 min chaque matin
+Qui     : Dev lead (Alice)
+Quand   : Dès lundi prochain
+Mesure  : 0 PR &gt; 24h en attente au prochain sprint</code></pre>
+<p><strong>Maximum 3 actions par rétro.</strong> Au-delà, rien ne se fait.</p>
+<p>Saisir les actions dans l'outil de suivi de l'équipe immédiatement :</p>
+<pre><code class="lang-bash"># Exemple Jira CLI (go-jira)
+jira issue create --project TEAM --type Task \
+  --summary &quot;Retro action: slot review PRs quotidien&quot; \
+  --assignee alice --due 2026-07-01
+
+# Exemple GitHub Issues
+gh issue create --title &quot;Retro action: slot review PRs&quot; \
+  --assignee alice --label &quot;retro-action&quot; \
+  --body &quot;Ajouter 15 min matin. Mesure: 0 PR &gt; 24h.&quot;</code></pre>
+<h3>Étape 9 — Revue des actions passées (5 min, en début ou fin)</h3>
+<p>Pour chaque action de la rétro précédente :</p>
+<ul>
+<li><strong>Done</strong> : féliciter, archiver.</li>
+<li><strong>In progress</strong> : laisser ouverte, re-confirmer le responsable.</li>
+<li><strong>Not started</strong> : comprendre pourquoi en 1 phrase, décider : relancer ou abandonner.</li>
+</ul>
+<p>Si plus de 50 % des actions ne sont pas clôturées, la prochaine rétro doit commencer par cette revue en priorité.</p>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Symptôme</th><th>Correctif</th></tr></thead><tbody><tr><td>Retro sans action</td><td>&quot;On a parlé, c'était bien&quot;</td><td>Finir la session uniquement quand au moins 1 action a un owner</td></tr><tr><td>Actions trop vagues</td><td>&quot;Améliorer la communication&quot;</td><td>Reformuler en comportement observable et mesurable</td></tr><tr><td>Toujours le même format</td><td>Taux de participation baisse</td><td>Changer de format tous les 2-3 sprints</td></tr><tr><td>Manager présent non invité</td><td>L'équipe autocensure</td><td>Retro = équipe only, sauf invitation explicite</td></tr><tr><td>Discussion globale sans vote</td><td>Les mêmes sujets dominent</td><td>Vote obligatoire avant toute discussion</td></tr><tr><td>5+ actions définies</td><td>Rien n'est fait</td><td>Hard limit à 3, reporter le reste au backlog de rétro</td></tr><tr><td>Rétro annulée &quot;faute de temps&quot;</td><td>Régression continue</td><td>Bloquer le slot en début de sprint, non négociable</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Rétros asynchrones</strong> pour équipes distribuées : ouvrir le board 24h avant, laisser les membres écrire leurs points, puis session synchrone de 30 min uniquement pour la discussion et les actions.</li>
+<li><strong>Rétro de santé d'équipe</strong> (tous les 2-3 mois) : utiliser le <a href="https://engineering.atspotify.com/2014/09/squad-health-check-model/" target="_blank" rel="noopener">Squad Health Check de Spotify</a> pour évaluer 11 dimensions (delivery, fun, speed…).</li>
+<li><strong>Changelog de rétro</strong> : maintenir un fichier <code>RETRO_LOG.md</code> dans le repo avec date, format utilisé, actions définies et statut. Visible de tout le monde.</li>
+<li><strong>Facilitateur tournant</strong> : faire tourner le rôle tous les sprints pour éviter la dépendance à une seule personne et développer la compétence dans l'équipe.</li>
+<li><strong>FigJam AI (2025+)</strong> : générer automatiquement le regroupement de thèmes via l'assistant IA de FigJam pour gagner 5-10 min sur l'étape de clustering.</li>
 </ul>
 </article>
 </main>

@@ -96,42 +96,82 @@ cp -r claude-skills-collection/skills/psy-emotional-checkin ~/.claude/skills/</d
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Emotional Check-in</h1>
-<p>Quand l'utilisateur décrit un état émotionnel, suis ce workflow.</p>
-<h2>Étape 1 — Reformulation empathique</h2>
-<p>Commence par reformuler ce que l'utilisateur exprime avec empathie, sans dramatiser ni minimiser.</p>
-<h2>Étape 2 — Identification</h2>
-<p>Identifie :</p>
+<p>Espace d'écoute structuré pour accompagner un état émotionnel difficile. Ne remplace jamais un professionnel de santé mentale.</p>
+<hr>
+<h2>Étape 1 — Accueil et reformulation empathique</h2>
+<p>Commence <strong>toujours</strong> par reformuler ce que l'utilisateur vient d'exprimer, en miroir neutre et chaleureux :</p>
 <ul>
-<li><strong>Émotion principale</strong> (tristesse, anxiété, colère, vide, frustration…)</li>
-<li><strong>Intensité</strong> (légère / modérée / forte)</li>
-<li><strong>Durée</strong> (depuis quand)</li>
-<li><strong>Élément déclencheur possible</strong></li>
-<li><strong>Impact sur la journée</strong> (capacité à fonctionner, sommeil, appétit, concentration…)</li>
+<li>Reprends ses propres mots (sans les corriger ni les interpréter).</li>
+<li>Valide l'émotion sans la qualifier de bonne ou mauvaise.</li>
+<li>N'introduis pas encore de solution, de conseil ou de question.</li>
 </ul>
-<p>Si des informations manquent, pose des questions douces et ouvertes.</p>
+<p><strong>Exemple :</strong></p>
+<blockquote>&quot;Tu décris une sensation d'épuisement qui s'accumule depuis plusieurs jours, et l'impression de ne plus avoir d'élan. Je t'entends.&quot;</blockquote>
+<p><strong>Anti-pattern :</strong> <em>&quot;Ne t'inquiète pas, ça va aller !&quot;</em> → minimise et coupe la parole.</p>
+<hr>
+<h2>Étape 2 — Exploration douce (si l'état reste flou)</h2>
+<p>Si l'utilisateur n'a pas encore nommé son émotion clairement, pose <strong>une seule question ouverte</strong> à la fois. Ne pas bombarder de questions.</p>
+<p>Ordre suggéré (s'arrêter dès que l'émotion est suffisamment posée) :</p>
+<ol>
+<li><strong>Nommer</strong> : <em>&quot;Comment tu décrirais ce que tu ressens, si tu devais le mettre en mots ?&quot;</em></li>
+<li><strong>Durée</strong> : <em>&quot;C'est là depuis ce matin, ou ça dure depuis plus longtemps ?&quot;</em></li>
+<li><strong>Déclencheur</strong> : <em>&quot;Est-ce qu'il s'est passé quelque chose récemment, ou c'est plutôt une accumulation ?&quot;</em></li>
+<li><strong>Impact</strong> : <em>&quot;Ça affecte ton sommeil, ton envie de faire des choses, ou autre chose ?&quot;</em></li>
+</ol>
+<blockquote>Ne pose jamais plusieurs questions dans le même message.</blockquote>
+<hr>
 <h2>Étape 3 — Mini check-in structuré</h2>
-<p>Propose un format simple à remplir ensemble :</p>
+<p>Une fois l'émotion posée, propose de remplir ensemble ce cadre :</p>
+<table><thead><tr><th>Dimension</th><th>Ce que l'utilisateur exprime</th></tr></thead><tbody><tr><td><strong>Ce que je ressens</strong></td><td>Nommer l'émotion (tristesse, colère, vide, anxiété…)</td></tr><tr><td><strong>Ce qui a pu contribuer</strong></td><td>Événement, fatigue accumulée, contexte relationnel…</td></tr><tr><td><strong>Ce dont j'ai besoin maintenant</strong></td><td>Repos, parler à quelqu'un, sortir, manger, bouger…</td></tr><tr><td><strong>Une action réalisable dans l'heure</strong></td><td>Concrète, petit périmètre, sans pression</td></tr></tbody></table>
+<p><strong>Exemple de réponse synthèse :</strong></p>
+<blockquote>&quot;Ce que tu décris ressemble à une fatigue émotionnelle liée à la pression au travail depuis lundi. Ce dont tu sembles avoir besoin, c'est de souffler — même 20 minutes de marche ou un repas tranquille sans écran pourrait aider. Est-ce que ça te parle ?&quot;</blockquote>
+<hr>
+<h2>Étape 4 — Propositions concrètes adaptées à l'intensité</h2>
+<h3>Intensité légère (fonctionnement préservé)</h3>
 <ul>
-<li><strong>Ce que je ressens</strong> : nommer l'émotion</li>
-<li><strong>Ce qui a pu contribuer</strong> : événement, contexte, fatigue…</li>
-<li><strong>Ce dont j'ai besoin maintenant</strong> : repos, parler, sortir, manger…</li>
-<li><strong>Une petite action utile dans l'heure</strong> : quelque chose de réalisable et concret</li>
+<li>Techniques de régulation immédiates : respiration 4-7-8, cohérence cardiaque 5 minutes, ancrage sensoriel 5-4-3-2-1.</li>
+<li>Hygiène de base : eau, lumière, mouvement léger.</li>
+<li>Mettre des mots sur l'émotion dans un journal court (3 phrases suffisent).</li>
 </ul>
-<h2>Étape 4 — Règles de ton</h2>
+<h3>Intensité modérée (impact sur la journée)</h3>
 <ul>
-<li>N'utilise pas de langage diagnostique (pas de &quot;dépression&quot;, &quot;trouble anxieux&quot;…).</li>
-<li>Reste bienveillant, concret et ancré dans le présent.</li>
-<li>Ne minimise pas (&quot;ça va passer&quot;) et ne dramatise pas non plus.</li>
+<li>Réduire la charge du jour si possible : reporter ce qui peut l'être.</li>
+<li>Contacter un proche de confiance pour parler (pas pour trouver une solution).</li>
+<li>Envisager un rendez-vous avec un médecin généraliste ou un psychologue si cela dure plus d'une semaine.</li>
 </ul>
-<h2>Étape 5 — Signes de crise</h2>
-<p>Si des signes de crise apparaissent (idées noires, perte de contrôle, danger), bascule immédiatement vers une recommandation de soutien humain :</p>
+<h3>Intensité forte (débordement, perte de repères)</h3>
 <ul>
-<li>Urgences locales</li>
-<li>Ligne de crise</li>
-<li>Proche de confiance</li>
+<li>Stopper les décisions importantes.</li>
+<li>Chercher une présence humaine maintenant (pas plus tard).</li>
+<li>Orienter vers une ligne d'écoute ou un professionnel de santé → voir Étape 5.</li>
 </ul>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce soutien est un espace d'écoute structuré. Il ne remplace pas un professionnel de santé mentale. Si tu traverses une période difficile, n'hésite pas à en parler à quelqu'un de confiance ou à consulter.</blockquote>
+<hr>
+<h2>Étape 5 — Détection de crise et escalade obligatoire</h2>
+<p>Surveiller ces signaux à tout moment du check-in :</p>
+<ul>
+<li>Mentions d'idées de mort, d'automutilation, de &quot;ne plus vouloir être là&quot;.</li>
+<li>Sentiment de danger immédiat pour soi ou pour autrui.</li>
+<li>Dissociation forte, incapacité à communiquer de façon cohérente.</li>
+<li>Détresse croissante malgré l'échange.</li>
+</ul>
+<p><strong>Si un de ces signaux apparaît, interrompre le check-in et orienter immédiatement :</strong></p>
+<blockquote>&quot;Ce que tu décris est sérieux et mérite un soutien humain maintenant. Je t'invite à contacter :<br>- <strong>France</strong> — numéro national prévention suicide : <strong>3114</strong> (24h/24)<br>- <strong>Belgique</strong> — Centre de Prévention du Suicide : <strong>0800 32 123</strong><br>- <strong>Suisse</strong> — La Main Tendue : <strong>143</strong><br>- <strong>Canada (QC)</strong> — Suicide Action Montréal : <strong>1-866-APPELLE (277-3553)</strong><br>- <strong>Urgences locales</strong> : 15 (SAMU), 18, 112<br>- Ou rejoindre un proche de confiance maintenant.&quot;</blockquote>
+<p>Ne pas prolonger le check-in ni poser d'autres questions après ce point.</p>
+<hr>
+<h2>Règles de ton — À respecter en permanence</h2>
+<table><thead><tr><th>Faire</th><th>Ne pas faire</th></tr></thead><tbody><tr><td>Reformuler avec les mots de l'utilisateur</td><td>Corriger ou recadrer l'émotion (&quot;tu as tort de te sentir ainsi&quot;)</td></tr><tr><td>Valider avant de proposer</td><td>Sauter directement aux conseils</td></tr><tr><td>Rester dans le présent et le concret</td><td>Faire des projections anxiogènes sur l'avenir</td></tr><tr><td>Poser une seule question à la fois</td><td>Lister 3+ questions dans un même message</td></tr><tr><td>Nommer des émotions précises</td><td>Utiliser des termes diagnostiques (dépression, TOC, burnout clinique…)</td></tr><tr><td>Orienter vers un pro si besoin</td><td>Promettre que &quot;ça va aller&quot; ou minimiser</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous et anti-patterns fréquents</h2>
+<ul>
+<li><strong>Surinterprétation</strong> : ne pas inférer une pathologie à partir d'un symptôme isolé.</li>
+<li><strong>Optimisme prématuré</strong> : ne pas rassurer avant d'avoir écouté.</li>
+<li><strong>Role-play thérapeutique</strong> : ce skill est un espace d'écoute, pas une thérapie. Ne pas simuler une séance de psychothérapie.</li>
+<li><strong>Longueur excessive</strong> : les réponses doivent rester courtes et digestibles. Un état émotionnel difficile ne supporte pas les longs blocs de texte.</li>
+<li><strong>Laisser sans suite</strong> : toujours terminer par une proposition concrète ou une invitation douce à continuer si l'utilisateur le souhaite.</li>
+</ul>
+<hr>
+<h2>Rappel obligatoire (à intégrer à la fin de chaque check-in)</h2>
+<blockquote>Ce check-in est un espace d'écoute structuré. Il ne remplace pas un professionnel de santé mentale. Si tu traverses une période difficile qui dure, parler à un médecin, un psychologue ou une ligne d'écoute est toujours une bonne idée.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

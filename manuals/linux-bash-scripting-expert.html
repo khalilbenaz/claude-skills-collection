@@ -97,37 +97,159 @@ cp -r claude-skills-collection/skills/linux-bash-scripting-expert ~/.claude/skil
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Bash Scripting Expert</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Définir la structure du script</strong> — commencer par le shebang <code>#!/bin/bash</code>, activer le mode strict avec <code>set -euo pipefail</code>, et ajouter un en-tête documentant l'objectif, l'auteur, la date et les paramètres attendus.</li>
-</ol>
-<ol>
-<li><strong>Gestion des variables et paramètres</strong> — utiliser des variables locales avec <code>local</code>, gérer les arguments positionnels (<code>$1</code>, <code>$2</code>, <code>$@</code>, <code>$#</code>), définir des valeurs par défaut avec <code>${VAR:-default}</code>, et valider les entrées avec des conditions de garde en début de script.</li>
-</ol>
-<ol>
-<li><strong>Structures de contrôle</strong> — implémenter les conditions avec <code>if/elif/else</code> et <code>[[ ]]</code> (double crochet pour les tests avancés), les boucles <code>for</code>, <code>while</code>, <code>until</code>, le <code>case</code> pour le pattern matching, et les opérateurs logiques <code>&amp;&amp;</code>, <code>||</code> pour le chaînage conditionnel.</li>
-</ol>
-<ol>
-<li><strong>Fonctions réutilisables</strong> — déclarer des fonctions avec le mot-clé <code>function</code> ou la syntaxe <code>nom()</code>, retourner des valeurs via <code>echo</code> (capture avec <code>$()</code>), utiliser <code>local</code> pour les variables internes, et organiser les fonctions utilitaires dans des fichiers sourcés avec <code>source</code> ou <code>.</code>.</li>
-</ol>
-<ol>
-<li><strong>Pipes et redirections</strong> — chaîner les commandes avec <code>|</code>, rediriger stdout/stderr avec <code>&gt;</code>, <code>2&gt;</code>, <code>&amp;&gt;</code>, utiliser les here-documents (<code>&lt;&lt;EOF</code>), le process substitution (<code>&lt;(commande)</code>), et <code>tee</code> pour écrire simultanément dans un fichier et stdout.</li>
-</ol>
-<ol>
-<li><strong>Gestion des erreurs</strong> — capturer les codes de retour avec <code>$?</code>, utiliser <code>trap</code> pour le nettoyage en cas d'erreur ou d'interruption (<code>trap cleanup EXIT</code>), logger les erreurs dans un fichier dédié, et implémenter des messages d'erreur explicites avec la fonction <code>die()</code>.</li>
-</ol>
-<ol>
-<li><strong>Traitement de texte</strong> — manipuler les chaînes avec les expansions Bash (<code>${var%%pattern}</code>, <code>${var##pattern}</code>, <code>${var/old/new}</code>), utiliser <code>awk</code>, <code>sed</code>, <code>grep</code>, <code>cut</code> pour le parsing, et <code>jq</code> pour le traitement JSON.</li>
-</ol>
-<ol>
-<li><strong>Tests et débogage</strong> — utiliser <code>bash -x script.sh</code> pour le mode trace, <code>shellcheck</code> pour l'analyse statique, écrire des tests avec <code>bats</code> (Bash Automated Testing System), et logger les étapes critiques pour faciliter le diagnostic.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. En-tête et mode strict</h3>
+<p>Toujours commencer par :</p>
+<pre><code class="lang-bash">#!/usr/bin/env bash
+# Description : &lt;objectif&gt;
+# Usage       : ./script.sh [OPTIONS] &lt;arg&gt;
+# Auteur      : &lt;nom&gt;  Date : 2026-xx-xx
+set -euo pipefail
+IFS=$'\n\t'</code></pre>
 <ul>
-<li>Toujours utiliser <code>set -euo pipefail</code> en début de script pour détecter les erreurs immédiatement — ne jamais laisser un script continuer silencieusement après une commande échouée.</li>
-<li>Quoter systématiquement les variables (<code>&quot;$var&quot;</code>) pour éviter le word splitting et le globbing involontaire — la majorité des bugs Bash viennent de variables non quotées.</li>
-<li>Utiliser <code>shellcheck</code> sur chaque script avant déploiement — cet outil détecte les erreurs courantes et les pratiques dangereuses.</li>
-<li>Préférer les commandes internes Bash (parameter expansion, arithmétique <code>$(())</code>) aux appels externes (<code>sed</code>, <code>awk</code>, <code>cut</code>) quand c'est possible pour améliorer la performance.</li>
-<li>Fournir toujours un message d'usage (<code>usage()</code>) et gérer les options avec <code>getopts</code> ou <code>getopt</code> pour rendre le script utilisable par d'autres.</li>
+<li><code>set -e</code> : arrêt immédiat sur erreur non capturée.</li>
+<li><code>set -u</code> : erreur sur variable non définie.</li>
+<li><code>set -o pipefail</code> : propagation du code d'erreur dans les pipes.</li>
+<li><code>IFS=$'\n\t'</code> : sécurise les boucles sur des chemins contenant des espaces.</li>
+</ul>
+<h3>2. Variables et paramètres</h3>
+<pre><code class="lang-bash"># Valeur par défaut
+LOG_DIR=&quot;${LOG_DIR:-/var/log/myapp}&quot;
+
+# Vérification des arguments
+[[ $# -lt 1 ]] &amp;&amp; { echo &quot;Usage: $0 &lt;fichier&gt;&quot; &gt;&amp;2; exit 1; }
+INPUT_FILE=&quot;$1&quot;
+
+# Variable locale dans une fonction
+process_file() {
+  local file=&quot;$1&quot;
+  local line_count
+  line_count=$(wc -l &lt; &quot;$file&quot;)
+  echo &quot;$line_count&quot;
+}</code></pre>
+<p>Règle : <strong>toujours quoter</strong> <code>&quot;$var&quot;</code> pour éviter word-splitting et globbing.</p>
+<h3>3. Structures de contrôle</h3>
+<pre><code class="lang-bash"># Tests avancés avec [[ ]]
+if [[ -f &quot;$file&quot; &amp;&amp; -r &quot;$file&quot; ]]; then
+  echo &quot;Lisible&quot;
+elif [[ &quot;$mode&quot; == &quot;dry-run&quot; ]]; then
+  echo &quot;Simulation&quot;
+else
+  die &quot;Fichier introuvable : $file&quot;
+fi
+
+# Boucle sur fichiers (safe avec espaces)
+while IFS= read -r line; do
+  echo &quot;Traitement : $line&quot;
+done &lt; &quot;$INPUT_FILE&quot;
+
+# Pattern matching
+case &quot;$action&quot; in
+  start|restart) systemctl &quot;$action&quot; myservice ;;
+  stop)          systemctl stop myservice ;;
+  *)             die &quot;Action inconnue : $action&quot; ;;
+esac</code></pre>
+<p><strong>Critère de décision <code>[ ]</code> vs <code>[[ ]]</code></strong> : utiliser <code>[[ ]]</code> par défaut (supporte <code>&amp;&amp;</code>, <code>||</code>, <code>=~</code>, pas de word-splitting) ; <code>[ ]</code> uniquement pour POSIX portability.</p>
+<h3>4. Gestion des erreurs et nettoyage</h3>
+<pre><code class="lang-bash"># Fonction die() standard
+die() { echo &quot;[ERROR] $*&quot; &gt;&amp;2; exit 1; }
+
+# Nettoyage automatique avec trap
+TMPDIR_WORK=$(mktemp -d)
+cleanup() {
+  rm -rf &quot;$TMPDIR_WORK&quot;
+}
+trap cleanup EXIT INT TERM
+
+# Commande optionnelle sans stopper le script
+some_cmd || true
+
+# Capture du code de retour sans déclencher set -e
+if ! rsync -a src/ dst/; then
+  die &quot;Échec rsync&quot;
+fi</code></pre>
+<h3>5. Fonctions utilitaires réutilisables</h3>
+<pre><code class="lang-bash">log()  { echo &quot;[$(date '+%H:%M:%S')] $*&quot;; }
+warn() { echo &quot;[WARN]  $*&quot; &gt;&amp;2; }
+
+require_cmd() {
+  command -v &quot;$1&quot; &amp;&gt;/dev/null || die &quot;Commande manquante : $1&quot;
+}
+
+# Vérification des dépendances en début de script
+require_cmd jq
+require_cmd rsync</code></pre>
+<h3>6. Pipes, redirections et process substitution</h3>
+<pre><code class="lang-bash"># Redirection stdout + stderr vers fichier
+myapp 2&gt;&amp;1 | tee -a &quot;$LOG_DIR/app.log&quot;
+
+# Process substitution (compare deux sorties sans fichier temporaire)
+diff &lt;(sort file1.txt) &lt;(sort file2.txt)
+
+# Here-document
+psql -U postgres &lt;&lt;SQL
+  SELECT count(*) FROM ma_table;
+SQL</code></pre>
+<h3>7. Traitement de texte</h3>
+<pre><code class="lang-bash"># Expansions Bash (préférer aux appels externes)
+filename=&quot;${path##*/}&quot;          # basename
+extension=&quot;${filename##*.}&quot;     # extension
+noext=&quot;${filename%.*}&quot;          # sans extension
+upper=&quot;${var^^}&quot;                # majuscules (Bash 4+)
+
+# Parsing rapide avec awk
+awk -F: '$3 &gt;= 1000 {print $1}' /etc/passwd   # utilisateurs standards
+
+# JSON avec jq
+jq -r '.items[] | select(.status==&quot;active&quot;) | .name' data.json
+
+# sed inline (macOS : sed -i '' ; Linux : sed -i)
+sed -i 's/old/new/g' config.txt</code></pre>
+<p><strong>Critère de décision</strong> : préférer les expansions Bash (<code>${var##...}</code>) pour les opérations simples sur chaînes (pas de fork). Utiliser <code>awk</code>/<code>sed</code> pour des transformations structurées ou multi-lignes.</p>
+<h3>8. Options et usage</h3>
+<pre><code class="lang-bash">usage() {
+  cat &lt;&lt;EOF
+Usage: $(basename &quot;$0&quot;) [OPTIONS] &lt;input&gt;
+  -v, --verbose   Mode verbeux
+  -o, --output    Fichier de sortie (défaut: stdout)
+  -h, --help      Affiche cette aide
+EOF
+}
+
+# Parsing avec getopts (POSIX, options courtes uniquement)
+while getopts &quot;:vo:h&quot; opt; do
+  case $opt in
+    v) VERBOSE=1 ;;
+    o) OUTPUT=&quot;$OPTARG&quot; ;;
+    h) usage; exit 0 ;;
+    :) die &quot;Option -$OPTARG requiert un argument&quot; ;;
+    \?) die &quot;Option inconnue : -$OPTARG&quot; ;;
+  esac
+done
+shift $((OPTIND - 1))</code></pre>
+<h3>9. Tests et débogage</h3>
+<pre><code class="lang-bash"># Trace complète
+bash -x script.sh arg1
+
+# Analyse statique (installer via apt/brew)
+shellcheck -S warning script.sh
+
+# Test unitaire avec bats
+@test &quot;process_file retourne le bon compte&quot; {
+  result=$(process_file fixtures/sample.txt)
+  [ &quot;$result&quot; -eq 10 ]
+}</code></pre>
+<p>Workflow de débogage recommandé : <code>shellcheck</code> → <code>bash -n</code> (syntax check) → <code>bash -x</code> (trace) → <code>bats</code> (tests).</p>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td>`ls *.log \</td><td>xargs rm`</td><td>Casse avec espaces/newlines</td><td><code>find . -name '*.log' -delete</code></td></tr><tr><td><code>for f in $(find ...)</code></td><td>Word splitting</td><td><code>while IFS= read -r f; do ... done &lt; &lt;(find ...)</code></td></tr><tr><td><code>[ $var == &quot;val&quot; ]</code></td><td>Erreur si <code>$var</code> vide</td><td><code>[[ &quot;$var&quot; == &quot;val&quot; ]]</code></td></tr><tr><td><code>cp file /dest</code> sans vérif</td><td>Écriture silencieuse sur fichier existant</td><td>Ajouter <code>-i</code> ou vérifier avant</td></tr><tr><td><code>eval &quot;$user_input&quot;</code></td><td>Injection de commandes</td><td>Éviter <code>eval</code> avec données externes</td></tr><tr><td>Script sans <code>set -u</code></td><td>Variable mal nommée passe silencieusement</td><td>Toujours <code>set -euo pipefail</code></td></tr><tr><td>Paths sans guillemets</td><td>Casse avec espaces</td><td>Toujours <code>&quot;$path&quot;</code></td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>ShellCheck</strong> intégré en CI (GitHub Actions : <code>shellcheck-action</code>) — bloquant sur <code>error</code>, avertissement sur <code>warning</code>.</li>
+<li><strong>Bats-core</strong> pour les tests unitaires Bash (<code>bats-core/bats-core</code> v1.10+).</li>
+<li><strong>Nommage</strong> : variables d'environnement en <code>UPPER_SNAKE</code>, variables locales en <code>lower_snake</code>, constantes en <code>readonly UPPER</code>.</li>
+<li><strong>Pas de Bash pour du Python</strong> : si le script dépasse ~200 lignes ou manipule du JSON/YAML complexe, migrer vers Python.</li>
+<li><strong>Logs structurés</strong> : préférer <code>echo &quot;[$(date -Iseconds)] [LEVEL] message&quot;</code> ou déléguer à <code>logger</code> (syslog).</li>
+<li><strong>Idempotence</strong> : chaque script doit pouvoir être relancé sans effet de bord — vérifier l'existence avant de créer, <code>mkdir -p</code>, <code>cp -n</code>.</li>
+<li><strong>Secrets</strong> : ne jamais mettre de mot de passe dans le script ; lire depuis <code>$ENV_VAR</code> ou un fichier avec permissions <code>600</code>.</li>
 </ul>
 </article>
 </main>

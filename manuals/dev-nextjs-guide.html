@@ -95,40 +95,199 @@ cp -r claude-skills-collection/skills/dev-nextjs-guide ~/.claude/skills/</div><b
 
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
-<h1>Guide Next.js</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le besoin</strong> — Identifier le type d'application (site vitrine, SaaS, e-commerce, dashboard) et déterminer la stratégie de rendu adaptée (SSR, SSG, ISR ou CSR) pour chaque page.</li>
-</ol>
-<ol>
-<li><strong>Structurer le projet avec App Router</strong> — Organiser l'arborescence <code>app/</code> avec les conventions de fichiers Next.js : <code>layout.tsx</code>, <code>page.tsx</code>, <code>loading.tsx</code>, <code>error.tsx</code>, <code>not-found.tsx</code>. Définir les groupes de routes <code>(group)</code>, les routes parallèles <code>@slot</code> et les intercepting routes <code>(.)</code>.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les Server Components</strong> — Concevoir les composants serveur par défaut pour les opérations de data fetching, accès base de données et logique métier. Réserver <code>&quot;use client&quot;</code> uniquement pour l'interactivité (useState, useEffect, event handlers, hooks navigateur).</li>
-</ol>
-<ol>
-<li><strong>Configurer le data fetching</strong> — Utiliser <code>fetch()</code> avec les options de cache Next.js (<code>force-cache</code>, <code>no-store</code>, <code>revalidate</code>), implémenter ISR avec <code>revalidate</code> dans les segments de route, et configurer <code>generateStaticParams</code> pour la génération statique des pages dynamiques.</li>
-</ol>
-<ol>
-<li><strong>Créer les API routes et Server Actions</strong> — Implémenter les Route Handlers dans <code>app/api/</code> pour les endpoints REST, et les Server Actions avec <code>&quot;use server&quot;</code> pour les mutations de données directes depuis les formulaires et composants client.</li>
-</ol>
-<ol>
-<li><strong>Configurer le middleware</strong> — Implémenter <code>middleware.ts</code> à la racine pour l'authentification, la redirection, la réécriture d'URL, les headers de sécurité et la gestion de l'internationalisation (i18n).</li>
-</ol>
-<ol>
-<li><strong>Optimiser les performances</strong> — Appliquer les optimisations Next.js : <code>next/image</code> pour les images, <code>next/font</code> pour les polices, streaming avec Suspense, parallel data fetching, et lazy loading des composants client avec <code>dynamic()</code>.</li>
-</ol>
-<ol>
-<li><strong>Déployer et monitorer</strong> — Configurer le déploiement sur Vercel, Docker ou Node.js standalone. Activer les métriques Web Vitals, configurer les headers de cache CDN et mettre en place le monitoring des erreurs serveur.</li>
-</ol>
-<h2>Règles</h2>
+<h1>Guide Next.js (App Router — 2026)</h1>
+<h2>1. Critères de décision stratégique</h2>
+<p><strong>Choix de la stratégie de rendu par page :</strong></p>
+<table><thead><tr><th>Besoin</th><th>Stratégie</th><th>Config</th></tr></thead><tbody><tr><td>Données dynamiques par requête</td><td>SSR</td><td><code>export const dynamic = 'force-dynamic'</code></td></tr><tr><td>Données rarement modifiées</td><td>ISR</td><td><code>export const revalidate = 60</code></td></tr><tr><td>Contenu totalement statique</td><td>SSG</td><td><code>generateStaticParams</code> + cache par défaut</td></tr><tr><td>Interactivité pure, auth client</td><td>CSR</td><td><code>&quot;use client&quot;</code> + SWR/React Query</td></tr><tr><td>Latence critique, edge-compatible</td><td>Edge SSR</td><td><code>export const runtime = 'edge'</code></td></tr></tbody></table>
+<p><strong>Quand utiliser <code>&quot;use client&quot;</code> :</strong> uniquement pour <code>useState</code>, <code>useEffect</code>, event handlers DOM, hooks navigateur (<code>window</code>, <code>localStorage</code>). Tout le reste = Server Component.</p>
+<hr>
+<h2>2. Initialisation du projet</h2>
+<pre><code class="lang-bash"># Next.js 15 avec TypeScript, Tailwind, App Router, ESLint
+npx create-next-app@latest my-app \
+  --typescript --tailwind --app --eslint --src-dir --import-alias &quot;@/*&quot;
+
+cd my-app &amp;&amp; npm run dev</code></pre>
+<p><strong>Structure <code>app/</code> recommandée :</strong></p>
+<pre><code>app/
+  (marketing)/          # groupe de routes sans segment URL
+    page.tsx
+    layout.tsx
+  (dashboard)/
+    layout.tsx           # layout partagé dashboard
+    analytics/page.tsx
+    settings/page.tsx
+  api/
+    users/route.ts       # Route Handler REST
+  globals.css
+  layout.tsx             # Root layout (obligatoire)
+  not-found.tsx</code></pre>
+<hr>
+<h2>3. Server Components — data fetching</h2>
+<pre><code class="lang-tsx">// app/users/page.tsx — Server Component par défaut
+async function getUsers() {
+  const res = await fetch('https://api.example.com/users', {
+    next: { revalidate: 60 }, // ISR : re-valide toutes les 60s
+  });
+  if (!res.ok) throw new Error('Fetch failed');
+  return res.json();
+}
+
+export default async function UsersPage() {
+  const users = await getUsers(); // pas de useEffect, direct
+  return &lt;ul&gt;{users.map(u =&gt; &lt;li key={u.id}&gt;{u.name}&lt;/li&gt;)}&lt;/ul&gt;;
+}</code></pre>
+<p><strong>Parallel fetching (évite les waterfalls) :</strong></p>
+<pre><code class="lang-tsx">export default async function DashboardPage() {
+  const [users, stats] = await Promise.all([
+    getUsers(),
+    getStats(),
+  ]);
+  return &lt;Dashboard users={users} stats={stats} /&gt;;
+}</code></pre>
+<hr>
+<h2>4. Server Actions — mutations de données</h2>
+<pre><code class="lang-tsx">// app/actions/user.ts
+'use server';
+import { z } from 'zod';
+import { revalidatePath } from 'next/cache';
+
+const CreateUserSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+});
+
+export async function createUser(formData: FormData) {
+  const parsed = CreateUserSchema.safeParse({
+    name: formData.get('name'),
+    email: formData.get('email'),
+  });
+  if (!parsed.success) return { error: parsed.error.flatten() };
+
+  await db.user.create({ data: parsed.data });
+  revalidatePath('/users'); // invalide le cache de la page
+}</code></pre>
+<pre><code class="lang-tsx">// Utilisation dans un form
+&lt;form action={createUser}&gt;
+  &lt;input name=&quot;name&quot; required /&gt;
+  &lt;input name=&quot;email&quot; type=&quot;email&quot; required /&gt;
+  &lt;button type=&quot;submit&quot;&gt;Créer&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+<hr>
+<h2>5. Route Handlers (API REST)</h2>
+<pre><code class="lang-ts">// app/api/users/[id]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise&lt;{ id: string }&gt; }
+) {
+  const { id } = await params; // Next 15 : params est une Promise
+  const user = await db.user.findUnique({ where: { id } });
+  if (!user) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json(user);
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise&lt;{ id: string }&gt; }
+) {
+  const { id } = await params;
+  await db.user.delete({ where: { id } });
+  return new NextResponse(null, { status: 204 });
+}</code></pre>
+<hr>
+<h2>6. Middleware — auth, redirections, headers</h2>
+<pre><code class="lang-ts">// middleware.ts (racine du projet)
+import { NextRequest, NextResponse } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('session')?.value;
+  const isProtected = request.nextUrl.pathname.startsWith('/dashboard');
+
+  if (isProtected &amp;&amp; !token) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  const response = NextResponse.next();
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  return response;
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+};</code></pre>
+<hr>
+<h2>7. Streaming et Suspense</h2>
+<pre><code class="lang-tsx">// app/dashboard/page.tsx
+import { Suspense } from 'react';
+import { UsersSkeleton } from '@/components/skeletons';
+
+export default function DashboardPage() {
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;Dashboard&lt;/h1&gt;
+      &lt;Suspense fallback={&lt;UsersSkeleton /&gt;}&gt;
+        &lt;SlowDataComponent /&gt;  {/* streamé indépendamment */}
+      &lt;/Suspense&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+<hr>
+<h2>8. Optimisation images et polices</h2>
+<pre><code class="lang-tsx">import Image from 'next/image';
+import { Inter } from 'next/font/google';
+
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
+
+// Image optimisée avec lazy loading automatique
+&lt;Image
+  src=&quot;/hero.webp&quot;
+  alt=&quot;Hero&quot;
+  width={1200}
+  height={630}
+  priority // uniquement pour LCP (above the fold)
+/&gt;</code></pre>
+<p><strong>Lazy loading composant client lourd :</strong></p>
+<pre><code class="lang-tsx">import dynamic from 'next/dynamic';
+const HeavyChart = dynamic(() =&gt; import('@/components/HeavyChart'), {
+  ssr: false, // si besoin de window
+  loading: () =&gt; &lt;p&gt;Chargement...&lt;/p&gt;,
+});</code></pre>
+<hr>
+<h2>9. Variables d'environnement</h2>
+<pre><code class="lang-bash"># .env.local
+DATABASE_URL=&quot;postgres://...&quot;          # serveur uniquement
+NEXT_PUBLIC_API_URL=&quot;https://api...&quot;   # exposé côté client (préfixe obligatoire)</code></pre>
 <ul>
-<li>Privilégie toujours les Server Components sauf quand l'interactivité client est explicitement nécessaire.</li>
-<li>Ne transmets jamais de données sensibles (tokens, clés API) aux composants client — garde-les côté serveur.</li>
-<li>Utilise les conventions de fichiers Next.js (<code>loading.tsx</code>, <code>error.tsx</code>) plutôt que des solutions custom pour la gestion des états de chargement et d'erreur.</li>
-<li>Valide systématiquement les entrées utilisateur dans les Server Actions et Route Handlers avant toute opération.</li>
-<li>Propose des solutions compatibles avec le déploiement edge quand la latence est critique.</li>
+<li>Sans <code>NEXT_PUBLIC_</code> → accessible uniquement côté serveur (Server Components, API routes, middleware).</li>
+<li>Avec <code>NEXT_PUBLIC_</code> → bundle client. Ne jamais y mettre clés secrètes.</li>
 </ul>
+<hr>
+<h2>10. Garde-fous et anti-patterns</h2>
+<p><strong>Waterfalls de fetch</strong> — ne jamais faire <code>await</code> en séquence quand les requêtes sont indépendantes. Utiliser <code>Promise.all</code>.</p>
+<p><strong>&quot;use client&quot; trop haut</strong> — ne pas marquer un layout ou une page entière comme client. Pousser <code>&quot;use client&quot;</code> au composant feuille qui a besoin d'interactivité.</p>
+<p><strong>Données sensibles dans les composants client</strong> — ne jamais passer <code>process.env.SECRET_KEY</code> ou tokens JWT à un composant client. Les garder dans les Server Actions ou Route Handlers.</p>
+<p><strong>Oublier <code>revalidatePath</code>/<code>revalidateTag</code> après une mutation</strong> — la page affichera des données périmées après une Server Action.</p>
+<p><strong><code>params</code> non awaité (Next 15)</strong> — <code>params</code> et <code>searchParams</code> sont des Promises dans Next.js 15. Toujours les <code>await</code>.</p>
+<p><strong><code>export const dynamic = 'force-dynamic'</code> sur tout</strong> — désactive le cache partout, détruit les performances. Utiliser uniquement quand les données changent à chaque requête.</p>
+<p><strong>Fetch sans gestion d'erreur</strong> — un fetch échoué dans un Server Component non protégé par <code>error.tsx</code> fait planter toute la page.</p>
+<hr>
+<h2>11. Déploiement</h2>
+<pre><code class="lang-bash"># Build de production
+npm run build &amp;&amp; npm start
+
+# Standalone (Docker)
+# next.config.ts
+output: 'standalone'
+
+# Dockerfile minimal
+FROM node:22-alpine AS runner
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+CMD [&quot;node&quot;, &quot;server.js&quot;]</code></pre>
+<p><strong>Vercel</strong> : zéro config — <code>vercel deploy --prod</code>. ISR, Edge Functions et Image Optimization activés automatiquement.</p>
+<p><strong>Self-hosted</strong> : vérifier que <code>HOSTNAME=0.0.0.0</code> est défini pour le serveur standalone (sinon écoute sur localhost seulement).</p>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

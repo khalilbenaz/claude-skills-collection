@@ -98,36 +98,130 @@ cp -r claude-skills-collection/skills/devops-github-actions-expert ~/.claude/ski
 <h1>GitHub Actions Expert</h1>
 <h2>Workflow</h2>
 <ol>
-<li><strong>Analyser le pipeline CI/CD requis</strong> — Identifier les étapes du pipeline : build, test, lint, analyse de sécurité, déploiement. Déterminer les triggers adaptés (<code>push</code>, <code>pull_request</code>, <code>schedule</code>, <code>workflow_dispatch</code>, <code>release</code>) et les branches concernées.</li>
+<li><strong>Analyser le pipeline requis</strong> — Identifier les étapes (build, test, lint, SAST, déploiement), les triggers adaptés et les branches concernées.</li>
 </ol>
+<table><thead><tr><th>Trigger</th><th>Quand l'utiliser</th></tr></thead><tbody><tr><td><code>push</code> sur <code>main</code></td><td>CI post-merge, déploiement continu</td></tr><tr><td><code>pull_request</code></td><td>Validation avant merge, checks obligatoires</td></tr><tr><td><code>schedule</code></td><td>Jobs de maintenance, audit de sécurité nocturne</td></tr><tr><td><code>workflow_dispatch</code></td><td>Déploiement manuel avec paramètres</td></tr><tr><td><code>release</code> (published)</td><td>Publication de packages, binaires</td></tr></tbody></table>
 <ol>
-<li><strong>Structurer le workflow YAML</strong> — Créer le fichier <code>.github/workflows/</code> avec les jobs organisés logiquement, les dépendances entre jobs (<code>needs</code>), les conditions d'exécution (<code>if</code>), et le choix des runners (<code>ubuntu-latest</code>, <code>windows-latest</code>, self-hosted).</li>
+<li><strong>Structurer le YAML</strong> — Organiser les jobs avec dépendances explicites et conditions.</li>
 </ol>
-<ol>
-<li><strong>Configurer les matrix builds</strong> — Définir les matrices de test pour valider sur plusieurs versions (Node.js 18/20/22, Python 3.10/3.12, .NET 8/9), systèmes d'exploitation, et combinaisons de dépendances. Utiliser <code>include</code>/<code>exclude</code> pour affiner.</li>
-</ol>
-<ol>
-<li><strong>Gérer les secrets et variables</strong> — Configurer les secrets d'organisation et de repository, les variables d'environnement, les environnements de déploiement avec protection rules (reviewers, wait timer), et l'utilisation d'OIDC pour l'authentification cloud sans secrets statiques.</li>
-</ol>
-<ol>
-<li><strong>Créer des actions custom</strong> — Développer des actions composite ou JavaScript/Docker réutilisables pour les opérations récurrentes : notifications, déploiements spécifiques, validations custom, et publication d'artifacts.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les reusable workflows</strong> — Extraire les patterns communs en workflows réutilisables (<code>workflow_call</code>), définir les inputs et secrets requis, et maintenir un repository central d'actions et workflows partagés par l'organisation.</li>
-</ol>
-<ol>
-<li><strong>Optimiser les performances</strong> — Réduire les temps d'exécution avec le caching des dépendances (<code>actions/cache</code>), la parallélisation des jobs, le skip conditionnel des étapes inchangées (<code>paths-filter</code>), et les artifacts pour le partage entre jobs.</li>
-</ol>
-<ol>
-<li><strong>Sécuriser le pipeline</strong> — Appliquer le principe du moindre privilège sur les <code>permissions</code> du workflow, utiliser <code>actions/attest-build-provenance</code> pour la traçabilité, scanner les dépendances avec Dependabot, et valider les actions tierces avec <code>@sha</code> plutôt que <code>@tag</code>.</li>
-</ol>
-<h2>Règles</h2>
+<p>   ```yaml    name: CI    on:      push:        branches: [main]      pull_request:        branches: [main]    permissions:           # Principe du moindre privilège global      contents: read    jobs:      build:        runs-on: ubuntu-latest        permissions:          contents: read        steps:</p>
 <ul>
-<li>Épingle toujours les actions tierces sur un SHA de commit plutôt qu'un tag mutable pour éviter les attaques de supply chain.</li>
-<li>Configure les <code>permissions</code> minimales nécessaires au niveau du workflow et de chaque job — ne laisse jamais les permissions par défaut.</li>
-<li>Utilise les environnements GitHub avec protection rules pour tout déploiement en staging ou production.</li>
-<li>Fournis des workflows complets et testables, avec des commentaires expliquant les choix non évidents.</li>
-<li>Propose des reusable workflows dès qu'un pattern se répète dans plus de deux repositories.</li>
+<li>uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2</li>
+<li>uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0</li>
+</ul>
+<p>           with:              node-version: '22'              cache: 'npm'</p>
+<ul>
+<li>run: npm ci</li>
+<li>run: npm run build</li>
+</ul>
+<p>     test:        needs: build        runs-on: ubuntu-latest        steps:</p>
+<ul>
+<li>uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683</li>
+<li>run: npm ci &amp;&amp; npm test</li>
+</ul>
+<p>   ```</p>
+<ol>
+<li><strong>Configurer les matrix builds</strong> — Tester plusieurs environnements sans duplication.</li>
+</ol>
+<p>   ```yaml    strategy:      fail-fast: false        # Ne pas annuler les autres axes si un échoue      matrix:        node: ['20', '22']        os: [ubuntu-latest, windows-latest]        include:</p>
+<ul>
+<li>node: '22'</li>
+</ul>
+<p>           os: ubuntu-latest            coverage: true     # Variable custom pour un axe précis        exclude:</p>
+<ul>
+<li>node: '20'</li>
+</ul>
+<p>           os: windows-latest    runs-on: ${{ matrix.os }}    steps:</p>
+<ul>
+<li>if: matrix.coverage</li>
+</ul>
+<p>       run: npm run test:coverage    ```</p>
+<ol>
+<li><strong>Gérer les secrets et variables</strong> — Hiérarchie : Organization &gt; Repository &gt; Environment.</li>
+</ol>
+<p>   ```yaml    env:      DATABASE_URL: ${{ vars.DATABASE_URL }}      # Variable non-sensible    steps:</p>
+<ul>
+<li>name: Deploy</li>
+</ul>
+<p>       env:          API_KEY: ${{ secrets.PROD_API_KEY }}    # Secret injecté en env, jamais en arg CLI        run: ./deploy.sh    ```</p>
+<p>   <strong>OIDC (recommandé sur AWS/Azure/GCP)</strong> — supprime les secrets statiques cloud :    ```yaml    permissions:      id-token: write      contents: read    steps:</p>
+<ul>
+<li>uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4</li>
+</ul>
+<p>       with:          role-to-assume: arn:aws:iam::123456789012:role/GitHubActions          aws-region: eu-west-1    ```</p>
+<ol>
+<li><strong>Cacher les dépendances</strong> — Impact direct sur la durée du pipeline.</li>
+</ol>
+<p>   ```yaml</p>
+<ul>
+<li>uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020</li>
+</ul>
+<p>     with:        node-version: '22'        cache: 'npm'           # Gère le cache automatiquement (préférer cette option)    # Ou cache manuel pour des cas custom :</p>
+<ul>
+<li>uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4</li>
+</ul>
+<p>     with:        path: ~/.m2/repository        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}        restore-keys: |          ${{ runner.os }}-maven-    ```</p>
+<ol>
+<li><strong>Créer des reusable workflows</strong> — Extraire les patterns communs dès qu'ils se répètent.</li>
+</ol>
+<p>   ```yaml    # .github/workflows/reusable-deploy.yml    on:      workflow_call:        inputs:          environment:            required: true            type: string        secrets:          DEPLOY_TOKEN:            required: true    jobs:      deploy:        runs-on: ubuntu-latest        environment: ${{ inputs.environment }}        steps:</p>
+<ul>
+<li>run: echo &quot;Deploying to ${{ inputs.environment }}&quot;</li>
+</ul>
+<p>   ```</p>
+<p>   Appel depuis un autre workflow :    ```yaml    jobs:      deploy-prod:        uses: my-org/.github/.github/workflows/reusable-deploy.yml@main        with:          environment: production        secrets:          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}    ```</p>
+<ol>
+<li><strong>Sécuriser le pipeline</strong> — Checklist obligatoire.</li>
+</ol>
+<p>   ```yaml    # Épingler sur SHA (jamais sur tag mutable)</p>
+<ul>
+<li>uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2</li>
+</ul>
+<p>   # Attester la provenance du build    permissions:      id-token: write      attestations: write    steps:</p>
+<ul>
+<li>uses: actions/attest-build-provenance@v2</li>
+</ul>
+<p>       with:          subject-path: dist/app.tar.gz    ```</p>
+<ol>
+<li><strong>Optimiser les temps d'exécution</strong> — Techniques d'accélération.</li>
+</ol>
+<p>   ```yaml    # Skip jobs si les fichiers concernés n'ont pas changé</p>
+<ul>
+<li>uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36  # v3</li>
+</ul>
+<p>     id: changes      with:        filters: |          backend:</p>
+<ul>
+<li>'src/**'</li>
+</ul>
+<ul>
+<li>if: steps.changes.outputs.backend == 'true'</li>
+</ul>
+<p>     run: npm run test:backend</p>
+<p>   # Partager des artifacts entre jobs</p>
+<ul>
+<li>uses: actions/upload-artifact@v4</li>
+</ul>
+<p>     with:        name: dist        path: dist/        retention-days: 1    ```</p>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td><code>uses: actions/checkout@v4</code> (tag mutable)</td><td>Supply chain attack</td><td>Épingler sur le SHA du commit</td></tr><tr><td><code>permissions: write-all</code> global</td><td>Élévation de privilèges</td><td>Déclarer seulement les permissions nécessaires par job</td></tr><tr><td>Secrets affichés dans les <code>run</code></td><td>Fuite dans les logs</td><td>Injecter via <code>env:</code> jamais via <code>${{ secrets.X }}</code> dans les commandes shell</td></tr><tr><td><code>continue-on-error: true</code> sans logging</td><td>Masquer des défaillances silencieuses</td><td>Utiliser avec un step de reporting explicite</td></tr><tr><td>Pas de <code>timeout-minutes</code></td><td>Job bloqué indéfiniment = facture</td><td>Toujours fixer un timeout (par défaut GitHub : 6h)</td></tr><tr><td>Stocker des credentials dans les variables (vars)</td><td>Exposition accidentelle</td><td>Vars = config publique, secrets = credentials</td></tr><tr><td>Concurrence non gérée sur déploiements</td><td>Double déploiement</td><td>Utiliser <code>concurrency</code> avec <code>cancel-in-progress: true</code></td></tr></tbody></table>
+<pre><code class="lang-yaml"># Gestion de la concurrence pour les déploiements
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true</code></pre>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Dependabot pour les actions</strong> — Ajouter <code>.github/dependabot.yml</code> pour maintenir les SHA à jour automatiquement :</li>
+</ul>
+<p>  ```yaml   updates:</p>
+<ul>
+<li>package-ecosystem: &quot;github-actions&quot;</li>
+</ul>
+<p>      directory: &quot;/&quot;       schedule:         interval: &quot;weekly&quot;   ```</p>
+<ul>
+<li><strong>Required status checks</strong> — Protéger <code>main</code> : activer les branch protection rules avec au moins un check CI obligatoire et <code>Require branches to be up to date</code>.</li>
+<li><strong>Environments de déploiement</strong> — Toujours utiliser un Environment GitHub (<code>Settings &gt; Environments</code>) avec reviewers pour la production ; les secrets d'environnement écrasent les secrets repo.</li>
+<li><strong>Self-hosted runners</strong> — Isoler dans des VMs éphémères (ou containers) ; ne jamais utiliser sur des repos publics sans <code>if: github.event.pull_request.head.repo.full_name == github.repository</code> pour bloquer les forks.</li>
+<li><strong>Audit des logs</strong> — Activer <code>ACTIONS_STEP_DEBUG</code> et <code>ACTIONS_RUNNER_DEBUG</code> en secrets (valeur <code>true</code>) pour le debugging ; les désactiver en production.</li>
 </ul>
 </article>
 </main>

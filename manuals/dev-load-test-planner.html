@@ -97,86 +97,147 @@ cp -r claude-skills-collection/skills/dev-load-test-planner ~/.claude/skills/</d
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Load Test Planner</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Définir les objectifs de performance</strong></li>
+<h3>1. Définir les objectifs de performance</h3>
+<p>Avant toute chose, fixer des seuils mesurables :</p>
+<table><thead><tr><th>Métrique</th><th>Exemple cible</th></tr></thead><tbody><tr><td>Utilisateurs simultanés</td><td>500 VU (virtual users)</td></tr><tr><td>Throughput</td><td>300 req/s</td></tr><tr><td>p50 latence</td><td>&lt; 150 ms</td></tr><tr><td>p95 latence</td><td>&lt; 500 ms</td></tr><tr><td>p99 latence</td><td>&lt; 1 200 ms</td></tr><tr><td>Taux d'erreurs</td><td>&lt; 0.5 %</td></tr></tbody></table>
+<p>Critère de décision : si pas de SLA formalisé, partir des mesures de production actuelles × 2 comme baseline cible.</p>
+<hr>
+<h3>2. Identifier les scénarios critiques</h3>
 <ul>
-<li>Nombre d'utilisateurs simultanés cibles (concurrent users)</li>
-<li>Requêtes par seconde attendues (RPS / TPS)</li>
-<li>Objectifs de latence : p50, p95, p99 en millisecondes</li>
-<li>SLA et seuils d'erreur acceptables (ex : &lt; 1% d'erreurs, p95 &lt; 500ms)</li>
+<li>Extraire les top 5 endpoints par volume depuis les logs Nginx/APM (<code>access.log</code>, Datadog, New Relic).</li>
+<li>Prioriser : opérations avec état (login + panier + checkout) &gt; GET simples cachés.</li>
+<li>Cas particuliers à ne pas oublier : upload fichier, websocket long-lived, job asynchrone déclenché par HTTP.</li>
 </ul>
-</ol>
+<hr>
+<h3>3. Choisir l'outil</h3>
+<table><thead><tr><th>Outil</th><th>Quand choisir</th></tr></thead><tbody><tr><td><strong>k6</strong></td><td>CI/CD, équipe dev, scripts JS, output InfluxDB/Prometheus natif</td></tr><tr><td><strong>Gatling</strong></td><td>Rapports HTML riches, DSL Kotlin/Scala, scénarios complexes</td></tr><tr><td><strong>JMeter</strong></td><td>Équipe QA non-dev, protocoles non-HTTP (JDBC, JMS, FTP)</td></tr><tr><td><strong>Artillery</strong></td><td>Stacks Node.js/AWS, config YAML rapide, plugins serverless</td></tr><tr><td><strong>Locust</strong></td><td>Python, logique de scénario très custom, debugging facile</td></tr><tr><td><strong>wrk/wrk2</strong></td><td>Microbenchmark HTTP brut, mesure de débit max sans logique</td></tr></tbody></table>
+<hr>
+<h3>4. Écrire le script — exemple k6 complet</h3>
+<pre><code class="lang-javascript">// k6 run --vus 100 --duration 5m script.js
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+import { SharedArray } from 'k6/data';
+
+const users = new SharedArray('users', () =&gt; JSON.parse(open('./users.json')));
+
+export const options = {
+  stages: [
+    { duration: '2m', target: 100 },   // ramp-up
+    { duration: '5m', target: 100 },   // charge nominale
+    { duration: '1m', target: 200 },   // spike
+    { duration: '2m', target: 0   },   // ramp-down
+  ],
+  thresholds: {
+    http_req_failed:   ['rate&lt;0.005'],          // &lt; 0.5 % erreurs
+    http_req_duration: ['p(95)&lt;500', 'p(99)&lt;1200'],
+  },
+};
+
+export default function () {
+  const user = users[__VU % users.length];
+
+  // 1. Login
+  const loginRes = http.post('https://api.example.com/auth/login', JSON.stringify({
+    email: user.email,
+    password: user.password,
+  }), { headers: { 'Content-Type': 'application/json' } });
+
+  check(loginRes, { 'login 200': (r) =&gt; r.status === 200 });
+  const token = loginRes.json('access_token');
+
+  sleep(1); // think time
+
+  // 2. Appel métier
+  const res = http.get('https://api.example.com/orders', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  check(res, { 'orders 200': (r) =&gt; r.status === 200 });
+
+  sleep(Math.random() * 2 + 1); // think time 1–3 s
+}</code></pre>
+<p><strong>Équivalent Gatling (Kotlin DSL) — ramp-up :</strong></p>
+<pre><code class="lang-kotlin">setUp(
+  scn.injectOpen(
+    rampUsers(100).during(2.minutes),
+    constantUsersPerSec(20.0).during(5.minutes)
+  )
+).protocols(httpProtocol)
+ .assertions(
+   global().responseTime().percentile3().lt(500),
+   global().failedRequests().percent().lt(0.5)
+ )</code></pre>
+<hr>
+<h3>5. Séquence de tests à exécuter dans l'ordre</h3>
 <ol>
-<li><strong>Identifier les scénarios critiques</strong></li>
-<ul>
-<li>User journeys les plus fréquents selon les analytics de production</li>
-<li>Opérations les plus coûteuses en ressources (requêtes lourdes, uploads)</li>
-<li>Points chauds identifiés par le monitoring existant</li>
-<li>Scénarios de pic prévisibles (soldes, lancement de produit, horaires de pointe)</li>
-</ul>
+<li><strong>Smoke test</strong> — 1–2 VU, 30 s : valider que le script est correct, pas d'erreur évidente.</li>
+<li><strong>Baseline test</strong> — charge actuelle de production, 10 min : établir la référence.</li>
+<li><strong>Load test</strong> — cible nominale, 30 min : vérifier les SLA.</li>
+<li><strong>Stress test</strong> — augmenter jusqu'à rupture (binary search sur les VU) : trouver le breaking point.</li>
+<li><strong>Spike test</strong> — 0 → cible × 3 en 30 s, redescente : résilience aux pics soudains.</li>
+<li><strong>Soak test</strong> — charge nominale, 2–4 h : détecter memory leaks et dégradation progressive.</li>
 </ol>
-<ol>
-<li><strong>Choix de l'outil adapté</strong></li>
+<p>Règle : <strong>ne pas sauter l'étape smoke</strong>. Un bug de script sous 500 VU coûte du temps et fausse les métriques.</p>
+<hr>
+<h3>6. Monitoring pendant le test</h3>
+<p>Lancer ces commandes en parallèle dans des terminaux séparés :</p>
+<pre><code class="lang-bash"># CPU / RAM serveur
+watch -n2 'mpstat 1 1 &amp;&amp; free -h'
+
+# Connexions DB actives (PostgreSQL)
+watch -n5 &quot;psql -U postgres -c \&quot;SELECT count(*) FROM pg_stat_activity WHERE state='active';\&quot;&quot;
+
+# Pool de connexions (si HikariCP)
+curl -s http://localhost:8080/actuator/metrics/hikaricp.connections.active | jq .
+
+# Logs erreurs en direct
+tail -f /var/log/app/error.log | grep -E 'ERROR|WARN|timeout'</code></pre>
+<p>Stack recommandée : k6 → InfluxDB → Grafana (dashboard k6 officiel ID <code>2587</code>).</p>
+<hr>
+<h3>7. Analyser les résultats</h3>
+<p>Checklist d'interprétation :</p>
 <ul>
-<li><strong>k6</strong> : scripts en JavaScript, idéal pour les développeurs, CI/CD-friendly</li>
-<li><strong>JMeter</strong> : interface graphique, adapté aux équipes QA non-développeurs</li>
-<li><strong>Gatling</strong> : DSL Scala/Kotlin, excellents rapports HTML, haute performance</li>
-<li><strong>Artillery</strong> : YAML/JavaScript, orienté Node.js, bonne intégration AWS</li>
+<li><strong>p95 dépasse le SLA</strong> → chercher d'abord les slow queries (EXPLAIN ANALYZE, APM traces).</li>
+<li><strong>Error rate &gt; seuil</strong> → distinguer 4xx (données test, auth) de 5xx (vrai bug serveur).</li>
+<li><strong>CPU &gt; 80 % soutenu</strong> → bottleneck CPU : profiler (async-profiler, py-spy), envisager le scaling horizontal.</li>
+<li><strong>Latence augmente linéairement avec les VU</strong> → souvent le pool DB ou le thread pool applicatif.</li>
+<li><strong>Latence stable puis cliff soudain</strong> → saturation d'une file d'attente (queue depth, connection pool).</li>
+<li><strong>Memory croissante sur soak test</strong> → memory leak : heap dump + analyse (Eclipse MAT, jmap).</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Écriture des scripts de test</strong></li>
+<pre><code class="lang-bash"># k6 — extraire p95 du rapport JSON
+k6 run --out json=results.json script.js
+cat results.json | jq '.metrics.http_req_duration.values[&quot;p(95)&quot;]'</code></pre>
+<hr>
+<h3>8. Rapport et capacity planning</h3>
+<p>Template de synthèse :</p>
+<pre><code>## Résultats — [Date] — [Version app] — [Infra : 2×c5.xlarge RDS t3.large]
+
+| Scénario    | VU  | p50  | p95   | p99    | Errors | Throughput |
+|-------------|-----|------|-------|--------|--------|-----------|
+| Login       | 100 | 45ms | 210ms | 480ms  | 0.1%   | 95 req/s  |
+| Checkout    | 100 | 120ms| 550ms | 1100ms | 0.3%   | 42 req/s  |
+
+Breaking point : 340 VU (p95 &gt; 1 s, errors &gt; 2 %)
+Recommandation : ajouter index sur orders.user_id — gain estimé 40 % sur p95 checkout</code></pre>
+<p>Capacity planning : <code>VU_max_safe = breaking_point × 0.7</code> (marge 30 %).</p>
+<hr>
+<h2>Anti-patterns / Pièges</h2>
 <ul>
-<li>Modéliser les scénarios réels (navigation, login, panier, checkout)</li>
-<li>Configurer le ramp-up progressif (montée en charge graduelle)</li>
-<li>Ajouter du think time pour simuler le comportement humain</li>
-<li>Paramétrer les données (users différents, produits variés, tokens rotatifs)</li>
+<li><strong>Tester sans think time</strong> → tous les VU frappent en continu, scénario irréaliste, résultats trop pessimistes.</li>
+<li><strong>Pool de données unique</strong> → un seul user en cache, latence biaisée à la baisse.</li>
+<li><strong>Ignorer le ramp-up</strong> → pic immédiat de connexions, échec précoce non représentatif.</li>
+<li><strong>Mélanger smoke et load dans la même run</strong> → métriques parasitées par la phase de démarrage.</li>
+<li><strong>Lancer depuis la machine locale</strong> → bande passante du client devient le bottleneck.</li>
+<li><strong>Comparer p99 entre tests sans fixer la seed random</strong> → think time variable rend la comparaison impossible.</li>
+<li><strong>Ne pas isoler l'environnement</strong> → un autre déploiement ou job parallèle fausse les mesures.</li>
+<li><strong>Tester en production sans coupure</strong> → risque SLA réel, données corrompues, alertes PagerDuty intempestives.</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Types de tests à exécuter</strong></li>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li><strong>Smoke test</strong> : 1-2 users, valider que le script fonctionne sans erreur</li>
-<li><strong>Load test</strong> : charge nominale attendue, vérifier les SLA</li>
-<li><strong>Stress test</strong> : dépasser la capacité pour trouver le point de rupture</li>
-<li><strong>Spike test</strong> : montée brutale et soudaine de charge</li>
-<li><strong>Soak/Endurance test</strong> : charge normale sur longue durée (memory leaks, dégradation)</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Exécution et monitoring en temps réel</strong></li>
-<ul>
-<li>Observer CPU, RAM, et I/O des serveurs pendant le test</li>
-<li>Surveiller les connexions actives à la base de données</li>
-<li>Monitorer les error rates et les timeouts en direct</li>
-<li>Utiliser Grafana + InfluxDB ou k6 Cloud pour la visualisation temps réel</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Analyse des résultats</strong></li>
-<ul>
-<li>Comparer p50 (médiane), p95 et p99 aux objectifs définis</li>
-<li>Calculer le throughput réel (requêtes réussies par seconde)</li>
-<li>Identifier les bottlenecks (CPU saturé, DB lente, pool de connexions épuisé)</li>
-<li>Corréler les pics de latence avec les métriques infrastructure</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Rapport et recommandations</strong></li>
-<ul>
-<li>Synthèse des résultats par scénario avec graphiques de tendance</li>
-<li>Identification claire des goulets d'étranglement et de leurs causes</li>
-<li>Recommandations d'optimisation priorisées (caching, indexation, scaling)</li>
-<li>Plan de capacity planning : estimer les ressources nécessaires pour X users</li>
-</ul>
-</ol>
-<h2>Règles</h2>
-<ul>
-<li>Commence toujours par un smoke test avant tout test de charge réel.</li>
-<li>Ne teste jamais en production sans accord préalable et fenêtre de maintenance.</li>
-<li>Paramètre les données pour éviter les biais de cache et les résultats non représentatifs.</li>
-<li>Documente le contexte exact du test (version, infrastructure, heure) pour reproductibilité.</li>
-<li>Fournis des scripts complets et exécutables adaptés à l'outil choisi par l'utilisateur.</li>
+<li>Intégrer le load test dans la CI sur chaque release candidate (k6 + GitHub Actions, seuil <code>thresholds</code> comme gate).</li>
+<li>Versionner les scripts avec le code applicatif (même repo, dossier <code>tests/load/</code>).</li>
+<li>Utiliser des environnements de staging iso-prod (même SKU VM/DB) pour des résultats transposables.</li>
+<li>Activer le tracing distribué (OpenTelemetry) pendant le test pour relier la latence HTTP aux spans internes.</li>
+<li>Documenter systématiquement : version app, sha commit, infra exacte, heure, paramètres k6 — sans cela, la reproductibilité est impossible.</li>
 </ul>
 </article>
 </main>

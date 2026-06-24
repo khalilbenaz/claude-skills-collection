@@ -5,76 +5,101 @@ description: Audit de sécurité des dépendances — détection de vulnérabili
 
 # Audit de Sécurité des Dépendances
 
-## Workflow
+## Workflow en 5 étapes
 
-1. **Scanner** : identifier les vulnérabilités connues (CVE) dans les dépendances.
-2. **Évaluer** : prioriser par sévérité (critique > haute > moyenne > basse).
-3. **Corriger** : mettre à jour, patcher ou remplacer.
-4. **Automatiser** : CI/CD, Dependabot, alertes.
+### 1. Scanner — détecter les vulnérabilités
 
-## Outils par écosystème
-
-| Écosystème | Outil natif | Outil avancé |
-|-----------|-------------|--------------|
-| **.NET** | `dotnet list package --vulnerable` | Snyk, OWASP Dependency-Check |
-| **npm** | `npm audit` | Snyk, Socket.dev |
-| **Python** | `pip-audit` | Safety, Snyk |
-| **Go** | `govulncheck` | Snyk |
-| **Rust** | `cargo audit` | — |
-
-## Commandes d'audit
-
-### .NET
+Lancer l'outil natif de l'écosystème, **toujours avec les transitives** :
 
 ```bash
-# Lister les packages vulnérables
+# .NET
 dotnet list package --vulnerable --include-transitive
 
-# Format JSON pour CI
-dotnet list package --vulnerable --format json
-
-# Mettre à jour un package spécifique
-dotnet add package PackageName --version X.Y.Z
-```
-
-### npm
-
-```bash
-# Audit complet
-npm audit
-
-# Audit avec fix automatique (non-breaking)
-npm audit fix
-
-# Rapport JSON pour CI
+# npm / pnpm / yarn
 npm audit --json
+pnpm audit --json
+yarn npm audit --json
 
-# Fix incluant les major versions (attention !)
-npm audit fix --force
+# Python
+pip-audit -r requirements.txt --output json
+
+# Go
+govulncheck ./...
+
+# Rust
+cargo audit
+
+# Multi-écosystème (recommandé en CI)
+trivy fs . --scanners vuln --exit-code 1
 ```
 
-### Python
+### 2. Évaluer — prioriser par impact réel
+
+Ne pas traiter toutes les CVE de la même façon. Critères de décision :
+
+| Critère | Poids | Question à se poser |
+|---|---|---|
+| CVSS score | élevé | ≥ 7.0 = traiter en priorité |
+| Exploitabilité | très élevé | Existe-t-il un exploit public (Exploit DB, PoC GitHub) ? |
+| Accessibilité du code vulnérable | critique | Mon code appelle-t-il la fonction vulnérable ? |
+| Exposition réseau | élevé | Le service est-il exposé sur Internet ? |
+| Sévérité pour le domaine | modéré | Injection SQL ≠ DoS selon le contexte métier |
+
+**Règle pratique** : une CVE High sur une lib utilisée uniquement en CLI de dev vaut moins qu'une CVE Medium sur un endpoint public.
+
+### 3. Corriger — stratégies par cas
 
 ```bash
-# Avec pip-audit
-pip-audit
-pip-audit --fix
-pip-audit -r requirements.txt
+# Cas 1 : mise à jour mineure/patch disponible (idéal)
+npm update <package>
+dotnet add package <Package> --version <X.Y.Z>
 
-# Avec safety
-safety check -r requirements.txt
+# Cas 2 : la version fixée n'est pas compatible (conflict)
+# → overrides npm (forcer une version transitive)
+# package.json :
+# "overrides": { "vulnerable-dep": ">=4.2.1" }
+
+# Cas 3 : pas de fix disponible → remplacer ou isoler
+# - Chercher un fork actif ou un package alternatif
+# - Wrapper la lib pour limiter la surface d'attaque
+# - Ajouter un contrôle applicatif (validation d'entrée) en attendant
+
+# Cas 4 : faux positif documenté → ignorer avec justification
+npm audit --json | jq '.vulnerabilities | to_entries[] | select(.value.severity=="high")'
+# Puis documenter dans .auditignore / .snyk / audit-ignore.json
 ```
 
-## Intégration CI/CD
+### 4. Générer un SBOM — inventaire des dépendances
 
-### GitHub Actions
+```bash
+# CycloneDX (standard recommandé 2025-2026)
+# .NET
+dotnet CycloneDX . -o ./sbom -j   # JSON
+
+# npm
+npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file sbom.json
+
+# Python
+cyclonedx-py environment -o sbom.json
+
+# Universel avec Syft
+syft . -o cyclonedx-json=sbom.json
+```
+
+Stocker le SBOM en artifact CI et le comparer entre versions pour détecter les régressions.
+
+### 5. Automatiser — CI/CD et alertes
+
+#### GitHub Actions (polyglotte)
 
 ```yaml
-name: Security Audit
+name: Dependency Audit
 on:
-  schedule:
-    - cron: '0 8 * * 1'  # Chaque lundi à 8h
   pull_request:
+  push:
+    branches: [main, develop]
+  schedule:
+    - cron: '0 7 * * 1'  # lundi 7h
 
 jobs:
   audit:
@@ -82,21 +107,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: .NET Audit
+      # .NET
+      - name: .NET audit
         run: |
           dotnet restore
           dotnet list package --vulnerable --include-transitive 2>&1 | tee audit.txt
-          if grep -q "has the following vulnerable packages" audit.txt; then
-            echo "::error::Vulnérabilités détectées"
-            exit 1
-          fi
+          grep -q "has the following vulnerable packages" audit.txt && exit 1 || true
 
-      - name: npm Audit
+      # npm
+      - name: npm audit
         working-directory: ./frontend
-        run: npm audit --audit-level=high
+        run: npm ci && npm audit --audit-level=high
+
+      # Scan universel (fallback)
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          exit-code: '1'
+          severity: 'HIGH,CRITICAL'
+          format: sarif
+          output: trivy.sarif
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy.sarif
 ```
 
-### Dependabot
+#### Dependabot
 
 ```yaml
 # .github/dependabot.yml
@@ -108,26 +149,45 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 10
     labels: ["dependencies", "security"]
-    reviewers: ["team-security"]
+    groups:
+      minor-patch:
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    versioning-strategy: increase-if-necessary
 ```
 
-## Processus de correction
+## SLA de correction
 
-| Sévérité | SLA de correction | Action |
-|----------|------------------|--------|
-| **Critique** (CVSS 9-10) | 24 heures | Patch immédiat, hotfix si nécessaire |
-| **Haute** (CVSS 7-8.9) | 7 jours | Inclure dans le prochain sprint |
-| **Moyenne** (CVSS 4-6.9) | 30 jours | Planifier la mise à jour |
-| **Basse** (CVSS 0-3.9) | 90 jours | Inclure dans la maintenance |
+| Sévérité | CVSS | Délai | Action |
+|---|---|---|---|
+| **Critique** | 9.0–10.0 | 24 h | Hotfix immédiat, bloquer le merge |
+| **Haute** | 7.0–8.9 | 7 jours | Sprint courant, bloquer le merge |
+| **Moyenne** | 4.0–6.9 | 30 jours | Planifier, ne bloque pas (sauf exposition réseau) |
+| **Basse** | 0.1–3.9 | 90 jours | Maintenance ordinaire |
 
-## Règles
-- L'audit de dépendances doit tourner **automatiquement** en CI sur chaque PR.
-- Les vulnérabilités **critiques** et **hautes** doivent bloquer le merge.
-- Revoir les dépendances **transitives** (pas seulement les directes).
-- Maintenir un **inventaire** (SBOM) des dépendances de chaque projet.
-- Ne jamais ignorer un audit échoué sans documenter la raison.
+## Garde-fous et anti-patterns
+
+**Ne pas faire :**
+- `npm audit fix --force` sans lire ce qui change — peut introduire des breaking changes majeurs en cascade.
+- Ignorer une CVE sans documenter la raison et une date de réévaluation.
+- N'auditer que les dépendances directes — les transitives représentent ~80 % des vulnérabilités remontées.
+- Supprimer le step d'audit de la CI "pour débloquer le build" — c'est exactement là que des incidents se produisent.
+- Faire confiance à un seul scanner — coupler l'outil natif + un scanner généraliste (Trivy, Snyk).
+
+**Pièges courants :**
+- `dotnet list package --vulnerable` nécessite une connexion à NuGet.org ; en environnement air-gapped, utiliser OWASP Dependency-Check avec un NVD local.
+- `npm audit` rapporte des vulnérabilités dans des `devDependencies` non embarquées en production : filtrer avec `--omit=dev` pour les audits de surface de déploiement.
+- Les forks privés et les packages internes n'apparaissent pas dans les bases CVE publiques — prévoir un scan de composition du code source (SAST) en complément.
+- Un SBOM obsolète de 2 semaines peut masquer une nouvelle CVE publiée — programmer la génération à chaque release.
+
+## Bonnes pratiques 2026
+
+- **Lock files obligatoires** : `package-lock.json`, `poetry.lock`, `Cargo.lock`, `packages.lock.json` (.NET) — committer et vérifier leur intégrité en CI (`npm ci` vs `npm install`).
+- **Vérification d'intégrité supply-chain** : activer Sigstore/cosign pour les images Docker, vérifier les checksums des packages critiques.
+- **Score OpenSSF** : intégrer la vérification du Scorecard des dépendances critiques (`ossf/scorecard-action`).
+- **Politique de rétention** : définir une version minimale supportée par lib et automatiser les alertes de fin de vie (endoflife.date API).
+- **Audit interne périodique** : revue trimestrielle manuelle des dépendances à fort risque (auth, crypto, parsing XML/YAML).

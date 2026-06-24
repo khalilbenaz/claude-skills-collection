@@ -97,23 +97,150 @@ cp -r claude-skills-collection/skills/networking-wireshark-analyst ~/.claude/ski
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Wireshark Analyst</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Définition du périmètre de capture</strong> — Identifier l'interface réseau cible, le type de trafic à analyser et la durée de capture nécessaire pour reproduire le problème.</li>
-<li><strong>Configuration des filtres de capture</strong> — Appliquer des filtres BPF (Berkeley Packet Filter) pour limiter le volume de données capturées aux flux pertinents (host, port, protocole).</li>
-<li><strong>Lancement de la capture</strong> — Démarrer la capture avec Wireshark ou <code>tcpdump</code> en configurant la taille maximale des fichiers, la rotation et le stockage approprié.</li>
-<li><strong>Application des filtres d'affichage</strong> — Utiliser les filtres d'affichage Wireshark pour isoler les conversations, protocoles ou anomalies spécifiques (retransmissions TCP, erreurs HTTP, handshakes TLS).</li>
-<li><strong>Analyse des flux et conversations</strong> — Examiner les statistiques de conversation, les graphiques d'E/S, les diagrammes de flux et les séquences TCP pour identifier les goulots d'étranglement.</li>
-<li><strong>Identification des anomalies</strong> — Repérer les paquets malformés, les retransmissions excessives, les fenêtres TCP réduites, les latences anormales et les erreurs protocolaires.</li>
-<li><strong>Corrélation avec les logs applicatifs</strong> — Croiser les résultats de l'analyse réseau avec les journaux applicatifs et système pour confirmer la cause racine du problème.</li>
-<li><strong>Rapport d'analyse</strong> — Rédiger un rapport détaillé incluant les captures d'écran pertinentes, les filtres utilisés, les statistiques clés et les recommandations d'amélioration.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Définir le périmètre de capture</h3>
 <ul>
-<li>Toujours obtenir une autorisation écrite avant de capturer du trafic réseau, car la capture peut contenir des données sensibles ou personnelles soumises à la réglementation.</li>
-<li>Limiter la capture au strict nécessaire en utilisant des filtres BPF précis pour réduire le volume de données et protéger la confidentialité.</li>
-<li>Ne jamais stocker les fichiers pcap contenant des données sensibles sur des supports non chiffrés ou des emplacements accessibles publiquement.</li>
-<li>Utiliser les profils de colonnes et les codes couleur personnalisés dans Wireshark pour accélérer l'identification visuelle des anomalies réseau.</li>
-<li>Supprimer les fichiers de capture après analyse et ne conserver que les extraits pertinents anonymisés dans le rapport final.</li>
+<li>Identifier l'interface réseau (NIC physique, loopback <code>lo</code>, VPN, VLAN).</li>
+<li>Déterminer le vecteur : client→serveur, serveur→serveur, broadcast.</li>
+<li>Évaluer la durée : capture courte (problème reproductible) vs. capture longue avec rotation.</li>
+</ul>
+<p><strong>Décision — capture embarquée ou déportée ?</strong></p>
+<ul>
+<li>Accès SSH sur la machine cible → <code>tcpdump</code> en CLI, rapatriement du pcap.</li>
+<li>Machine locale → Wireshark directement.</li>
+<li>Équipement réseau → port mirroring (SPAN) ou tap physique.</li>
+</ul>
+<h3>2. Configurer les filtres BPF (capture)</h3>
+<p>Limiter dès la capture réduit le bruit et protège la confidentialité.</p>
+<pre><code class="lang-bash"># Capturer uniquement le trafic HTTP/HTTPS vers un serveur précis
+tcpdump -i eth0 -w /tmp/capture.pcap \
+  'host 10.1.2.3 and (port 80 or port 443)'
+
+# Capturer avec rotation (100 MB max, 5 fichiers)
+tcpdump -i eth0 -C 100 -W 5 -w /tmp/cap.pcap \
+  'tcp and host 192.168.1.0/24'
+
+# Exclure SSH pour ne pas capturer sa propre session
+tcpdump -i eth0 -w /tmp/cap.pcap 'not port 22'
+
+# Capturer DNS + réponses ICMP seulement
+tcpdump -i any -w /tmp/dns.pcap 'port 53 or icmp'</code></pre>
+<p><strong>Filtres BPF courants :</strong></p>
+<table><thead><tr><th>Besoin</th><th>Filtre BPF</th></tr></thead><tbody><tr><td>Un hôte uniquement</td><td><code>host 10.0.0.5</code></td></tr><tr><td>Subnet</td><td><code>net 192.168.1.0/24</code></td></tr><tr><td>Port source ou dest</td><td><code>port 8080</code></td></tr><tr><td>TCP SYN uniquement</td><td><code>tcp[tcpflags] &amp; tcp-syn != 0</code></td></tr><tr><td>UDP + DNS</td><td><code>udp port 53</code></td></tr><tr><td>ICMP</td><td><code>icmp</code></td></tr></tbody></table>
+<h3>3. Lancer la capture (Wireshark ou tcpdump)</h3>
+<pre><code class="lang-bash"># Capture headless longue durée, horodatage dans le nom de fichier
+tcpdump -i eth0 -s 0 -w &quot;/tmp/cap_$(date +%Y%m%dT%H%M%S).pcap&quot; \
+  'host 10.0.0.1'
+
+# Capture Wireshark depuis la CLI (tshark)
+tshark -i eth0 -a duration:60 -w /tmp/cap.pcap \
+  -f 'port 443'
+
+# Lire un pcap existant dans tshark (sans GUI)
+tshark -r /tmp/cap.pcap -Y &quot;http.response.code &gt;= 400&quot;</code></pre>
+<h3>4. Appliquer les filtres d'affichage Wireshark</h3>
+<p>Les filtres d'affichage sont distincts des filtres BPF — syntaxe propre à Wireshark.</p>
+<pre><code># Retransmissions TCP
+tcp.analysis.retransmission
+
+# Erreurs HTTP (4xx/5xx)
+http.response.code &gt;= 400
+
+# Handshake TLS uniquement
+tls.handshake
+
+# Conversations d'un hôte
+ip.addr == 10.0.0.5
+
+# Paquets avec delta-time &gt; 1 seconde (latence)
+frame.time_delta &gt; 1
+
+# RST TCP (connexions coupées brutalement)
+tcp.flags.reset == 1
+
+# ICMP Destination Unreachable
+icmp.type == 3
+
+# Combiner : trafic HTTP d'un hôte précis sans les succès
+ip.addr == 10.0.0.5 &amp;&amp; http.response.code &gt;= 400
+
+# Requêtes DNS avec erreur NXDOMAIN
+dns.flags.rcode == 3</code></pre>
+<h3>5. Analyser les flux et statistiques</h3>
+<p><strong>Outils Wireshark :</strong></p>
+<ul>
+<li><code>Statistics &gt; Conversations</code> → classement par volume, latence par pair.</li>
+<li><code>Statistics &gt; IO Graph</code> → repérer les pics de trafic corrélés aux incidents.</li>
+<li><code>Analyze &gt; Follow &gt; TCP Stream</code> → lire l'échange applicatif en clair.</li>
+<li><code>Statistics &gt; TCP Stream Graphs &gt; Time-Sequence (tcptrace)</code> → visualiser les retransmissions et fenêtres.</li>
+<li><code>Telephony &gt; RTP Streams</code> → qualité VoIP (jitter, perte de paquets).</li>
+</ul>
+<p><strong>tshark — statistiques en ligne de commande :</strong></p>
+<pre><code class="lang-bash"># Top 10 conversations TCP par octets
+tshark -r cap.pcap -q -z conv,tcp | sort -k6 -rn | head -10
+
+# Statistiques HTTP
+tshark -r cap.pcap -q -z http,tree
+
+# Temps de réponse HTTP
+tshark -r cap.pcap -T fields \
+  -e http.request.uri -e http.time \
+  -Y &quot;http.time&quot;</code></pre>
+<h3>6. Identifier les anomalies réseau</h3>
+<p><strong>Checklist rapide :</strong></p>
+<table><thead><tr><th>Anomalie</th><th>Filtre d'affichage</th><th>Signification</th></tr></thead><tbody><tr><td>Retransmissions TCP</td><td><code>tcp.analysis.retransmission</code></td><td>Perte de paquets, congestion</td></tr><tr><td>Fenêtre TCP à zéro</td><td><code>tcp.analysis.zero_window</code></td><td>Récepteur saturé</td></tr><tr><td>Duplicate ACK</td><td><code>tcp.analysis.duplicate_ack</code></td><td>Perte en transit</td></tr><tr><td>Reset inattendu</td><td><code>tcp.flags.reset==1</code></td><td>Connexion refusée ou timeout</td></tr><tr><td>Latence DNS élevée</td><td><code>dns &amp;&amp; frame.time_delta &gt; 0.5</code></td><td>Résolution lente</td></tr><tr><td>Retransmission SYN</td><td><code>tcp.flags==0x002 &amp;&amp; tcp.analysis.retransmission</code></td><td>Serveur injoignable</td></tr><tr><td>TLS Alert</td><td><code>tls.alert_message</code></td><td>Erreur de certificat ou chiffrement</td></tr></tbody></table>
+<p><strong>Analyse de latence :</strong></p>
+<pre><code class="lang-bash"># Extraire RTT TCP (SYN → SYN-ACK) pour chaque connexion
+tshark -r cap.pcap -T fields \
+  -e ip.src -e ip.dst -e tcp.analysis.ack_rtt \
+  -Y &quot;tcp.analysis.ack_rtt &gt; 0.1&quot;</code></pre>
+<h3>7. Croiser avec les logs applicatifs</h3>
+<ul>
+<li>Synchroniser les timestamps : vérifier que le pcap et les logs ont le même fuseau horaire.</li>
+<li>Utiliser <code>frame.time</code> dans Wireshark en UTC (<code>View &gt; Time Display Format &gt; UTC</code>).</li>
+<li>Corréler les erreurs HTTP 5xx avec les pics de retransmissions TCP dans la même fenêtre temporelle.</li>
+<li>Pour les microservices : filtrer par <code>X-Request-Id</code> ou <code>trace-id</code> dans les headers HTTP capturés.</li>
+</ul>
+<pre><code class="lang-bash"># Extraire les timestamps et URLs d'erreur en CSV
+tshark -r cap.pcap -T fields \
+  -e frame.time -e http.request.uri -e http.response.code \
+  -Y &quot;http.response.code &gt;= 500&quot; \
+  -E header=y -E separator=, &gt; erreurs_http.csv</code></pre>
+<h3>8. Produire le rapport</h3>
+<ul>
+<li>Inclure : interface, durée, filtres BPF utilisés, volume capturé.</li>
+<li>Joindre les filtres d'affichage qui reproduisent chaque anomalie.</li>
+<li>Exporter uniquement les paquets pertinents (<code>File &gt; Export Specified Packets</code>).</li>
+<li>Anonymiser les IPs si le pcap est partagé (<code>File &gt; Export Packet Dissections</code> ou <code>editcap</code> avec <code>--anonymize</code>).</li>
+</ul>
+<pre><code class="lang-bash"># Anonymiser un pcap avant partage
+editcap --anonymize -r cap.pcap cap_anonymized.pcap</code></pre>
+<hr>
+<h2>Garde-fous et pièges</h2>
+<p><strong>Pièges courants :</strong></p>
+<ul>
+<li><strong>Capturer sur loopback et manquer le problème</strong> — le trafic loopback bypass le NIC, utiliser <code>lo</code> uniquement pour du local-local.</li>
+<li><strong>Taille de snap incorrecte</strong> — <code>tcpdump -s 0</code> capture le paquet entier ; <code>-s 68</code> (défaut ancien) tronque les payloads applicatifs.</li>
+<li><strong>Timestamps décalés</strong> — NTP non synchronisé rend la corrélation avec les logs impossible ; vérifier avant la capture.</li>
+<li><strong>Volume non maîtrisé</strong> — sans filtre BPF ni rotation, un trafic de 1 Gbps remplit le disque en minutes.</li>
+<li><strong>TLS/HTTPS chiffré</strong> — la capture montre l'enveloppe TCP mais pas le payload ; utiliser le SSLKEYLOGFILE si disponible.</li>
+<li><strong>Confusion BPF vs. display filter</strong> — les filtres BPF s'appliquent à la capture (syntaxe tcpdump) ; les display filters s'appliquent après (syntaxe Wireshark/tshark).</li>
+<li><strong>Capturer la propre session SSH</strong> — toujours exclure <code>not port 22</code> pour éviter la boucle.</li>
+</ul>
+<p><strong>Sécurité et conformité :</strong></p>
+<ul>
+<li>Obtenir une autorisation écrite avant toute capture en production.</li>
+<li>Ne jamais stocker de pcap en clair sur un partage réseau ou un dépôt git.</li>
+<li>Supprimer les fichiers après analyse ; conserver uniquement les extraits anonymisés.</li>
+<li>En environnement réglementé (PCI-DSS, RGPD) : consulter le RSSI avant de capturer un segment portant des données cartes ou PII.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Préférer <strong>tshark</strong> en CI/CD pour l'automatisation et les rapports scriptés.</li>
+<li>Utiliser <strong>Zeek</strong> (ex-Bro) pour l'analyse comportementale long terme et la génération de logs structurés.</li>
+<li>Intégrer les pcap dans <strong>Arkime</strong> (Moloch) pour la rétention et la recherche à grande échelle.</li>
+<li>Activer le <strong>SSLKEYLOGFILE</strong> dans les navigateurs/JVMs de test pour décrypter TLS en local sans casser le chiffrement en prod.</li>
+<li>Pour Kubernetes : utiliser <code>kubectl sniff</code> ou <strong>Hubble</strong> (Cilium) plutôt que tcpdump dans les pods.</li>
 </ul>
 </article>
 </main>

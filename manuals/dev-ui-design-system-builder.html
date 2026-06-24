@@ -96,24 +96,172 @@ cp -r claude-skills-collection/skills/dev-ui-design-system-builder ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>UI Design System Builder</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Audit de l'existant</strong> : analyser les interfaces actuelles pour identifier les inconsistances visuelles, les composants dupliqués ou contradictoires, les styles orphelins, et mesurer l'écart entre ce qui est designé et ce qui est implémenté.</li>
-<li><strong>Fondations — Design Tokens</strong> : définir les tokens de base (couleurs primitives, typographie, spacing scale en multiples de 4px/8px, shadows, border-radius, breakpoints, z-index, transitions) comme single source of truth.</li>
-<li><strong>Palette de couleurs</strong> : construire la palette complète — couleurs primaires, secondaires, neutrals (grays), sémantiques (success/warning/error/info), surfaces et backgrounds, en garantissant les ratios de contraste WCAG AA/AAA et en prévoyant le dark mode.</li>
-<li><strong>Système typographique</strong> : établir la type scale (H1–H6, body, caption, label), sélectionner les font families (display + text), définir les weights, line-heights, letter-spacings, et s'assurer de la lisibilité responsive sur tous les breakpoints.</li>
-<li><strong>Composants atomiques</strong> : créer Button (variants : primary, secondary, ghost, destructive ; states : default, hover, active, disabled, loading), Input, Badge, Avatar, Icon, Divider, Spinner — chacun avec props, variants et tous les états documentés.</li>
-<li><strong>Composants moléculaires</strong> : assembler Card, Modal, Dropdown, Toast/Snackbar, Table, Form (avec validation), Navigation (header, sidebar, breadcrumb), Tabs — en respectant la composition des composants atomiques.</li>
-<li><strong>Documentation et guidelines</strong> : rédiger les règles d'usage (do/don't illustrés), les spacing rules, les copy guidelines (tone, capitalization, longueur), et les accessibility requirements pour chaque composant.</li>
-<li><strong>Implémentation</strong> : livrer la Figma library (avec variables/styles liés), Storybook pour les développeurs, les CSS custom properties ou le Tailwind config généré depuis les tokens, et un versioning sémantique (changelog, migration guides).</li>
-</ol>
-<h2>Règles</h2>
+<h2>Étapes du workflow</h2>
+<h3>1. Audit de l'existant</h3>
+<p>Avant de créer quoi que ce soit, inventorier :</p>
+<pre><code>- Compter les valeurs de couleur uniques dans le CSS (grep -r &quot;color:&quot; src/ | sort -u)
+- Lister les font-size utilisées
+- Identifier les composants Button/Card/Modal dupliqués entre équipes
+- Mesurer l'écart design (Figma) ↔ implémentation (DOM)</code></pre>
+<p><strong>Critère de go/no-go</strong> : si &gt; 5 composants identiques avec des styles différents coexistent → design system prioritaire. Sinon, un simple tokens file suffit peut-être.</p>
+<hr>
+<h3>2. Design Tokens — single source of truth</h3>
+<p>Définir les tokens en JSON (style-dictionary) ou en CSS custom properties.</p>
+<p><strong>Structure recommandée (style-dictionary 4.x) :</strong></p>
+<pre><code class="lang-json">{
+  &quot;color&quot;: {
+    &quot;brand&quot;: { &quot;primary&quot;: { &quot;value&quot;: &quot;#1A73E8&quot; } },
+    &quot;neutral&quot;: {
+      &quot;100&quot;: { &quot;value&quot;: &quot;#F5F5F5&quot; },
+      &quot;900&quot;: { &quot;value&quot;: &quot;#1A1A1A&quot; }
+    },
+    &quot;semantic&quot;: {
+      &quot;success&quot;: { &quot;value&quot;: &quot;{color.green.500}&quot; },
+      &quot;error&quot;:   { &quot;value&quot;: &quot;{color.red.600}&quot; }
+    }
+  },
+  &quot;spacing&quot;: {
+    &quot;xs&quot;:  { &quot;value&quot;: &quot;4px&quot;  },
+    &quot;sm&quot;:  { &quot;value&quot;: &quot;8px&quot;  },
+    &quot;md&quot;:  { &quot;value&quot;: &quot;16px&quot; },
+    &quot;lg&quot;:  { &quot;value&quot;: &quot;24px&quot; },
+    &quot;xl&quot;:  { &quot;value&quot;: &quot;32px&quot; }
+  },
+  &quot;typography&quot;: {
+    &quot;scale&quot;: {
+      &quot;h1&quot;: { &quot;value&quot;: &quot;2.25rem&quot; },
+      &quot;body&quot;: { &quot;value&quot;: &quot;1rem&quot; }
+    },
+    &quot;weight&quot;: {
+      &quot;regular&quot;: { &quot;value&quot;: 400 },
+      &quot;semibold&quot;: { &quot;value&quot;: 600 }
+    }
+  },
+  &quot;radius&quot;: {
+    &quot;sm&quot;: { &quot;value&quot;: &quot;4px&quot; },
+    &quot;md&quot;: { &quot;value&quot;: &quot;8px&quot; },
+    &quot;full&quot;: { &quot;value&quot;: &quot;9999px&quot; }
+  }
+}</code></pre>
+<p>Build via style-dictionary pour générer CSS, JS, iOS Swift, Android XML en parallèle :</p>
+<pre><code class="lang-bash">npx style-dictionary build --config sd.config.json</code></pre>
+<hr>
+<h3>3. Palette de couleurs</h3>
+<p><strong>Checklist WCAG 2.1 :</strong></p>
 <ul>
-<li>Base-toi sur les principes de l'atomic design et les standards d'accessibilité WCAG 2.1.</li>
-<li>Sois constructif : chaque recommandation de composant doit inclure les variants essentiels et les états interactifs.</li>
-<li>Fournis des exemples visuels de référence (Material Design, Radix, Shadcn/UI) pour contextualiser les choix.</li>
-<li>Adapte le système au contexte cible (web, mobile, desktop) et au stack technique de l'équipe.</li>
-<li>Pense scalabilité : chaque décision de token ou composant doit pouvoir évoluer sans casser l'existant.</li>
+<li>Texte normal sur fond : ratio ≥ 4.5:1 (AA) ou ≥ 7:1 (AAA)</li>
+<li>Texte large (≥18px bold) : ratio ≥ 3:1</li>
+<li>Composants UI et icônes : ratio ≥ 3:1</li>
+</ul>
+<pre><code class="lang-bash"># Vérification rapide
+npx @adobe/leonardo-contrast-colors --bg &quot;#FFFFFF&quot; --fg &quot;#1A73E8&quot;</code></pre>
+<p><strong>Structure de palette :</strong></p>
+<ul>
+<li>Primitifs (50–950 pour chaque teinte)</li>
+<li>Alias sémantiques (<code>--color-text-primary</code>, <code>--color-surface-danger</code>)</li>
+<li>Dark mode via <code>@media (prefers-color-scheme: dark)</code> OU data-attribute <code>[data-theme=&quot;dark&quot;]</code></li>
+</ul>
+<hr>
+<h3>4. Système typographique</h3>
+<p><strong>Type scale modulaire (ratio 1.25 — Major Third) :</strong></p>
+<table><thead><tr><th>Token</th><th>rem</th><th>px</th></tr></thead><tbody><tr><td><code>text-xs</code></td><td>0.64</td><td>~10</td></tr><tr><td><code>text-sm</code></td><td>0.8</td><td>~13</td></tr><tr><td><code>text-base</code></td><td>1.0</td><td>16</td></tr><tr><td><code>text-lg</code></td><td>1.25</td><td>20</td></tr><tr><td><code>text-xl</code></td><td>1.563</td><td>25</td></tr><tr><td><code>text-2xl</code></td><td>1.953</td><td>31</td></tr><tr><td><code>text-3xl</code></td><td>2.441</td><td>39</td></tr></tbody></table>
+<p>Règles :</p>
+<ul>
+<li>Line-height : 1.5 pour le corps, 1.2 pour les titres</li>
+<li>Toujours définir les tailles en <code>rem</code> (jamais <code>px</code> directement dans les tokens)</li>
+<li>Limiter à 2 familles max (display + body)</li>
+</ul>
+<hr>
+<h3>5. Composants atomiques</h3>
+<p>Pour chaque composant, livrer : <strong>props API + variants + états + accessibilité</strong>.</p>
+<p><strong>Exemple : Button</strong></p>
+<pre><code class="lang-tsx">// Variants: primary | secondary | ghost | destructive
+// Sizes: sm | md | lg
+// States: default | hover | active | disabled | loading
+
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
+  size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
+  disabled?: boolean;
+  leftIcon?: React.ReactNode;
+  onClick?: () =&gt; void;
+  children: React.ReactNode;
+}</code></pre>
+<p><strong>Composants atomiques prioritaires :</strong> <code>Button</code>, <code>Input</code>, <code>Checkbox</code>, <code>Radio</code>, <code>Badge</code>, <code>Avatar</code>, <code>Icon</code>, <code>Divider</code>, <code>Spinner</code>, <code>Tag</code></p>
+<hr>
+<h3>6. Composants moléculaires</h3>
+<p>Assembler les atomiques. Critère : un composant moléculaire contient ≥ 2 atomiques et a sa propre logique d'état.</p>
+<p><strong>Priorité par fréquence d'usage :</strong></p>
+<ol>
+<li>Card (header + body + footer)</li>
+<li>Modal / Dialog (focus trap + aria-modal)</li>
+<li>Toast / Snackbar (auto-dismiss, variants success/error)</li>
+<li>Dropdown / Select (virtualisé si &gt; 100 options)</li>
+<li>DataTable (sort, filter, pagination)</li>
+<li>Form (validation, error states, accessible labels)</li>
+</ol>
+<hr>
+<h3>7. Documentation — Storybook</h3>
+<pre><code class="lang-bash">npx storybook@latest init
+# stories colocalisées : Button.stories.tsx à côté de Button.tsx</code></pre>
+<p><strong>Structure d'une story minimale :</strong></p>
+<pre><code class="lang-tsx">export default {
+  title: 'Atoms/Button',
+  component: Button,
+  argTypes: { variant: { control: 'select' } },
+};
+
+export const AllVariants = () =&gt; (
+  &lt;div style={{ display: 'flex', gap: '8px' }}&gt;
+    {['primary','secondary','ghost','destructive'].map(v =&gt; (
+      &lt;Button key={v} variant={v as any}&gt;{v}&lt;/Button&gt;
+    ))}
+  &lt;/div&gt;
+);</code></pre>
+<p>Activer <code>@storybook/addon-a11y</code> pour les audits d'accessibilité inline.</p>
+<hr>
+<h3>8. Intégration Tailwind / CSS Variables</h3>
+<p><strong>Option A — Tailwind config depuis tokens :</strong></p>
+<pre><code class="lang-js">// tailwind.config.js
+module.exports = {
+  theme: {
+    colors: require('./tokens/colors.json'),
+    spacing: require('./tokens/spacing.json'),
+    borderRadius: require('./tokens/radius.json'),
+  },
+};</code></pre>
+<p><strong>Option B — CSS custom properties (framework-agnostic) :</strong></p>
+<pre><code class="lang-css">:root {
+  --color-primary:   #1A73E8;
+  --spacing-md:      16px;
+  --radius-md:       8px;
+  --font-size-base:  1rem;
+}</code></pre>
+<hr>
+<h3>9. Versioning et gouvernance</h3>
+<pre><code class="lang-bash"># Semantic versioning : MAJOR.MINOR.PATCH
+# MAJOR = breaking change (renommage token, suppression composant)
+# MINOR = nouveau composant ou token
+# PATCH = bug visuel, ajustement d'état
+
+npm version minor -m &quot;feat(button): add loading state&quot;</code></pre>
+<ul>
+<li>Maintenir un <code>CHANGELOG.md</code> par composant</li>
+<li>Migration guides pour chaque MAJOR</li>
+<li>Figma library versionnée avec auto-sync via Tokens Studio plugin</li>
+</ul>
+<hr>
+<h2>Garde-fous — Anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correctif</th></tr></thead><tbody><tr><td>Valeurs en dur (<code>color: #1A73E8</code> dans un composant)</td><td>Impossible de theming</td><td>Toujours passer par un token</td></tr><tr><td>Trop de variants dès le début</td><td>Complexity overhead</td><td>Commencer avec 3 variants max, ajouter sur usage réel</td></tr><tr><td>Composants trop couplés (Card qui contient une Table)</td><td>Impossible à réutiliser</td><td>Composer via props/slots</td></tr><tr><td>Aucun test d'accessibilité</td><td>Non-conformité WCAG</td><td>Ajouter axe-core dans les tests CI</td></tr><tr><td>Design tokens sans owner</td><td>Dérive silencieuse</td><td>Désigner un DX/Design Lead responsable</td></tr><tr><td>Dark mode ajouté après coup</td><td>Refactoring massif</td><td>Planifier les alias sémantiques dès le départ</td></tr><tr><td>Storybook non maintenu</td><td>Décalage doc ↔ réalité</td><td>PR bloquante si story manquante</td></tr></tbody></table>
+<hr>
+<h2>Références 2025-2026</h2>
+<ul>
+<li><strong>Radix UI</strong> + <strong>shadcn/ui</strong> : composants headless + copier-coller, approche recommandée pour React</li>
+<li><strong>Style Dictionary 4.x</strong> : génération multi-plateforme depuis un JSON de tokens</li>
+<li><strong>Tokens Studio</strong> (Figma plugin) : sync bidirectionnel Figma ↔ repo Git</li>
+<li><strong>Storybook 8.x</strong> : test visuel, a11y, interaction testing intégrés</li>
+<li><strong>WCAG 2.2</strong> (2023) : nouveaux critères focus appearance, target size minimum 24×24px</li>
 </ul>
 </article>
 </main>

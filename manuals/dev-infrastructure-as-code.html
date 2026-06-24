@@ -96,24 +96,143 @@ cp -r claude-skills-collection/skills/dev-infrastructure-as-code ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Infrastructure as Code</h1>
-<h2>Workflow</h2>
-<ol>
-<li>Analyse des besoins infrastructure : cloud provider cible, services requis (compute, réseau, stockage, base de données), topologie réseau et exigences de sécurité</li>
-<li>Choix de l'outil IaC adapté : Terraform pour le multi-cloud, Bicep pour Azure natif, Pulumi pour l'infrastructure en code natif (TypeScript, Python, Go)</li>
-<li>Structuration du projet : organisation en modules réutilisables, séparation par environnement, configuration du backend de state et conventions de nommage</li>
-<li>Écriture des ressources : compute (VMs, containers, fonctions), réseau (VNet, subnets, security groups), stockage, base de données et IAM/RBAC</li>
-<li>Gestion des variables et secrets : fichiers tfvars par environnement, intégration avec Azure Key Vault/AWS Secrets Manager, référencement sécurisé sans valeurs en dur</li>
-<li>State management et locking : remote state dans un backend sécurisé (Blob Storage, S3), state locking, procédures de migration et d'import de ressources existantes</li>
-<li>Validation et plan d'exécution : terraform plan/validate, détection de drift, politique de tag enforcement, revue des changements avant apply</li>
-<li>Intégration CI/CD : apply automatisé avec gates d'approbation, promotion entre environnements, drift detection planifiée, notifications sur changements</li>
-</ol>
-<h2>Règles</h2>
+<h2>Critères de choix d'outil</h2>
+<table><thead><tr><th>Critère</th><th>Terraform</th><th>Bicep</th><th>Pulumi</th></tr></thead><tbody><tr><td>Multi-cloud</td><td>✅</td><td>❌ Azure only</td><td>✅</td></tr><tr><td>Langage</td><td>HCL (DSL)</td><td>Bicep DSL</td><td>TS / Python / Go / .NET</td></tr><tr><td>Maturité état</td><td>Élevée</td><td>Élevée (Azure)</td><td>Moyenne</td></tr><tr><td>Courbe apprentissage</td><td>Faible</td><td>Très faible (Azure)</td><td>Nécessite dev skills</td></tr><tr><td>Meilleur pour</td><td>Tout cloud, équipes mixtes</td><td>Azure full-native, Azure Devs</td><td>Teams avec devs, logique complexe</td></tr></tbody></table>
+<p><strong>Règle</strong> : si Azure only → Bicep. Si multi-cloud ou équipes mixtes → Terraform. Si la logique dépasse les templates → Pulumi.</p>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Analyse du contexte</h3>
 <ul>
-<li>Adapte le code IaC au cloud provider de l'utilisateur (Azure avec Bicep/Terraform, AWS ou GCP avec Terraform/Pulumi)</li>
-<li>Fournis des fichiers de configuration complets, commentés et organisés selon les best practices du provider</li>
-<li>Priorise la sécurité : principe du moindre privilège pour IAM, chiffrement au repos et en transit, pas de secrets en clair dans le code</li>
-<li>Propose des solutions progressives : infrastructure minimale fonctionnelle d'abord, puis ajout de la haute disponibilité, du disaster recovery et de l'optimisation des coûts</li>
+<li>Cloud provider(s) cibles, régions</li>
+<li>Services requis : compute, réseau, storage, DB, IAM</li>
+<li>Environnements : dev / staging / prod (séparés ?)</li>
+<li>Contraintes : conformité, coûts, équipe existante</li>
 </ul>
+<h3>2. Structure du projet</h3>
+<p><strong>Terraform (recommandé)</strong></p>
+<pre><code>infra/
+├── modules/           # modules réutilisables (vnet, aks, sql…)
+│   └── vnet/
+│       ├── main.tf
+│       ├── variables.tf
+│       └── outputs.tf
+├── environments/
+│   ├── dev/
+│   │   ├── main.tf
+│   │   ├── terraform.tfvars
+│   │   └── backend.tf
+│   └── prod/
+│       ├── main.tf
+│       └── terraform.tfvars
+└── .terraform-version  # ex: 1.9.0</code></pre>
+<p><strong>Bicep</strong></p>
+<pre><code>infra/
+├── modules/
+│   └── storage.bicep
+├── main.bicep
+└── parameters/
+    ├── dev.bicepparam
+    └── prod.bicepparam</code></pre>
+<h3>3. Backend de state (Terraform)</h3>
+<pre><code class="lang-hcl"># backend.tf — à créer AVANT terraform init
+terraform {
+  backend &quot;azurerm&quot; {
+    resource_group_name  = &quot;rg-tfstate-prod&quot;
+    storage_account_name = &quot;sttfstateprod001&quot;
+    container_name       = &quot;tfstate&quot;
+    key                  = &quot;myapp/prod.terraform.tfstate&quot;
+  }
+}</code></pre>
+<p>Commandes de bootstrap du backend :</p>
+<pre><code class="lang-bash">az group create -n rg-tfstate-prod -l westeurope
+az storage account create -n sttfstateprod001 -g rg-tfstate-prod --sku Standard_LRS
+az storage container create -n tfstate --account-name sttfstateprod001</code></pre>
+<h3>4. Variables et secrets</h3>
+<pre><code class="lang-hcl"># variables.tf
+variable &quot;db_password&quot; {
+  description = &quot;Mot de passe de la base de données&quot;
+  type        = string
+  sensitive   = true  # masqué dans les logs
+}
+
+# Référence Key Vault (Azure)
+data &quot;azurerm_key_vault_secret&quot; &quot;db_password&quot; {
+  name         = &quot;db-password&quot;
+  key_vault_id = azurerm_key_vault.kv.id
+}</code></pre>
+<p>Passer les secrets <strong>sans les coder en dur</strong> :</p>
+<pre><code class="lang-bash"># Via variable d'environnement (CI/CD)
+export TF_VAR_db_password=&quot;$(az keyvault secret show --name db-password --vault-name mykv --query value -o tsv)&quot;
+terraform apply</code></pre>
+<h3>5. Cycle plan / apply</h3>
+<pre><code class="lang-bash"># Initialiser
+terraform init
+
+# Valider la syntaxe
+terraform validate
+
+# Voir les changements avant apply
+terraform plan -var-file=environments/prod/terraform.tfvars -out=tfplan
+
+# Appliquer (toujours à partir du plan généré)
+terraform apply tfplan
+
+# Vérifier le drift (détection manuelle)
+terraform plan -detailed-exitcode   # exit 2 = drift détecté</code></pre>
+<p><strong>Bicep</strong> :</p>
+<pre><code class="lang-bash">az deployment group what-if \
+  --resource-group rg-myapp-prod \
+  --template-file main.bicep \
+  --parameters parameters/prod.bicepparam
+
+az deployment group create \
+  --resource-group rg-myapp-prod \
+  --template-file main.bicep \
+  --parameters parameters/prod.bicepparam</code></pre>
+<h3>6. Import de ressources existantes</h3>
+<pre><code class="lang-bash"># Terraform : importer une ressource créée manuellement
+terraform import azurerm_resource_group.main /subscriptions/&lt;sub&gt;/resourceGroups/rg-existing
+
+# Générer la config depuis une ressource existante (Terraform 1.5+)
+terraform plan -generate-config-out=generated.tf</code></pre>
+<h3>7. CI/CD (GitHub Actions, Azure DevOps)</h3>
+<pre><code class="lang-yaml"># .github/workflows/terraform.yml (extrait)
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: &quot;1.9.0&quot;
+      - run: terraform init
+      - run: terraform plan -out=tfplan
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+
+  apply:
+    needs: plan
+    environment: production   # gate d'approbation manuelle
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { name: tfplan }
+      - run: terraform apply tfplan</code></pre>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Versions épinglées</strong> : always pin provider et terraform version dans <code>required_providers</code></li>
+<li><strong>Tagging systématique</strong> : <code>environment</code>, <code>owner</code>, <code>cost-center</code>, <code>managed-by=terraform</code> sur toutes les ressources</li>
+<li><strong>Outputs documentés</strong> : exposer les <code>output</code> utiles aux autres modules (IDs, endpoints)</li>
+<li><strong><code>moved</code> blocks</strong> : utiliser <code>moved {}</code> pour renommer des ressources sans destroy/recreate</li>
+<li><strong>Drift detection</strong> : planifier <code>terraform plan</code> en cron (daily) et alerter sur exit code 2</li>
+<li><strong>Workspaces</strong> : éviter les workspaces Terraform pour les environnements — préférer des dossiers séparés (state isolation plus claire)</li>
+<li><strong>Checkov / tfsec</strong> : scanner IaC avant merge (secrets, ports ouverts, chiffrement désactivé)</li>
+</ul>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Conséquence</th><th>Remède</th></tr></thead><tbody><tr><td><code>terraform apply</code> sans <code>plan</code> préalable</td><td>Surprises en prod</td><td>Toujours <code>-out=tfplan</code> + apply depuis le plan</td></tr><tr><td>Secrets dans <code>.tfvars</code> commités</td><td>Fuite de credentials</td><td><code>sensitive = true</code> + <code>.gitignore</code> sur <code>*.tfvars</code></td></tr><tr><td>State en local</td><td>Pas de collaboration, perte</td><td>Backend remote dès le début</td></tr><tr><td>Trop de ressources dans un seul state</td><td><code>plan</code> lent, blast radius élevé</td><td>Découper par domaine (réseau / app / data)</td></tr><tr><td><code>count</code> pour les environnements</td><td><code>terraform state</code> difficile à lire</td><td><code>for_each</code> sur une map + workspaces séparés</td></tr><tr><td>Hardcoder la région</td><td>Pas réutilisable</td><td>Variable <code>location</code> systématique</td></tr><tr><td>Ignorer les <code>lifecycle</code></td><td>Recreations non voulues</td><td><code>lifecycle { prevent_destroy = true }</code> sur les bases de données</td></tr><tr><td>Bicep sans <code>what-if</code></td><td>Changements destructifs silencieux</td><td>Toujours <code>what-if</code> avant deployment</td></tr></tbody></table>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

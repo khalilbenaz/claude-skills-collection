@@ -96,86 +96,197 @@ cp -r claude-skills-collection/skills/dev-integration-test-builder ~/.claude/ski
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Integration Test Builder</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Identifier les points d'intégration à tester</strong></li>
+<h2>Critères de décision : quel type de test choisir ?</h2>
+<table><thead><tr><th>Scénario</th><th>Choix recommandé</th></tr></thead><tbody><tr><td>Controller + DB + auth sur vrai schéma</td><td><code>WebApplicationFactory</code> + Testcontainers</td></tr><tr><td>Microservice consommant une API tierce</td><td>WireMock/MockServer + Testcontainers DB</td></tr><tr><td>Message broker (Kafka, RabbitMQ)</td><td>Testcontainers (image officielle)</td></tr><tr><td>Lambda/Cloud Function légère, pas de DB</td><td>Base in-memory + <code>TestClient</code></td></tr><tr><td>Contrat entre deux microservices</td><td>Pact (CDC)</td></tr><tr><td>Smoke test post-déploiement</td><td>Test E2E contre l'environnement staging</td></tr></tbody></table>
+<p>Ne simuler avec un mock que ce qui est <strong>impossible ou coûteux</strong> à démarrer localement.</p>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Cartographier les points d'intégration</h3>
+<p>Lister explicitement :</p>
 <ul>
-<li>Endpoints API REST ou GraphQL exposés par le service</li>
-<li>Accès base de données (requêtes, transactions, contraintes)</li>
-<li>Files de messages (Kafka, RabbitMQ, Azure Service Bus)</li>
-<li>Services externes consommés (paiement, email, stockage, auth)</li>
+<li>Endpoints REST/GraphQL exposés</li>
+<li>Accès DB (requêtes, transactions, contraintes FK, migrations)</li>
+<li>Broker de messages (topics/queues consommés ou produits)</li>
+<li>Services tiers appelés (paiement, email, stockage, SSO)</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Setup de l'environnement de test</strong></li>
+<p>Chaque point doit avoir au moins un scénario nominal et un scénario d'erreur.</p>
+<hr>
+<h3>2. Choisir et configurer l'infrastructure de test</h3>
+<p><strong>Testcontainers — .NET (xUnit)</strong></p>
+<pre><code class="lang-csharp">// NuGet : Testcontainers, Testcontainers.PostgreSql
+public class PostgresFixture : IAsyncLifetime
+{
+    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder()
+        .WithImage(&quot;postgres:16-alpine&quot;)
+        .Build();
+
+    public string ConnectionString =&gt; _db.GetConnectionString();
+
+    public Task InitializeAsync() =&gt; _db.StartAsync();
+    public Task DisposeAsync() =&gt; _db.StopAsync();
+}</code></pre>
+<p><strong>Testcontainers — Node.js (Jest/Vitest)</strong></p>
+<pre><code class="lang-ts">// npm i testcontainers
+import { PostgreSqlContainer } from &quot;@testcontainers/postgresql&quot;;
+let container: StartedPostgreSqlContainer;
+beforeAll(async () =&gt; { container = await new PostgreSqlContainer().start(); });
+afterAll(async () =&gt; { await container.stop(); });</code></pre>
+<p><strong>Base in-memory (EF Core) — acceptable pour tests ultra-rapides uniquement</strong></p>
+<pre><code class="lang-csharp">services.AddDbContext&lt;AppDbContext&gt;(o =&gt; o.UseInMemoryDatabase(&quot;test_&quot; + Guid.NewGuid()));
+// Attention : pas de contraintes FK, pas de SQL brut, pas de migrations.</code></pre>
+<hr>
+<h3>3. Configurer le serveur de test</h3>
+<p><strong>.NET — WebApplicationFactory</strong></p>
+<pre><code class="lang-csharp">public class ApiFixture : WebApplicationFactory&lt;Program&gt;, IAsyncLifetime
+{
+    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder().Build();
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.ConfigureTestServices(services =&gt;
+        {
+            // Remplacer la vraie connexion par celle du conteneur
+            services.RemoveAll&lt;DbContextOptions&lt;AppDbContext&gt;&gt;();
+            services.AddDbContext&lt;AppDbContext&gt;(o =&gt;
+                o.UseNpgsql(_db.GetConnectionString()));
+        });
+    }
+
+    public async Task InitializeAsync() =&gt; await _db.StartAsync();
+    public new async Task DisposeAsync() =&gt; await _db.StopAsync();
+}</code></pre>
+<p><strong>Python FastAPI</strong></p>
+<pre><code class="lang-python"># pip install httpx pytest-asyncio
+from httpx import AsyncClient, ASGITransport
+import pytest
+
+@pytest.fixture
+async def client(db_session):  # db_session = session sur DB de test
+    app.dependency_overrides[get_db] = lambda: db_session
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=&quot;http://test&quot;) as c:
+        yield c</code></pre>
+<p><strong>Node.js / Express</strong></p>
+<pre><code class="lang-ts">// npm i supertest @types/supertest
+import request from &quot;supertest&quot;;
+import { app } from &quot;../src/app&quot;;
+
+describe(&quot;POST /orders&quot;, () =&gt; {
+  it(&quot;creates order and returns 201&quot;, async () =&gt; {
+    const res = await request(app).post(&quot;/orders&quot;).send({ productId: 1, qty: 2 });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ id: expect.any(Number) });
+  });
+});</code></pre>
+<hr>
+<h3>4. Fixtures et seed data</h3>
 <ul>
-<li>TestContainers pour démarrer de vraies instances DB/Redis/Kafka en Docker</li>
-<li>Base de données in-memory (SQLite, H2, EF Core InMemory) pour tests légers</li>
-<li>Docker Compose dédié à l'environnement de test avec profils isolés</li>
-<li>Variables d'environnement et configuration spécifiques au mode test</li>
+<li>Utiliser des <strong>builders/factories</strong> pour générer des entités cohérentes (pas de magic strings éparpillées).</li>
+<li>Seed minimal : créer uniquement les données nécessaires au test, pas un jeu de données global.</li>
+<li>Nettoyage : <strong>rollback de transaction</strong> (le plus propre) ou truncate après chaque test.</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Configuration du test server</strong></li>
+<pre><code class="lang-csharp">// Builder pattern C#
+var user = new UserBuilder().WithRole(&quot;admin&quot;).WithEmail(&quot;test@example.com&quot;).Build();
+await dbContext.Users.AddAsync(user);
+await dbContext.SaveChangesAsync();</code></pre>
+<pre><code class="lang-sql">-- Rollback via transaction xUnit
+// Utiliser Respawn (NuGet) pour un truncate rapide entre tests
+var respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
+{
+    DbAdapter = DbAdapter.Postgres,
+    SchemasToInclude = [&quot;public&quot;]
+});
+await respawner.ResetAsync(connection);</code></pre>
+<hr>
+<h3>5. Écrire les scénarios d'intégration</h3>
+<p>Structure d'un test : <strong>Arrange → Act → Assert → Cleanup</strong></p>
+<pre><code class="lang-csharp">[Fact]
+public async Task CreateOrder_ValidPayload_Returns201AndPersists()
+{
+    // Arrange
+    var client = _factory.CreateClient();
+    var payload = new { productId = 42, quantity = 3 };
+
+    // Act
+    var response = await client.PostAsJsonAsync(&quot;/api/orders&quot;, payload);
+
+    // Assert
+    response.StatusCode.Should().Be(HttpStatusCode.Created);
+    var body = await response.Content.ReadFromJsonAsync&lt;OrderDto&gt;();
+    body!.Id.Should().BePositive();
+
+    // Vérification en DB (pas seulement via l'API)
+    using var scope = _factory.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService&lt;AppDbContext&gt;();
+    db.Orders.Should().ContainSingle(o =&gt; o.Id == body.Id);
+}</code></pre>
+<p>Couvrir systématiquement :</p>
 <ul>
-<li>.NET : <code>WebApplicationFactory&lt;Program&gt;</code> avec <code>IClassFixture</code></li>
-<li>Node.js : <code>supertest</code> avec l'app Express/Fastify démarrée en mode test</li>
-<li>FastAPI/Python : <code>TestClient</code> de Starlette avec base de données de test</li>
-<li>Spring Boot : <code>@SpringBootTest</code> avec <code>MockMvc</code> ou <code>WebTestClient</code></li>
+<li>Cas nominal (200/201/204)</li>
+<li>Validation échouée (400 + message d'erreur structuré)</li>
+<li>Ressource absente (404)</li>
+<li>Conflit (409)</li>
+<li>Accès non autorisé (401/403)</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Création des fixtures et seed data</strong></li>
+<hr>
+<h3>6. Simuler les services externes</h3>
+<p><strong>WireMock.Net (.NET)</strong></p>
+<pre><code class="lang-csharp">// NuGet : WireMock.Net
+var server = WireMockServer.Start();
+server.Given(Request.Create().WithPath(&quot;/payments/charge&quot;).UsingPost())
+      .RespondWith(Response.Create().WithStatusCode(200)
+          .WithBodyAsJson(new { transactionId = &quot;txn_123&quot; }));
+
+// Injecter l'URL dans la config de test
+builder.UseSetting(&quot;PaymentService:BaseUrl&quot;, server.Url);</code></pre>
+<p><strong>LocalStack (AWS S3, SQS) via Testcontainers</strong></p>
+<pre><code class="lang-csharp">var localstack = new LocalStackBuilder().WithServices(Service.S3, Service.SQS).Build();
+await localstack.StartAsync();</code></pre>
+<hr>
+<h3>7. Contract testing avec Pact</h3>
+<pre><code class="lang-ts">// Consumer side (Jest + @pact-foundation/pact)
+const provider = new PactV3({ consumer: &quot;OrderService&quot;, provider: &quot;PaymentService&quot; });
+
+it(&quot;expects a charge endpoint&quot;, async () =&gt; {
+  await provider
+    .addInteraction({ uponReceiving: &quot;a charge request&quot;, ... })
+    .executeTest(async (mockServer) =&gt; {
+      const result = await chargeCard(mockServer.url, { amount: 100 });
+      expect(result.transactionId).toBeDefined();
+    });
+});</code></pre>
+<p>Publier le contrat sur Pact Broker et déclencher la vérification côté fournisseur dans la CI.</p>
+<hr>
+<h3>8. Isolation et parallélisation</h3>
 <ul>
-<li>Données de test réalistes et représentatives des cas métier</li>
-<li>Builders ou factories pour générer des entités cohérentes</li>
-<li>Scripts de seed versionnés et reproductibles</li>
-<li>Cleanup systématique après chaque test (rollback, truncate, drop)</li>
+<li>Chaque test doit pouvoir tourner <strong>seul et dans n'importe quel ordre</strong>.</li>
+<li>Ports dynamiques : Testcontainers gère cela automatiquement.</li>
+<li>Collections xUnit : <code>[Collection(&quot;db&quot;)]</code> pour partager un conteneur sans le redémarrer à chaque test — économise 5-15 s par suite.</li>
+<li>Ne jamais partager de données mutables entre tests sans transaction/rollback.</li>
 </ul>
-</ol>
-<ol>
-<li><strong>Tests des scénarios d'intégration</strong></li>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Conséquence</th><th>Correctif</th></tr></thead><tbody><tr><td>Tests qui partagent l'état DB sans rollback</td><td>Flakiness, ordre-dépendance</td><td>Respawn ou transaction rollback</td></tr><tr><td>Mocker la couche repository dans un test d'intégration</td><td>On ne teste plus l'intégration</td><td>Utiliser la vraie DB via Testcontainers</td></tr><tr><td><code>Thread.Sleep</code> pour attendre un message broker</td><td>Lenteur, flakiness</td><td><code>WaitUntil</code> / <code>Polly</code> avec timeout</td></tr><tr><td>Une seule WebApplicationFactory pour tous les tests</td><td>Config partagée, couplage</td><td>Fixture par suite ou <code>WithWebHostBuilder</code> par test</td></tr><tr><td>Ignorer les migrations : créer le schéma à la main</td><td>Désynchronisation avec prod</td><td>Toujours exécuter <code>DbContext.Database.MigrateAsync()</code> dans le fixture</td></tr><tr><td>Tests E2E en CI sur prod</td><td>Risque de side effects</td><td>Environnement staging dédié, données synthétiques</td></tr></tbody></table>
+<hr>
+<h2>Commandes utiles</h2>
+<pre><code class="lang-bash"># Lancer uniquement les tests d'intégration (xUnit + filtre par category)
+dotnet test --filter &quot;Category=Integration&quot;
+
+# Vitest avec tag
+vitest run --reporter=verbose integration/
+
+# Pytest avec marker
+pytest -m integration -v
+
+# Générer le rapport de couverture (coverage uniquement sur tests d'intégration)
+dotnet test --filter &quot;Category=Integration&quot; --collect:&quot;XPlat Code Coverage&quot;</code></pre>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>CRUD complet : créer, lire, mettre à jour, supprimer une ressource</li>
-<li>Workflows multi-étapes : enchaîner plusieurs appels dans un scénario cohérent</li>
-<li>Vérifier les codes HTTP, les headers, la structure des réponses JSON</li>
-<li>Tester les cas d'erreur : 404, 400, 409, 500 et leurs messages</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Gestion des dépendances externes</strong></li>
-<ul>
-<li>WireMock ou MockServer pour simuler les APIs tierces</li>
-<li>Fake services locaux (fake-stripe, localstack pour AWS)</li>
-<li>Configurer les timeouts et les comportements d'erreur simulés</li>
-<li>Vérifier que les contrats d'appel sont respectés</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Tests de contrat</strong></li>
-<ul>
-<li>Pact pour le contract testing consumer-driven entre microservices</li>
-<li>Définir les contrats côté consommateur et les vérifier côté fournisseur</li>
-<li>Intégrer Pact Broker pour partager et versionner les contrats</li>
-<li>Valider les schémas JSON avec JSON Schema ou OpenAPI validation</li>
-</ul>
-</ol>
-<ol>
-<li><strong>Parallélisation et isolation des tests</strong></li>
-<ul>
-<li>Transactions de base de données rollbackées après chaque test</li>
-<li>Ports dynamiques pour éviter les conflits entre tests parallèles</li>
-<li>Ordering explicite si des dépendances existent entre tests</li>
-<li>Séparation claire des collections de tests (unit vs integration vs e2e)</li>
-</ul>
-</ol>
-<h2>Règles</h2>
-<ul>
-<li>Adapte le setup au stack technique du projet (framework, DB, cloud provider).</li>
-<li>Fournis du code complet et exécutable avec les dépendances NuGet/npm/pip listées.</li>
-<li>Nomme chaque test de façon descriptive pour refléter le scénario métier testé.</li>
-<li>Ne simule pas ce qui peut être testé réellement via TestContainers ou équivalent.</li>
-<li>Assure l'isolation totale : un test ne doit jamais dépendre de l'état laissé par un autre.</li>
+<li><strong>Testcontainers Cloud</strong> : décharger le démarrage des conteneurs sur un démon distant en CI pour réduire la durée des pipelines de 40-60 %.</li>
+<li><strong>Nommer les tests</strong> comme des spécifications : <code>[Méthode]_[Contexte]_[Résultat attendu]</code> — lisible dans les rapports sans ouvrir le code.</li>
+<li><strong>Vérifier en DB</strong> après un POST, pas seulement via la réponse HTTP — un bug de persistance silencieux passe sinon.</li>
+<li><strong>Séparer les collections CI</strong> : <code>unit</code> (&lt; 30 s), <code>integration</code> (&lt; 3 min), <code>e2e</code> (optionnel sur merge seulement).</li>
+<li><strong>Ne pas tester la logique métier pure</strong> dans un test d'intégration — c'est le rôle des tests unitaires. Un test d'intégration vérifie que les composants se parlent correctement.</li>
 </ul>
 </article>
 </main>

@@ -7,29 +7,331 @@ description: Développement .NET/C# avec ASP.NET Core, EF Core et patterns moder
 
 ## Workflow
 
-1. **Setup projet** : Créer avec `dotnet new` (webapi, console, classlib, solution), organiser en multi-projets (API, Domain, Infrastructure, Tests), configurer les `global usings` dans `GlobalUsings.cs`, centraliser les propriétés dans `Directory.Build.props` (versions NuGet, nullable, warnings), utiliser `Directory.Packages.props` pour la gestion centralisée des versions de packages.
+### 1. Créer et structurer le projet
 
-2. **C# moderne** : Utiliser les `record` pour les DTOs et Value Objects immutables (`record UserDto(string Name, string Email)`), le pattern matching exhaustif (`switch` expressions, `is` patterns, list patterns), activer les `nullable reference types` (`<Nullable>enable</Nullable>`) pour éliminer les NullReferenceExceptions, les primary constructors (C# 12) pour la concision, les raw string literals (`"""..."""`) pour JSON/SQL embarqués.
+```bash
+dotnet new sln -n MonProjet
+dotnet new webapi -n MonProjet.Api --use-minimal-apis
+dotnet new classlib -n MonProjet.Domain
+dotnet new classlib -n MonProjet.Infrastructure
+dotnet new xunit -n MonProjet.Tests
+dotnet sln add **/*.csproj
+```
 
-3. **ASP.NET Core** : Choisir entre Minimal APIs (projets simples, microservices) et Controllers (projets complexes, CQRS), comprendre le middleware pipeline (ordre critique : exception handler → HTTPS → auth → routing → endpoints), configurer l'injection de dépendances (Singleton, Scoped, Transient), utiliser l'options pattern (`IOptions<T>`, `IOptionsSnapshot<T>`) pour la configuration typée.
+`Directory.Build.props` à la racine (partagé par tous les projets) :
 
-4. **Entity Framework Core** : Définir le `DbContext` avec des `DbSet<T>`, configurer les entités via Fluent API (`modelBuilder.Entity<T>().HasKey(...)`), générer et appliquer les migrations (`dotnet ef migrations add`, `dotnet ef database update`), optimiser les queries (éviter N+1 avec `.Include()`, utiliser `.AsNoTracking()` en lecture seule), les bulk operations avec `ExecuteUpdateAsync`/`ExecuteDeleteAsync` (EF Core 7+), les interceptors pour le soft delete.
+```xml
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+  </PropertyGroup>
+</Project>
+```
 
-5. **Authentication et security** : Implémenter ASP.NET Core Identity pour l'authentification locale, configurer JWT Bearer authentication (`AddAuthentication().AddJwtBearer(...)`), intégrer OAuth2/OIDC avec des providers externes (Microsoft, Google), définir des authorization policies (`RequireRole`, `RequireClaim`, policy-based), protéger les données sensibles avec l'API Data Protection, appliquer HTTPS, CORS et les security headers.
+`Directory.Packages.props` pour la gestion centralisée des versions NuGet :
 
-6. **Background processing** : Implémenter des tâches récurrentes avec `IHostedService` et `BackgroundService`, planifier des jobs avec Hangfire (dashboard intégré, retry automatique, jobs récurrents Cron), utiliser les Worker Services (template dédié) pour les processus longue durée, les `System.Threading.Channels` pour les pipelines producteur/consommateur in-process haute performance.
+```xml
+<Project>
+  <PropertyGroup><ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally></PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
+    <PackageVersion Include="xunit" Version="2.9.0" />
+  </ItemGroup>
+</Project>
+```
 
-7. **Testing .NET** : Structurer les tests avec xUnit (`[Fact]`, `[Theory]`, `[InlineData]`), mocker les dépendances avec Moq (`Mock<T>`) ou NSubstitute (API plus fluide), tester les endpoints ASP.NET Core avec `WebApplicationFactory<T>` (sans démarrer de vrai serveur), utiliser Testcontainers pour les tests d'intégration avec vraies bases de données, générer des données de test réalistes avec Bogus (`Faker<T>`).
+---
 
-8. **Performance .NET** : Utiliser `Span<T>` et `Memory<T>` pour éviter les allocations sur le tas dans les hot paths, `StringBuilder` pour la concaténation de strings en boucle, les source generators (`[GeneratedRegex]`, `JsonSerializerContext`) pour déplacer le travail à la compilation, la compilation AOT (Native AOT) pour les temps de démarrage rapides, benchmarker avec BenchmarkDotNet (`[Benchmark]`, `[MemoryDiagnoser]`) avant/après optimisation.
+### 2. Utiliser C# moderne (C# 12/13)
 
-## Règles
+**Records** pour DTOs et Value Objects immuables :
 
-- Utiliser les dernières features C# (C# 12/13) et cibler .NET 8/9 LTS pour bénéficier des améliorations de performance (JIT, GC) et des nouvelles APIs.
-- Activer `<Nullable>enable</Nullable>` et `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>` dans `Directory.Build.props` ; traiter les warnings nullability comme des bugs.
-- Préférer les Minimal APIs pour les nouveaux projets de microservices : moins de boilerplate, plus de performance, structure claire avec les endpoint groups.
-- Ne jamais bloquer sur des opérations async (`Task.Result`, `.Wait()`) dans du code async ; utiliser `await` jusqu'au bout pour éviter les deadlocks.
-- Expliquer les choix d'architecture DI et les lifetimes (Singleton vs Scoped vs Transient) ; une lifetime incorrecte peut causer des bugs subtils de concurrence ou des memory leaks.
+```csharp
+public record CreateUserCommand(string Name, string Email);
+public record UserId(Guid Value);
+```
+
+**Primary constructors** (C# 12) pour les services :
+
+```csharp
+public class UserService(IUserRepository repo, ILogger<UserService> logger)
+{
+    public async Task<User?> GetAsync(Guid id) => await repo.FindAsync(id);
+}
+```
+
+**Pattern matching exhaustif** :
+
+```csharp
+var label = order.Status switch
+{
+    OrderStatus.Pending => "En attente",
+    OrderStatus.Shipped => "Expédié",
+    OrderStatus.Cancelled => "Annulé",
+    _ => throw new UnreachableException()
+};
+```
+
+**Raw string literals** pour JSON/SQL embarqués :
+
+```csharp
+var json = """
+    {
+      "key": "value"
+    }
+    """;
+```
+
+**Critère de décision C# 12 vs 13** : cibler .NET 9 + C# 13 pour les nouveaux projets ; .NET 8 LTS si contrainte de stabilité long terme.
+
+---
+
+### 3. ASP.NET Core — Minimal APIs vs Controllers
+
+| Critère | Minimal APIs | Controllers |
+|---|---|---|
+| Microservice / API simple | ✅ | ➖ |
+| CQRS, projet complexe | ➖ | ✅ |
+| Filters globaux, conventions | Limité | ✅ |
+| Performance (cold start) | Meilleure | Standard |
+
+**Minimal API avec endpoint group** :
+
+```csharp
+var app = builder.Build();
+app.MapGroup("/users").MapUsersEndpoints();
+app.Run();
+
+// UsersEndpoints.cs
+public static class UsersEndpoints
+{
+    public static RouteGroupBuilder MapUsersEndpoints(this RouteGroupBuilder group)
+    {
+        group.MapGet("/{id:guid}", async (Guid id, UserService svc) =>
+            await svc.GetAsync(id) is { } user ? Results.Ok(user) : Results.NotFound());
+        return group;
+    }
+}
+```
+
+**Ordre du middleware pipeline** (critique) :
+
+```csharp
+app.UseExceptionHandler("/error");
+app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers(); // ou app.MapGroup(...)
+```
+
+---
+
+### 4. Entity Framework Core
+
+**DbContext** :
+
+```csharp
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+{
+    public DbSet<User> Users => Set<User>();
+
+    protected override void OnModelCreating(ModelBuilder model)
+        => model.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+}
+```
+
+**Configuration Fluent API séparée** :
+
+```csharp
+public class UserConfiguration : IEntityTypeConfiguration<User>
+{
+    public void Configure(EntityTypeBuilder<User> builder)
+    {
+        builder.HasKey(u => u.Id);
+        builder.Property(u => u.Email).HasMaxLength(256).IsRequired();
+        builder.HasIndex(u => u.Email).IsUnique();
+    }
+}
+```
+
+**Migrations** :
+
+```bash
+dotnet ef migrations add InitialCreate --project MonProjet.Infrastructure --startup-project MonProjet.Api
+dotnet ef database update --startup-project MonProjet.Api
+```
+
+**Optimisations clés** :
+
+```csharp
+// Lecture seule — désactive le change tracking
+var users = await db.Users.AsNoTracking().ToListAsync();
+
+// Bulk update EF Core 7+ — pas de chargement en mémoire
+await db.Users.Where(u => u.IsInactive)
+    .ExecuteUpdateAsync(s => s.SetProperty(u => u.ArchivedAt, DateTime.UtcNow));
+
+// Éviter N+1 avec Include explicite
+var orders = await db.Orders.Include(o => o.Lines).ThenInclude(l => l.Product).ToListAsync();
+```
+
+---
+
+### 5. Authentication & Security
+
+**JWT Bearer** :
+
+```csharp
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(opts =>
+    {
+        opts.TokenValidationParameters = new()
+        {
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidateLifetime = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
+        };
+    });
+```
+
+**Authorization policy** :
+
+```csharp
+builder.Services.AddAuthorization(opts =>
+    opts.AddPolicy("AdminOnly", p => p.RequireRole("Admin").RequireClaim("department", "IT")));
+
+// Usage Minimal API
+group.MapDelete("/{id}", handler).RequireAuthorization("AdminOnly");
+```
+
+---
+
+### 6. Background processing
+
+**BackgroundService** (tâche périodique) :
+
+```csharp
+public class CleanupWorker(IServiceScopeFactory factory) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            using var scope = factory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Logs.Where(l => l.CreatedAt < DateTime.UtcNow.AddDays(-30))
+                         .ExecuteDeleteAsync(ct);
+            await Task.Delay(TimeSpan.FromHours(1), ct);
+        }
+    }
+}
+```
+
+**Critère Hangfire vs BackgroundService** : Hangfire si besoin de dashboard, retry configurable, jobs récurrents Cron persistés ; `BackgroundService` si tâche simple sans dépendance supplémentaire.
+
+---
+
+### 7. Testing
+
+**Test unitaire avec xUnit + NSubstitute** :
+
+```csharp
+public class UserServiceTests
+{
+    [Fact]
+    public async Task GetAsync_ExistingId_ReturnsUser()
+    {
+        var repo = Substitute.For<IUserRepository>();
+        repo.FindAsync(Arg.Any<Guid>()).Returns(new User { Id = Guid.NewGuid() });
+        var svc = new UserService(repo, NullLogger<UserService>.Instance);
+
+        var result = await svc.GetAsync(Guid.NewGuid());
+
+        Assert.NotNull(result);
+    }
+}
+```
+
+**Test d'intégration avec WebApplicationFactory** :
+
+```csharp
+public class UsersApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+{
+    [Fact]
+    public async Task GetUser_Returns200()
+    {
+        var client = factory.CreateClient();
+        var response = await client.GetAsync("/users/some-id");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+}
+```
+
+**Testcontainers** pour SQL Server réel :
+
+```csharp
+var container = new MsSqlBuilder().Build();
+await container.StartAsync();
+// utiliser container.GetConnectionString() dans les options EF
+```
+
+---
+
+### 8. Performance
+
+```csharp
+// Source generator JSON — zéro reflection en production
+[JsonSerializable(typeof(UserDto))]
+public partial class AppJsonContext : JsonSerializerContext { }
+
+// Regex compilée au build
+[GeneratedRegex(@"^\d{8}$")]
+private static partial Regex CinRegex();
+
+// Span<T> — pas d'allocation heap
+public static bool StartsWithCode(ReadOnlySpan<char> input)
+    => input.StartsWith("B3G", StringComparison.OrdinalIgnoreCase);
+```
+
+**Benchmarker avant d'optimiser** :
+
+```bash
+dotnet add package BenchmarkDotNet
+dotnet run -c Release -- --filter *MyBenchmark*
+```
+
+---
+
+## Garde-fous & Anti-patterns
+
+| Anti-pattern | Risque | Correction |
+|---|---|---|
+| `.Result` / `.Wait()` sur Task | Deadlock ASP.NET | `await` partout |
+| `DbContext` Singleton | Concurrence, data stale | Toujours Scoped |
+| `.ToList()` avant `.Where()` | Charge toute la table en mémoire | Filtrer avant `ToList` |
+| `Include` en cascade sans limite | Query CartésienneExplosion | Projeter avec `Select` |
+| Secrets dans `appsettings.json` | Fuite credentials | `dotnet user-secrets` / Azure Key Vault |
+| Ignorer les warnings nullable | NullReferenceException prod | `TreatWarningsAsErrors` + corriger |
+| Scoped dans Singleton | `ObjectDisposedException` | Injecter `IServiceScopeFactory` |
+
+---
+
+## Bonnes pratiques 2026
+
+- **.NET 9** : cibler net9.0 pour les nouveaux projets ; .NET 8 LTS si stabilité requise 3 ans.
+- **Native AOT** : activer pour les microservices sans reflection (`<PublishAot>true</PublishAot>`), vérifier la compatibilité EF Core (limité).
+- **OpenTelemetry** : intégrer `AddOpenTelemetry()` dès le départ (traces, métriques, logs) — rétrofit coûteux.
+- **Keyed DI** (ASP.NET Core 8+) : `AddKeyedSingleton<IPayment, StripePayment>("stripe")` pour injecter plusieurs implémentations.
+- **Problem Details** : utiliser `AddProblemDetails()` + `UseExceptionHandler` pour des erreurs HTTP uniformes RFC 9457.
+- **Health checks** : `AddHealthChecks().AddDbContextCheck<AppDbContext>()` + endpoint `/health` pour les sondes k8s/Docker.
 
 
 ## Communication Rules — MANDATORY

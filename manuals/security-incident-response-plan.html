@@ -96,35 +96,149 @@ cp -r claude-skills-collection/skills/security-incident-response-plan ~/.claude/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Plan de Réponse aux Incidents</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Préparer l'organisation</strong> — Constituer l'équipe CSIRT avec les rôles définis (incident manager, analyste forensique, communicant, juridique), maintenir les contacts d'urgence à jour, préparer les outils forensiques (kits d'analyse, images de référence), et organiser des exercices de simulation réguliers (tabletop exercises).</li>
-</ol>
-<ol>
-<li><strong>Détecter et analyser</strong> — Identifier l'incident via les sources de détection (SIEM, EDR, IDS/IPS, signalement utilisateur, threat intelligence), évaluer la sévérité initiale, classifier le type d'incident (malware, ransomware, exfiltration, DDoS, insider threat), et déclencher le niveau d'escalade approprié.</li>
-</ol>
-<ol>
-<li><strong>Contenir la menace</strong> — Appliquer le containment à court terme : isoler les systèmes compromis du réseau, bloquer les vecteurs d'attaque identifiés, désactiver les comptes compromis, et préserver les preuves forensiques. Déployer le containment à long terme : appliquer les correctifs, renforcer les contrôles d'accès.</li>
-</ol>
-<ol>
-<li><strong>Éradiquer la cause</strong> — Supprimer complètement la menace : nettoyer les malwares, fermer les backdoors, révoquer les accès non autorisés, corriger les vulnérabilités exploitées, et valider l'éradication complète par un scan approfondi de l'infrastructure impactée.</li>
-</ol>
-<ol>
-<li><strong>Restaurer les opérations</strong> — Remettre en service les systèmes de manière contrôlée : restaurer depuis des backups vérifiés, appliquer les configurations durcies, surveiller intensivement les systèmes restaurés pour détecter toute résurgence, et valider le fonctionnement nominal avec les équipes métier.</li>
-</ol>
-<ol>
-<li><strong>Communiquer</strong> — Gérer la communication interne (direction, équipes IT, employés) et externe (clients, régulateurs, autorités, presse) selon le plan de communication de crise. Respecter les obligations légales de notification (RGPD 72h, réglementations sectorielles).</li>
-</ol>
-<ol>
-<li><strong>Conduire le retour d'expérience</strong> — Organiser la réunion post-mortem dans les 5 jours suivant la clôture : analyser la timeline complète, identifier les points d'amélioration (détection, réponse, communication), mettre à jour les playbooks, et planifier les actions correctives avec des responsables et des échéances.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Matrice de sévérité (déclencher dès la détection)</h2>
+<table><thead><tr><th>Niveau</th><th>Critères</th><th>Délai de réponse</th><th>Escalade</th></tr></thead><tbody><tr><td>P1 — Critique</td><td>Ransomware actif, exfiltration en cours, infrastructure core compromise</td><td>&lt; 15 min</td><td>CSIRT complet + direction</td></tr><tr><td>P2 — Majeur</td><td>Accès non autorisé confirmé, backdoor détectée, compromission compte privilégié</td><td>&lt; 1 h</td><td>CSIRT + responsable sécurité</td></tr><tr><td>P3 — Modéré</td><td>Tentative d'intrusion détectée, malware isolé sur poste</td><td>&lt; 4 h</td><td>Analyste sécurité</td></tr><tr><td>P4 — Mineur</td><td>Anomalie de log, faux positif probable</td><td>&lt; 24 h</td><td>Surveillance renforcée</td></tr></tbody></table>
+<hr>
+<h2>Workflow — 6 phases PICERL</h2>
+<h3>1. Préparation (avant tout incident)</h3>
+<p><strong>Équipe CSIRT minimale :</strong></p>
 <ul>
-<li>Documente chaque action avec horodatage précis dès le début de l'incident — la traçabilité est essentielle pour l'analyse post-mortem et les obligations légales.</li>
-<li>Ne tente jamais de restaurer un système compromis sans avoir d'abord collecté les preuves forensiques et identifié la cause racine.</li>
-<li>Respecte strictement les obligations légales de notification (RGPD, réglementations sectorielles) — le non-respect expose l'organisation à des sanctions.</li>
-<li>Teste le plan de réponse aux incidents au minimum deux fois par an avec des exercices de simulation impliquant toutes les parties prenantes.</li>
-<li>Applique le principe du besoin d'en connaître pour la communication sur l'incident — ne divulgue les détails techniques qu'aux personnes habilitées.</li>
+<li>Incident Manager — coordonne et décide</li>
+<li>Analyste forensique — collecte preuves, analyse technique</li>
+<li>Responsable communication — messages internes/externes</li>
+<li>Référent juridique/conformité — obligations légales, RGPD</li>
+</ul>
+<p><strong>Kit forensique prêt à l'emploi :</strong></p>
+<pre><code class="lang-bash"># Image disque à chaud (Linux)
+dd if=/dev/sda bs=4M conv=sync,noerror | gzip &gt; /secure/evidence/$(hostname)_$(date +%Y%m%d_%H%M%S).img.gz
+
+# Capture mémoire RAM (Linux — LiME)
+sudo insmod lime.ko &quot;path=/secure/evidence/ram_$(date +%Y%m%d_%H%M%S).lime format=lime&quot;
+
+# Export logs Windows Event Log
+wevtutil epl Security C:\Evidence\Security_%DATE%.evtx
+wevtutil epl System   C:\Evidence\System_%DATE%.evtx
+wevtutil epl Application C:\Evidence\App_%DATE%.evtx</code></pre>
+<p><strong>Contacts d'urgence (à maintenir à jour) :</strong></p>
+<pre><code>CSIRT interne : [email] + [téléphone astreinte]
+ANSSI / CERT national : cert@ssi.gouv.fr / +33 1 71 75 84 68
+Assureur cyber : [référence police + n° sinistres]
+Prestataire forensique externe : [NDA signé en place]
+Autorité de contrôle RGPD (CNIL FR) : notifications@cnil.fr</code></pre>
+<hr>
+<h3>2. Identification &amp; Analyse</h3>
+<p><strong>Sources de détection à corréler :</strong></p>
+<ul>
+<li>SIEM (règles Sigma corrélées), EDR/XDR, IDS/IPS</li>
+<li>Threat intelligence feeds (MISP, OpenCTI, VirusTotal)</li>
+<li>Signalement utilisateur, honeypots, canary tokens</li>
+</ul>
+<p><strong>Triage initial — questions clés :</strong></p>
+<pre><code>1. Quel est le vecteur d'entrée probable ? (phishing, CVE exploitée, credential stuffing)
+2. Quels systèmes/données sont dans le périmètre impacté ?
+3. L'attaquant a-t-il encore accès actif ?
+4. Y a-t-il exfiltration de données (PII, secrets, données métier) ?
+5. L'incident est-il encore en cours ou contenu ?</code></pre>
+<p><strong>Préserver les preuves AVANT toute action corrective :</strong></p>
+<pre><code class="lang-bash"># Capture réseau en cours (tcpdump)
+tcpdump -i eth0 -w /secure/evidence/capture_$(date +%Y%m%d_%H%M%S).pcap
+
+# Snapshot VM avant isolation (AWS)
+aws ec2 create-snapshot --volume-id vol-XXXXXX --description &quot;IR-$(date +%Y%m%d)-pre-containment&quot;
+
+# Export logs CloudTrail (AWS) sur période suspecte
+aws cloudtrail lookup-events \
+  --start-time 2026-06-01T00:00:00Z \
+  --end-time 2026-06-24T23:59:59Z \
+  --output json &gt; /secure/evidence/cloudtrail_export.json</code></pre>
+<hr>
+<h3>3. Containment</h3>
+<p><strong>Containment réseau immédiat :</strong></p>
+<pre><code class="lang-bash"># Isoler un hôte Linux du réseau (firewall local)
+iptables -I INPUT  1 -j DROP
+iptables -I OUTPUT 1 -j DROP
+iptables -I INPUT  2 -s &lt;IP_CSIRT&gt; -j ACCEPT   # Garder accès forensique
+
+# Bloquer une IP suspecte sur pfSense/iptables
+iptables -A INPUT  -s &lt;IP_ATTAQUANT&gt; -j DROP
+iptables -A OUTPUT -d &lt;IP_ATTAQUANT&gt; -j DROP
+
+# Révoquer une session active (Entra ID / Azure AD)
+az ad user revoke-signin-sessions --id user@domain.com
+
+# Désactiver un compte AD compromis
+Disable-ADAccount -Identity &quot;compromised_user&quot;
+Set-ADUser -Identity &quot;compromised_user&quot; -PasswordNeverExpires $false</code></pre>
+<p><strong>Critère de décision — isolement total vs partiel :</strong></p>
+<ul>
+<li>Isolement total (coupure réseau) → attaque active, ransomware en propagation</li>
+<li>Isolement partiel (VLAN de quarantaine) → investigation en cours, impact métier fort</li>
+</ul>
+<hr>
+<h3>4. Éradication</h3>
+<p><strong>Checklist éradication :</strong></p>
+<pre><code>[ ] Tous les malwares/outils attaquant supprimés et vérifiés (hash VirusTotal)
+[ ] Backdoors fermées : ports inattendus fermés, tâches planifiées suspectes supprimées
+[ ] Credentials compromis révoqués : mots de passe, tokens, clés API, certificats
+[ ] CVE exploitée patchée sur TOUS les systèmes du parc (pas seulement le compromis)
+[ ] Règles de détection SIEM mises à jour pour détecter les IOC de cet incident
+[ ] Scan complet post-éradication (Nessus, OpenVAS) avant réintégration</code></pre>
+<pre><code class="lang-bash"># Rechercher des tâches planifiées suspectes (Linux)
+crontab -l -u root
+ls -la /etc/cron* /var/spool/cron/
+
+# Rechercher des services persistants inhabituels (Windows)
+Get-ScheduledTask | Where-Object { $_.TaskPath -notlike &quot;\Microsoft\*&quot; } | Select-Object TaskName, TaskPath, State
+
+# Chercher des clés de registre Run suspectes
+Get-ItemProperty &quot;HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run&quot;
+Get-ItemProperty &quot;HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run&quot;</code></pre>
+<hr>
+<h3>5. Recovery</h3>
+<p><strong>Restauration contrôlée :</strong></p>
+<pre><code class="lang-bash"># Vérifier l'intégrité du backup avant restauration
+sha256sum backup_2026-06-20.tar.gz  # Comparer avec le hash stocké offline
+
+# Restaurer depuis snapshot validé (AWS)
+aws ec2 create-volume --snapshot-id snap-XXXXXX --availability-zone eu-west-1a
+
+# Monitoring renforcé post-restauration (Wazuh/OSSEC)
+# Augmenter la fréquence des scans pendant 30 jours</code></pre>
+<p><strong>Critères de retour en production :</strong></p>
+<ul>
+<li>Scan de vulnérabilités validé (0 critique, 0 haute non mitigée)</li>
+<li>Logs centralisés et règles de détection actives</li>
+<li>Confirmation métier du fonctionnement nominal</li>
+<li>Revue de sécurité signée par l'Incident Manager</li>
+</ul>
+<hr>
+<h3>6. Lessons Learned (post-mortem J+5 max)</h3>
+<p><strong>Template timeline post-mortem :</strong></p>
+<pre><code>Date/Heure | Action | Acteur | Résultat
+-----------|--------|--------|--------
+J0 08:42   | Alerte SIEM déclenchée | Système | IOC détecté
+J0 09:00   | Analyse triage initial | Analyste | Confirmation P2
+...</code></pre>
+<p><strong>Questions structurantes :</strong></p>
+<ul>
+<li>Comment l'attaquant est-il entré ? (vecteur initial)</li>
+<li>Qu'est-ce qui a permis la détection ? Aurait-on pu détecter plus tôt ?</li>
+<li>Quels contrôles ont fonctionné / ont failli ?</li>
+<li>Quelles actions correctives avec responsable + deadline ?</li>
+</ul>
+<hr>
+<h2>Obligations légales de notification</h2>
+<table><thead><tr><th>Réglementation</th><th>Délai</th><th>Destinataire</th></tr></thead><tbody><tr><td>RGPD (données personnelles)</td><td>72 h</td><td>CNIL (FR) / autorité nationale</td></tr><tr><td>NIS2 (infrastructure critique)</td><td>24 h (early warning) + 72 h</td><td>ANSSI / autorité nationale</td></tr><tr><td>DORA (finance UE)</td><td>4 h (P1)</td><td>Autorité compétente (ACPR, AMF)</td></tr><tr><td>Secteur santé (HDS)</td><td>Immédiat</td><td>ANS + CNIL</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns / Pièges</h2>
+<ul>
+<li><strong>Ne pas restaurer avant de forensiquer</strong> — toujours snapshotter avant toute action corrective, sinon les preuves disparaissent.</li>
+<li><strong>Containment précipité sans capture mémoire</strong> — un processus malveillant en RAM tue les IOC dès l'extinction.</li>
+<li><strong>Patcher uniquement le système compromis</strong> — si une CVE est exploitée, tout le parc est vulnérable.</li>
+<li><strong>Communication non contrôlée</strong> — un employé qui tweete l'incident avant la communication officielle aggrave la crise.</li>
+<li><strong>Ne pas changer TOUS les secrets</strong> — après compromission d'un compte, auditer et révoquer tous les secrets qu'il avait accès (clés SSH, tokens CI/CD, vaults).</li>
+<li><strong>Réutiliser les mêmes playbooks sans les mettre à jour</strong> — chaque incident apporte des IOC et des techniques nouvelles à intégrer.</li>
+<li><strong>Oublier les systèmes legacy hors supervision SIEM</strong> — les angles morts sont les premiers exploités.</li>
 </ul>
 </article>
 </main>

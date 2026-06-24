@@ -97,22 +97,126 @@ cp -r claude-skills-collection/skills/testing-test-strategy-planner ~/.claude/sk
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Test Strategy Planner</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le contexte du projet</strong> — Identifier le type d'application (web, mobile, API, microservices), les contraintes techniques, les délais et les exigences réglementaires. Comprendre les objectifs qualité attendus par les parties prenantes.</li>
-<li><strong>Définir la pyramide de tests</strong> — Répartir les efforts selon la pyramide : majorité de tests unitaires (base), tests d'intégration (milieu), et tests E2E/UI (sommet). Adapter les proportions au contexte du projet.</li>
-<li><strong>Appliquer les quadrants de tests agiles</strong> — Classifier les tests selon les quadrants : Q1 (unitaires, TDD), Q2 (fonctionnels, acceptance), Q3 (exploratoires, usabilité), Q4 (performance, sécurité). Assurer une couverture équilibrée.</li>
-<li><strong>Planifier la couverture de tests</strong> — Définir les objectifs de couverture de code (lignes, branches, conditions). Identifier les modules critiques nécessitant une couverture renforcée. Configurer les outils de mesure (Istanbul, JaCoCo, Coverlet).</li>
-<li><strong>Effectuer une analyse de risques</strong> — Lister les fonctionnalités par criticité métier et complexité technique. Appliquer le risk-based testing pour prioriser les efforts de test sur les zones à haut risque. Documenter la matrice de risques.</li>
-<li><strong>Définir les environnements et données de test</strong> — Planifier les environnements nécessaires (dev, staging, pré-prod). Définir la stratégie de gestion des données de test (génération, anonymisation, refresh).</li>
-<li><strong>Établir les critères d'entrée et de sortie</strong> — Définir les conditions pour démarrer les tests (critères d'entrée) et les conditions de validation (critères de sortie). Fixer les seuils acceptables de défauts par sévérité.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Analyser le contexte du projet</h3>
+<p>Recueillir avant toute chose :</p>
 <ul>
-<li>Toujours adapter la stratégie au contexte du projet ; ne jamais appliquer un modèle générique sans analyse préalable.</li>
-<li>Prioriser les tests par valeur métier et risque plutôt que par couverture de code brute ; un taux de couverture élevé ne garantit pas la qualité.</li>
-<li>Documenter la stratégie de test dans un document vivant, revu et mis à jour à chaque sprint ou itération.</li>
-<li>Impliquer l'ensemble de l'équipe (développeurs, QA, PO) dans la définition de la stratégie pour garantir l'adhésion et la pertinence.</li>
-<li>Prévoir systématiquement une phase de tests exploratoires en complément des tests automatisés pour détecter les défauts imprévus.</li>
+<li>Type d'application : API REST, SPA, mobile natif, microservices, batch…</li>
+<li>Stack technique et frameworks de test disponibles</li>
+<li>Contraintes réglementaires : PCI-DSS, RGPD, ISO 27001, HIPAA…</li>
+<li>Délais, budget QA, effectif QA vs Dev</li>
+<li>Niveau de maturité actuel (aucun test, legacy sans CI, CI partielle…)</li>
+</ul>
+<p><strong>Décision rapide :</strong></p>
+<table><thead><tr><th>Contexte</th><th>Priorité</th></tr></thead><tbody><tr><td>Startup MVP</td><td>Tests unitaires critiques + 2-3 E2E smoke</td></tr><tr><td>Fintech / banque</td><td>Couverture unitaire ≥ 80%, contrats API, tests de sécurité obligatoires</td></tr><tr><td>Microservices</td><td>Tests de contrat (Pact), tests d'intégration par service</td></tr><tr><td>Legacy sans tests</td><td>Characterization tests avant tout refactoring</td></tr></tbody></table>
+<hr>
+<h3>2. Définir la pyramide de tests</h3>
+<p>Proportion cible selon le contexte :</p>
+<pre><code>              [E2E / UI]        ~10 %   lents, coûteux, fragiles
+           [Intégration]        ~20 %   API, BDD, contrats
+        [Unitaires]             ~70 %   rapides, isolés, stables</code></pre>
+<p>Pour un projet microservices, substituer une partie des E2E par des <strong>tests de contrat</strong> (Pact) :</p>
+<pre><code>              [E2E smoke]       ~5 %
+        [Contrats Pact]         ~15 %
+    [Intégration service]       ~20 %
+  [Unitaires]                   ~60 %</code></pre>
+<hr>
+<h3>3. Appliquer les quadrants de tests agiles (Agile Testing Quadrants)</h3>
+<table><thead><tr><th>Quadrant</th><th>Type</th><th>Objectif</th><th>Exemples</th></tr></thead><tbody><tr><td>Q1 — Soutenir l'équipe, tech</td><td>Unitaires, composants</td><td>Guider le design (TDD)</td><td>JUnit, Jest, xUnit</td></tr><tr><td>Q2 — Soutenir l'équipe, métier</td><td>Fonctionnels, acceptance</td><td>Valider les stories</td><td>Cucumber, FitNesse, Playwright</td></tr><tr><td>Q3 — Critiquer le produit, métier</td><td>Exploratoires, usabilité</td><td>Trouver ce que les scripts ratent</td><td>Sessions exploratoires, UX testing</td></tr><tr><td>Q4 — Critiquer le produit, tech</td><td>Performance, sécurité</td><td>Non-régressions non-fonctionnelles</td><td>k6, OWASP ZAP, Gatling</td></tr></tbody></table>
+<p>Vérifier qu'au moins un quadrant par sprint est couvert ; Q3 et Q4 sont souvent négligés.</p>
+<hr>
+<h3>4. Analyse de risques (Risk-Based Testing)</h3>
+<p><strong>Matrice risque = probabilité × impact :</strong></p>
+<pre><code>         │ Impact faible │ Impact élevé
+─────────┼───────────────┼──────────────────
+Proba    │               │
+élevée   │  Surveiller   │  ★ Tester en priorité
+─────────┼───────────────┼──────────────────
+Proba    │               │
+faible   │  Ignorer      │  Tester si temps dispo</code></pre>
+<p>Exemples de zones à haut risque à identifier : paiements, authentification, calculs métier critiques, intégrations tierces instables.</p>
+<p>Template Markdown pour la matrice :</p>
+<pre><code class="lang-markdown">| Fonctionnalité | Probabilité (1-5) | Impact (1-5) | Score | Couverture cible |
+|---|---|---|---|---|
+| Paiement carte | 3 | 5 | 15 | Unitaire + Intégration + E2E |
+| Rapport PDF | 2 | 2 | 4 | Unitaire seul |</code></pre>
+<hr>
+<h3>5. Planifier la couverture de tests</h3>
+<p><strong>Objectifs de couverture recommandés :</strong></p>
+<table><thead><tr><th>Domaine</th><th>Couverture ligne</th><th>Couverture branche</th></tr></thead><tbody><tr><td>Logique métier critique</td><td>≥ 90 %</td><td>≥ 80 %</td></tr><tr><td>Services applicatifs</td><td>≥ 75 %</td><td>≥ 70 %</td></tr><tr><td>Infrastructure / adapters</td><td>≥ 50 %</td><td>—</td></tr><tr><td>Code généré automatiquement</td><td>Exclure</td><td>—</td></tr></tbody></table>
+<p><strong>Configurer Istanbul/NYC (JS/TS) :</strong></p>
+<pre><code class="lang-json">// package.json
+&quot;jest&quot;: {
+  &quot;coverageThreshold&quot;: {
+    &quot;global&quot;: { &quot;lines&quot;: 80, &quot;branches&quot;: 70, &quot;functions&quot;: 80 }
+  },
+  &quot;coveragePathIgnorePatterns&quot;: [&quot;generated/&quot;, &quot;migrations/&quot;]
+}</code></pre>
+<p><strong>JaCoCo (Java/Kotlin) — build.gradle :</strong></p>
+<pre><code class="lang-groovy">jacocoTestCoverageVerification {
+  violationRules {
+    rule { limit { minimum = 0.80 } }
+  }
+}</code></pre>
+<p><strong>Coverlet (.NET) :</strong></p>
+<pre><code class="lang-bash">dotnet test --collect:&quot;XPlat Code Coverage&quot; \
+  /p:Threshold=80 /p:ThresholdType=line</code></pre>
+<p>Bloquer le pipeline CI si les seuils ne sont pas atteints.</p>
+<hr>
+<h3>6. Définir les environnements et données de test</h3>
+<p><strong>Environnements :</strong></p>
+<table><thead><tr><th>Env</th><th>Usage</th><th>Refresh données</th></tr></thead><tbody><tr><td>Local / Dev</td><td>Tests unitaires, intégration</td><td>Mocks / fixtures</td></tr><tr><td>CI</td><td>Smoke, intégration légère</td><td>Seed DB automatique</td></tr><tr><td>Staging</td><td>E2E, performance, UAT</td><td>Clone anonymisé prod</td></tr><tr><td>Pré-prod</td><td>Tests de charge, go/no-go</td><td>Jeu complet anonymisé</td></tr></tbody></table>
+<p><strong>Stratégie données :</strong></p>
+<ul>
+<li>Utiliser des <strong>builders / fixtures factories</strong> (ex : FactoryBot, Bogus .NET, Faker.js) plutôt que des dumps SQL figés.</li>
+<li>Anonymiser systématiquement les dumps de production (RGPD) : outil recommandé <code>faker</code> + script de masquage.</li>
+<li>Versionner les seeds avec les migrations pour éviter les drifts.</li>
+</ul>
+<hr>
+<h3>7. Établir les critères d'entrée et de sortie</h3>
+<p><strong>Critères d'entrée (pour démarrer les tests d'intégration/E2E) :</strong></p>
+<ul>
+<li>Build CI vert</li>
+<li>Tests unitaires passants ≥ seuil défini</li>
+<li>Environnement de test disponible et configuré</li>
+<li>User stories avec critères d'acceptance définis</li>
+</ul>
+<p><strong>Critères de sortie (Definition of Done QA) :</strong></p>
+<ul>
+<li>Couverture ≥ seuils définis</li>
+<li>0 bug bloquant / critique ouvert</li>
+<li>Tests de régression passants</li>
+<li>Rapport de test généré et archivé</li>
+<li>Tests de performance dans les SLA définis</li>
+</ul>
+<p><strong>Niveaux de sévérité de défauts :</strong></p>
+<table><thead><tr><th>Niveau</th><th>Définition</th><th>Seuil acceptable</th></tr></thead><tbody><tr><td>Bloquant</td><td>Crash, perte de données</td><td>0</td></tr><tr><td>Critique</td><td>Fonctionnalité clé KO</td><td>0 en release</td></tr><tr><td>Majeur</td><td>Dégradation significative</td><td>≤ 2 en release</td></tr><tr><td>Mineur</td><td>Cosmétique, workaround dispo</td><td>À planifier</td></tr></tbody></table>
+<hr>
+<h3>8. Intégrer la stratégie dans le CI/CD</h3>
+<p>Pipeline type (GitHub Actions / Azure DevOps) :</p>
+<pre><code class="lang-yaml">stages:
+  - name: unit-tests        # &lt; 2 min — bloque le merge
+  - name: lint-and-coverage # contrôle seuils
+  - name: integration-tests # &lt; 10 min — bloque le merge
+  - name: e2e-smoke         # &lt; 5 min — bloque le déploiement
+  - name: performance       # planifié nightly
+  - name: security-scan     # OWASP ZAP, Snyk — planifié nightly</code></pre>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<ul>
+<li><strong>Faux sentiment de sécurité du coverage</strong> : 90 % de couverture sans assertions utiles ne détecte rien. Préférer la mutation testing (<code>Stryker</code>, <code>PITest</code>) pour valider la qualité des tests.</li>
+<li><strong>Trop d'E2E</strong> : Chaque test E2E coûte 10x à 100x plus qu'un test unitaire en maintenance. Supprimer les E2E redondants dès qu'un test d'intégration couvre la même logique.</li>
+<li><strong>Tests couplés à l'implémentation</strong> : Tester les comportements observables, pas les détails internes. Un refactoring ne doit pas casser les tests si le comportement est inchangé.</li>
+<li><strong>Données de test en dur dans le code</strong> : utiliser des factories/fixtures pour éviter les tests fragiles et les conflits entre runs parallèles.</li>
+<li><strong>Ignorer les tests flaky</strong> : Un test instable masque des problèmes réels. Politique stricte : quarantaine immédiate + fix dans le sprint courant.</li>
+<li><strong>Stratégie figée</strong> : Réviser la stratégie à chaque release majeure ou changement d'architecture. C'est un document vivant.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Shift-left</strong> : intégrer les tests dès la phase de design (Test-Driven Development, BDD avec Gherkin).</li>
+<li><strong>AI-assisted testing</strong> : utiliser les outils de génération de tests (Diffblue, CodiumAI, GitHub Copilot) pour accélérer la couverture des cas limites — toujours relire et valider les tests générés.</li>
+<li><strong>Observabilité comme filet de sécurité</strong> : traces distribuées (OpenTelemetry) + alertes en production complètent la stratégie de test.</li>
+<li><strong>Chaos engineering léger</strong> : dès la staging, injecter des pannes simulées (Toxiproxy pour les dépendances réseau) pour valider la résilience.</li>
+<li><strong>Test contracts first</strong> : pour les APIs exposées à des partenaires, définir le contrat OpenAPI avant l'implémentation et le valider en CI (Schemathesis, Dredd).</li>
 </ul>
 </article>
 </main>

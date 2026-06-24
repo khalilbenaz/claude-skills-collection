@@ -97,37 +97,202 @@ cp -r claude-skills-collection/skills/dev-nginx-configurator ~/.claude/skills/</
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Nginx Configurator</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Identifier l'architecture cible</strong> — Déterminer le rôle de Nginx dans l'infrastructure : serveur web statique, reverse proxy, load balancer, API gateway, ou combinaison de ces rôles. Recenser les services backend à exposer.</li>
-</ol>
-<ol>
-<li><strong>Configurer le bloc serveur de base</strong> — Créer la configuration <code>server</code> avec <code>listen</code>, <code>server_name</code>, <code>root</code>, et <code>index</code>. Configurer les <code>location</code> blocks pour le routage des requêtes vers les fichiers statiques et les services backend.</li>
-</ol>
-<ol>
-<li><strong>Mettre en place le reverse proxy</strong> — Configurer <code>proxy_pass</code> vers les services backend, définir les headers de proxy (<code>X-Real-IP</code>, <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code>, <code>Host</code>), gérer les timeouts (<code>proxy_connect_timeout</code>, <code>proxy_read_timeout</code>) et le buffering.</li>
-</ol>
-<ol>
-<li><strong>Configurer SSL/TLS</strong> — Mettre en place HTTPS avec Let's Encrypt ou des certificats custom, configurer les protocoles TLS (1.2, 1.3), les cipher suites sécurisées, OCSP stapling, HSTS, et la redirection automatique HTTP vers HTTPS.</li>
-</ol>
-<ol>
-<li><strong>Implémenter le load balancing</strong> — Configurer le bloc <code>upstream</code> avec les algorithmes de répartition (<code>round-robin</code>, <code>least_conn</code>, <code>ip_hash</code>, <code>random</code>), les health checks, les poids des serveurs, et la gestion des serveurs <code>backup</code> et <code>down</code>.</li>
-</ol>
-<ol>
-<li><strong>Configurer le caching</strong> — Mettre en place <code>proxy_cache</code> avec des zones de cache nommées, définir les règles de validité (<code>proxy_cache_valid</code>), les clés de cache (<code>proxy_cache_key</code>), le bypass conditionnel et la purge de cache.</li>
-</ol>
-<ol>
-<li><strong>Appliquer les headers de sécurité</strong> — Configurer <code>Content-Security-Policy</code>, <code>X-Frame-Options</code>, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code>, et le rate limiting avec <code>limit_req_zone</code> et <code>limit_conn_zone</code>.</li>
-</ol>
-<ol>
-<li><strong>Tester et déployer</strong> — Valider la configuration avec <code>nginx -t</code>, tester les performances avec des outils de charge (ab, wrk, k6), configurer la rotation des logs, et mettre en place le reload sans downtime (<code>nginx -s reload</code>).</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Identifier l'architecture cible</h3>
+<p>Définir le rôle avant d'écrire une seule ligne :</p>
+<table><thead><tr><th>Rôle</th><th>Indicateur clé</th><th>Directives centrales</th></tr></thead><tbody><tr><td>Serveur statique</td><td>Pas de backend</td><td><code>root</code>, <code>try_files</code></td></tr><tr><td>Reverse proxy</td><td>1 backend</td><td><code>proxy_pass</code>, <code>proxy_set_header</code></td></tr><tr><td>Load balancer</td><td>N backends</td><td><code>upstream</code>, <code>least_conn</code></td></tr><tr><td>API Gateway</td><td>Auth, rate-limit, routing fin</td><td><code>limit_req_zone</code>, <code>map</code>, <code>auth_request</code></td></tr><tr><td>Cache proxy</td><td>Backend lent/coûteux</td><td><code>proxy_cache_path</code>, <code>proxy_cache_valid</code></td></tr></tbody></table>
+<p>Recenser : noms de domaine, ports, chemins <code>/api/</code>, backends (host:port), contraintes SSL (Let's Encrypt vs certificat interne).</p>
+<hr>
+<h3>2. Structure des fichiers — ne pas monolithiser</h3>
+<pre><code>/etc/nginx/
+├── nginx.conf              # global (worker_processes, events, http block)
+├── conf.d/
+│   ├── 00-defaults.conf    # gzip, types, log_format
+│   └── upstream.conf       # blocs upstream mutualisés
+└── sites-enabled/
+    └── monapp.conf         # 1 fichier par vhost</code></pre>
+<pre><code class="lang-nginx"># nginx.conf — paramètres globaux recommandés 2026
+worker_processes auto;
+worker_rlimit_nofile 65535;
+
+events {
+    worker_connections 4096;
+    multi_accept on;
+    use epoll;
+}
+
+http {
+    server_tokens off;                        # masque la version
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    client_max_body_size 20m;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    log_format main '$remote_addr - $remote_user [$time_local] &quot;$request&quot; '
+                    '$status $body_bytes_sent &quot;$http_referer&quot; '
+                    '&quot;$http_user_agent&quot; rt=$request_time';
+
+    include /etc/nginx/conf.d/*.conf;
+    include /etc/nginx/sites-enabled/*.conf;
+}</code></pre>
+<hr>
+<h3>3. Bloc serveur de base + reverse proxy</h3>
+<pre><code class="lang-nginx"># /etc/nginx/sites-enabled/monapp.conf
+upstream backend {
+    least_conn;
+    server 127.0.0.1:3000 weight=3;
+    server 127.0.0.1:3001 weight=1 backup;
+    keepalive 32;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name app.exemple.com;
+
+    access_log /var/log/nginx/app.access.log main;
+    error_log  /var/log/nginx/app.error.log warn;
+
+    # --- SSL (section 4) ---
+    ssl_certificate     /etc/letsencrypt/live/app.exemple.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.exemple.com/privkey.pem;
+
+    location / {
+        proxy_pass         http://backend;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade $http_upgrade;
+        proxy_set_header   Connection &quot;upgrade&quot;;  # WebSocket support
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout    60s;
+        proxy_send_timeout    60s;
+        proxy_buffering       on;
+        proxy_buffer_size     8k;
+        proxy_buffers         8 16k;
+    }
+
+    location /static/ {
+        alias /var/www/app/static/;
+        expires 1y;
+        add_header Cache-Control &quot;public, immutable&quot;;
+    }
+}
+
+# Redirection HTTP → HTTPS
+server {
+    listen 80;
+    server_name app.exemple.com;
+    return 301 https://$host$request_uri;
+}</code></pre>
+<hr>
+<h3>4. SSL/TLS — configuration durcie</h3>
+<pre><code class="lang-nginx"># conf.d/ssl.conf — inclure dans chaque vhost HTTPS
+ssl_protocols              TLSv1.2 TLSv1.3;
+ssl_prefer_server_ciphers  on;
+ssl_ciphers                ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384;
+ssl_session_cache          shared:SSL:10m;
+ssl_session_timeout        1d;
+ssl_session_tickets        off;
+ssl_stapling               on;
+ssl_stapling_verify        on;
+resolver                   8.8.8.8 1.1.1.1 valid=300s;
+add_header Strict-Transport-Security &quot;max-age=63072000; includeSubDomains; preload&quot; always;</code></pre>
+<p>Obtenir un certificat Let's Encrypt :</p>
+<pre><code class="lang-bash">certbot --nginx -d app.exemple.com --email admin@exemple.com --agree-tos --non-interactive
+# Renouvellement automatique (cron ou systemd timer déjà créé par certbot)
+certbot renew --dry-run</code></pre>
+<hr>
+<h3>5. Load balancing — critères de choix</h3>
+<table><thead><tr><th>Algorithme</th><th>Quand l'utiliser</th></tr></thead><tbody><tr><td><code>round-robin</code> (défaut)</td><td>Backends homogènes, requêtes rapides</td></tr><tr><td><code>least_conn</code></td><td>Requêtes longues, latences variables</td></tr><tr><td><code>ip_hash</code></td><td>Session affinité obligatoire (stateful sans Redis)</td></tr><tr><td><code>hash $request_uri consistent</code></td><td>Cache côté backend, même URL → même nœud</td></tr><tr><td><code>random two least_conn</code></td><td>Très grands clusters (100+ backends)</td></tr></tbody></table>
+<p>Health check passif (open-source) :</p>
+<pre><code class="lang-nginx">upstream backend {
+    least_conn;
+    server 10.0.0.1:8080 max_fails=3 fail_timeout=30s;
+    server 10.0.0.2:8080 max_fails=3 fail_timeout=30s;
+}</code></pre>
+<p>Health check actif → nécessite <strong>nginx-plus</strong> ou module <code>ngx_http_upstream_hc_module</code> compilé.</p>
+<hr>
+<h3>6. Caching proxy</h3>
+<pre><code class="lang-nginx"># conf.d/cache.conf
+proxy_cache_path /var/cache/nginx/app
+                 levels=1:2
+                 keys_zone=app_cache:10m
+                 max_size=1g
+                 inactive=60m
+                 use_temp_path=off;
+
+# Dans le location block :
+location /api/ {
+    proxy_pass        http://backend;
+    proxy_cache       app_cache;
+    proxy_cache_key   &quot;$scheme$host$request_uri&quot;;
+    proxy_cache_valid 200 302 10m;
+    proxy_cache_valid 404      1m;
+    proxy_cache_bypass $http_pragma $http_authorization;
+    add_header X-Cache-Status $upstream_cache_status;  # debug : HIT/MISS
+}</code></pre>
+<p>Ne jamais cacher : requêtes authentifiées (<code>Authorization</code> header), méthodes POST/PUT/DELETE, endpoints <code>/logout</code>, <code>/pay</code>.</p>
+<hr>
+<h3>7. Sécurité — headers et rate limiting</h3>
+<pre><code class="lang-nginx"># conf.d/security.conf
+add_header X-Frame-Options           &quot;SAMEORIGIN&quot;   always;
+add_header X-Content-Type-Options    &quot;nosniff&quot;      always;
+add_header Referrer-Policy           &quot;strict-origin-when-cross-origin&quot; always;
+add_header Permissions-Policy        &quot;camera=(), microphone=(), geolocation=()&quot; always;
+add_header Content-Security-Policy   &quot;default-src 'self'; script-src 'self'; object-src 'none'&quot; always;
+
+# Rate limiting
+limit_req_zone $binary_remote_addr zone=api:10m rate=20r/s;
+limit_conn_zone $binary_remote_addr zone=conn:10m;
+
+# Appliquer dans le location :
+location /api/ {
+    limit_req  zone=api burst=40 nodelay;
+    limit_conn conn 20;
+    limit_req_status 429;
+    proxy_pass http://backend;
+}
+
+# Bloquer méthodes non désirées
+if ($request_method !~ ^(GET|POST|PUT|PATCH|DELETE|OPTIONS)$) {
+    return 405;
+}</code></pre>
+<hr>
+<h3>8. Tester et déployer sans downtime</h3>
+<pre><code class="lang-bash"># Validation syntaxique — toujours avant reload
+nginx -t
+
+# Reload sans coupure (0-downtime)
+nginx -s reload
+# ou via systemd :
+systemctl reload nginx
+
+# Tester les headers de sécurité
+curl -I https://app.exemple.com
+
+# Test de charge rapide
+wrk -t4 -c100 -d30s https://app.exemple.com/api/health
+# ou
+ab -n 10000 -c 200 https://app.exemple.com/
+
+# Vérifier le cache
+curl -I https://app.exemple.com/api/items | grep X-Cache-Status</code></pre>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Risque</th><th>Correction</th></tr></thead><tbody><tr><td><code>proxy_pass http://backend/</code> avec <code>/</code> final</td><td>Rewrite du path — <code>/api/foo</code> devient <code>/foo</code></td><td>Omettre le <code>/</code> final si on veut préserver le path</td></tr><tr><td><code>add_header</code> dans un bloc <code>if</code></td><td>Hérite mal, écrase les headers parents</td><td>Utiliser <code>always</code> dans le bloc <code>server</code> ou <code>location</code></td></tr><tr><td><code>worker_processes 1</code> en production</td><td>Sous-utilisation CPU</td><td><code>worker_processes auto;</code></td></tr><tr><td><code>client_max_body_size</code> à 0</td><td>Upload illimité, risque DoS</td><td>Fixer à la taille max métier (ex: <code>50m</code>)</td></tr><tr><td>HSTS sans <code>preload</code> testé</td><td>Difficile à révoquer</td><td>Tester d'abord sans <code>preload</code>, ajouter après validation</td></tr><tr><td>Cache sans <code>proxy_cache_bypass $http_authorization</code></td><td>Servir du contenu privé à d'autres</td><td>Toujours bypass si header <code>Authorization</code> présent</td></tr><tr><td><code>ssl_protocols TLSv1 TLSv1.1</code></td><td>Protocoles dépréciés (CVE)</td><td>TLSv1.2 + TLSv1.3 uniquement</td></tr><tr><td>Logs désactivés en prod</td><td>Impossible de diagnostiquer</td><td>Conserver access + error log, rotation via logrotate</td></tr></tbody></table>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Fournis toujours des fichiers de configuration complets et commentés, prêts à être utilisés.</li>
-<li>Applique systématiquement les bonnes pratiques de sécurité : désactiver <code>server_tokens</code>, limiter les méthodes HTTP autorisées, configurer les headers de sécurité.</li>
-<li>Adapte la configuration au contexte de déploiement de l'utilisateur (bare metal, Docker, Kubernetes Ingress, cloud managed).</li>
-<li>Propose des configurations séparées par fichier (<code>sites-available/</code>, <code>conf.d/</code>) plutôt qu'un seul fichier monolithique.</li>
-<li>Inclus toujours les directives de logging (<code>access_log</code>, <code>error_log</code>) avec des formats personnalisés pour le debugging.</li>
+<li><strong>HTTP/3 (QUIC)</strong> : <code>listen 443 quic reuseport;</code> + <code>add_header Alt-Svc 'h3=&quot;:443&quot;; ma=86400';</code> si nginx ≥ 1.25 compilé avec BoringSSL.</li>
+<li><strong>Brotli</strong> : préférer à gzip seul — module <code>ngx_brotli</code> (compilation) ou image Docker <code>nginxinc/nginx-unprivileged</code> avec Brotli inclus.</li>
+<li><strong>Docker/K8s</strong> : utiliser <code>nginx:alpine</code> (image officielle), monter la config via ConfigMap, exposer <code>/healthz</code> avec <code>stub_status</code> pour les liveness probes.</li>
+<li><strong>Observabilité</strong> : exporter les métriques avec <code>nginx-prometheus-exporter</code> + scraper Prometheus ; dasboard Grafana ID 12708.</li>
+<li><strong>Mise à jour</strong> : patcher régulièrement — suivre <a href="https://nginx.org/en/CHANGES" target="_blank" rel="noopener">nginx.org/en/CHANGES</a> ; en distro, <code>apt-get upgrade nginx</code> sans supprimer les configs.</li>
 </ul>
 </article>
 </main>

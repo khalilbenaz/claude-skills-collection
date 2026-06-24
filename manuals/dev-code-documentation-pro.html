@@ -96,38 +96,147 @@ cp -r claude-skills-collection/skills/dev-code-documentation-pro ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Code Documentation Pro</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Adopter la bonne philosophie</strong> : Le code bien écrit s'auto-documente en partie (noms clairs, fonctions courtes). Commenter le POURQUOI (intention, contexte métier, contrainte) jamais le COMMENT (ce que le code dit déjà). Un commentaire qui répète le code est du bruit. Un commentaire qui explique une décision non-évidente est de la valeur.</li>
-</ol>
-<ol>
-<li><strong>Rédiger des docstrings et JSDoc de qualité</strong> : Utiliser le format standard du langage (Google style / NumPy style en Python, JSDoc en JS/TS, XML doc comments en C#, Javadoc en Java). Documenter systématiquement : description courte, paramètres avec types et rôle, valeur de retour, exceptions levées, exemples d'usage. Ne pas documenter l'évident.</li>
-</ol>
-<ol>
-<li><strong>Écrire des commentaires utiles</strong> : Indiquer la complexité algorithmique (O(n log n)) quand elle n'est pas triviale. Expliquer les workarounds et hacks avec un lien vers l'issue ou le bug tracker. Préfixer les TODO/FIXME avec l'auteur, la date et le contexte (<code>// TODO(alice, 2024-03): supprimer après migration v3</code>). Lier vers la documentation externe quand pertinent.</li>
-</ol>
-<ol>
-<li><strong>Exploiter types et interfaces comme documentation</strong> : Les types TypeScript, les type hints Python et les génériques C# sont de la documentation exécutable. Préférer des types expressifs (<code>UserId</code> vs <code>string</code>, <code>EmailAddress</code> vs <code>string</code>). Les interfaces et contrats de types communiquent l'intention mieux qu'un commentaire.</li>
-</ol>
-<ol>
-<li><strong>Ajouter des exemples dans les docstrings</strong> : Inclure un bloc <code>Examples</code> ou <code>@example</code> dans chaque docstring de fonction publique non-triviale. Les doctest Python sont exécutables et vérifiables. Les exemples dans les docstrings deviennent la première documentation que le dev lit dans son IDE.</li>
-</ol>
-<ol>
-<li><strong>Générer la documentation automatiquement</strong> : Configurer les outils selon le stack : Swagger/OpenAPI pour les APIs REST, TypeDoc pour TypeScript, Doxygen pour C/C++, Sphinx pour Python, DocFX pour .NET. Intégrer la génération dans le pipeline CI/CD. Publier automatiquement sur GitHub Pages ou un site interne à chaque merge sur main.</li>
-</ol>
-<ol>
-<li><strong>Documenter l'architecture du code</strong> : Ajouter un README.md dans chaque package/module important expliquant son rôle, ses dépendances et son fonctionnement global. Maintenir des diagrammes C4 pour les composants majeurs. Documenter les invariants, pré-conditions et post-conditions des modules critiques (sécurité, paiement, données sensibles).</li>
-</ol>
-<ol>
-<li><strong>Faire des revues de documentation</strong> : Inclure la documentation dans les critères d'acceptance des PRs. Vérifier lors des code reviews : nouveaux paramètres documentés, nouvelles exceptions listées, exemples à jour, liens fonctionnels. Utiliser des outils de lint de documentation (pydocstyle, ESLint jsdoc plugin). Organiser des revues trimestrielles de complétude sur les modules publics.</li>
-</ol>
-<h2>Règles</h2>
+<h2>Philosophie : commenter le POURQUOI, pas le QUOI</h2>
+<p>Le code bien écrit s'auto-documente (noms clairs, fonctions courtes, types expressifs). Un commentaire qui répète le code est du bruit. Un commentaire qui explique une décision non-évidente est de la valeur.</p>
+<pre><code class="lang-python"># BAD — répète le code
+i += 1  # incrémente i
+
+# GOOD — explique la contrainte métier
+i += 1  # l'index commence à 1 côté API fournisseur (spec §4.2), pas 0</code></pre>
+<hr>
+<h2>Workflow en étapes</h2>
+<h3>1. Choisir le format adapté au langage</h3>
+<table><thead><tr><th>Langage</th><th>Format</th><th>Outils de génération</th></tr></thead><tbody><tr><td>Python</td><td>Google style / NumPy style</td><td>Sphinx + autodoc, pdoc</td></tr><tr><td>TypeScript / JavaScript</td><td>JSDoc (<code>/** */</code>)</td><td>TypeDoc</td></tr><tr><td>C#</td><td>XML doc (<code>///</code>)</td><td>DocFX, Sandcastle</td></tr><tr><td>Java</td><td>Javadoc (<code>/** */</code>)</td><td>Javadoc CLI, Dokka</td></tr><tr><td>Go</td><td>GoDoc (commentaire au-dessus du symbole)</td><td><code>go doc</code>, pkg.go.dev</td></tr><tr><td>C++</td><td>Doxygen</td><td>Doxygen</td></tr></tbody></table>
+<h3>2. Structurer chaque docstring publique</h3>
+<p>Ordre canonique : description courte → paramètres → retour → exceptions → exemple.</p>
+<p><strong>Python (Google style) :</strong></p>
+<pre><code class="lang-python">def charge_payment(amount: Decimal, currency: str, idempotency_key: str) -&gt; PaymentResult:
+    &quot;&quot;&quot;Débite le montant depuis la passerelle configurée.
+
+    N'effectue aucune opération si la clé d'idempotence est déjà connue (replay safe).
+
+    Args:
+        amount: Montant en unité principale (ex: 10.50 pour 10,50 TND).
+        currency: Code ISO 4217 en majuscules (ex: &quot;TND&quot;).
+        idempotency_key: UUID v4 unique par tentative, persisté avant l'appel.
+
+    Returns:
+        PaymentResult avec status, transaction_id et timestamp.
+
+    Raises:
+        InsufficientFundsError: Si le solde est insuffisant.
+        GatewayTimeoutError: Si la passerelle ne répond pas en &lt; 10 s.
+
+    Examples:
+        &gt;&gt;&gt; result = charge_payment(Decimal(&quot;50.00&quot;), &quot;TND&quot;, str(uuid4()))
+        &gt;&gt;&gt; assert result.status == &quot;SUCCESS&quot;
+    &quot;&quot;&quot;</code></pre>
+<p><strong>TypeScript (JSDoc) :</strong></p>
+<pre><code class="lang-typescript">/**
+ * Génère un token JWT signé avec rotation automatique des clés.
+ *
+ * @param payload - Données à embarquer ; ne pas inclure de PII sensibles.
+ * @param ttlSeconds - Durée de validité en secondes (défaut : 3600).
+ * @returns Token signé ou lève une erreur si le keystore est indisponible.
+ * @throws {KeystoreUnavailableError} Quand aucune clé active n'est trouvée.
+ * @example
+ * const token = generateJwt({ userId: &quot;u_123&quot;, role: &quot;admin&quot; });
+ */
+export function generateJwt(payload: JwtPayload, ttlSeconds = 3600): string { ... }</code></pre>
+<p><strong>C# (XML doc) :</strong></p>
+<pre><code class="lang-csharp">/// &lt;summary&gt;
+/// Calcule la commission nette après déduction des frais plateforme.
+/// &lt;/summary&gt;
+/// &lt;param name=&quot;grossAmount&quot;&gt;Montant brut en millimes.&lt;/param&gt;
+/// &lt;param name=&quot;feeRate&quot;&gt;Taux plateforme entre 0 et 1 (ex: 0.015 = 1,5 %).&lt;/param&gt;
+/// &lt;returns&gt;Commission nette en millimes, toujours positive.&lt;/returns&gt;
+/// &lt;exception cref=&quot;ArgumentOutOfRangeException&quot;&gt;
+/// Levée si &lt;paramref name=&quot;feeRate&quot;/&gt; est hors [0, 1].
+/// &lt;/exception&gt;
+public static long ComputeNetCommission(long grossAmount, decimal feeRate) { ... }</code></pre>
+<h3>3. Commenter les cas non-évidents dans le corps</h3>
+<pre><code class="lang-typescript">// Intentionnellement séquentiel (pas Promise.all) : la passerelle rejette
+// les appels parallèles avec le même merchantId — ticket #4521
+for (const batch of batches) {
+  await processBatch(batch);
+}</code></pre>
+<pre><code class="lang-python"># Workaround SDK v2.3 : le champ `created_at` arrive en epoch ms malgré la spec ISO 8601
+# Supprimer après upgrade vers v3.x (voir issue #892)
+ts = datetime.fromtimestamp(raw[&quot;created_at&quot;] / 1000, tz=timezone.utc)</code></pre>
+<h3>4. Utiliser les types comme documentation exécutable</h3>
+<p>Préférer des types expressifs aux primitives nues :</p>
+<pre><code class="lang-typescript">// BAD
+function transfer(from: string, to: string, amount: number): boolean
+
+// GOOD
+function transfer(from: AccountId, to: AccountId, amount: MoneyMillimes): TransferResult</code></pre>
+<p>En Python, utiliser <code>TypeAlias</code> et <code>NewType</code> :</p>
+<pre><code class="lang-python">from typing import NewType
+UserId = NewType(&quot;UserId&quot;, str)
+AmountMillimes = NewType(&quot;AmountMillimes&quot;, int)</code></pre>
+<h3>5. Documenter les TODO/FIXME avec contexte</h3>
+<p>Format recommandé :</p>
+<pre><code class="lang-python"># TODO(k.benazzouz, 2026-06): supprimer après migration schéma v4 — voir ADR-012
+# FIXME(team-payment): race condition possible si deux workers traitent le même idempotency_key simultanément</code></pre>
+<h3>6. Configurer la génération automatique</h3>
+<p><strong>Python (Sphinx + autodoc) :</strong></p>
+<pre><code class="lang-bash">pip install sphinx sphinx-autodoc-typehints
+sphinx-quickstart docs/
+# Dans conf.py :
+extensions = [&quot;sphinx.ext.autodoc&quot;, &quot;sphinx_autodoc_typehints&quot;]
+# Générer :
+make -C docs html</code></pre>
+<p><strong>TypeScript (TypeDoc) :</strong></p>
+<pre><code class="lang-bash">npx typedoc --entryPointStrategy expand src --out docs/api</code></pre>
+<p><strong>CI GitHub Actions :</strong></p>
+<pre><code class="lang-yaml">- name: Generate docs
+  run: npx typedoc --out docs/api
+- name: Deploy to GitHub Pages
+  uses: peaceiris/actions-gh-pages@v4
+  with:
+    publish_dir: docs/api</code></pre>
+<h3>7. Linter la documentation</h3>
+<pre><code class="lang-bash"># Python
+pip install pydocstyle
+pydocstyle --convention=google src/
+
+# TypeScript (ESLint)
+npm install eslint-plugin-jsdoc
+# .eslintrc : &quot;plugins&quot;: [&quot;jsdoc&quot;], &quot;extends&quot;: [&quot;plugin:jsdoc/recommended&quot;]
+npx eslint src/ --rule 'jsdoc/require-jsdoc: warn'
+
+# C# (via Roslyn analyzer, dans .csproj)
+# &lt;GenerateDocumentationFile&gt;true&lt;/GenerateDocumentationFile&gt;</code></pre>
+<h3>8. Documenter l'architecture au niveau module</h3>
+<p>Chaque package/module expose un <code>README.md</code> minimal :</p>
 <ul>
-<li><strong>Commenter le POURQUOI uniquement</strong> : Le code montre le quoi et le comment. Les commentaires expliquent les décisions, contraintes et intentions non-déductibles du code seul.</li>
-<li><strong>Format standard par langage</strong> : Utiliser le format officiel de l'écosystème (JSDoc, Google style, XML doc) pour bénéficier de l'intégration IDE et des outils de génération.</li>
-<li><strong>Documentation = critère de qualité</strong> : Une PR qui ajoute une API publique sans docstring est incomplète. La documentation fait partie du code livré, pas d'une tâche optionnelle séparée.</li>
-<li><strong>Tests comme documentation vivante</strong> : Des tests bien nommés (<code>should_return_404_when_user_not_found</code>) documentent le comportement attendu et restent toujours à jour puisqu'ils s'exécutent.</li>
-<li><strong>Automatiser pour maintenir</strong> : La documentation non-automatisée se dégrade. Générer, déployer et vérifier la documentation en CI garantit sa fraîcheur et sa cohérence.</li>
+<li>Rôle du module (1-2 phrases)</li>
+<li>Dépendances directes et leurs raisons</li>
+<li>Patterns utilisés (ex: Repository, CQRS)</li>
+<li>Invariants et contraintes (ex: &quot;toutes les mutations passent par le CommandBus&quot;)</li>
+</ul>
+<hr>
+<h2>Critères de décision</h2>
+<table><thead><tr><th>Situation</th><th>Action</th></tr></thead><tbody><tr><td>Fonction publique d'une librairie/API</td><td>Docstring complète obligatoire</td></tr><tr><td>Fonction privée triviale (&lt; 5 lignes, nom explicite)</td><td>Pas de docstring nécessaire</td></tr><tr><td>Algorithme complexe ou optimisation non-évidente</td><td>Commentaire + référence (article, issue, ADR)</td></tr><tr><td>Workaround ou hack temporaire</td><td>Commentaire avec auteur, date, lien ticket</td></tr><tr><td>Code de sécurité / paiement</td><td>Documenter les invariants, pré/post-conditions</td></tr><tr><td>Module public stable</td><td>README + génération auto dans CI</td></tr></tbody></table>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<ul>
+<li><strong>Commentaire qui ment</strong> : un commentaire obsolète est pire qu'aucun commentaire. Revoir en même temps que le code qu'il décrit.</li>
+<li><strong>Sur-documentation du code trivial</strong> : <code>// retourne true si actif</code> au-dessus de <code>return this.isActive</code> — inutile.</li>
+<li><strong>Docstring sans exemple pour les cas complexes</strong> : les exemples réduisent les allers-retours des consommateurs de l'API.</li>
+<li><strong>TODO sans propriétaire ni date</strong> : devient un commentaire fantôme jamais traité.</li>
+<li><strong>Documentation séparée du code</strong> : le code change, le doc Word ne suit pas. Seul autodoc est fiable.</li>
+<li><strong>Traduire le type dans le texte</strong> : <code>@param amount {number}</code> en JSDoc quand TypeScript infère déjà le type — redondant, peut diverger.</li>
+<li><strong>Oublier les exceptions</strong> : la moitié des bugs consommateur vient d'une exception non-documentée.</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Activer <code>strict</code> TypeScript + <code>py.typed</code> marker pour que l'IDE affiche les docstrings inline.</li>
+<li>Utiliser des LLM pour générer un premier jet de docstring, puis relire / corriger la sémantique métier.</li>
+<li>Intégrer un diff de documentation dans les PR reviews (TypeDoc, Sphinx supportent les outputs comparables).</li>
+<li>Préférer les tests nommés explicitement comme complément de documentation (<code>should_reject_payment_when_wallet_frozen</code>) — ils ne se désynchronisent jamais.</li>
+<li>Pour les APIs REST, garder OpenAPI comme source de vérité et générer le client + la doc depuis le contrat (contract-first).</li>
 </ul>
 </article>
 </main>

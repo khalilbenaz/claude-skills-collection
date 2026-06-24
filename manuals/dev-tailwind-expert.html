@@ -97,38 +97,170 @@ cp -r claude-skills-collection/skills/dev-tailwind-expert ~/.claude/skills/</div
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Tailwind CSS Expert</h1>
 <h2>Workflow</h2>
-<ol>
-<li><strong>Analyser le design</strong> — Examiner la maquette ou les besoins UI pour identifier les composants, la palette de couleurs, la typographie, les espacements et les breakpoints nécessaires.</li>
-</ol>
-<ol>
-<li><strong>Configurer le projet</strong> — Initialiser Tailwind CSS avec <code>tailwind.config.ts</code>, définir le <code>content</code> pour le tree-shaking, et configurer le thème personnalisé (<code>colors</code>, <code>spacing</code>, <code>fontFamily</code>, <code>screens</code>, <code>extend</code>).</li>
-</ol>
-<ol>
-<li><strong>Créer le système de design</strong> — Définir les design tokens dans la configuration : couleurs sémantiques (<code>primary</code>, <code>secondary</code>, <code>destructive</code>), échelle typographique, ombres et border-radius cohérents avec la charte graphique.</li>
-</ol>
-<ol>
-<li><strong>Implémenter les composants</strong> — Construire les composants UI avec les classes utilitaires Tailwind, en utilisant les variantes responsive (<code>sm:</code>, <code>md:</code>, <code>lg:</code>), les états interactifs (<code>hover:</code>, <code>focus:</code>, <code>active:</code>, <code>disabled:</code>), et les classes de groupe (<code>group-hover:</code>).</li>
-</ol>
-<ol>
-<li><strong>Configurer le dark mode</strong> — Implémenter le mode sombre avec la stratégie <code>class</code> ou <code>media</code>, définir les variantes <code>dark:</code> pour chaque composant, et gérer la persistance du choix utilisateur via localStorage.</li>
-</ol>
-<ol>
-<li><strong>Développer des plugins custom</strong> — Créer des plugins Tailwind pour les composants récurrents, les utilitaires personnalisés et les variantes spécifiques au projet. Utiliser <code>addComponents</code>, <code>addUtilities</code> et <code>matchUtilities</code> selon le besoin.</li>
-</ol>
-<ol>
-<li><strong>Optimiser la production</strong> — Vérifier le tree-shaking des classes inutilisées, extraire les classes répétitives avec <code>@apply</code> dans les composants de base, et mesurer la taille finale du CSS généré.</li>
-</ol>
-<ol>
-<li><strong>Assurer la maintenabilité</strong> — Organiser les classes avec un ordre cohérent (layout, spacing, sizing, typography, colors, effects), utiliser <code>clsx</code>/<code>cn</code> pour la composition conditionnelle, et documenter les conventions d'équipe.</li>
-</ol>
-<h2>Règles</h2>
+<h3>1. Initialiser le projet</h3>
+<pre><code class="lang-bash"># Tailwind v4 (2025+) — recommandé pour tous les nouveaux projets
+npm install tailwindcss @tailwindcss/vite
+# OU avec PostCSS
+npm install tailwindcss postcss autoprefixer
+npx tailwindcss init -p</code></pre>
+<p><strong>Critère de décision v3 vs v4 :</strong></p>
 <ul>
-<li>Privilégie les classes utilitaires Tailwind plutôt que du CSS custom — n'utilise <code>@apply</code> que pour les composants de base très répétés.</li>
-<li>Utilise toujours l'approche mobile-first pour le responsive : commence par les styles mobiles puis ajoute les variantes <code>sm:</code>, <code>md:</code>, <code>lg:</code>.</li>
-<li>Ne modifie jamais les valeurs par défaut de Tailwind directement — utilise <code>extend</code> dans la configuration pour ajouter des valeurs personnalisées.</li>
-<li>Fournis des exemples avec les classes complètes et lisibles, pas de classes abrégées ou ambiguës.</li>
-<li>Propose systématiquement une version accessible (contraste WCAG AA, focus visible, attributs ARIA) pour chaque composant.</li>
+<li>v4 : projet neuf, Vite/Remix/Next 15+, CSS-first config (<code>@theme</code>), performances build x2</li>
+<li>v3 : projet existant ou contrainte de compatibilité ecosystème (plugins tiers non migrés)</li>
 </ul>
+<h3>2. Configurer <code>tailwind.config.ts</code></h3>
+<pre><code class="lang-ts">// tailwind.config.ts (v3)
+import type { Config } from 'tailwindcss'
+
+export default {
+  content: [
+    './src/**/*.{ts,tsx,html}',
+    './node_modules/@acme/ui/dist/**/*.js', // libs externes si nécessaire
+  ],
+  darkMode: 'class', // ou 'media'
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          50: '#f0f9ff',
+          500: '#0ea5e9',
+          900: '#0c4a6e',
+        },
+        destructive: 'hsl(var(--color-destructive) / &lt;alpha-value&gt;)',
+      },
+      fontFamily: {
+        sans: ['Inter Variable', 'system-ui', 'sans-serif'],
+      },
+      screens: {
+        xs: '480px', // breakpoint custom avant sm
+      },
+    },
+  },
+  plugins: [
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/typography'),
+  ],
+} satisfies Config</code></pre>
+<p><strong>En v4 (CSS-first) :</strong> la config se fait dans le CSS directement :</p>
+<pre><code class="lang-css">/* app.css */
+@import &quot;tailwindcss&quot;;
+@theme {
+  --color-brand-500: oklch(62% 0.19 240);
+  --font-sans: &quot;Inter Variable&quot;, system-ui, sans-serif;
+}</code></pre>
+<h3>3. Construire les design tokens</h3>
+<p>Principe : définir une fois, utiliser partout via des variables CSS ou tokens Tailwind.</p>
+<pre><code class="lang-ts">// Couleurs sémantiques → mappe les tokens sur des rôles
+colors: {
+  primary: 'hsl(var(--primary) / &lt;alpha-value&gt;)',
+  'primary-foreground': 'hsl(var(--primary-foreground) / &lt;alpha-value&gt;)',
+}</code></pre>
+<pre><code class="lang-css">/* globals.css */
+:root {
+  --primary: 221 83% 53%;
+  --primary-foreground: 0 0% 100%;
+}
+.dark {
+  --primary: 217 91% 70%;
+}</code></pre>
+<h3>4. Implémenter les composants</h3>
+<p><strong>Mobile-first systématique :</strong></p>
+<pre><code class="lang-html">&lt;!-- Mauvais : pas de base mobile --&gt;
+&lt;div class=&quot;lg:flex lg:gap-8&quot;&gt;...&lt;/div&gt;
+
+&lt;!-- Bon : mobile d'abord, puis breakpoints --&gt;
+&lt;div class=&quot;flex flex-col gap-4 md:flex-row md:gap-8&quot;&gt;...&lt;/div&gt;</code></pre>
+<p><strong>Composition conditionnelle avec <code>cn</code> (clsx + tailwind-merge) :</strong></p>
+<pre><code class="lang-ts">import { clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+// Utilisation
+&lt;button className={cn(
+  'px-4 py-2 rounded-md font-medium transition-colors',
+  variant === 'primary' &amp;&amp; 'bg-brand-500 text-white hover:bg-brand-600',
+  variant === 'ghost'   &amp;&amp; 'bg-transparent text-brand-500 hover:bg-brand-50',
+  disabled &amp;&amp; 'opacity-50 cursor-not-allowed',
+)}&gt;</code></pre>
+<p><strong>Groupes et peer :</strong></p>
+<pre><code class="lang-html">&lt;!-- group-hover : effet parent → enfant --&gt;
+&lt;div class=&quot;group rounded-lg border p-4 hover:border-brand-500&quot;&gt;
+  &lt;p class=&quot;text-gray-500 group-hover:text-brand-500&quot;&gt;Texte&lt;/p&gt;
+&lt;/div&gt;
+
+&lt;!-- peer : état sibling input → label --&gt;
+&lt;input id=&quot;email&quot; class=&quot;peer&quot; required /&gt;
+&lt;p class=&quot;hidden peer-invalid:block text-red-500 text-sm&quot;&gt;Email invalide&lt;/p&gt;</code></pre>
+<h3>5. Dark mode</h3>
+<pre><code class="lang-ts">// tailwind.config.ts
+darkMode: 'class' // toggle via JS — meilleure UX</code></pre>
+<pre><code class="lang-ts">// Hook de toggle (React)
+function useDarkMode() {
+  const toggle = () =&gt; document.documentElement.classList.toggle('dark')
+  return toggle
+}</code></pre>
+<pre><code class="lang-html">&lt;!-- Classes dark: sur chaque token de couleur --&gt;
+&lt;div class=&quot;bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100&quot;&gt;</code></pre>
+<h3>6. Plugins custom</h3>
+<pre><code class="lang-ts">// Plugin utilitaires — ex: text-balance manquant en v3
+const plugin = require('tailwindcss/plugin')
+
+module.exports = {
+  plugins: [
+    plugin(({ addUtilities, matchUtilities, theme }) =&gt; {
+      // Utilitaire statique
+      addUtilities({
+        '.text-balance': { 'text-wrap': 'balance' },
+        '.scrollbar-none': { 'scrollbar-width': 'none' },
+      })
+      // Utilitaire dynamique avec valeur config
+      matchUtilities(
+        { 'grid-cols-auto': (value) =&gt; ({ gridTemplateColumns: `repeat(auto-fill, minmax(${value}, 1fr))` }) },
+        { values: theme('spacing') }
+      )
+    }),
+  ],
+}
+// Usage : &lt;div class=&quot;grid-cols-auto-64&quot;&gt;</code></pre>
+<h3>7. Optimiser pour la production</h3>
+<pre><code class="lang-bash"># Vérifier la taille du CSS généré
+npx tailwindcss -i ./src/app.css -o ./dist/out.css --minify
+du -sh dist/out.css  # objectif : &lt; 20 KB en prod typique
+
+# Analyser les classes non purgées (safelist si nécessaire)</code></pre>
+<pre><code class="lang-ts">// Safelist pour classes générées dynamiquement (ex: couleur depuis DB)
+safelist: [
+  'bg-red-500', 'bg-green-500', 'bg-blue-500',
+  { pattern: /^(bg|text|border)-(brand|destructive)-\d{2,3}$/ },
+]</code></pre>
+<p><strong>Règle <code>@apply</code> :</strong> uniquement pour les composants de base répétés dans des fichiers <code>.css</code> — jamais dans des composants JSX.</p>
+<pre><code class="lang-css">/* base.css — OK */
+.btn-primary {
+  @apply px-4 py-2 bg-brand-500 text-white rounded-md hover:bg-brand-600;
+}</code></pre>
+<h3>8. Ordre et maintenabilité</h3>
+<p>Ordre recommandé (Prettier plugin enforce automatiquement) :</p>
+<pre><code class="lang-bash">npm install -D prettier-plugin-tailwindcss</code></pre>
+<pre><code>Layout (display, position) → Flexbox/Grid → Sizing → Spacing → Typography → Colors → Effects → Interactions</code></pre>
+<hr>
+<h2>Anti-patterns et pièges</h2>
+<table><thead><tr><th>Piège</th><th>Problème</th><th>Solution</th></tr></thead><tbody><tr><td>Classes dynamiques par concaténation de string</td><td>Purgées en prod</td><td>Utiliser des classes complètes ou safelist</td></tr><tr><td><code>@apply</code> dans chaque composant JSX</td><td>Annule le bénéfice utility-first</td><td>Garder les styles inline en JSX</td></tr><tr><td>Override sans <code>extend</code></td><td>Supprime les valeurs Tailwind par défaut</td><td>Toujours utiliser <code>theme.extend</code></td></tr><tr><td>Ignorer <code>tailwind-merge</code></td><td>Conflits de classes (<code>p-2 p-4</code> → imprévisible)</td><td>Toujours passer par <code>cn()</code></td></tr><tr><td>Breakpoints hors mobile-first</td><td>CSS incohérent</td><td>Base sans préfixe = mobile, puis <code>sm:</code> et au-delà</td></tr><tr><td>Hardcoder des couleurs hex en classes</td><td>Pas thémable</td><td>Définir dans <code>tailwind.config</code> ou <code>@theme</code></td></tr></tbody></table>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>v4 par défaut</strong> pour tout projet neuf : config CSS-first, support P3/oklch, zero config JS.</li>
+<li><strong>Variants composés</strong> (v3.4+) : <code>[@media(hover:hover)]:hover:bg-brand-600</code> pour cibler les vrais hover devices.</li>
+<li><strong>Arbitrary values</strong> avec modération : <code>w-[327px]</code> acceptable ponctuellement, jamais pour les tokens systèmes.</li>
+<li><strong>Accessibilité</strong> : toujours inclure <code>focus-visible:ring-2 focus-visible:ring-brand-500</code> sur les éléments interactifs ; tester le contraste avec <code>oklch</code> avant de figer la palette.</li>
+<li><strong>Container queries</strong> (plugin officiel v3, natif v4) : préférer <code>@container</code> au responsive basé sur viewport pour les composants réutilisables.</li>
+</ul>
+<pre><code class="lang-html">&lt;!-- Container query v4 --&gt;
+&lt;div class=&quot;@container&quot;&gt;
+  &lt;div class=&quot;grid grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3&quot;&gt;...&lt;/div&gt;
+&lt;/div&gt;</code></pre>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

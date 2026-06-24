@@ -96,38 +96,201 @@ cp -r claude-skills-collection/skills/dev-python-best-practices ~/.claude/skills
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Python Best Practices</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Structure du projet</strong> : Adopter le src layout (<code>src/mon_package/</code>), configurer <code>pyproject.toml</code> comme source unique de vérité, gérer les environnements virtuels avec <code>poetry</code> ou <code>uv</code> (plus rapide), définir les dépendances avec groupes dev/prod, versionner le package avec <code>__version__</code> centralisé.</li>
-</ol>
-<ol>
-<li><strong>Style et conventions</strong> : Appliquer PEP 8 via <code>ruff</code> (lint + format), utiliser les type hints PEP 484 sur toutes les signatures publiques, rédiger des docstrings au format Google ou NumPy, configurer <code>black</code> ou <code>ruff format</code> pour le formatage automatique, définir les règles dans <code>pyproject.toml</code> section <code>[tool.ruff]</code>.</li>
-</ol>
-<ol>
-<li><strong>Patterns pythoniques</strong> : Préférer les list/dict/set comprehensions aux boucles impératives, utiliser les générateurs (<code>yield</code>) pour les séquences paresseuses, exploiter les context managers (<code>with</code>, <code>__enter__</code>/<code>__exit__</code>, <code>contextlib</code>), maîtriser les décorateurs (<code>functools.wraps</code>, stacking), remplacer les classes de données simples par <code>@dataclass</code> ou <code>attrs</code>.</li>
-</ol>
-<ol>
-<li><strong>Async Python</strong> : Structurer avec <code>asyncio</code> (event loop, <code>async def</code>, <code>await</code>), utiliser <code>aiohttp</code> ou <code>httpx</code> pour les requêtes HTTP asynchrones, implémenter des async generators (<code>async for</code>), appliquer la structured concurrency avec <code>asyncio.TaskGroup</code> (Python 3.11+), éviter les blocages en ne mixant pas sync/async sans <code>run_in_executor</code>.</li>
-</ol>
-<ol>
-<li><strong>Testing</strong> : Organiser les tests avec <code>pytest</code> et le dossier <code>tests/</code>, utiliser les fixtures pour l'injection de dépendances, <code>@pytest.mark.parametrize</code> pour les cas multiples, <code>unittest.mock</code> ou <code>pytest-mock</code> pour le mocking, mesurer la couverture avec <code>pytest-cov</code>, utiliser <code>hypothesis</code> pour le property-based testing.</li>
-</ol>
-<ol>
-<li><strong>Performance</strong> : Profiler avec <code>cProfile</code> et <code>line_profiler</code> avant d'optimiser, utiliser <code>functools.lru_cache</code> / <code>functools.cache</code> pour la mémoïsation, paralléliser les tâches CPU avec <code>multiprocessing</code>, les tâches I/O avec <code>asyncio</code>, envisager <code>Cython</code> ou <code>numba</code> pour les hot paths, optimiser la mémoire avec <code>__slots__</code> et les générateurs.</li>
-</ol>
-<ol>
-<li><strong>Packaging et distribution</strong> : Configurer <code>pyproject.toml</code> avec <code>[build-system]</code>, <code>[project]</code>, <code>[project.optional-dependencies]</code>, construire avec <code>python -m build</code>, publier sur PyPI via <code>twine</code> ou <code>poetry publish</code>, gérer le versioning sémantique avec <code>bump2version</code> ou <code>commitizen</code>, créer des scripts d'entrée avec <code>[project.scripts]</code>.</li>
-</ol>
-<ol>
-<li><strong>Outils essentiels</strong> : Automatiser avec <code>ruff</code> (lint+format), vérifier les types avec <code>mypy</code> en mode strict, configurer <code>pre-commit</code> hooks (ruff, mypy, tests), utiliser <code>tox</code> pour tester sur plusieurs versions Python, structurer les commandes dans un <code>Makefile</code>, intégrer dans CI/CD (GitHub Actions, <code>.github/workflows/ci.yml</code>).</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Structure de projet</h2>
+<p>Adopter le <strong>src layout</strong> pour éviter les imports parasites :</p>
+<pre><code>mon_projet/
+├── src/
+│   └── mon_package/
+│       ├── __init__.py
+│       └── core.py
+├── tests/
+├── pyproject.toml
+└── README.md</code></pre>
+<p>Fichier <code>pyproject.toml</code> comme source unique de vérité :</p>
+<pre><code class="lang-toml">[build-system]
+requires = [&quot;hatchling&quot;]
+build-backend = &quot;hatchling.build&quot;
+
+[project]
+name = &quot;mon-package&quot;
+version = &quot;1.2.0&quot;
+requires-python = &quot;&gt;=3.12&quot;
+dependencies = [&quot;httpx&gt;=0.27&quot;]
+
+[project.optional-dependencies]
+dev = [&quot;pytest&quot;, &quot;ruff&quot;, &quot;mypy&quot;]
+
+[tool.ruff]
+line-length = 100
+select = [&quot;E&quot;, &quot;F&quot;, &quot;I&quot;, &quot;UP&quot;, &quot;B&quot;, &quot;SIM&quot;]
+
+[tool.mypy]
+strict = true</code></pre>
+<p>Choix gestionnaire de packages :</p>
 <ul>
-<li>Écrire du code pythonique : explicite &gt; implicite, lisibilité &gt; concision excessive, suivre le Zen of Python (<code>import this</code>).</li>
-<li>Typer systématiquement le code public avec les type hints et valider avec <code>mypy --strict</code> ; les types sont de la documentation executable.</li>
-<li>Ne jamais ignorer les exceptions silencieusement (<code>except Exception: pass</code>) ; logger ou re-raise avec contexte (<code>raise ValueError(&quot;msg&quot;) from e</code>).</li>
-<li>Utiliser les outils de l'écosystème moderne : <code>uv</code> pour la vitesse, <code>ruff</code> remplace <code>flake8</code>+<code>isort</code>+<code>pylint</code>, <code>httpx</code> remplace <code>requests</code> pour l'async.</li>
-<li>Expliquer le &quot;pourquoi&quot; dans les commentaires, pas le &quot;quoi&quot; ; le code doit s'auto-documenter via des noms explicites et des type hints précis.</li>
+<li><strong><code>uv</code></strong> : rapide (10–100× pip), résout + installe + lock en une commande → préférer en 2026</li>
+<li><strong><code>poetry</code></strong> : UI plus riche, monorepo OK</li>
+<li><strong>Jamais</strong> requirements.txt mutable sans lock file</li>
+</ul>
+<pre><code class="lang-bash">uv init mon-projet &amp;&amp; cd mon-projet
+uv add httpx
+uv add --dev pytest ruff mypy
+uv run pytest</code></pre>
+<h2>2. Style et qualité</h2>
+<pre><code class="lang-bash"># Lint + format en une commande
+uv run ruff check --fix src/ tests/
+uv run ruff format src/ tests/
+
+# Vérification des types
+uv run mypy src/ --strict</code></pre>
+<p>Type hints obligatoires sur toutes les signatures publiques :</p>
+<pre><code class="lang-python">from collections.abc import Sequence
+from typing import TypeAlias
+
+UserId: TypeAlias = int
+
+def get_users(ids: Sequence[UserId], active: bool = True) -&gt; list[dict[str, str]]:
+    ...</code></pre>
+<p>Docstrings format Google (standard de facto pour FastAPI/Django) :</p>
+<pre><code class="lang-python">def process(data: bytes, *, encoding: str = &quot;utf-8&quot;) -&gt; str:
+    &quot;&quot;&quot;Décode les données brutes en chaîne.
+
+    Args:
+        data: Payload binaire à décoder.
+        encoding: Encodage cible. Défaut UTF-8.
+
+    Returns:
+        Chaîne décodée.
+
+    Raises:
+        UnicodeDecodeError: Si l'encodage est incompatible.
+    &quot;&quot;&quot;</code></pre>
+<h2>3. Patterns pythoniques</h2>
+<pre><code class="lang-python"># Préférer
+actifs = [u for u in users if u.active]
+
+# Générateur pour gros volumes (lazy, O(1) mémoire)
+def lignes_valides(fichier: str):
+    with open(fichier) as f:
+        yield from (l.strip() for l in f if l.strip())
+
+# Dataclass plutôt qu'un dict ou tuple anonyme
+from dataclasses import dataclass, field
+
+@dataclass(frozen=True, slots=True)
+class Point:
+    x: float
+    y: float
+    tags: list[str] = field(default_factory=list)
+
+# Context manager personnalisé
+from contextlib import contextmanager
+
+@contextmanager
+def timer(label: str):
+    import time
+    t = time.perf_counter()
+    yield
+    print(f&quot;{label}: {time.perf_counter() - t:.3f}s&quot;)</code></pre>
+<h2>4. Async Python</h2>
+<pre><code class="lang-python">import asyncio
+import httpx
+
+async def fetch_all(urls: list[str]) -&gt; list[str]:
+    async with httpx.AsyncClient(timeout=10) as client:
+        # TaskGroup (Python 3.11+) : annule tout si une tâche échoue
+        async with asyncio.TaskGroup() as tg:
+            tasks = [tg.create_task(client.get(url)) for url in urls]
+    return [t.result().text for t in tasks]
+
+# Appel de code bloquant depuis async
+import asyncio
+loop = asyncio.get_running_loop()
+result = await loop.run_in_executor(None, blocking_function, arg)</code></pre>
+<p>Critères de décision async vs threads vs multiprocessing :</p>
+<table><thead><tr><th>Charge</th><th>Outil recommandé</th></tr></thead><tbody><tr><td>I/O concurrente (HTTP, DB)</td><td><code>asyncio</code> + librairie async</td></tr><tr><td>Code CPU-bound</td><td><code>multiprocessing</code> ou <code>concurrent.futures.ProcessPoolExecutor</code></td></tr><tr><td>Bibliothèque sync non-portable</td><td><code>run_in_executor</code> dans async</td></tr><tr><td>Simple parallélisme I/O léger</td><td><code>threading.Thread</code> ou <code>ThreadPoolExecutor</code></td></tr></tbody></table>
+<h2>5. Testing</h2>
+<pre><code class="lang-bash">uv run pytest tests/ -v --cov=src --cov-report=term-missing</code></pre>
+<pre><code class="lang-python">import pytest
+from unittest.mock import AsyncMock, patch
+
+@pytest.fixture
+def user():
+    return {&quot;id&quot;: 1, &quot;name&quot;: &quot;Alice&quot;}
+
+@pytest.mark.parametrize(&quot;n,expected&quot;, [(0, 1), (5, 120)])
+def test_factorielle(n: int, expected: int):
+    assert factorielle(n) == expected
+
+@pytest.mark.asyncio
+async def test_fetch():
+    with patch(&quot;httpx.AsyncClient.get&quot;, new_callable=AsyncMock) as mock:
+        mock.return_value.text = &quot;ok&quot;
+        result = await fetch(&quot;https://example.com&quot;)
+    assert result == &quot;ok&quot;</code></pre>
+<p>Seuil de couverture minimal : <strong>≥ 85 %</strong> sur le code métier ; ne pas cibler 100 % sur les adapters.</p>
+<h2>6. Performance</h2>
+<pre><code class="lang-python">from functools import cache
+import cProfile
+
+# Mémoïsation
+@cache
+def fib(n: int) -&gt; int:
+    return n if n &lt; 2 else fib(n - 1) + fib(n - 2)
+
+# Profiler avant d'optimiser
+cProfile.run(&quot;mon_algo(grand_dataset)&quot;, sort=&quot;cumtime&quot;)</code></pre>
+<p>Outils de profiling :</p>
+<ul>
+<li><code>cProfile</code> / <code>pstats</code> : profil d'appels, intégré</li>
+<li><code>line_profiler</code> (<code>@profile</code>) : ligne par ligne</li>
+<li><code>memray</code> : mémoire, idéal pour fuites</li>
+<li><code>py-spy</code> : sampling sans modification du code (prod)</li>
+</ul>
+<p><code>__slots__</code> pour réduire l'empreinte mémoire sur des milliers d'instances :</p>
+<pre><code class="lang-python">class Vecteur:
+    __slots__ = (&quot;x&quot;, &quot;y&quot;)
+    def __init__(self, x: float, y: float) -&gt; None:
+        self.x, self.y = x, y</code></pre>
+<h2>7. Packaging et CI</h2>
+<pre><code class="lang-bash"># Build + publish
+uv build
+uv publish  # ou twine upload dist/*
+
+# Versioning sémantique
+uv run commitizen bump --changelog</code></pre>
+<p>GitHub Actions minimal :</p>
+<pre><code class="lang-yaml"># .github/workflows/ci.yml
+on: [push, pull_request]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --dev
+      - run: uv run ruff check src/ tests/
+      - run: uv run mypy src/
+      - run: uv run pytest --cov=src</code></pre>
+<p><code>pre-commit</code> hooks :</p>
+<pre><code class="lang-yaml"># .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format</code></pre>
+<h2>8. Pièges et anti-patterns</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td><code>except Exception: pass</code></td><td>Avale les erreurs silencieusement</td><td><code>except Exception as e: raise RuntimeError(&quot;ctx&quot;) from e</code></td></tr><tr><td>Argument mutable par défaut <code>def f(lst=[])</code></td><td>Partagé entre appels</td><td><code>def f(lst=None): lst = lst or []</code></td></tr><tr><td><code>import *</code></td><td>Pollution du namespace</td><td>Import explicite</td></tr><tr><td><code>requests</code> en async context</td><td>Bloque l'event loop</td><td><code>httpx.AsyncClient</code></td></tr><tr><td>Type hints <code>Dict</code>, <code>List</code> (majuscule)</td><td>Obsolète depuis Python 3.9</td><td><code>dict</code>, <code>list</code>, <code>set</code> minuscules</td></tr><tr><td>Chaîner <code>.format()</code> au lieu de f-strings</td><td>Lisibilité</td><td><code>f&quot;Bonjour {nom}&quot;</code></td></tr><tr><td><code>os.path</code> partout</td><td>Verbeux</td><td><code>pathlib.Path</code></td></tr><tr><td>Ignorer <code>mypy</code> warnings</td><td>Bugs à runtime</td><td>Corriger ou annoter <code># type: ignore[...]</code></td></tr></tbody></table>
+<h2>9. Garde-fous en 2026</h2>
+<ul>
+<li>Python <strong>3.12+</strong> minimum pour les projets nouveaux (perf GIL-free en 3.13 expérimental).</li>
+<li><code>uv</code> remplace <code>pip</code> + <code>venv</code> + <code>pip-tools</code> dans la majorité des contextes.</li>
+<li><code>ruff</code> remplace <code>flake8</code> + <code>isort</code> + <code>pylint</code> ; configuration unique dans <code>pyproject.toml</code>.</li>
+<li>Utiliser <code>tomllib</code> (stdlib 3.11+) pour lire les fichiers TOML, pas de dépendance externe.</li>
+<li><code>httpx</code> à la place de <code>requests</code> pour avoir une API sync/async unifiée.</li>
+<li>Ne jamais pusher de secrets : <code>python-dotenv</code> pour le dev local, variables d'env injectées en prod.</li>
 </ul>
 </article>
 </main>

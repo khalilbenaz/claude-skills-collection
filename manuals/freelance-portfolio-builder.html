@@ -96,23 +96,103 @@ cp -r claude-skills-collection/skills/freelance-portfolio-builder ~/.claude/skil
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Portfolio Builder</h1>
-<h2>Workflow</h2>
+<h2>Étape 1 — Clarifier l'objectif avant tout</h2>
+<p>Poser ces trois questions en priorité :</p>
+<table><thead><tr><th>Objectif</th><th>Conséquence concrète</th></tr></thead><tbody><tr><td>Missions freelance courtes</td><td>CTA &quot;Disponible dès X&quot; visible en fold, taux journalier lisible</td></tr><tr><td>CDI / poste salarié</td><td>Mettre en avant stack d'entreprise, collaboration en équipe</td></tr><tr><td>Expertise niche (ex. IA, fintech)</td><td>Landing page mono-sujet, projets triés par domaine</td></tr><tr><td>Marque personnelle long terme</td><td>Blog/newsletter, profil cohérent LinkedIn + GitHub + site</td></tr></tbody></table>
+<p>Un portfolio qui veut tout dire ne dit rien. Choisir <strong>un</strong> objectif principal.</p>
+<hr>
+<h2>Étape 2 — Sélectionner 4 à 6 projets (critères de décision)</h2>
+<p>Retenir un projet si <strong>3 critères sur 4</strong> sont vrais :</p>
 <ol>
-<li><strong>Définition de l'objectif</strong> — Clarifier l'objectif du portfolio : décrocher des missions freelance, trouver un CDI, montrer une expertise spécifique, ou construire une marque personnelle.</li>
-<li><strong>Sélection des projets</strong> — Choisir 4-8 projets représentatifs selon des critères : pertinence par rapport à la cible, diversité des compétences démontrées, résultats mesurables, qualité visuelle.</li>
-<li><strong>Storytelling par projet</strong> — Pour chaque projet, structurer la présentation : contexte et problème client, solution technique choisie (et pourquoi), défis rencontrés et solutions apportées, résultats concrets (métriques, impact business), stack technique utilisée.</li>
-<li><strong>Page À Propos</strong> — Rédiger une page personnelle engageante : parcours professionnel, valeurs, spécialités, ce qui vous différencie, photo professionnelle.</li>
-<li><strong>Structure du site</strong> — Organiser le portfolio : page d'accueil avec proposition de valeur claire, galerie de projets filtrable, page à propos, témoignages clients, page contact avec CTA visible.</li>
-<li><strong>Optimisation technique</strong> — Assurer : responsive design, temps de chargement rapide (&lt; 3s), SEO (balises meta, schema.org, sitemap), accessibilité (WCAG 2.1), analytics (Google Analytics ou Plausible).</li>
-<li><strong>Choix de la plateforme</strong> — Recommander une solution adaptée : site custom (Next.js, Astro), plateforme dédiée (Behance, Dribbble), constructeur (Webflow, Framer), ou GitHub Pages pour les développeurs.</li>
-<li><strong>Maintenance et mise à jour</strong> — Planifier des mises à jour trimestrielles : ajouter les nouveaux projets, retirer les projets obsolètes, actualiser les témoignages et les métriques.</li>
+<li>Aligné avec la cible (ex. SaaS B2B si c'est le marché visé)</li>
+<li>Résultat mesurable disponible (perf, chiffre, délai)</li>
+<li>Code/design montrable sans NDA ou avec accord client</li>
+<li>Pas vieux de plus de 3 ans (sauf projet fondateur ou award)</li>
 </ol>
-<h2>Règles</h2>
+<p>Éliminer les side-projects sans impact réel. Mieux vaut 4 projets forts qu'un catalogue.</p>
+<hr>
+<h2>Étape 3 — Structurer chaque fiche projet (template)</h2>
+<pre><code class="lang-markdown">## [Nom du projet] — [tagline en 10 mots max]
+
+**Client / Contexte** : secteur, taille équipe, date
+**Problème** : ce qui bloquait avant votre intervention
+**Solution** : décisions techniques clés + pourquoi ce choix
+**Défis &amp; résolutions** : 1 ou 2 obstacles concrets + comment résolus
+**Résultats** : métriques avant/après (ex. &quot;temps de chargement : 4.2s → 1.1s&quot;)
+**Stack** : Next.js 14 · PostgreSQL · Vercel · GitHub Actions
+**Liens** : [Demo live] [Repo public] [Case study PDF]</code></pre>
+<p>Le champ &quot;Résultats&quot; est obligatoire. Si aucune métrique n'existe, estimer : &quot;~30% de réduction du support client selon le retour client&quot;.</p>
+<hr>
+<h2>Étape 4 — Choisir la plateforme (arbre de décision)</h2>
+<pre><code>Développeur web / fullstack ?
+  ├── Oui → GitHub Pages + Astro ou Next.js (contrôle total, SEO natif)
+  └── Non → Designer / no-code ?
+        ├── Visuels importants (UX/UI, motion) → Framer ou Webflow
+        ├── Rapidité de mise en ligne → Notion + Super.so ou Read.cv
+        └── Communauté créative → Behance (design) / Dribbble (UI)</code></pre>
+<p><strong>Recommandation 2026 pour dev</strong> : Astro + Vercel. Build statique, Markdown pour les case studies, 100 Lighthouse score atteignable sans effort.</p>
+<pre><code class="lang-bash"># Scaffold rapide Astro
+npm create astro@latest mon-portfolio -- --template minimal
+cd mon-portfolio &amp;&amp; npm install
+npm run dev</code></pre>
+<hr>
+<h2>Étape 5 — Page d'accueil : anatomie du fold</h2>
+<p>La première fenêtre visible sans scroll doit contenir :</p>
+<ol>
+<li><strong>Headline</strong> : qui vous êtes + valeur principale (ex. &quot;Développeur fullstack TypeScript · je livre des MVPs en 6 semaines&quot;)</li>
+<li><strong>Preuve sociale immédiate</strong> : 2-3 logos clients ou &quot;X projets livrés&quot;</li>
+<li><strong>CTA unique</strong> : &quot;Voir mes projets&quot; ou &quot;Me contacter&quot; — pas les deux</li>
+<li><strong>Signal de disponibilité</strong> : badge vert &quot;Dispo Q3 2026&quot; ou rouge &quot;Complet&quot;</li>
+</ol>
+<p>Éviter : photo hero pleine page sans texte, animations lourdes, slider de projets en autoplay.</p>
+<hr>
+<h2>Étape 6 — SEO et performance (checklist technique)</h2>
+<pre><code class="lang-html">&lt;!-- Balises meta minimales --&gt;
+&lt;title&gt;Prénom Nom — Développeur TypeScript · React · Node.js&lt;/title&gt;
+&lt;meta name=&quot;description&quot; content=&quot;Freelance fullstack basé à Paris. Spécialiste SaaS B2B, 50+ projets livrés depuis 2018.&quot; /&gt;
+
+&lt;!-- Open Graph (partage LinkedIn/Twitter) --&gt;
+&lt;meta property=&quot;og:title&quot; content=&quot;...&quot; /&gt;
+&lt;meta property=&quot;og:image&quot; content=&quot;/og-cover.png&quot; /&gt; &lt;!-- 1200×630px --&gt;</code></pre>
+<p>Checklist performance :</p>
 <ul>
-<li>Qualité plutôt que quantité : 5 projets bien présentés valent mieux que 20 projets bâclés.</li>
-<li>Chaque projet doit montrer un résultat concret, pas juste une liste de technologies.</li>
-<li>Ne jamais publier de code ou d'informations client sans autorisation explicite.</li>
-<li>Le portfolio doit être accessible et rapide sur mobile (plus de 60% du trafic).</li>
+<li>[ ] Score Lighthouse Performance ≥ 90 (tester via <code>npx lighthouse https://mon-site.fr</code>)</li>
+<li>[ ] Images au format WebP ou AVIF, lazy-loaded</li>
+<li>[ ] Font system (<code>font-family: system-ui</code>) ou 1 seule Google Font max</li>
+<li>[ ] Sitemap XML généré automatiquement (<code>/sitemap.xml</code>)</li>
+<li>[ ] Analytics léger : Plausible (RGPD-friendly, 0 cookie banner) ou Umami auto-hébergé</li>
+</ul>
+<hr>
+<h2>Étape 7 — Page Contact : convertir le visiteur</h2>
+<pre><code class="lang-markdown"># Travaillons ensemble
+
+📅 Prochain slot disponible : **septembre 2026**
+💶 Tarif journalier : sur demande (fourchette visible sur demande)
+
+[Réserver un appel 30 min →] (lien Calendly ou Cal.com)
+[m@email.com]</code></pre>
+<p>Ne pas mettre un formulaire complexe. Un lien vers un agenda + un email suffisent. Cal.com (open-source) remplace Calendly gratuitement.</p>
+<hr>
+<h2>Étape 8 — Maintenance trimestrielle (routine)</h2>
+<p>Rappel agenda tous les 3 mois :</p>
+<ul>
+<li>Ajouter le dernier projet livré (ou l'archiver si NDA)</li>
+<li>Mettre à jour le badge disponibilité</li>
+<li>Vérifier que tous les liens demo fonctionnent</li>
+<li>Relire les métriques : sont-elles encore valides ?</li>
+<li>Purger les projets de plus de 4 ans si non fondateurs</li>
+</ul>
+<hr>
+<h2>Anti-patterns à éviter</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Problème</th><th>Correction</th></tr></thead><tbody><tr><td>&quot;Je suis passionné par la tech&quot;</td><td>Vague, non différenciant</td><td>&quot;Je réduis le time-to-market des SaaS B2B&quot;</td></tr><tr><td>Liste de 20 technologies sans contexte</td><td>Aucune preuve de maîtrise réelle</td><td>3-4 techs avec un projet de référence chacune</td></tr><tr><td>Portfolio en PDF ou Notion public</td><td>Non indexable, expérience mobile médiocre</td><td>Site web avec URL propre</td></tr><tr><td>Cacher le tarif ou la disponibilité</td><td>Perd du temps des deux côtés</td><td>Afficher au moins la fourchette</td></tr><tr><td>Projets confidentiels sans permission</td><td>Risque légal + perte de confiance</td><td>Flouter les données sensibles, obtenir accord</td></tr><tr><td>Dark mode uniquement</td><td>Contraste souvent insuffisant (WCAG AA)</td><td>Respecter le prefers-color-scheme du système</td></tr><tr><td>Animations GSAP lourdes en homepage</td><td>LCP dégradé, distraction du message</td><td>Micro-animations CSS légères uniquement</td></tr></tbody></table>
+<hr>
+<h2>Règles non négociables</h2>
+<ul>
+<li>Qualité &gt; quantité : 5 projets avec résultats valent 20 projets sans.</li>
+<li>Chaque projet cite un résultat mesurable, même estimé.</li>
+<li>Jamais de code ou données client sans autorisation écrite.</li>
+<li>Mobile-first : tester sur iPhone SE (375px) avant tout.</li>
+<li>URL canonique propre (pas de <code>/index.html</code>, HTTPS obligatoire).</li>
 </ul>
 </article>
 </main>

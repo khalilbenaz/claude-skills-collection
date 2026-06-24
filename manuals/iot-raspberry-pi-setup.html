@@ -96,24 +96,168 @@ cp -r claude-skills-collection/skills/iot-raspberry-pi-setup ~/.claude/skills/</
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Raspberry Pi Setup</h1>
-<h2>Workflow</h2>
-<ol>
-<li><strong>Choix du modèle</strong> — Sélectionner le Raspberry Pi adapté au projet (Pi 5, Pi Zero, Pi Pico) selon les besoins en puissance, connectivité et consommation</li>
-<li><strong>Installation de l'OS</strong> — Flasher l'image système appropriée (Raspberry Pi OS, Ubuntu Server, DietPi) avec Raspberry Pi Imager et configurer le premier démarrage</li>
-<li><strong>Configuration réseau</strong> — Paramétrer le Wi-Fi ou Ethernet, configurer une IP statique, activer SSH et sécuriser l'accès distant</li>
-<li><strong>Configuration GPIO</strong> — Installer les bibliothèques GPIO (RPi.GPIO, gpiozero), configurer les pins en entrée/sortie et tester les connexions matérielles</li>
-<li><strong>Installation des services</strong> — Déployer les logiciels nécessaires (Home Assistant, Node-RED, Pi-hole, serveur web) et configurer les dépendances</li>
-<li><strong>Automatisation</strong> — Créer les scripts de démarrage avec systemd, configurer les tâches cron et mettre en place la supervision des services</li>
-<li><strong>Sécurisation</strong> — Changer les mots de passe par défaut, configurer le pare-feu UFW, désactiver les services inutiles et mettre à jour le système</li>
-<li><strong>Sauvegarde et maintenance</strong> — Mettre en place des sauvegardes automatiques de la carte SD, planifier les mises à jour et surveiller les ressources système</li>
-</ol>
-<h2>Règles</h2>
+<h2>1. Choix du modèle</h2>
+<table><thead><tr><th>Besoin</th><th>Modèle recommandé</th><th>Raison</th></tr></thead><tbody><tr><td>Serveur, IA edge, desktop</td><td>Pi 5 (4/8 Go)</td><td>PCIe, NVMe, double 4K</td></tr><tr><td>Projet headless léger</td><td>Pi 4 (2 Go)</td><td>Bon rapport perf/prix</td></tr><tr><td>Caméra, capteurs simple</td><td>Pi Zero 2 W</td><td>Ultra compact, Wi-Fi</td></tr><tr><td>Microcontrôleur (pas Linux)</td><td>Pi Pico 2</td><td>MicroPython, bare-metal</td></tr><tr><td>NAS/stockage</td><td>Pi 5 + HAT NVMe</td><td>Bande passante PCIe 2.0</td></tr></tbody></table>
+<p>Critère décisif : si le projet nécessite Docker, Python avec libs ML ou un serveur web → Pi 4/5. Si batterie/consommation prime → Zero 2 W ou Pico.</p>
+<h2>2. Installation OS</h2>
+<pre><code class="lang-bash"># Installer Raspberry Pi Imager (multi-OS)
+# https://www.raspberrypi.com/software/
+
+# Via CLI (Linux/macOS) avec rpi-imager ou directement dd :
+# Recommandé : rpi-imager GUI → choisir &quot;Raspberry Pi OS Lite 64-bit&quot; pour headless
+
+# Options à configurer AVANT flashage (bouton roue dentée dans Imager) :
+# - Hostname : monpi.local
+# - SSH activé, clé publique injectée
+# - Wi-Fi SSID + mot de passe
+# - Locale fr_FR, timezone Europe/Paris</code></pre>
+<p>Choix OS :</p>
 <ul>
-<li>Toujours sécuriser l'accès SSH avec des clés plutôt que des mots de passe et désactiver l'utilisateur pi par défaut</li>
-<li>Fournir les commandes complètes avec explications pour chaque étape de configuration</li>
-<li>Recommander une alimentation officielle ou certifiée pour éviter les problèmes de sous-tension</li>
-<li>Proposer des solutions de refroidissement adaptées selon la charge prévue (passif, ventilateur, boîtier)</li>
-<li>Inclure un plan de sauvegarde et de récupération en cas de corruption de la carte SD</li>
+<li><strong>Raspberry Pi OS Lite 64-bit</strong> : headless, léger, recommandé pour serveurs/GPIO</li>
+<li><strong>Ubuntu Server 24.04 LTS</strong> : si besoin snap, cloud-init, écosystème standard</li>
+<li><strong>DietPi</strong> : footprint minimal (~500 Mo RAM), optimisé IoT</li>
+<li><strong>Home Assistant OS</strong> : uniquement si dédiée domotique (ne pas mélanger)</li>
+</ul>
+<h2>3. Configuration réseau et SSH</h2>
+<pre><code class="lang-bash"># Premier accès SSH
+ssh pi@monpi.local          # mDNS via avahi-daemon
+ssh pi@192.168.x.x          # IP fixe si mDNS indisponible
+
+# IP statique via NetworkManager (Bookworm 2023+)
+sudo nmcli con mod &quot;Wired connection 1&quot; \
+  ipv4.addresses 192.168.1.100/24 \
+  ipv4.gateway 192.168.1.1 \
+  ipv4.dns &quot;8.8.8.8 1.1.1.1&quot; \
+  ipv4.method manual
+sudo nmcli con up &quot;Wired connection 1&quot;
+
+# Ancienne méthode dhcpcd (Bullseye et antérieur) — /etc/dhcpcd.conf :
+# interface eth0
+# static ip_address=192.168.1.100/24
+# static routers=192.168.1.1
+# static domain_name_servers=8.8.8.8</code></pre>
+<h2>4. Sécurisation (obligatoire avant exposition réseau)</h2>
+<pre><code class="lang-bash"># Changer le mot de passe pi ou créer un nouvel utilisateur
+sudo adduser khalil
+sudo usermod -aG sudo khalil
+
+# Désactiver login par mot de passe SSH — /etc/ssh/sshd_config :
+sudo sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo sed -i 's/^#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo systemctl restart ssh
+
+# Pare-feu minimal
+sudo apt install -y ufw
+sudo ufw default deny incoming
+sudo ufw allow ssh
+sudo ufw allow 80/tcp    # si serveur web
+sudo ufw enable
+
+# Fail2ban
+sudo apt install -y fail2ban
+sudo systemctl enable --now fail2ban
+
+# Mises à jour automatiques de sécurité
+sudo apt install -y unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades</code></pre>
+<h2>5. GPIO — commandes et bibliothèques</h2>
+<pre><code class="lang-bash"># Installer gpiozero (recommandée 2024+) + lgpio backend
+sudo apt install -y python3-lgpio python3-gpiozero
+
+# Activer interfaces (I2C, SPI, 1-Wire) via raspi-config
+sudo raspi-config nonint do_i2c 0
+sudo raspi-config nonint do_spi 0
+
+# Vérifier périphériques I2C connectés
+i2cdetect -y 1</code></pre>
+<pre><code class="lang-python"># LED clignotante — gpiozero (Pi 4/5, BCM numbering)
+from gpiozero import LED
+from time import sleep
+
+led = LED(17)          # GPIO17 = pin 11
+while True:
+    led.on(); sleep(0.5)
+    led.off(); sleep(0.5)
+
+# Bouton avec callback
+from gpiozero import Button
+btn = Button(18, pull_up=True)
+btn.when_pressed = lambda: print(&quot;Appui détecté&quot;)</code></pre>
+<pre><code class="lang-python"># Lecture capteur DHT22 (température/humidité)
+import board, adafruit_dht
+dht = adafruit_dht.DHT22(board.D4)
+print(f&quot;Temp: {dht.temperature}°C  Hum: {dht.humidity}%&quot;)</code></pre>
+<h2>6. Services système avec systemd</h2>
+<pre><code class="lang-ini"># /etc/systemd/system/monapp.service
+[Unit]
+Description=Mon application Pi
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=khalil
+WorkingDirectory=/home/khalil/monapp
+ExecStart=/usr/bin/python3 main.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+<pre><code class="lang-bash">sudo systemctl daemon-reload
+sudo systemctl enable --now monapp
+journalctl -u monapp -f        # logs en temps réel</code></pre>
+<h2>7. Sauvegarde carte SD</h2>
+<pre><code class="lang-bash"># Sauvegarde image compressée (depuis une autre machine)
+ssh pi@monpi.local &quot;sudo dd if=/dev/mmcblk0 bs=4M status=progress&quot; \
+  | gzip &gt; backup-$(date +%Y%m%d).img.gz
+
+# Outil recommandé : rpi-clone (sauvegarde à chaud vers autre SD/USB)
+git clone https://github.com/billw2/rpi-clone.git
+sudo rpi-clone sda              # clone vers /dev/sda
+
+# Cron sauvegarde hebdomadaire
+0 3 * * 0 root rpi-clone -f sda &gt;&gt; /var/log/rpi-clone.log 2&gt;&amp;1</code></pre>
+<h2>8. Cas d'usage courants — commandes clés</h2>
+<pre><code class="lang-bash"># Pi-hole (bloqueur DNS réseau local)
+curl -sSL https://install.pi-hole.net | bash
+
+# Home Assistant Supervised (sur Debian Bookworm)
+curl -Lo haos_rpi4.img.xz https://github.com/home-assistant/operating-system/releases/...
+# Mieux : flasher Home Assistant OS directement depuis Imager
+
+# Node-RED
+bash &lt;(curl -sL https://raw.githubusercontent.com/node-red/linux-installers/master/deb/update-nodejs-and-nodered)
+sudo systemctl enable --now nodered
+
+# Monitoring ressources
+sudo apt install -y htop glances
+glances --webserver --port 61208   # dashboard web
+
+# Température CPU
+vcgencmd measure_temp              # Pi 4/5
+cat /sys/class/thermal/thermal_zone0/temp   # universel, /1000 = °C</code></pre>
+<h2>Garde-fous / Anti-patterns / Pièges</h2>
+<ul>
+<li><strong>Sous-tension</strong> : le Pi 5 exige 5V/5A (27W). Un chargeur USB standard provoque des throttlings silencieux. Vérifier <code>vcgencmd get_throttled</code> — <code>0x0</code> = OK.</li>
+<li><strong>Carte SD bon marché</strong> : les cartes SD A1/A2 de faible qualité se corrompent sous écriture intensive (logs, bases de données). Utiliser SSD USB ou NVMe via HAT pour tout projet critique.</li>
+<li><strong>Ne pas couper l'alimentation brutalement</strong> : toujours <code>sudo shutdown -h now</code>. Mettre en place un onduleur ou un bouton GPIO avec script systemd pour Pi headless.</li>
+<li><strong>GPIO 3.3V uniquement</strong> : les GPIOs Pi tolèrent max 3.3V. Un signal 5V (Arduino, capteur non adapté) détruit le SoC. Utiliser un level shifter.</li>
+<li><strong>Ne pas utiliser RPi.GPIO sur Pi 5</strong> : RPi.GPIO ne supporte pas le Pi 5 (RP1 chip). Utiliser <code>lgpio</code> ou <code>gpiozero</code> avec backend <code>lgpio</code>.</li>
+<li><strong>Overlocking sans refroidissement</strong> : le Pi 5 peut dépasser 85°C sans dissipateur. Activer <code>arm_freq=2400</code> uniquement avec refroidissement actif.</li>
+<li><strong>Ne pas exposer SSH sur IP publique</strong> sans fail2ban + clés. Préférer un VPN WireGuard ou Tailscale.</li>
+<li><strong>Raspberry Pi Imager efface</strong> : vérifier deux fois le device cible — une erreur formate le mauvais disque.</li>
+</ul>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li>Utiliser <strong>NVMe HAT</strong> (Pi 5) plutôt que carte SD pour tout projet en production.</li>
+<li>Préférer <strong>gpiozero</strong> + backend <code>lgpio</code> à <code>RPi.GPIO</code> (déprécié sur Pi 5+).</li>
+<li><strong>Tailscale</strong> pour accès distant sécurisé sans ouvrir de ports : <code>curl -fsSL https://tailscale.com/install.sh | sh</code>.</li>
+<li>Logger vers <strong>journald</strong> (systemd), pas vers fichiers texte, pour rotation automatique.</li>
+<li>Versionner scripts et configs dans git ; utiliser <strong>Ansible</strong> dès qu'on gère plusieurs Pi.</li>
+<li>Monitorer température et voltage avec <strong>Glances</strong> ou <strong>Netdata</strong> dès la mise en production.</li>
 </ul>
 </article>
 </main>

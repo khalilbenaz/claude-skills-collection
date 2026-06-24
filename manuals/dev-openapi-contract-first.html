@@ -96,19 +96,23 @@ cp -r claude-skills-collection/skills/dev-openapi-contract-first ~/.claude/skill
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Design API Contract-First avec OpenAPI</h1>
-<h2>Workflow</h2>
+<h2>Workflow en étapes</h2>
 <ol>
-<li><strong>Définir le contrat</strong> : spécification OpenAPI (YAML/JSON) avec endpoints, schémas et exemples.</li>
-<li><strong>Valider</strong> : vérifier la conformité du contrat (linting, breaking changes).</li>
-<li><strong>Générer</strong> : code serveur et/ou client depuis la spec.</li>
-<li><strong>Documenter</strong> : interface interactive pour les consommateurs de l'API.</li>
+<li><strong>Choisir la version OpenAPI</strong> — utiliser <strong>3.1.0</strong> pour tout nouveau projet (support JSON Schema complet, <code>nullable</code> remplacé par <code>type: [string, 'null']</code>). Rester sur 3.0.x uniquement si l'outillage cible ne supporte pas encore 3.1.</li>
+<li><strong>Rédiger la spec avant le code</strong> — commencer par les paths, les schemas <code>required</code>, les codes d'erreur. Ne pas générer la spec depuis le code existant : c'est du code-first déguisé.</li>
+<li><strong>Valider et linter</strong> la spec (Spectral) avant tout commit.</li>
+<li><strong>Faire reviewer par les consommateurs</strong> — frontend, mobile, partenaires — avant de freezer le contrat.</li>
+<li><strong>Générer serveur et/ou client</strong> depuis la spec validée.</li>
+<li><strong>Implémenter</strong> derrière le contrat généré ; l'implémentation ne doit jamais diverger du contrat.</li>
+<li><strong>Détecter les breaking changes</strong> en CI avant chaque PR mergée.</li>
+<li><strong>Publier la doc interactive</strong> (Swagger UI, Redoc, Scalar).</li>
 </ol>
-<h2>Structure d'une spécification OpenAPI</h2>
+<hr>
+<h2>Structure de référence (OpenAPI 3.1)</h2>
 <pre><code class="lang-yaml">openapi: 3.1.0
 info:
   title: Payment API
   version: 1.0.0
-  description: API de gestion des paiements
   contact:
     name: Équipe Paiements
     email: payments@company.com
@@ -122,7 +126,7 @@ servers:
 paths:
   /payments:
     post:
-      operationId: createPayment
+      operationId: createPayment   # OBLIGATOIRE — utilisé pour nommer la méthode générée
       summary: Créer un paiement
       tags: [Payments]
       requestBody:
@@ -149,15 +153,9 @@ paths:
 
     get:
       operationId: listPayments
-      summary: Lister les paiements
-      tags: [Payments]
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/LimitParam'
-        - name: status
-          in: query
-          schema:
-            $ref: '#/components/schemas/PaymentStatus'
       responses:
         '200':
           description: Liste paginée
@@ -182,13 +180,10 @@ components:
         recipient_id:
           type: string
           pattern: '^usr_[a-zA-Z0-9]+$'
-        metadata:
-          type: object
-          additionalProperties:
-            type: string
 
     Payment:
       type: object
+      required: [id, amount, currency, status, created_at]
       properties:
         id:
           type: string
@@ -209,6 +204,7 @@ components:
 
     PaymentList:
       type: object
+      required: [data, pagination]
       properties:
         data:
           type: array
@@ -219,6 +215,7 @@ components:
 
     Pagination:
       type: object
+      required: [page, limit, total]
       properties:
         page:
           type: integer
@@ -226,6 +223,19 @@ components:
           type: integer
         total:
           type: integer
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
 
   parameters:
     PageParam:
@@ -266,57 +276,85 @@ components:
 
 security:
   - BearerAuth: []</code></pre>
-<h2>Génération de code</h2>
-<h3>.NET (NSwag)</h3>
-<pre><code class="lang-bash"># Générer le client C#
-nswag openapi2csclient /input:openapi.yaml /output:PaymentApiClient.cs \
-  /namespace:MyApp.ApiClients /className:PaymentApiClient
+<hr>
+<h2>Validation et linting</h2>
+<pre><code class="lang-bash"># Linting Spectral (règles OpenAPI + règles customs)
+npx @stoplight/spectral-cli lint openapi.yaml --ruleset .spectral.yaml
 
-# Générer le contrôleur serveur
-nswag openapi2cscontroller /input:openapi.yaml /output:PaymentController.cs \
-  /namespace:MyApp.Controllers</code></pre>
+# Valider la syntaxe seule
+npx @apidevtools/swagger-parser validate openapi.yaml
+
+# Détecter les breaking changes entre deux versions
+oasdiff breaking openapi-v1.yaml openapi-v2.yaml
+oasdiff breaking openapi-v1.yaml openapi-v2.yaml --fail-on ERR  # sortie non-zéro = CI fail</code></pre>
+<p>Règleset Spectral minimal <code>.spectral.yaml</code> :</p>
+<pre><code class="lang-yaml">extends: ['spectral:oas']
+rules:
+  operation-operationId: error
+  operation-tags: warn
+  oas3-api-servers: error</code></pre>
+<hr>
+<h2>Génération de code</h2>
+<h3>.NET — NSwag</h3>
+<pre><code class="lang-bash"># Client C#
+nswag openapi2csclient \
+  /input:openapi.yaml \
+  /output:PaymentApiClient.cs \
+  /namespace:MyApp.ApiClients \
+  /className:PaymentApiClient \
+  /generateClientInterfaces:true
+
+# Contrôleur serveur (interface + stub)
+nswag openapi2cscontroller \
+  /input:openapi.yaml \
+  /output:PaymentControllerBase.cs \
+  /namespace:MyApp.Controllers \
+  /controllerBaseClass:ControllerBase</code></pre>
 <h3>TypeScript</h3>
-<pre><code class="lang-bash"># openapi-typescript
+<pre><code class="lang-bash"># Types seuls (léger, recommandé pour fetch natif)
 npx openapi-typescript openapi.yaml -o ./src/api/schema.d.ts
 
-# openapi-generator
+# Client complet (fetch)
 npx @openapitools/openapi-generator-cli generate \
-  -i openapi.yaml -g typescript-fetch -o ./src/api/client</code></pre>
-<h2>Validation et linting</h2>
-<pre><code class="lang-bash"># Spectral (linting OpenAPI)
-npx @stoplight/spectral-cli lint openapi.yaml
-
-# oasdiff (détection de breaking changes)
-oasdiff breaking openapi-old.yaml openapi-new.yaml</code></pre>
-<h2>Bonnes pratiques</h2>
-<h3>Conception</h3>
+  -i openapi.yaml -g typescript-fetch -o ./src/api/client \
+  --additional-properties=supportsES6=true,npmVersion=10</code></pre>
+<h3>Java / Spring Boot</h3>
+<pre><code class="lang-bash">openapi-generator-cli generate \
+  -i openapi.yaml -g spring \
+  -o ./generated \
+  --additional-properties=interfaceOnly=true,useSpringBoot3=true</code></pre>
+<hr>
+<h2>Critères de décision</h2>
+<table><thead><tr><th>Situation</th><th>Recommandation</th></tr></thead><tbody><tr><td>Nouvelle API, équipe multi-stack</td><td>Contract-First obligatoire</td></tr><tr><td>API existante à documenter</td><td>Générer la spec depuis code (code-first), puis migrer vers contract-first</td></tr><tr><td>Partenaires externes consomment l'API</td><td>Versionner dans l'URL (<code>/v1/</code>), publier Redoc/Scalar</td></tr><tr><td>Micro-changement non-breaking</td><td>OK sans bump de version majeure</td></tr><tr><td>Changement breaking (suppression champ, rename)</td><td>Nouvelle version (<code>/v2/</code>) + période de dépréciation</td></tr><tr><td>Authentification multi-schémas</td><td>Déclarer tous les <code>securitySchemes</code>, appliquer au niveau global ou opération</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous / Anti-patterns</h2>
+<p><strong>Ne pas faire :</strong></p>
 <ul>
-<li>Utiliser des <code>$ref</code> pour éviter la duplication de schémas</li>
-<li>Définir des <code>operationId</code> uniques pour la génération de code</li>
-<li>Inclure des <code>examples</code> dans les schémas pour la documentation</li>
-<li>Versionner l'API dans l'URL (<code>/v1/</code>, <code>/v2/</code>)</li>
+<li>Générer la spec depuis le code annoté (code-first) puis prétendre faire du contract-first — la spec suit le code, pas l'inverse.</li>
+<li>Schemas inline dans les paths — toujours utiliser <code>$ref '#/components/schemas/...'</code>.</li>
+<li>Omettre <code>operationId</code> — les générateurs produiront des noms aléatoires et instables.</li>
+<li>Marquer tous les champs response comme optionels par prudence — les clients ne sauront pas sur quoi compter.</li>
+<li>Mettre des exemples incohérents avec les schemas (ne valident pas Spectral mais trompent les développeurs).</li>
+<li>Versionner la spec dans le code applicatif sans pipeline de détection de breaking changes — un champ renommé casse silencieusement les clients.</li>
+<li>Utiliser <code>additionalProperties: false</code> sur les requêtes mais pas sur les réponses — évolutivité compromise côté consommateur.</li>
 </ul>
-<h3>Schémas</h3>
+<p><strong>Pièges courants :</strong></p>
 <ul>
-<li>Marquer les champs <code>required</code> explicitement</li>
-<li>Utiliser <code>pattern</code> pour les formats personnalisés</li>
-<li>Définir <code>minimum</code>/<code>maximum</code> pour les nombres</li>
-<li>Utiliser <code>enum</code> pour les valeurs limitées</li>
+<li>OpenAPI 3.1 utilise <code>type: ['string', 'null']</code> ; <code>nullable: true</code> est 3.0 uniquement — mixer les deux casse les validateurs.</li>
+<li><code>format: date-time</code> est indicatif, pas contraignant — ajouter un <code>pattern</code> si la validation stricte est requise.</li>
+<li>Les <code>$ref</code> dans les <code>responses</code> d'un path écrasent tout le contenu de la réponse (headers inclus) — déclarer les headers séparément si nécessaire.</li>
+<li>Spectral <code>extends: spectral:oas</code> active les règles OAS3 <strong>et</strong> OAS2 — préciser <code>extends: ['spectral:oas', {recommended: true}]</code> pour filtrer.</li>
 </ul>
-<h3>Workflow Contract-First</h3>
-<ol>
-<li>Rédiger la spec OpenAPI <strong>avant</strong> le code</li>
-<li>Revue de la spec par les consommateurs de l'API</li>
-<li>Générer le code serveur/client depuis la spec</li>
-<li>Valider que l'implémentation est conforme au contrat</li>
-<li>Tester les breaking changes avant chaque modification</li>
-</ol>
-<h2>Règles</h2>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
 <ul>
-<li>Le contrat OpenAPI est la source de vérité — pas le code.</li>
-<li>Chaque endpoint doit avoir un <code>operationId</code> unique.</li>
-<li>Les breaking changes doivent être validées avec un outil dédié avant merge.</li>
-<li>Les schémas partagés doivent être dans <code>components/schemas</code>, jamais inline.</li>
+<li><strong>Scalar</strong> remplace Swagger UI comme UI de doc interactive standard (DX bien supérieure, thème moderne, Try-it intégré).</li>
+<li><strong>openapi-typescript v7+</strong> génère des types avec <code>paths</code>, <code>components</code>, <code>operations</code> bien séparés — utiliser <code>createFetch</code> de <code>openapi-fetch</code> pour des appels typés bout-en-bout sans génération de client lourd.</li>
+<li>Stocker la spec dans un dépôt dédié ou <code>api/</code> à la racine du monorepo, versionné avec Git.</li>
+<li>Taguer chaque release de spec avec la version (<code>git tag api-v1.2.0</code>).</li>
+<li>Intégrer <code>oasdiff</code> en CI sur la branche principale pour bloquer les breaking changes non intentionnels.</li>
+<li>Utiliser <strong>Prism</strong> pour mocker l'API depuis la spec pendant le développement frontend : <code>npx @stoplight/prism-cli mock openapi.yaml</code>.</li>
+<li>Documenter les webhooks (OpenAPI 3.1 les supporte nativement via <code>webhooks:</code>).</li>
 </ul>
 </article>
 </main>

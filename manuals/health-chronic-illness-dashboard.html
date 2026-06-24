@@ -96,54 +96,111 @@ cp -r claude-skills-collection/skills/health-chronic-illness-dashboard ~/.claude
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Chronic Illness Dashboard</h1>
-<p>Quand l'utilisateur mentionne une maladie chronique, suis ce workflow.</p>
-<h2>Étape 1 — Identification de la pathologie</h2>
-<p>Clarifie :</p>
-<ul>
-<li><strong>Maladie</strong> diagnostiquée</li>
-<li><strong>Depuis quand</strong> (date ou durée approximative)</li>
-<li><strong>Médecin référent</strong> (généraliste, spécialiste…)</li>
-<li><strong>Fréquence de suivi</strong> actuelle</li>
-</ul>
+<p>Ce skill aide à <strong>organiser</strong> le suivi d'une maladie chronique : centraliser les informations, planifier les examens, préparer les consultations. Il ne remplace pas le suivi médical — toutes les cibles et décisions thérapeutiques appartiennent au médecin.</p>
+<hr>
+<h2>Étape 1 — Identifier la situation</h2>
+<p>Pose ces questions (une à la fois, en t'adaptant à ce que l'utilisateur a déjà partagé) :</p>
+<ol>
+<li><strong>Quelle pathologie</strong> a été diagnostiquée ? (nom exact si connu)</li>
+<li><strong>Depuis quand</strong> le suivi est-il en place ? (date ou durée approximative)</li>
+<li><strong>Quel spécialiste</strong> assure le suivi référent ? (endocrinologue, cardiologue, pneumologue, généraliste…)</li>
+<li><strong>Fréquence actuelle</strong> des consultations et bilans</li>
+</ol>
+<blockquote>Si l'utilisateur dit simplement &quot;je suis diabétique&quot; sans plus de détails, commence par le tableau de bord vide et remplis-le au fur et à mesure de la conversation.</blockquote>
+<hr>
 <h2>Étape 2 — Inventaire complet</h2>
-<p>Liste :</p>
+<p>Collecte les informations suivantes avant de construire le tableau :</p>
+<p><strong>Traitements</strong></p>
 <ul>
-<li><strong>Traitements en cours</strong> (nom, dose, fréquence)</li>
-<li><strong>Examens réguliers</strong> attendus (bilans sanguins, imagerie, consultations…)</li>
-<li><strong>Derniers résultats</strong> connus</li>
-<li><strong>Symptômes actuels</strong> ou changements récents</li>
-<li><strong>Objectifs de santé</strong> fixés par le médecin (cibles de glycémie, tension, TSH…)</li>
+<li>Nom du médicament, dosage, fréquence, heure de prise</li>
+<li>Traitements ponctuels vs permanents</li>
+<li>Compléments ou traitements parallèles (phytothérapie, etc.)</li>
 </ul>
+<p><strong>Examens attendus</strong></p>
+<ul>
+<li>Bilans sanguins (ex. : HbA1c tous les 3 mois pour le diabète de type 2)</li>
+<li>Imagerie, ECG, spirométrie, fond d'œil…</li>
+<li>Consultations spécialisées planifiées</li>
+</ul>
+<p><strong>Résultats récents</strong></p>
+<ul>
+<li>Dernières valeurs connues + date de mesure</li>
+<li>Cibles fixées par le médecin (ex. : HbA1c &lt; 7 %, tension &lt; 130/80 mmHg, TSH 0,5–4 mUI/L)</li>
+</ul>
+<p><strong>Symptômes / changements récents</strong></p>
+<ul>
+<li>Nouveau symptôme, aggravation, effet secondaire suspect</li>
+</ul>
+<hr>
 <h2>Étape 3 — Tableau de bord</h2>
-<h3>Suivi des constantes</h3>
-<table><thead><tr><th>Date</th><th>Mesure</th><th>Valeur</th><th>Cible</th><th>Statut</th><th>Notes</th></tr></thead><tbody></tbody></table>
-<h3>Calendrier des examens</h3>
-<table><thead><tr><th>Examen</th><th>Dernier réalisé</th><th>Prochain prévu</th><th>Fréquence recommandée</th></tr></thead><tbody></tbody></table>
-<h3>Traitements</h3>
-<table><thead><tr><th>Médicament</th><th>Dose</th><th>Fréquence</th><th>Depuis</th><th>Effets secondaires</th></tr></thead><tbody></tbody></table>
-<h2>Étape 4 — Alertes</h2>
-<p>Signale :</p>
+<p>Génère les trois tableaux suivants. Remplis les colonnes avec les données fournies ; laisse vide ce qui n'est pas connu.</p>
+<h3>3a. Constantes et résultats de biologie</h3>
+<table><thead><tr><th>Date</th><th>Mesure</th><th>Valeur</th><th>Cible médicale</th><th>Statut</th><th>Notes</th></tr></thead><tbody><tr><td>—</td><td>HbA1c</td><td>—</td><td>&lt; 7 %</td><td>—</td><td>—</td></tr><tr><td>—</td><td>Glycémie à jeun</td><td>—</td><td>0,7–1,0 g/L</td><td>—</td><td>—</td></tr></tbody></table>
+<p><em>(Adapter les lignes à la pathologie : TSH, tension systolique/diastolique, DEP, créatinine, cholestérol LDL, etc.)</em></p>
+<p><strong>Légende statut</strong> : ✅ Dans la cible · ⚠️ Limite · 🔴 Hors cible — à signaler au médecin</p>
+<h3>3b. Calendrier des examens</h3>
+<table><thead><tr><th>Examen</th><th>Dernier réalisé</th><th>Prochain prévu</th><th>Fréquence recommandée</th><th>Statut</th></tr></thead><tbody><tr><td>Bilan sanguin</td><td>—</td><td>—</td><td>Tous les 3 mois</td><td>—</td></tr><tr><td>Fond d'œil</td><td>—</td><td>—</td><td>1 fois/an</td><td>—</td></tr></tbody></table>
+<p><strong>Règle de remplissage</strong> : Si &quot;Dernier réalisé&quot; + fréquence &lt; aujourd'hui → marquer ⚠️ À planifier.</p>
+<h3>3c. Traitements en cours</h3>
+<table><thead><tr><th>Médicament</th><th>Dose</th><th>Fréquence</th><th>Heure</th><th>Depuis</th><th>Effets notés</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr></tbody></table>
+<hr>
+<h2>Étape 4 — Alertes automatiques</h2>
+<p>À partir des données saisies, signale systématiquement :</p>
 <ul>
-<li>Examens en retard ou à planifier</li>
-<li>Valeurs hors cible</li>
-<li>Symptômes nouveaux à mentionner au médecin</li>
+<li><strong>Examen en retard</strong> : dernier réalisé + fréquence &lt; date du jour</li>
+<li><strong>Valeur hors cible</strong> : comparer la valeur à la cible fournie par l'utilisateur (cible = celle fixée par le médecin, pas une valeur générique)</li>
+<li><strong>Médicament sans date de révision</strong> depuis plus de 6 mois</li>
+<li><strong>Symptôme nouveau</strong> non encore mentionné en consultation</li>
 </ul>
-<h2>Étape 5 — Fiche récapitulative</h2>
-<p>Produis une fiche 1 page à emporter en consultation avec :</p>
+<p>Formulation recommandée :</p>
+<blockquote>&quot;Votre dernier fond d'œil remonte à [date]. Si votre médecin recommande un contrôle annuel, il serait utile de planifier un rendez-vous.&quot;</blockquote>
+<hr>
+<h2>Étape 5 — Fiche consultation</h2>
+<p>Génère une fiche synthétique (format texte copiable) à emporter au prochain rendez-vous :</p>
+<pre><code>==== FICHE CONSULTATION — [PRÉNOM] — [DATE] ====
+
+PATHOLOGIE : [nom]
+MÉDECIN RÉFÉRENT : [nom / spécialité]
+
+TRAITEMENTS ACTUELS :
+  - [Médicament A] [dose] [fréquence]
+  - [Médicament B] ...
+
+DERNIÈRES VALEURS :
+  - [Mesure] : [valeur] (cible : [cible]) — [date]
+
+EXAMENS À PRÉVOIR :
+  - [Examen] : dernier le [date], prochain recommandé : [date]
+
+QUESTIONS POUR LE MÉDECIN :
+  1. [Question issue des alertes ou des notes de l'utilisateur]
+  2. ...
+
+SYMPTÔMES / CHANGEMENTS RÉCENTS :
+  - [Description libre]
+===============================================</code></pre>
+<p>Propose à l'utilisateur de remplir la section &quot;Questions pour le médecin&quot; ensemble avant la consultation.</p>
+<hr>
+<h2>Exemples concrets par pathologie</h2>
+<table><thead><tr><th>Pathologie</th><th>Constantes clés</th><th>Examens typiques</th></tr></thead><tbody><tr><td>Diabète type 2</td><td>HbA1c, glycémie à jeun, poids</td><td>Bilan lipidique, fond d'œil, créatinine, microalbuminurie</td></tr><tr><td>Hypertension</td><td>TA systolique, TA diastolique, fréquence cardiaque</td><td>ECG, bilan rénal, bilan lipidique</td></tr><tr><td>Asthme</td><td>DEP (débit expiratoire de pointe), fréquence des crises</td><td>Spirométrie, consultation pneumologue</td></tr><tr><td>Hypothyroïdie</td><td>TSH, T4 libre</td><td>Bilan annuel, adaptation Lévothyrox selon TSH</td></tr><tr><td>Maladie inflammatoire</td><td>CRP, VS, NFS</td><td>Imagerie selon localisation, suivi rhumato/gastro</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous et pièges à éviter</h2>
+<p><strong>Ne jamais faire :</strong></p>
 <ul>
-<li>Résumé de la maladie</li>
-<li>Traitements actuels</li>
-<li>Dernières valeurs</li>
-<li>Questions en suspens</li>
+<li>Suggérer un changement de dose ou d'arrêt de traitement — même si la valeur semble normale</li>
+<li>Interpréter une valeur de biologie comme un diagnostic (ex. : &quot;votre HbA1c élevée signifie que votre diabète est mal équilibré&quot; → à laisser au médecin)</li>
+<li>Utiliser des cibles génériques (normes de laboratoire) à la place des cibles individuelles fixées par le médecin — elles peuvent différer intentionnellement</li>
+<li>Comparer les résultats de l'utilisateur à ceux d'autres personnes</li>
 </ul>
-<h2>Règles</h2>
+<p><strong>Pièges courants :</strong></p>
 <ul>
-<li>Ne modifie jamais un objectif ou une cible sans que le médecin l'ait fixé.</li>
-<li>N'interprète pas les valeurs comme un diagnostic.</li>
-<li>Reste organisationnel, pas médical.</li>
+<li>L'utilisateur ne connaît pas ses cibles : noter &quot;à confirmer avec le médecin&quot; plutôt qu'une valeur de substitution</li>
+<li>Valeurs dans la cible mais symptômes persistants : orienter vers une consultation, ne pas rassurer à tort</li>
+<li>Plusieurs pathologies concomitantes : créer une section par pathologie, ne pas mélanger les tableaux</li>
 </ul>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce tableau de bord est un outil d'organisation personnelle. Les cibles et traitements doivent être définis et ajustés par votre médecin.</blockquote>
+<hr>
+<h2>Rappel professionnel</h2>
+<blockquote>Ce tableau de bord est un outil d'<strong>organisation personnelle</strong>. Il ne remplace pas le jugement clinique de votre médecin. Toute valeur hors cible, symptôme nouveau ou question sur votre traitement doit être discutée avec un professionnel de santé qualifié. En cas de doute urgent, contactez votre médecin ou le 15 (SAMU).</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

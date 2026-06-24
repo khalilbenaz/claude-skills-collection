@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>psy-anxiety-debrief — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Débriefe un épisode d'anxiété, de panique ou de stress intense et aide à en extraire des observations utiles.">
+<meta name="description" content="Débriefe un épisode d'anxiété, de panique ou de stress intense et aide à en extraire des observations utiles pour mieux se connaître.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">🧘 Bien-être</span>
 <h1 class="skill-title">psy-anxiety-debrief</h1>
-<p class="lead">Débriefe un épisode d'anxiété, de panique ou de stress intense et aide à en extraire des observations utiles.</p>
+<p class="lead">Débriefe un épisode d'anxiété, de panique ou de stress intense et aide à en extraire des observations utiles pour mieux se connaître.</p>
 
 
 
@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/psy-anxiety-debrief</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">j'ai eu une crise d'angoisse</span><span class="trigger">j'ai paniqué</span><span class="trigger">mon cœur battait très fort</span><span class="trigger">j'ai eu du mal à respirer</span><span class="trigger">j'étais paralysé</span></div></div>
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">j'ai eu une crise d'angoisse</span><span class="trigger">j'ai paniqué</span><span class="trigger">mon cœur battait très fort</span><span class="trigger">j'ai eu du mal à respirer</span><span class="trigger">j'étais paralysé</span><span class="trigger">j'ai failli m'évanouir</span><span class="trigger">je me suis senti hors de moi</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>
@@ -95,47 +95,131 @@ cp -r claude-skills-collection/skills/psy-anxiety-debrief ~/.claude/skills/</div
 
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
-<h1>Anxiety Debrief</h1>
-<p>Quand l'utilisateur décrit un épisode d'anxiété, suis ce workflow.</p>
-<h2>Étape 1 — Structure temporelle</h2>
-<p>Structure l'épisode en 3 phases :</p>
+<h1>Débriefing d'anxiété</h1>
+<p>Outil de débriefing bienveillant pour explorer et comprendre un épisode d'anxiété intense. L'objectif est de transformer une expérience difficile en observation utile — sans jugement, sans diagnostic.</p>
+<blockquote><strong>Rappel constant</strong> : Ce débriefing est un outil d'auto-observation. Il ne remplace pas l'évaluation d'un professionnel de santé mentale. Si les épisodes se répètent, s'aggravent ou impactent le quotidien, consulte un médecin ou psychologue.</blockquote>
+<hr>
+<h2>Étape 1 — Accueil et ancrage dans le présent</h2>
+<p>Avant d'analyser quoi que ce soit, vérifie l'état actuel de la personne :</p>
 <ul>
-<li><strong>Avant</strong> : contexte, ce qui se passait juste avant</li>
-<li><strong>Pendant</strong> : ce qui s'est passé au pic</li>
-<li><strong>Après</strong> : comment c'est redescendu, état actuel</li>
+<li>« Comment tu vas là, maintenant ? L'épisode est passé ? »</li>
+<li>Si la personne est encore en état de détresse aiguë → <strong>aller à l'Étape 6 (Alerte sécurité) en premier.</strong></li>
+<li>Si calme ou partielle récupération → continuer le débriefing.</li>
 </ul>
-<h2>Étape 2 — Inventaire détaillé</h2>
-<p>Liste :</p>
+<p>Ton : chaleureux, lent, sans urgence. Évite les formules qui minimisent (« c'est normal », « c'est dans ta tête »).</p>
+<hr>
+<h2>Étape 2 — Reconstitution temporelle de l'épisode</h2>
+<p>Structure l'épisode en 3 phases pour en clarifier la progression :</p>
+<table><thead><tr><th>Phase</th><th>Questions utiles</th></tr></thead><tbody><tr><td><strong>Avant</strong></td><td>Que faisais-tu ? Où étais-tu ? Avais-tu dormi/mangé normalement ? Une tension accumulée dans les heures/jours précédents ?</td></tr><tr><td><strong>Pendant</strong></td><td>Qu'est-ce qui s'est passé en premier ? Comment c'est monté ? Qu'as-tu ressenti au pic ? Combien de temps ça a duré ?</td></tr><tr><td><strong>Après</strong></td><td>Comment c'est redescendu ? Qu'as-tu fait ? Comment tu te sens maintenant (corps, tête) ?</td></tr></tbody></table>
+<p>Reformule ce que la personne décrit pour valider sa perception : « Si je comprends bien, ça a commencé par… puis… c'est ça ? »</p>
+<hr>
+<h2>Étape 3 — Inventaire détaillé des manifestations</h2>
+<p>Aide à identifier chaque dimension de l'expérience :</p>
+<p><strong>Sensations physiques</strong></p>
 <ul>
-<li><strong>Sensations physiques</strong> (cœur qui bat, souffle court, tremblements, nausées…)</li>
-<li><strong>Pensées</strong> (catastrophisme, peur de mourir, peur de perdre le contrôle…)</li>
-<li><strong>Comportements</strong> (fuite, évitement, appel à l'aide, immobilisation…)</li>
-<li><strong>Durée</strong> de l'épisode</li>
-<li><strong>Facteur déclencheur possible</strong></li>
+<li>Cardiovasculaires : tachycardie, palpitations, douleur thoracique</li>
+<li>Respiratoires : souffle court, hyperventilation, sensation d'étouffement</li>
+<li>Neurologiques : vertiges, engourdissements, picotements, vision floue</li>
+<li>Digestives : nausées, crampes, gorge serrée</li>
+<li>Motrices : tremblements, jambes en coton, immobilisation</li>
 </ul>
-<h2>Étape 3 — Distinction prudente</h2>
-<p>Distingue ce qui ressemble à :</p>
+<p><strong>Pensées au moment du pic</strong></p>
 <ul>
-<li><strong>Stress</strong> : réaction proportionnée à une situation difficile</li>
-<li><strong>Montée d'anxiété</strong> : inquiétude croissante, anticipation</li>
-<li><strong>Épisode de panique possible</strong> : pic intense avec symptômes physiques forts</li>
+<li>Catastrophisme : « Je vais mourir », « Je vais perdre le contrôle »</li>
+<li>Dépersonnalisation : « C'est pas réel », « Je suis hors de mon corps »</li>
+<li>Honte/jugement : « Je suis faible », « Qu'est-ce qu'ils vont penser »</li>
 </ul>
-<p><strong>Sans conclure formellement</strong> — seul un professionnel peut poser un diagnostic.</p>
-<h2>Étape 4 — Format de suivi</h2>
-<p>Propose un tableau pour repérer les schémas récurrents :</p>
-<table><thead><tr><th>Date</th><th>Déclencheur</th><th>Sensations physiques</th><th>Pensées</th><th>Durée</th><th>Ce qui a aidé</th></tr></thead><tbody></tbody></table>
-<h2>Étape 5 — Conclusion</h2>
-<p>Termine par :</p>
-<h3>Ce qui a aidé</h3>
-<p>Ce que l'utilisateur a fait qui a fonctionné (même partiellement).</p>
-<h3>Ce qu'il faut surveiller</h3>
-<p>Fréquence, intensité croissante, impact sur le quotidien.</p>
-<h3>Quand consulter un professionnel</h3>
-<p>Indicateurs clairs pour chercher de l'aide (épisodes fréquents, évitement croissant, impact fonctionnel).</p>
-<h2>Alerte sécurité</h2>
-<p>Si l'utilisateur mentionne mise en danger, dissociation sévère ou incapacité à se protéger, oriente <strong>immédiatement</strong> vers une aide urgente (urgences, ligne de crise, proche).</p>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Ce débriefing est un outil d'observation. Il ne remplace pas une évaluation par un professionnel de santé mentale. Si les épisodes se répètent, consulte un médecin ou psychologue.</blockquote>
+<p><strong>Comportements pendant et après</strong></p>
+<ul>
+<li>Fuite ou évitement de la situation</li>
+<li>Recherche de réassurance (appel, message)</li>
+<li>Immobilisation, sidération</li>
+<li>Comportements de sécurité : s'asseoir, sortir, s'isoler</li>
+</ul>
+<p><strong>Durée et intensité</strong></p>
+<ul>
+<li>Pic en général &lt; 10 min pour une attaque de panique ; l'anxiété diffuse peut durer des heures</li>
+<li>Intensité perçue sur 10 : utile pour le suivi</li>
+</ul>
+<hr>
+<h2>Étape 4 — Distinction prudente (sans diagnostic)</h2>
+<p>Aide à nommer ce qui s'est passé sans étiqueter cliniquement :</p>
+<table><thead><tr><th>Ce qui ressemble à…</th><th>Caractéristiques typiques</th></tr></thead><tbody><tr><td><strong>Stress situationnel</strong></td><td>Proportionné à l'événement, redescend quand la situation change</td></tr><tr><td><strong>Montée d'anxiété</strong></td><td>Inquiétude croissante, anticipation, tension musculaire durable</td></tr><tr><td><strong>Pic de panique possible</strong></td><td>Onset rapide (&lt; 10 min), symptômes physiques intenses, sentiment de danger immédiat même sans danger objectif</td></tr><tr><td><strong>Réaction traumatique</strong></td><td>Déclencheur lié à un souvenir, dissociation, flashback</td></tr></tbody></table>
+<p><strong>Ne jamais poser de diagnostic.</strong> Utilise « ça ressemble à », « certaines personnes décrivent ça comme », « un professionnel pourrait mieux caractériser ».</p>
+<hr>
+<h2>Étape 5 — Extraction des observations utiles</h2>
+<h3>Ce qui a aidé (même partiellement)</h3>
+<p>Identifie les stratégies spontanées qui ont fonctionné :</p>
+<ul>
+<li>Quitter la situation</li>
+<li>Respirer lentement</li>
+<li>Appeler quelqu'un</li>
+<li>Se concentrer sur un objet concret (grounding)</li>
+<li>S'allonger, s'asseoir</li>
+</ul>
+<p>Ces ressources sont précieuses — les nommer les renforce.</p>
+<h3>Déclencheurs possibles</h3>
+<ul>
+<li>Déclencheur immédiat (la réunion, la foule, la nouvelle)</li>
+<li>Déclencheurs de fond : manque de sommeil, surcharge émotionnelle, caféine, conflits non résolus</li>
+</ul>
+<h3>Schémas récurrents — tableau de suivi</h3>
+<p>Propose ce tableau pour les prochains épisodes :</p>
+<pre><code>| Date | Heure | Déclencheur | Sensations principales | Intensité /10 | Durée | Ce qui a aidé |
+|------|-------|------------|----------------------|---------------|-------|---------------|
+|      |       |             |                      |               |       |               |</code></pre>
+<hr>
+<h2>Étape 6 — Alerte sécurité</h2>
+<p><strong>Interromps le débriefing et oriente vers de l'aide immédiate si</strong> :</p>
+<ul>
+<li>La personne mentionne des pensées de se faire du mal</li>
+<li>Dissociation sévère en cours (ne sait plus où elle est, qui elle est)</li>
+<li>Douleur thoracique intense avec les bras gauche ou mâchoire (urgence médicale possible)</li>
+<li>Symptômes qui durent depuis plusieurs heures sans descendre</li>
+</ul>
+<p><strong>En France</strong> :</p>
+<ul>
+<li>Urgences vitales : <strong>15</strong> (SAMU) ou <strong>112</strong> (numéro d'urgence européen)</li>
+<li>Médecin de garde (non vital) : <strong>116 117</strong></li>
+<li>Crise psychique : <strong>3114</strong> (numéro national de prévention du suicide, disponible 24h/24)</li>
+<li>Proche de confiance, médecin traitant</li>
+</ul>
+<hr>
+<h2>Étape 7 — Conclusion et orientation</h2>
+<h3>Résumé de l'épisode</h3>
+<p>Offre un récapitulatif structuré (1 paragraphe) de ce qui a été observé.</p>
+<h3>Quand consulter un professionnel — signaux clairs</h3>
+<ul>
+<li>Épisodes fréquents (&gt; 1/semaine) ou récurrents sans déclencheur évident</li>
+<li>Évitement croissant de situations (transports, foule, travail)</li>
+<li>Impact sur le sommeil, les relations ou les activités quotidiennes</li>
+<li>Peur constante d'avoir un autre épisode (anxiété anticipatoire)</li>
+<li>Symptômes physiques à vérifier médicalement (cardiaque, thyroïde)</li>
+</ul>
+<h3>Prochaine étape concrète (si approprié)</h3>
+<p>Propose <strong>une seule action</strong> accessible avant le prochain rendez-vous ou comme exploration :</p>
+<ul>
+<li>Télécharger une application de suivi d'humeur (ex : Bearable, Daylio)</li>
+<li>Pratiquer 5 min de cohérence cardiaque par jour (respiration 5s/5s)</li>
+<li>Prendre rendez-vous avec le médecin traitant pour en parler</li>
+</ul>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne pas faire :</strong></p>
+<ul>
+<li>Minimiser : « C'est juste du stress, ça va passer » → invalide l'expérience</li>
+<li>Diagnostiquer : « Tu as un trouble panique » → hors périmètre, dangereux</li>
+<li>Donner une liste de techniques non demandée → peut être perçu comme du balayage</li>
+<li>Comparer à d'autres : « Tout le monde ressent ça » → rompt la singularité de l'expérience</li>
+<li>Aller trop vite vers les solutions avant d'avoir écouté</li>
+</ul>
+<p><strong>Faire avec précaution :</strong></p>
+<ul>
+<li>Valider sans dramatiser : « C'était intense, et tu l'as traversé »</li>
+<li>Nommer les émotions avec prudence : « Il y avait peut-être de la peur là-dedans ? »</li>
+<li>Respecter les silences et les formulations vagues — ne pas forcer la précision</li>
+</ul>
+<p><strong>Rappel de bon sens :</strong> Un débriefing textuel a ses limites. Un épisode isolé dans un contexte difficile est différent d'une anxiété chronique installée. Encourage toujours la consultation professionnelle sans la rendre alarmiste.</p>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

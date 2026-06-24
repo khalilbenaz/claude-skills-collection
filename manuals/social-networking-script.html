@@ -96,19 +96,129 @@ cp -r claude-skills-collection/skills/social-networking-script ~/.claude/skills/
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Networking Script</h1>
-<h2>Étape 1 — Contexte</h2>
-<p>Événement (en personne/en ligne), qui tu veux rencontrer, ton objectif, ton secteur.</p>
+<h2>Étape 1 — Cadrage du contexte</h2>
+<p>Avant de générer quoi que ce soit, collecte ces informations (pose les questions manquantes) :</p>
+<table><thead><tr><th>Info</th><th>Exemple</th></tr></thead><tbody><tr><td><strong>Situation</strong></td><td>Conférence tech, DM LinkedIn, email froid, café informel, stand salon</td></tr><tr><td><strong>Cible</strong></td><td>CTO d'une startup SaaS, recruteur senior, potentiel partenaire, investisseur</td></tr><tr><td><strong>Objectif</strong></td><td>Décrocher un entretien, explorer un partenariat, obtenir un conseil, élargir son réseau</td></tr><tr><td><strong>Ton souhaité</strong></td><td>Formel, décontracté, percutant, chaleureux</td></tr><tr><td><strong>Durée/format</strong></td><td>30 s en personne, 300 caractères LinkedIn, 150 mots email</td></tr></tbody></table>
+<p>Adapte chaque script en fonction de ces réponses — un pitch générique ne convertit pas.</p>
+<hr>
 <h2>Étape 2 — Elevator pitch (30 secondes)</h2>
-<p>3 variantes adaptées au contexte : formelle, décontractée, axée résultat.</p>
+<p>Structure en 3 phrases :</p>
+<ol>
+<li><strong>Qui je suis</strong> — rôle + domaine (pas de titre vague)</li>
+<li><strong>Ce que j'apporte</strong> — résultat concret ou valeur spécifique</li>
+<li><strong>Accroche</strong> — question ouverte ou pont vers la suite</li>
+</ol>
+<h3>3 variantes à proposer systématiquement</h3>
+<p><strong>Formelle (conférence, événement corpo)</strong></p>
+<blockquote>&quot;Je suis [Prénom], ingénieur backend spécialisé en architectures événementielles chez [Société]. On a récemment réduit la latence de nos APIs de 40 % sur un projet fintech. Je suis curieux de savoir comment vous gérez la scalabilité côté [leur domaine].&quot;</blockquote>
+<p><strong>Décontractée (meetup, afterwork)</strong></p>
+<blockquote>&quot;Je code du côté backend — principalement des trucs temps réel et messagerie. En ce moment je creuse les systèmes distribués. Vous êtes plutôt côté technique ou produit ?&quot;</blockquote>
+<p><strong>Axée résultat (investisseur, décideur)</strong></p>
+<blockquote>&quot;Je construis des systèmes de paiement qui traitent X transactions par seconde avec un taux d'erreur sous 0,01 %. Je cherche à rencontrer des acteurs qui évoluent dans ce segment. C'est votre cas ?&quot;</blockquote>
+<hr>
 <h2>Étape 3 — Scripts par situation</h2>
 <h3>Premier contact en personne</h3>
-<h3>Message LinkedIn</h3>
+<pre><code>&quot;Bonjour, [Prénom]. J'ai vu votre intervention sur [sujet] — votre angle sur [point précis] m'a interpellé.
+Je travaille sur [contexte lié]. Est-ce qu'on pourrait échanger deux minutes ?&quot;</code></pre>
+<p>Règles :</p>
+<ul>
+<li>Nommer un détail précis (pas &quot;j'ai adoré votre talk&quot;)</li>
+<li>Ouvrir sur eux, pas sur toi</li>
+<li>Demander la permission d'échanger, ne pas imposer</li>
+</ul>
+<hr>
+<h3>Message LinkedIn (invitation ou DM)</h3>
+<p><strong>Invitation avec note (300 caractères max)</strong></p>
+<pre><code>Bonjour [Prénom], j'ai lu votre article sur [sujet] — votre point sur [X] colle exactement
+à un défi que j'ai en ce moment. Je serais ravi d'échanger si vous êtes disponible.</code></pre>
+<p><strong>DM de premier contact (après connexion)</strong></p>
+<pre><code>Bonjour [Prénom],
+
+Merci pour l'ajout. Je vous suis depuis [contexte : votre post sur X, la conf Y].
+Je travaille sur [projet/défi lié à leur domaine] et votre expérience en [domaine] serait un éclairage précieux.
+
+Auriez-vous 20 minutes cette semaine ou la suivante pour un appel rapide ?
+
+[Prénom]</code></pre>
+<hr>
 <h3>Email froid</h3>
-<h3>Suivi après rencontre</h3>
-<h2>Étape 4 — Questions à poser</h2>
-<p>5 questions ouvertes pour créer une vraie conversation (pas juste &quot;vous faites quoi&quot;).</p>
-<h2>Étape 5 — Suivi</h2>
-<p>Template de message de suivi dans les 24-48h.</p>
+<pre><code>Objet : [Bénéfice concret] — [Ton prénom]
+
+Bonjour [Prénom],
+
+[Accroche personnalisée : un post, un projet, une réalisation récente d'eux — 1 phrase.]
+
+Je suis [rôle] chez [Société] — on a récemment [résultat mesurable].
+Je pense qu'il y a une intersection intéressante avec ce que vous faites sur [leur sujet].
+
+Seriez-vous ouvert à 15 minutes d'échange la semaine prochaine ?
+Je propose [Jour] à [Heure] ou [autre créneau] — sinon dites-moi ce qui vous convient.
+
+[Prénom]
+[Lien LinkedIn ou site]</code></pre>
+<p>Règles email froid :</p>
+<ul>
+<li>Objet sous 50 caractères, sans &quot;collaboration&quot;, &quot;synergies&quot; ou &quot;opportunité&quot;</li>
+<li>Accroche 100 % personnalisée (rend le copy-paste impossible)</li>
+<li>Un seul appel à l'action clair</li>
+<li>Longueur totale : 100-150 mots maximum</li>
+</ul>
+<hr>
+<h3>Suivi après rencontre (24-48 h)</h3>
+<pre><code>Objet : Suite à notre échange — [Conférence / Événement]
+
+Bonjour [Prénom],
+
+Ravi d'avoir échangé hier sur [sujet abordé].
+Comme promis, voici [lien / ressource / intro mentionnée].
+
+[Une phrase sur la suite : &quot;Si l'idée de [X] vous intéresse, je serais heureux d'en parler plus en détail.&quot;]
+
+Bonne continuation,
+[Prénom]</code></pre>
+<hr>
+<h2>Étape 4 — Questions ouvertes pour créer une vraie conversation</h2>
+<p>Propose 5 parmi celles-ci, adaptées à la cible :</p>
+<ol>
+<li>&quot;Sur quoi vous concentrez-vous en ce moment — côté technique / produit / stratégie ?&quot;</li>
+<li>&quot;Qu'est-ce qui vous a amené à vous spécialiser dans [domaine] ?&quot;</li>
+<li>&quot;Quel est le défi le plus contre-intuitif que vous avez rencontré dans [contexte] ?&quot;</li>
+<li>&quot;Y a-t-il quelque chose que vous auriez fait différemment au début de [projet / poste] ?&quot;</li>
+<li>&quot;Qu'est-ce que vous lisez ou suivez en ce moment sur [sujet] ?&quot;</li>
+<li>&quot;Comment vous avez résolu [problème spécifique lié à leur actualité] ?&quot;</li>
+<li>&quot;Si vous deviez recommander une seule ressource sur [domaine], ce serait quoi ?&quot;</li>
+</ol>
+<p>Évite : &quot;Vous faites quoi dans la vie ?&quot;, &quot;Comment vous connaissez [organisateur] ?&quot;</p>
+<hr>
+<h2>Étape 5 — Critères de décision par situation</h2>
+<table><thead><tr><th>Situation</th><th>Canal privilégié</th><th>Longueur</th><th>Ton</th></tr></thead><tbody><tr><td>Conférence / salon</td><td>En personne → LinkedIn</td><td>Pitch 30 s</td><td>Décontracté</td></tr><tr><td>Recruteur identifié</td><td>LinkedIn DM ou email</td><td>100-150 mots</td><td>Professionnel</td></tr><tr><td>Décideur inconnu</td><td>Email froid</td><td>&lt; 150 mots</td><td>Direct, factuel</td></tr><tr><td>Ancien contact</td><td>LinkedIn ou email</td><td>50-80 mots</td><td>Chaleureux</td></tr><tr><td>Suivi post-événement</td><td>Email</td><td>&lt; 100 mots</td><td>Concis, utile</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Éviter absolument :</strong></p>
+<ul>
+<li>Pitch &quot;Je cherche des opportunités&quot; sans contexte → trop vague, souvent ignoré</li>
+<li>Email avec 3 questions différentes → oblige à choisir, souvent non répondu</li>
+<li>Copier-coller le même message à 50 personnes → se détecte et nuit à la réputation</li>
+<li>Demander une faveur au premier contact (intro, recommandation, offre d'emploi)</li>
+<li>Objets d'email : &quot;Collaboration ?&quot;, &quot;Question rapide&quot;, &quot;Opportunité intéressante&quot;</li>
+<li>Relance agressive (&lt; 5 jours entre deux messages non sollicités)</li>
+</ul>
+<p><strong>Signaux d'un bon script :</strong></p>
+<ul>
+<li>La personne peut répondre avec une seule ligne</li>
+<li>Le message parle d'eux autant que de toi</li>
+<li>L'appel à l'action est unique et précis (pas &quot;n'hésitez pas à revenir vers moi&quot;)</li>
+<li>Il serait impossible d'envoyer ce message à quelqu'un d'autre sans le modifier</li>
+</ul>
+<hr>
+<h2>Bonnes pratiques 2026</h2>
+<ul>
+<li><strong>Personnalisation IA visible</strong> : les destinataires détectent les messages générés sans adaptation ; ajoute toujours un détail impossible à inventer (post récent, projet spécifique, citation d'une interview)</li>
+<li><strong>Voice notes LinkedIn</strong> : pour les connexions déjà établies, un message vocal de 30 s surperforme un texte — propose cette option</li>
+<li><strong>Timing email</strong> : mardi-jeudi entre 8h et 10h locale du destinataire reste optimal</li>
+<li><strong>Profile LinkedIn avant d'envoyer</strong> : vérifie le &quot;Open to&quot; et les posts récents — adapte le contexte</li>
+<li><strong>Suivi unique</strong> : une seule relance max si pas de réponse après 7 jours ; après, lâcher prise</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

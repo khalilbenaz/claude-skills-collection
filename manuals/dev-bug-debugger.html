@@ -96,30 +96,103 @@ cp -r claude-skills-collection/skills/dev-bug-debugger ~/.claude/skills/</div><b
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Bug Debugger</h1>
-<h2>Workflow</h2>
+<h2>Étape 0 — Collecter le contexte minimal</h2>
+<p>Avant toute hypothèse, s'assurer d'avoir :</p>
+<table><thead><tr><th>Info</th><th>Exemples</th></tr></thead><tbody><tr><td>Message d'erreur complet</td><td>stack trace, code HTTP, errno</td></tr><tr><td>Comportement attendu vs observé</td><td>&quot;devrait retourner 200, retourne 500&quot;</td></tr><tr><td>Reproductibilité</td><td>toujours / parfois / en prod seulement</td></tr><tr><td>Dernière modification</td><td>commit, déploiement, changement config</td></tr><tr><td>Environnement</td><td>OS, version runtime, variables d'env</td></tr></tbody></table>
+<p>Si un de ces éléments manque et bloque le diagnostic → demander uniquement ce qui est nécessaire, pas tout à la fois.</p>
+<hr>
+<h2>Étape 1 — Lire l'erreur sans sauter aux conclusions</h2>
+<pre><code>TypeError: Cannot read properties of undefined (reading 'id')
+    at getUserName (user.js:42:18)
+    at processRequest (api.js:17:5)</code></pre>
+<ul>
+<li><strong>Lire le type d'erreur</strong> : <code>TypeError</code>, <code>NullReferenceException</code>, <code>SIGSEGV</code>…</li>
+<li><strong>Localiser le premier frame applicatif</strong> (ignorer les frames de libs tierces).</li>
+<li><strong>Identifier l'opération qui échoue</strong> : accès propriété, appel fonction, cast, IO…</li>
+</ul>
+<hr>
+<h2>Étape 2 — Formuler 3 hypothèses classées par probabilité</h2>
+<p>Format attendu :</p>
 <ol>
-<li><strong>Comprendre le problème</strong> :</li>
-<ul>
-<li>Quel est le comportement attendu ?</li>
-<li>Quel est le comportement observé ?</li>
-<li>Depuis quand ? Qu'est-ce qui a changé récemment ?</li>
-</ul>
-<li><strong>Analyser l'erreur</strong> :</li>
-<ul>
-<li>Lire le message d'erreur ligne par ligne</li>
-<li>Identifier le fichier, la ligne et la fonction concernée</li>
-<li>Remonter la stack trace</li>
-</ul>
-<li><strong>Hypothèses</strong> : lister les 3 causes les plus probables, classées par probabilité.</li>
-<li><strong>Vérification</strong> : pour chaque hypothèse, proposer un test simple (console.log, print, breakpoint…).</li>
-<li><strong>Correction</strong> : code corrigé avec explication de pourquoi ça résout le problème.</li>
-<li><strong>Prévention</strong> : comment éviter ce bug à l'avenir (types, tests, validation…).</li>
+<li><strong>(Probable)</strong> <code>user</code> est <code>undefined</code> car la DB ne retourne rien pour cet ID → vérifier avec <code>console.log(user)</code> avant la ligne 42.</li>
+<li><strong>(Possible)</strong> La fonction est appelée avant que la promesse soit résolue → ajouter <code>await</code>.</li>
+<li><strong>(Moins probable)</strong> Race condition sur un cache partagé → vérifier si ça arrive en parallèle.</li>
 </ol>
-<h2>Règles</h2>
+<p>Règle : ne pas proposer plus de 3 hypothèses sans validation intermédiaire.</p>
+<hr>
+<h2>Étape 3 — Vérification rapide par hypothèse</h2>
+<h3>JavaScript/TypeScript</h3>
+<pre><code class="lang-ts">// Inspecter sans modifier le flux
+console.log('[debug] user:', JSON.stringify(user, null, 2));
+// Vérifier le type exact
+console.log('[debug] typeof user:', typeof user, user instanceof Object);</code></pre>
+<h3>Python</h3>
+<pre><code class="lang-python">import pprint
+print('[debug] user:', pprint.pformat(user))
+# Ou avec breakpoint natif (Python 3.7+)
+breakpoint()</code></pre>
+<h3>.NET / C#</h3>
+<pre><code class="lang-csharp">// Ajouter un point de log avant la ligne incriminée
+_logger.LogDebug(&quot;user={User}&quot;, JsonSerializer.Serialize(user));
+// Ou utiliser le debugger avec Watch sur l'expression</code></pre>
+<h3>Shell / CLI</h3>
+<pre><code class="lang-bash"># Activer le mode verbose
+set -x          # bash : affiche chaque commande avant exécution
+export DEBUG=*  # Node.js : active les logs de debug des modules</code></pre>
+<hr>
+<h2>Étape 4 — Correction</h2>
+<p>Toujours présenter un diff avant/après :</p>
+<pre><code class="lang-ts">// AVANT
+const name = user.profile.name;
+
+// APRÈS — avec guard null
+const name = user?.profile?.name ?? 'Inconnu';</code></pre>
+<p>Expliquer <strong>pourquoi</strong> la correction fonctionne, pas seulement <strong>quoi</strong> changer.</p>
+<hr>
+<h2>Étape 5 — Prévention</h2>
+<p>Adapter selon le contexte :</p>
+<table><thead><tr><th>Type de bug</th><th>Prévention recommandée</th></tr></thead><tbody><tr><td>Null/undefined</td><td>TypeScript strict, optional chaining, guards</td></tr><tr><td>Race condition</td><td>mutex, transactions, idempotence</td></tr><tr><td>Régression</td><td>test unitaire couvrant le cas exact</td></tr><tr><td>Config manquante</td><td>validation au démarrage (<code>zod</code>, <code>pydantic</code>)</td></tr><tr><td>Erreur silencieuse</td><td>logger sur les catch, ne jamais <code>catch {}</code> vide</td></tr></tbody></table>
+<hr>
+<h2>Garde-fous et anti-patterns</h2>
+<p><strong>Ne pas faire :</strong></p>
 <ul>
-<li>Ne devine pas — demande le contexte manquant.</li>
-<li>Montre toujours le avant/après du code.</li>
-<li>Si le bug dépasse le code montré, dis-le.</li>
+<li>Modifier le code sans reproduire le bug d'abord → on peut &quot;corriger&quot; la mauvaise chose.</li>
+<li>Ajouter plusieurs changements à la fois → impossible de savoir lequel a résolu.</li>
+<li>Ignorer le type d'erreur et chercher directement la &quot;solution Stack Overflow&quot;.</li>
+<li>Supprimer l'erreur avec un try/catch vide au lieu de traiter la cause.</li>
+</ul>
+<p><strong>Pièges fréquents :</strong></p>
+<ul>
+<li><em>Works on my machine</em> : vérifier les variables d'environnement, versions, données de test.</li>
+<li><em>Intermittent bug</em> : penser ordre d'initialisation, état partagé, timeouts.</li>
+<li><em>Après un déploiement</em> : vérifier la migration DB, les secrets, les dépendances mises à jour.</li>
+<li><em>Bug en prod seulement</em> : vérifier les logs de prod, les permissions, le volume de données.</li>
+</ul>
+<hr>
+<h2>Commandes de diagnostic utiles (copiables)</h2>
+<pre><code class="lang-bash"># Git — trouver le commit qui a introduit le bug
+git bisect start
+git bisect bad HEAD
+git bisect good &lt;commit-ok&gt;
+
+# Node.js — lancer avec inspect
+node --inspect-brk index.js
+
+# Docker — logs du container
+docker logs --tail=100 -f &lt;container&gt;
+
+# Linux — tracer les appels système
+strace -p &lt;pid&gt; 2&gt;&amp;1 | grep -v ENOENT
+
+# .NET — heap dump
+dotnet-dump collect -p &lt;pid&gt;</code></pre>
+<hr>
+<h2>Critères de décision — quand escalader</h2>
+<ul>
+<li>Le bug est dans une dépendance externe non patchée → ouvrir une issue upstream + workaround temporaire.</li>
+<li>La reproduction nécessite des données de production → demander un dump anonymisé ou un jeu de test équivalent.</li>
+<li>Le fix implique une refonte architecturale → documenter en ADR, ne pas patcher à la va-vite.</li>
+<li>L'erreur est liée à la sécurité (injection, overflow) → traiter comme incident, pas comme bug ordinaire.</li>
 </ul>
 </article>
 </main>

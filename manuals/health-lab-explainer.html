@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/health-lab-explainer</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">mes résultats</span><span class="trigger">mon bilan</span><span class="trigger">NFS</span><span class="trigger">glycémie</span><span class="trigger">cholestérol</span><span class="trigger">TSH</span><span class="trigger">créatinine</span><span class="trigger">hémoglobine</span></div></div>
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">mes résultats</span><span class="trigger">mon bilan</span><span class="trigger">NFS</span><span class="trigger">glycémie</span><span class="trigger">cholestérol</span><span class="trigger">TSH</span><span class="trigger">créatinine</span><span class="trigger">hémoglobine</span><span class="trigger">ferritine</span><span class="trigger">bilan hépatique</span><span class="trigger">ionogramme</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>
@@ -96,36 +96,92 @@ cp -r claude-skills-collection/skills/health-lab-explainer ~/.claude/skills/</di
 <article class="manual">
 <h1 style="margin-top:2.5rem">📖 Manuel</h1>
 <h1>Lab Explainer</h1>
-<p>Quand l'utilisateur fournit des résultats médicaux, suis ce workflow.</p>
-<h2>Étape 1 — Reformulation simple</h2>
-<p>Reformule chaque résultat en langage accessible. Évite le jargon médical sauf si l'utilisateur montre qu'il le maîtrise.</p>
-<h2>Étape 2 — Classement en 3 groupes</h2>
-<p>Classe chaque élément dans l'un de ces groupes :</p>
+<h2>Objectif</h2>
+<p>Rendre des résultats d'analyses lisibles, contextualisés et actionnables — sans jamais poser de diagnostic ni remplacer le médecin prescripteur.</p>
+<hr>
+<h2>Workflow en 7 étapes</h2>
+<h3>1. Inventaire des données reçues</h3>
+<p>Avant tout, liste ce que l'utilisateur a transmis :</p>
 <ul>
-<li><strong>Dans la norme</strong> : valeurs normales, rien de particulier à signaler.</li>
-<li><strong>À surveiller</strong> : valeurs légèrement hors norme ou en limite, sans urgence apparente.</li>
-<li><strong>À discuter avec un professionnel</strong> : valeurs potentiellement importantes nécessitant un avis médical.</li>
+<li>Paramètres présents (noms, valeurs, unités, intervalles de référence fournis).</li>
+<li>Paramètres manquants mais utiles (ex. : contexte clinique, traitements en cours, bilans antérieurs).</li>
+<li>Format : tableau collé, photo OCR, liste libre ?</li>
 </ul>
-<h2>Étape 3 — Tendances possibles</h2>
-<p>Signale les tendances possibles (ex. valeur en hausse par rapport à un bilan précédent) sans poser de diagnostic.</p>
-<h2>Étape 4 — Lien symptômes/valeurs</h2>
-<p>Si l'utilisateur a décrit des symptômes, relie les valeurs aux symptômes <strong>uniquement si le lien est plausible</strong> et formule avec prudence (ex. &quot;une hypothèse à explorer serait…&quot;).</p>
-<h2>Étape 5 — Règles de prudence</h2>
+<p>Si les intervalles de référence du laboratoire ne sont pas fournis, utilise les normes standard courantes tout en précisant que les seuils peuvent varier légèrement selon les labs.</p>
+<h3>2. Reformulation en langage accessible</h3>
+<p>Pour chaque paramètre, fournis :</p>
 <ul>
-<li>Évite les affirmations définitives.</li>
-<li>Ne pose jamais de diagnostic.</li>
-<li>Ne recommande jamais de modifier un traitement sur la base de résultats bruts.</li>
+<li><strong>Nom courant</strong> (et sigle explicité, ex. &quot;NFS = Numération Formule Sanguine&quot;).</li>
+<li><strong>Ce qu'il mesure</strong> en une phrase simple.</li>
+<li><strong>La valeur de l'utilisateur</strong> avec son unité.</li>
+<li><strong>L'intervalle de référence</strong> utilisé pour la comparaison.</li>
 </ul>
-<h2>Étape 6 — Conclusion</h2>
-<p>Termine par :</p>
-<h3>Points prioritaires</h3>
-<p>Les éléments les plus importants à aborder avec un professionnel.</p>
-<h3>Questions à poser au médecin</h3>
-<p>5 questions personnalisées et concrètes.</p>
-<h3>Informations complémentaires utiles</h3>
-<p>Ce que l'utilisateur pourrait fournir en plus pour mieux comprendre (bilans précédents, contexte, traitements…).</p>
-<h2>Rappel obligatoire</h2>
-<blockquote>⚠️ Cette synthèse est informative et ne remplace pas un avis médical. Parlez de ces résultats avec votre médecin traitant ou le prescripteur de l'analyse.</blockquote>
+<p>Exemple de reformulation :</p>
+<pre><code>Hémoglobine (Hb) — mesure la quantité de &quot;transporteurs d'oxygène&quot; dans le sang.
+→ Votre valeur : 10,8 g/dL | Norme femme adulte : 12,0–16,0 g/dL  ⚠️ sous la norme</code></pre>
+<p>Adapte le niveau de langage au profil de l'utilisateur (profane, infirmier, médecin).</p>
+<h3>3. Classement en 3 catégories visuelles</h3>
+<p>Présente un tableau de synthèse :</p>
+<table><thead><tr><th>Paramètre</th><th>Valeur</th><th>Statut</th></tr></thead><tbody><tr><td>Glycémie à jeun</td><td>5,1 mmol/L</td><td>✅ Dans la norme</td></tr><tr><td>LDL-cholestérol</td><td>4,2 mmol/L</td><td>⚠️ À surveiller</td></tr><tr><td>Créatinine</td><td>145 µmol/L</td><td>🔴 À discuter avec un professionnel</td></tr></tbody></table>
+<p><strong>Définitions des statuts :</strong></p>
+<ul>
+<li>✅ <strong>Dans la norme</strong> : valeur dans l'intervalle de référence, rien de particulier.</li>
+<li>⚠️ <strong>À surveiller</strong> : valeur légèrement hors norme ou en zone limite ; à mentionner au médecin mais sans caractère d'urgence.</li>
+<li>🔴 <strong>À discuter avec un professionnel</strong> : écart notable ou paramètre à fort impact clinique potentiel ; consultation recommandée sans délai inutile.</li>
+</ul>
+<h3>4. Explication des valeurs hors norme</h3>
+<p>Pour chaque ⚠️ ou 🔴, fournis :</p>
+<ul>
+<li><strong>Causes fréquentes</strong> (non diagnostiques — &quot;cela peut être dû à…&quot;).</li>
+<li><strong>Facteurs interférents</strong> connus (effort physique avant le prélèvement, repas, médicaments, heure du prélèvement).</li>
+<li><strong>Ce que le médecin cherchera à vérifier</strong> en premier lieu.</li>
+</ul>
+<p>Exemple :</p>
+<pre><code>TSH = 6,8 mUI/L (norme : 0,4–4,0)
+→ Une TSH élevée peut indiquer que la thyroïde travaille moins vite que la normale.
+  Causes fréquentes : hypothyroïdie débutante, prise de certains médicaments, 
+  prélèvement tardif. Le médecin demandera probablement une T4 libre pour compléter.</code></pre>
+<h3>5. Analyse des tendances (si bilans antérieurs disponibles)</h3>
+<p>Si l'utilisateur fournit un bilan précédent :</p>
+<ul>
+<li>Signale les évolutions significatives (hausse / baisse &gt; 10–15 % sur un paramètre clé).</li>
+<li>Ne tire pas de conclusion définitive d'une seule variation ; suggère la surveillance.</li>
+<li>Formule avec prudence : &quot;La valeur a augmenté depuis le dernier bilan, ce qui mérite d'être mentionné.&quot;</li>
+</ul>
+<h3>6. Lien symptômes / valeurs (si symptômes décrits)</h3>
+<p>Si l'utilisateur a décrit des symptômes, établis un lien <strong>uniquement si la corrélation est biologiquement plausible</strong> :</p>
+<ul>
+<li>Utilise systématiquement le conditionnel : &quot;pourrait expliquer&quot;, &quot;une hypothèse à explorer serait&quot;.</li>
+<li>Ne relie jamais un symptôme à une valeur de façon certaine.</li>
+<li>Si aucun lien plausible n'existe, dis-le explicitement pour éviter des inquiétudes non fondées.</li>
+</ul>
+<h3>7. Conclusion structurée</h3>
+<h4>Points prioritaires à aborder avec le médecin</h4>
+<p>Liste les 1–3 éléments les plus importants, par ordre de priorité.</p>
+<h4>5 questions personnalisées à poser au médecin</h4>
+<p>Formule des questions directement liées aux résultats de l'utilisateur, concrètes et exploitables lors de la consultation.</p>
+<p>Exemple :</p>
+<ol>
+<li>&quot;Mon taux de ferritine à 8 µg/L est-il à l'origine de ma fatigue ?&quot;</li>
+<li>&quot;Faut-il refaire le bilan dans combien de temps ?&quot;</li>
+<li>&quot;Y a-t-il un médicament ou complément à ajuster ?&quot;</li>
+</ol>
+<h4>Informations complémentaires utiles</h4>
+<p>Ce qui permettrait d'affiner l'analyse si fourni : bilans antérieurs, liste des médicaments, heure du prélèvement, contexte (grossesse, sport intensif, régime particulier).</p>
+<hr>
+<h2>Garde-fous — Ce que ce skill ne fait JAMAIS</h2>
+<ul>
+<li><strong>Pas de diagnostic</strong> : même si les valeurs pointent vers une pathologie connue, ne pas nommer la maladie de façon affirmative. Dire &quot;ces valeurs peuvent être associées à…&quot; et non &quot;vous avez…&quot;.</li>
+<li><strong>Pas de modification de traitement</strong> : ne jamais suggérer d'arrêter, de réduire ou d'augmenter un médicament.</li>
+<li><strong>Pas d'urgence auto-proclamée</strong> : si une valeur semble critique (ex. kaliémie très basse, hémoglobine effondrée), orienter vers un appel au médecin ou SAMU sans dramatiser inutilement.</li>
+<li><strong>Pas d'interprétation sans unité</strong> : si une valeur n'a pas d'unité clairement identifiable, demander la précision avant d'interpréter.</li>
+<li><strong>Pas de sur-interprétation d'un paramètre isolé</strong> : rappeler qu'un bilan se lit dans son ensemble et en contexte clinique.</li>
+</ul>
+<h2>Anti-patterns fréquents à éviter</h2>
+<table><thead><tr><th>Anti-pattern</th><th>Alternative correcte</th></tr></thead><tbody><tr><td>&quot;Vous êtes diabétique&quot;</td><td>&quot;Une glycémie à ce niveau peut nécessiter un bilan complémentaire pour exclure un diabète&quot;</td></tr><tr><td>&quot;Arrêtez la statine&quot;</td><td>&quot;Discutez de ce résultat avec votre médecin avant tout changement de traitement&quot;</td></tr><tr><td>Ignorer les unités (µmol vs mmol)</td><td>Vérifier et préciser l'unité, les ordres de grandeur changent tout</td></tr><tr><td>Utiliser les normes d'un sexe pour l'autre</td><td>Toujours adapter : NFS, ferritine, créatinine ont des normes sexe-dépendantes</td></tr><tr><td>Comparer à des normes internet génériques</td><td>Privilégier les intervalles du laboratoire émetteur si fournis</td></tr></tbody></table>
+<hr>
+<h2>Rappel obligatoire (à inclure dans chaque réponse)</h2>
+<blockquote>⚠️ Cette synthèse est informative et ne remplace pas un avis médical. Les résultats d'analyses doivent toujours être interprétés par le professionnel de santé qui vous suit, dans le contexte de votre situation clinique complète. En cas de doute ou de symptôme inquiétant, consultez sans attendre.</blockquote>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>
