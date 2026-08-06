@@ -1,6 +1,6 @@
 ---
 name: technical-writing-guide
-description: Rédaction technique claire pour documentation, ADR et RFC. Se déclenche avec "documentation technique", "technical writing", "rédiger une doc", "ADR", "RFC", "architecture decision record", "comment documenter", "README".
+description: Rédaction technique claire pour documentation, ADR et RFC. Se déclenche avec "documentation technique", "technical writing", "rédiger une doc", "ADR", "RFC", "architecture decision record", "comment documenter", "README". Also triggers on "write documentation", "write an RFC".
 ---
 
 # Technical Writing Guide

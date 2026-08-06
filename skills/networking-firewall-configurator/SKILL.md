@@ -1,6 +1,6 @@
 ---
 name: networking-firewall-configurator
-description: Configuration de firewalls et règles de sécurité réseau pour iptables/nftables, pfSense, Azure NSG, AWS Security Groups et Cisco ACL. Se déclenche avec "firewall", "iptables", "pfSense", "NSG", "Security Group", "règles firewall", "ports"
+description: Configuration de firewalls et règles de sécurité réseau pour iptables/nftables, pfSense, Azure NSG, AWS Security Groups et Cisco ACL. Se déclenche avec "firewall", "iptables", "pfSense", "NSG", "Security Group", "règles firewall", "ports. Also triggers on "firewall rules", "iptables config", "security group rules".
 ---
 
 # Firewall Configurator

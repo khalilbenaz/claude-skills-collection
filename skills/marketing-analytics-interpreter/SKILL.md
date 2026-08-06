@@ -1,6 +1,6 @@
 ---
 name: marketing-analytics-interpreter
-description: Analyse et interprétation de données Google Analytics et Matomo — métriques, segments, conversions et rapports actionnables. Se déclenche avec "Google Analytics", "GA4", "Matomo", "analytics", "taux de conversion", "bounce rate".
+description: Analyse et interprétation de données Google Analytics et Matomo — métriques, segments, conversions et rapports actionnables. Se déclenche avec "Google Analytics", "GA4", "Matomo", "analytics", "taux de conversion", "bounce rate". Also triggers on "Google Analytics report", "interpret my traffic data", "conversion analysis".
 ---
 
 # Analytics Interpreter

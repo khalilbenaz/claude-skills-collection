@@ -1,6 +1,6 @@
 ---
 name: dev-llm-integration-guide
-description: Intégration de LLMs dans des applications via API. Se déclenche avec "API OpenAI", "Claude API", "intégrer un LLM", "GPT dans mon app", "Ollama", "LLM local", "streaming", "embeddings", "fine-tuning", "token management".
+description: Intégration de LLMs dans des applications via API. Se déclenche avec "API OpenAI", "Claude API", "intégrer un LLM", "GPT dans mon app", "Ollama", "LLM local", "streaming", "embeddings", "fine-tuning", "token management". Also triggers on "call an LLM API", "integrate a model in my app", "streaming completions".
 ---
 
 # LLM Integration Guide

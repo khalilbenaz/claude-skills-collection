@@ -1,6 +1,6 @@
 ---
 name: agent-langgraph-designer
-description: Conception de graphes d'agents avec LangGraph pour workflows complexes et stateful. Gestion d'état partagé, edges conditionnels, persistance et human-in-the-loop. Se déclenche avec "LangGraph", "graph agent", "state machine agent", "agent graph", "conditional edges", "checkpointer", "agent workflow stateful", "langgraph workflow", "graph workflow".
+description: Conception de graphes d'agents avec LangGraph pour workflows complexes et stateful. Gestion d'état partagé, edges conditionnels, persistance et human-in-the-loop. Se déclenche avec "LangGraph", "graph agent", "state machine agent", "agent graph", "conditional edges", "checkpointer", "agent workflow stateful", "langgraph workflow", "graph workflow". Also triggers on "LangGraph graph", "stateful agent workflow", "LangGraph nodes".
 ---
 
 # LangGraph Designer — Graphes d'Agents Stateful

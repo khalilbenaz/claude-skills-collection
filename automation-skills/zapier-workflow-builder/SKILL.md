@@ -1,6 +1,6 @@
 ---
 name: zapier-workflow-builder
-description: Automatisation avec Zapier — Zaps multi-étapes, filtres, paths, webhooks et intégration entre applications. Se déclenche avec "Zapier", "Zap", "automatiser sans code", "connecter des apps", "webhook Zapier".
+description: Automatisation avec Zapier — Zaps multi-étapes, filtres, paths, webhooks et intégration entre applications. Se déclenche avec "Zapier", "Zap", "automatiser sans code", "connecter des apps", "webhook Zapier". Also triggers on "Zapier zap", "connect two apps", "no-code automation".
 ---
 
 # Zapier Workflow Builder

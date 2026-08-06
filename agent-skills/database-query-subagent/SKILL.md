@@ -1,6 +1,6 @@
 ---
 name: database-query-subagent
-description: Sous-agent spécialisé dans les requêtes base de données — SQL generation, exécution et analyse de résultats. Se déclenche avec "sous-agent DB", "database agent", "SQL agent", "agent base de données", "query agent", "agent qui requête", "text-to-SQL agent", "NL2SQL".
+description: Sous-agent spécialisé dans les requêtes base de données — SQL generation, exécution et analyse de résultats. Se déclenche avec "sous-agent DB", "database agent", "SQL agent", "agent base de données", "query agent", "agent qui requête", "text-to-SQL agent", "NL2SQL". Also triggers on "database query agent", "text to SQL subagent".
 ---
 
 # Database Query Sub-Agent

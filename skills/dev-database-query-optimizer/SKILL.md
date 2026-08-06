@@ -1,6 +1,6 @@
 ---
 name: dev-database-query-optimizer
-description: Analyse et optimise des requêtes SQL ou NoSQL pour améliorer les performances. À utiliser quand l'utilisateur a une requête lente ou veut optimiser sa base de données. Se déclenche aussi avec "requête lente", "optimiser SQL", "EXPLAIN", "index", "performance DB", "N+1", ou toute question d'optimisation de requêtes.
+description: Analyse et optimise des requêtes SQL ou NoSQL pour améliorer les performances. À utiliser quand l'utilisateur a une requête lente ou veut optimiser sa base de données. Se déclenche aussi avec "requête lente", "optimiser SQL", "EXPLAIN", "index", "performance DB", "N+1", ou toute question d'optimisation de requêtes. Also triggers on "slow query", "optimize this SQL", "add an index".
 ---
 
 # Database Query Optimizer

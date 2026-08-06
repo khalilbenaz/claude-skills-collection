@@ -1,6 +1,6 @@
 ---
 name: workflows
-description: Orchestration multi-agent déterministe avec le tool natif Workflow de Claude Code. Conçoit des scripts qui fan-out, vérifient et synthétisent sur de nombreux sous-agents (pipeline, parallel, adversarial verify, judge panel, loop-until-dry). Se déclenche avec "workflow", "orchestrer des agents", "fan-out", "multi-agent", "paralléliser des sous-agents", "audit exhaustif", "vérification adversariale", "/workflows".
+description: Orchestration multi-agent déterministe avec le tool natif Workflow de Claude Code. Conçoit des scripts qui fan-out, vérifient et synthétisent sur de nombreux sous-agents (pipeline, parallel, adversarial verify, judge panel, loop-until-dry). Se déclenche avec "workflow", "orchestrer des agents", "fan-out", "multi-agent", "paralléliser des sous-agents", "audit exhaustif", "vérification adversariale", "/workflows". Also triggers on "run a workflow", "orchestrate subagents", "fan out agents in parallel".
 ---
 
 # Workflows — Orchestration multi-agent native

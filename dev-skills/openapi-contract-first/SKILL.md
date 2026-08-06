@@ -1,6 +1,6 @@
 ---
 name: openapi-contract-first
-description: Design d'API Contract-First avec OpenAPI/Swagger, génération de code, validation de contrats et documentation interactive. À utiliser quand l'utilisateur conçoit une API REST, écrit une spécification OpenAPI ou génère du code depuis un contrat. Se déclenche aussi avec "OpenAPI", "Swagger", "contract first", "spécification API", "openapi.yaml", "swagger.json", "génération de code API".
+description: Design d'API Contract-First avec OpenAPI/Swagger, génération de code, validation de contrats et documentation interactive. À utiliser quand l'utilisateur conçoit une API REST, écrit une spécification OpenAPI ou génère du code depuis un contrat. Se déclenche aussi avec "OpenAPI", "Swagger", "contract first", "spécification API", "openapi.yaml", "swagger.json", "génération de code API". Also triggers on "contract-first API", "OpenAPI spec", "generate client from spec".
 ---
 
 # Design API Contract-First avec OpenAPI

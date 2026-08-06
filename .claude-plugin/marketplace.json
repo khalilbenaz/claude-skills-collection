@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-skills-collection",
-  "description": "349 professional skills for Claude Code — dev, cloud, security, AI/ML, business, career, and more",
+  "description": "348 professional skills for Claude Code — dev, cloud, security, AI/ML, business, career, and more",
   "owner": {
     "name": "Khalil BENAZZOU",
     "email": ""
@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "claude-skills-collection",
-      "description": "The largest collection of Claude Code skills. 349 skills across 34 domains: development, DevOps, cloud, databases, security, AI/ML, agents, testing, business, career, finance, marketing, productivity, and more.",
+      "description": "The largest collection of Claude Code skills. 348 skills across 34 domains: development, DevOps, cloud, databases, security, AI/ML, agents, testing, business, career, finance, marketing, productivity, and more.",
       "version": "1.0.0",
       "author": {
         "name": "Khalil BENAZZOU"

@@ -1,6 +1,6 @@
 ---
 name: linux-bash-scripting-expert
-description: Écriture de scripts Bash avancés — variables, boucles, fonctions, pipes, gestion d'erreurs et bonnes pratiques. Se déclenche avec "bash", "script bash", "shell script", "#!/bin/bash", "automatiser avec bash".
+description: Écriture de scripts Bash avancés — variables, boucles, fonctions, pipes, gestion d'erreurs et bonnes pratiques. Se déclenche avec "bash", "script bash", "shell script", "#!/bin/bash", "automatiser avec bash". Also triggers on "bash script", "shell scripting", "write a shell one-liner".
 ---
 
 # Bash Scripting Expert

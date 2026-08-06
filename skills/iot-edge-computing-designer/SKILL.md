@@ -1,6 +1,6 @@
 ---
 name: iot-edge-computing-designer
-description: Conception de systèmes edge computing avec traitement local, synchronisation cloud, latence et offline-first. Se déclenche avec "edge computing", "edge", "traitement local", "IoT edge", "fog computing", "offline IoT".
+description: Conception de systèmes edge computing avec traitement local, synchronisation cloud, latence et offline-first. Se déclenche avec "edge computing", "edge", "traitement local", "IoT edge", "fog computing", "offline IoT". Also triggers on "local processing with cloud sync", "offline-first device".
 ---
 
 # Edge Computing Designer

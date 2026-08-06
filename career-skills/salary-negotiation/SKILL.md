@@ -1,6 +1,6 @@
 ---
 name: salary-negotiation
-description: Prépare une négociation salariale avec arguments, fourchettes et stratégie. À utiliser quand l'utilisateur veut négocier son salaire, une augmentation ou un package. Se déclenche aussi avec "négocier mon salaire", "demander une augmentation", "combien demander", "négociation salariale", "je suis sous-payé".
+description: Prépare une négociation salariale avec arguments, fourchettes et stratégie. À utiliser quand l'utilisateur veut négocier son salaire, une augmentation ou un package. Se déclenche aussi avec "négocier mon salaire", "demander une augmentation", "combien demander", "négociation salariale", "je suis sous-payé". Also triggers on "negotiate my salary", "counter offer", "ask for a raise".
 ---
 
 # Salary Negotiation

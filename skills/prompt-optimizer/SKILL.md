@@ -1,6 +1,6 @@
 ---
 name: prompt-optimizer
-description: Analyse et améliore un prompt existant pour obtenir de meilleurs résultats avec un LLM. À utiliser quand l'utilisateur a un prompt qui ne donne pas les résultats voulus ou veut l'améliorer. Se déclenche aussi avec "améliore mon prompt", "optimise ce prompt", "mon prompt ne marche pas", "meilleur prompt", "prompt engineering", ou toute demande d'amélioration de prompt.
+description: Analyse et améliore un prompt existant pour obtenir de meilleurs résultats avec un LLM. À utiliser quand l'utilisateur a un prompt qui ne donne pas les résultats voulus ou veut l'améliorer. Se déclenche aussi avec "améliore mon prompt", "optimise ce prompt", "mon prompt ne marche pas", "meilleur prompt", "prompt engineering", ou toute demande d'amélioration de prompt. Also triggers on "improve my prompt", "optimize this prompt", "better results from the model".
 ---
 
 # Prompt Optimizer

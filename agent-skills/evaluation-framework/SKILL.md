@@ -1,6 +1,6 @@
 ---
 name: evaluation-framework
-description: Framework d'évaluation et benchmarking d'agents IA. Métriques, tests, comparaisons et quality assurance. Se déclenche avec "évaluer agent", "agent eval", "benchmark agent", "tester mon agent", "qualité agent", "agent metrics", "agent performance", "LMSYS", "agent accuracy".
+description: Framework d'évaluation et benchmarking d'agents IA. Métriques, tests, comparaisons et quality assurance. Se déclenche avec "évaluer agent", "agent eval", "benchmark agent", "tester mon agent", "qualité agent", "agent metrics", "agent performance", "LMSYS", "agent accuracy". Also triggers on "evaluate my agent", "agent benchmark", "agent eval harness".
 ---
 
 # Agent Evaluation Framework

@@ -1,6 +1,6 @@
 ---
 name: microservices-designer
-description: Conception et découpage d'architecture microservices — DDD, bounded contexts, patterns de communication, migration de monolithe. À utiliser pour concevoir ou migrer vers des microservices. Se déclenche avec "microservices", "découpage", "bounded context", "service mesh", "décomposition monolithe", "architecture distribuée".
+description: Conception et découpage d'architecture microservices — DDD, bounded contexts, patterns de communication, migration de monolithe. À utiliser pour concevoir ou migrer vers des microservices. Se déclenche avec "microservices", "découpage", "bounded context", "service mesh", "décomposition monolithe", "architecture distribuée". Also triggers on "split into microservices", "service boundaries".
 ---
 
 # Microservices Designer

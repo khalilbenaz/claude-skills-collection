@@ -1,6 +1,6 @@
 ---
 name: parent-self-care
-description: Aide les parents épuisés à identifier leurs besoins et trouver du temps pour eux. Se déclenche aussi avec "je suis épuisé en tant que parent", "charge mentale", "je n'ai plus de temps pour moi", "parent fatigué", ou toute expression d'épuisement parental.
+description: Aide les parents épuisés à identifier leurs besoins et trouver du temps pour eux. Se déclenche aussi avec "je suis épuisé en tant que parent", "charge mentale", "je n'ai plus de temps pour moi", "parent fatigué", ou toute expression d'épuisement parental. Also triggers on "exhausted parent", "parental burnout", "time for myself as a parent".
 ---
 
 # Parent Self-Care

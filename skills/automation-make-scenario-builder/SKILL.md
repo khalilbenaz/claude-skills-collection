@@ -1,6 +1,6 @@
 ---
 name: automation-make-scenario-builder
-description: Scénarios d'automatisation avec Make (ex-Integromat) — modules, routers, iterators, webhooks, data stores et orchestration visuelle. Se déclenche avec "Make", "Integromat", "scénario Make", "automatisation Make".
+description: Scénarios d'automatisation avec Make (ex-Integromat) — modules, routers, iterators, webhooks, data stores et orchestration visuelle. Se déclenche avec "Make", "Integromat", "scénario Make", "automatisation Make". Also triggers on "Make scenario", "Integromat automation", "Make webhook".
 ---
 
 # Make Scenario Builder

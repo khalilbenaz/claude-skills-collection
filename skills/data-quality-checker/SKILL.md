@@ -1,6 +1,6 @@
 ---
 name: data-quality-checker
-description: Vérification de la qualité des données — complétude, cohérence, unicité, validité et fraîcheur. À utiliser quand l'utilisateur doit valider des données, détecter des anomalies ou mettre en place des contrôles qualité sur des pipelines de données. Se déclenche aussi avec "qualité des données", "data quality", "données manquantes", "doublons", "validation de données", "anomalie données", "contrôle qualité data".
+description: Vérification de la qualité des données — complétude, cohérence, unicité, validité et fraîcheur. À utiliser quand l'utilisateur doit valider des données, détecter des anomalies ou mettre en place des contrôles qualité sur des pipelines de données. Se déclenche aussi avec "qualité des données", "data quality", "données manquantes", "doublons", "validation de données", "anomalie données", "contrôle qualité data". Also triggers on "data quality checks", "validate a dataset", "detect missing values".
 ---
 
 # Vérificateur de Qualité des Données

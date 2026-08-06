@@ -1,6 +1,6 @@
 ---
 name: devops-github-actions-expert
-description: Maîtrise de GitHub Actions — workflows CI/CD, actions custom, matrix builds, secrets, environments et reusable workflows. Se déclenche avec "GitHub Actions", "workflow GitHub", "actions", "CI/CD GitHub", ".github/workflows".
+description: Maîtrise de GitHub Actions — workflows CI/CD, actions custom, matrix builds, secrets, environments et reusable workflows. Se déclenche avec "GitHub Actions", "workflow GitHub", "actions", "CI/CD GitHub", ".github/workflows". Also triggers on "GitHub Actions workflow", "CI on GitHub".
 ---
 
 # GitHub Actions Expert

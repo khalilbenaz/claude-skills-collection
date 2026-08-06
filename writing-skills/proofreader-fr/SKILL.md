@@ -1,6 +1,6 @@
 ---
 name: proofreader-fr
-description: Corrige et améliore un texte en français (grammaire, style, clarté, ton). À utiliser quand l'utilisateur veut relire, corriger ou améliorer un texte français. Se déclenche aussi avec "corrige mon texte", "relecture", "fautes d'orthographe", "améliore le style", "est-ce que c'est bien écrit".
+description: Corrige et améliore un texte en français (grammaire, style, clarté, ton). À utiliser quand l'utilisateur veut relire, corriger ou améliorer un texte français. Se déclenche aussi avec "corrige mon texte", "relecture", "fautes d'orthographe", "améliore le style", "est-ce que c'est bien écrit". Also triggers on "proofread my French text", "fix grammar in French", "improve French style".
 ---
 
 # Proofreader FR

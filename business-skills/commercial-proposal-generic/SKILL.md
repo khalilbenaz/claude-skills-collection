@@ -1,6 +1,6 @@
 ---
 name: commercial-proposal-generic
-description: Génération d'offres commerciales professionnelles pour tout type de sujet ou secteur d'activité. Se déclenche avec "offre commerciale", "proposition commerciale", "offre de prestation", "devis", "pitch commercial", "offre de mission", "réponse à appel d'offres", "business proposal".
+description: Génération d'offres commerciales professionnelles pour tout type de sujet ou secteur d'activité. Se déclenche avec "offre commerciale", "proposition commerciale", "offre de prestation", "devis", "pitch commercial", "offre de mission", "réponse à appel d'offres", "business proposal". Also triggers on "write a proposal", "commercial offer", "quote for a client".
 ---
 
 # Commercial Proposal Generator (Generic)

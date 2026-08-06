@@ -1,6 +1,6 @@
 ---
 name: n8n-workflow-designer
-description: Workflows d'automatisation avec n8n — nodes, triggers, credentials, déploiement self-hosted, intégrations SaaS et bonnes pratiques de fiabilité. Se déclenche avec "n8n", "workflow n8n", "automatisation open-source", "n8n self-hosted".
+description: Workflows d'automatisation avec n8n — nodes, triggers, credentials, déploiement self-hosted, intégrations SaaS et bonnes pratiques de fiabilité. Se déclenche avec "n8n", "workflow n8n", "automatisation open-source", "n8n self-hosted". Also triggers on "n8n workflow", "self-hosted automation", "n8n nodes".
 ---
 
 # n8n Workflow Designer

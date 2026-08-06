@@ -1,6 +1,6 @@
 ---
 name: security-audit-automation
-description: Automatisation d'audits de sécurité incluant scanning, reporting, intégration CI/CD et remediation tracking. Se déclenche avec "audit automatisé", "security scanning", "SAST", "DAST", "Trivy", "Snyk", "audit CI/CD"
+description: Automatisation d'audits de sécurité incluant scanning, reporting, intégration CI/CD et remediation tracking. Se déclenche avec "audit automatisé", "security scanning", "SAST", "DAST", "Trivy", "Snyk", "audit CI/CD. Also triggers on "automate security scans", "security in CI/CD", "continuous security audit".
 ---
 
 # Security Audit Automation

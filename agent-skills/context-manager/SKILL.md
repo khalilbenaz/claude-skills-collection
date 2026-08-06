@@ -1,6 +1,6 @@
 ---
 name: context-manager
-description: Gestion avancée du contexte pour agents IA — fenêtre de contexte, compression, RAG dynamique, sliding window, prompt caching. Se déclenche avec "context window", "contexte agent", "token limit", "context management", "context overflow", "trop de contexte", "agent context", "context stuffing", "context compression".
+description: Gestion avancée du contexte pour agents IA — fenêtre de contexte, compression, RAG dynamique, sliding window, prompt caching. Se déclenche avec "context window", "contexte agent", "token limit", "context management", "context overflow", "trop de contexte", "agent context", "context stuffing", "context compression". Also triggers on "agent context window", "manage agent context".
 ---
 
 # Agent Context Manager

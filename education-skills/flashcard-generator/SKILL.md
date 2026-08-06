@@ -1,6 +1,6 @@
 ---
 name: flashcard-generator
-description: Génère des flashcards de révision à partir d'un cours, d'un texte ou d'un sujet. À utiliser quand l'utilisateur veut mémoriser du contenu. Se déclenche aussi avec "flashcards", "cartes de révision", "fiches mémoire", "aide-moi à mémoriser", "questions/réponses".
+description: Génère des flashcards de révision à partir d'un cours, d'un texte ou d'un sujet. À utiliser quand l'utilisateur veut mémoriser du contenu. Se déclenche aussi avec "flashcards", "cartes de révision", "fiches mémoire", "aide-moi à mémoriser", "questions/réponses". Also triggers on "make flashcards", "spaced repetition cards", "quiz me on this".
 ---
 
 # Flashcard Generator

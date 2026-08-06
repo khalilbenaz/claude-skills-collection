@@ -1,6 +1,6 @@
 ---
 name: transition-planner
-description: Accompagne une reconversion ou transition de carrière avec bilan, options et plan d'action. À utiliser quand l'utilisateur veut changer de métier, de secteur ou réorienter sa carrière. Se déclenche aussi avec "changer de métier", "reconversion", "je veux faire autre chose", "transition professionnelle", "bilan de compétences", "je ne sais pas quoi faire".
+description: Accompagne une reconversion ou transition de carrière avec bilan, options et plan d'action. À utiliser quand l'utilisateur veut changer de métier, de secteur ou réorienter sa carrière. Se déclenche aussi avec "changer de métier", "reconversion", "je veux faire autre chose", "transition professionnelle", "bilan de compétences", "je ne sais pas quoi faire". Also triggers on "career change", "switch careers", "career transition plan".
 ---
 
 # Career Transition Planner

@@ -1,6 +1,6 @@
 ---
 name: visa-checker
-description: Aide à vérifier les conditions de visa et documents nécessaires pour un voyage. Se déclenche aussi avec "visa", "ai-je besoin d'un visa", "documents voyage", "passeport", ou toute question sur les formalités d'entrée dans un pays.
+description: Aide à vérifier les conditions de visa et documents nécessaires pour un voyage. Se déclenche aussi avec "visa", "ai-je besoin d'un visa", "documents voyage", "passeport", ou toute question sur les formalités d'entrée dans un pays. Also triggers on "do I need a visa", "visa requirements", "entry documents".
 ---
 
 # Visa Checker

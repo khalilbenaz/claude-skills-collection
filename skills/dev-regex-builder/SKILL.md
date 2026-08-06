@@ -1,6 +1,6 @@
 ---
 name: dev-regex-builder
-description: Construit, explique et teste des expressions régulières pas à pas. À utiliser quand l'utilisateur a besoin d'une regex ou veut comprendre une regex existante. Se déclenche aussi avec "regex", "expression régulière", "pattern matching", "comment matcher", "valider un email", ou toute demande impliquant du pattern matching.
+description: Construit, explique et teste des expressions régulières pas à pas. À utiliser quand l'utilisateur a besoin d'une regex ou veut comprendre une regex existante. Se déclenche aussi avec "regex", "expression régulière", "pattern matching", "comment matcher", "valider un email", ou toute demande impliquant du pattern matching. Also triggers on "write a regex", "regular expression", "match this pattern".
 ---
 
 # Regex Builder

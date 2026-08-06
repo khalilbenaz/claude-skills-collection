@@ -1,6 +1,6 @@
 ---
 name: diet-trigger-journal
-description: Met en relation alimentation et symptômes pour identifier des déclencheurs possibles. À utiliser quand l'utilisateur suspecte qu'un aliment ou un repas aggrave ses symptômes. Se déclenche aussi avec "après avoir mangé", "quand je mange du…", "intolérance", "ballonnements après repas", "diarrhée après…", "journal alimentaire", ou toute mention de lien entre nourriture et gêne.
+description: Met en relation alimentation et symptômes pour identifier des déclencheurs possibles. À utiliser quand l'utilisateur suspecte qu'un aliment ou un repas aggrave ses symptômes. Se déclenche aussi avec "après avoir mangé", "quand je mange du…", "intolérance", "ballonnements après repas", "diarrhée après…", "journal alimentaire", ou toute mention de lien entre nourriture et gêne. Also triggers on "food and symptom diary", "food triggers", "what I ate and how I felt".
 ---
 
 # Diet Trigger Journal

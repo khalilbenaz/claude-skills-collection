@@ -1,6 +1,6 @@
 ---
 name: mqtt-architect
-description: Architecture de messaging IoT avec MQTT incluant brokers, topics, QoS, sécurité et patterns. Se déclenche avec "MQTT", "broker MQTT", "Mosquitto", "IoT messaging", "topic MQTT", "QoS".
+description: Architecture de messaging IoT avec MQTT incluant brokers, topics, QoS, sécurité et patterns. Se déclenche avec "MQTT", "broker MQTT", "Mosquitto", "IoT messaging", "topic MQTT", "QoS". Also triggers on "MQTT broker", "MQTT topics and QoS".
 ---
 
 # MQTT Architect

@@ -1,6 +1,6 @@
 ---
 name: pitch-deck-designer
-description: Création de pitch decks pour startups et projets avec structure, métriques et appel à l'action. Se déclenche avec "pitch deck", "présentation investisseur", "levée de fonds", "startup pitch", "deck". Génère des slides structurées slide par slide, formule les métriques clés, adapte la narration au stade de maturité et au profil investisseur.
+description: Création de pitch decks pour startups et projets avec structure, métriques et appel à l'action. Se déclenche avec "pitch deck", "présentation investisseur", "levée de fonds", "startup pitch", "deck". Génère des slides structurées slide par slide, formule les métriques clés, adapte la narration au stade de maturité et au profil investisseur. Also triggers on "investor deck", "startup slides".
 ---
 
 # Pitch Deck Designer

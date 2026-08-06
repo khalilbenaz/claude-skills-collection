@@ -1,6 +1,6 @@
 ---
 name: django-guide
-description: Développement d'applications Python Django avec models, views, templates, ORM, admin et Django REST Framework. Se déclenche avec "Django", "Django REST", "DRF", "ORM Django", "model Django", "vue Django".
+description: Développement d'applications Python Django avec models, views, templates, ORM, admin et Django REST Framework. Se déclenche avec "Django", "Django REST", "DRF", "ORM Django", "model Django", "vue Django". Also triggers on "Django app", "Django ORM query".
 ---
 
 # Guide Django

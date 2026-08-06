@@ -1,6 +1,6 @@
 ---
 name: productivity-incident-postmortem-guide
-description: Rédaction de post-mortems techniques après un incident — timeline, analyse des causes racines, actions correctives et leçons apprises. À utiliser quand l'utilisateur doit documenter un incident, analyser une panne ou structurer un retour d'expérience. Se déclenche aussi avec "post-mortem", "postmortem", "incident report", "retour d'expérience", "RCA", "root cause analysis", "blameless postmortem", "analyse de panne".
+description: Rédaction de post-mortems techniques après un incident — timeline, analyse des causes racines, actions correctives et leçons apprises. À utiliser quand l'utilisateur doit documenter un incident, analyser une panne ou structurer un retour d'expérience. Se déclenche aussi avec "post-mortem", "postmortem", "incident report", "retour d'expérience", "RCA", "root cause analysis", "blameless postmortem", "analyse de panne". Also triggers on "write a postmortem", "blameless incident review".
 ---
 
 # Guide de Post-Mortem d'Incident

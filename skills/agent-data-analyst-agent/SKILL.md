@@ -1,6 +1,6 @@
 ---
 name: agent-data-analyst-agent
-description: Création d'agents d'analyse de données qui explorent, visualisent et expliquent les données. Se déclenche avec "data analyst agent", "agent analyse données", "agent data", "agent qui analyse", "automated analysis", "data exploration agent", "agent SQL", "agent pandas".
+description: Création d'agents d'analyse de données qui explorent, visualisent et expliquent les données. Se déclenche avec "data analyst agent", "agent analyse données", "agent data", "agent qui analyse", "automated analysis", "data exploration agent", "agent SQL", "agent pandas". Also triggers on "agent that analyzes data", "agent charts".
 ---
 
 # Data Analyst Agent

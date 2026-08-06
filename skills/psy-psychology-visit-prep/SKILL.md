@@ -1,6 +1,6 @@
 ---
 name: psy-psychology-visit-prep
-description: Prépare un premier rendez-vous ou une séance chez le psychologue avec objectifs, difficultés et thèmes à aborder. Se déclenche aussi avec "rendez-vous psychologue", "première séance psy", "je commence une thérapie", "je ne sais pas quoi dire au psy", ou toute préparation de consultation psychologique.
+description: Prépare un premier rendez-vous ou une séance chez le psychologue avec objectifs, difficultés et thèmes à aborder. Se déclenche aussi avec "rendez-vous psychologue", "première séance psy", "je commence une thérapie", "je ne sais pas quoi dire au psy", ou toute préparation de consultation psychologique. Also triggers on "prepare for therapy session", "first session with a psychologist", "what to bring up in therapy".
 ---
 
 # Psychology Visit Prep

@@ -1,6 +1,6 @@
 ---
 name: writing-blog-post-writer
-description: Structure et rédige un article de blog optimisé et engageant. À utiliser quand l'utilisateur veut écrire un article, un post ou du contenu long format. Se déclenche aussi avec "écrire un article", "blog post", "rédiger un article", "contenu pour mon blog", "article de blog".
+description: Structure et rédige un article de blog optimisé et engageant. À utiliser quand l'utilisateur veut écrire un article, un post ou du contenu long format. Se déclenche aussi avec "écrire un article", "blog post", "rédiger un article", "contenu pour mon blog", "article de blog". Also triggers on "write a blog post", "article outline", "blog content".
 ---
 
 # Blog Post Writer

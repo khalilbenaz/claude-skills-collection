@@ -1,6 +1,6 @@
 ---
 name: api-gateway-ocelot-gateway-guide
-description: Configuration d'Ocelot comme API Gateway en .NET — routing, aggregation, rate limiting, load balancing et intégration Consul/Kubernetes. À utiliser quand l'utilisateur implémente une gateway API avec Ocelot en .NET. Se déclenche aussi avec "Ocelot", "Ocelot gateway", "ocelot.json", "API gateway Ocelot", "routing Ocelot", "aggregation Ocelot".
+description: Configuration d'Ocelot comme API Gateway en .NET — routing, aggregation, rate limiting, load balancing et intégration Consul/Kubernetes. À utiliser quand l'utilisateur implémente une gateway API avec Ocelot en .NET. Se déclenche aussi avec "Ocelot", "Ocelot gateway", "ocelot.json", "API gateway Ocelot", "routing Ocelot", "aggregation Ocelot". Also triggers on ".NET API gateway", "Ocelot routing".
 ---
 
 # Guide Ocelot API Gateway

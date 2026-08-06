@@ -1,6 +1,6 @@
 ---
 name: database-database-design-advisor
-description: Conception et modélisation de schémas de bases de données. Se déclenche avec "schéma base de données", "normalisation", "3NF", "database design", "modélisation relationnelle", "ERD"
+description: Conception et modélisation de schémas de bases de données. Se déclenche avec "schéma base de données", "normalisation", "3NF", "database design", "modélisation relationnelle", "ERD. Also triggers on "design a database schema", "normalize my tables", "ER model".
 ---
 
 # Database Design Advisor

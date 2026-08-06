@@ -1,6 +1,6 @@
 ---
 name: psy-cbt-thought-record
-description: Crée une fiche TCC pour examiner une pensée difficile, sans remplacer une psychothérapie. À utiliser pour ruminations, pensées automatiques, peur du jugement, culpabilité ou catastrophisme. Se déclenche aussi avec "je n'arrête pas de penser que…", "j'ai peur que…", "je me sens coupable", "et si tout allait mal", "je rumine", ou toute pensée négative répétitive.
+description: Crée une fiche TCC pour examiner une pensée difficile, sans remplacer une psychothérapie. À utiliser pour ruminations, pensées automatiques, peur du jugement, culpabilité ou catastrophisme. Se déclenche aussi avec "je n'arrête pas de penser que…", "j'ai peur que…", "je me sens coupable", "et si tout allait mal", "je rumine", ou toute pensée négative répétitive. Also triggers on "CBT thought record", "challenge a negative thought", "cognitive distortions".
 ---
 
 # CBT Thought Record

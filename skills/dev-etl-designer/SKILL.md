@@ -1,6 +1,6 @@
 ---
 name: dev-etl-designer
-description: Conception de processus ETL/ELT pour l'intégration de données. Se déclenche avec "ETL", "ELT", "extraction", "transformation", "load", "data integration", "data warehouse", "SSIS", "Talend", "Informatica".
+description: Conception de processus ETL/ELT pour l'intégration de données. Se déclenche avec "ETL", "ELT", "extraction", "transformation", "load", "data integration", "data warehouse", "SSIS", "Talend", "Informatica". Also triggers on "ETL process", "ELT design", "data integration job".
 ---
 
 # ETL Designer

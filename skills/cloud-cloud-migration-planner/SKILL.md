@@ -1,6 +1,6 @@
 ---
 name: cloud-cloud-migration-planner
-description: Planification de migration vers le cloud incluant assessment, stratégie, lift-and-shift et refactoring. Se déclenche avec "migration cloud", "lift and shift", "cloud migration", "on-premise vers cloud", "migration strategy", "6 R's"
+description: Planification de migration vers le cloud incluant assessment, stratégie, lift-and-shift et refactoring. Se déclenche avec "migration cloud", "lift and shift", "cloud migration", "on-premise vers cloud", "migration strategy", "6 R's. Also triggers on "migrate to the cloud", "lift and shift plan", "cloud migration assessment".
 ---
 
 # Cloud Migration Planner

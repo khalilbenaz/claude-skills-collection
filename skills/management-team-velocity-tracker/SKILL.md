@@ -1,6 +1,6 @@
 ---
 name: management-team-velocity-tracker
-description: Suivi de la vélocité d'équipe et des métriques agile pour piloter la performance et la prévisibilité. Se déclenche avec "vélocité", "burndown", "lead time", "cycle time", "throughput", "métriques agile".
+description: Suivi de la vélocité d'équipe et des métriques agile pour piloter la performance et la prévisibilité. Se déclenche avec "vélocité", "burndown", "lead time", "cycle time", "throughput", "métriques agile". Also triggers on "team velocity", "agile metrics", "predictability of the team".
 ---
 
 # Team Velocity Tracker

@@ -1,6 +1,6 @@
 ---
 name: linux-systemd-manager
-description: Gestion de services avec systemd — units, timers, journalctl, boot et dépendances entre services. Se déclenche avec "systemd", "systemctl", "service Linux", "journalctl", "unit file", "timer systemd".
+description: Gestion de services avec systemd — units, timers, journalctl, boot et dépendances entre services. Se déclenche avec "systemd", "systemctl", "service Linux", "journalctl", "unit file", "timer systemd". Also triggers on "systemd unit", "systemd timer", "journalctl logs".
 ---
 
 # Systemd Manager

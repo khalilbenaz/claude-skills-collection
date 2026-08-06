@@ -1,6 +1,6 @@
 ---
 name: dev-system-design-helper
-description: Aide à la conception de systèmes à grande échelle. Se déclenche avec "system design", "architecture système", "concevoir un système", "comment architecturer", "high availability", "load balancing", "scalability".
+description: Aide à la conception de systèmes à grande échelle. Se déclenche avec "system design", "architecture système", "concevoir un système", "comment architecturer", "high availability", "load balancing", "scalability". Also triggers on "design a large-scale system", "architecture interview question".
 ---
 
 # System Design Helper

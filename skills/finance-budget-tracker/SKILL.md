@@ -1,6 +1,6 @@
 ---
 name: finance-budget-tracker
-description: Aide à créer et suivre un budget mensuel clair et réaliste. À utiliser quand l'utilisateur veut organiser ses finances, suivre ses dépenses ou créer un budget. Se déclenche aussi avec "budget", "mes finances", "où va mon argent", "gérer mon argent", "budget mensuel", "économiser".
+description: Aide à créer et suivre un budget mensuel clair et réaliste. À utiliser quand l'utilisateur veut organiser ses finances, suivre ses dépenses ou créer un budget. Se déclenche aussi avec "budget", "mes finances", "où va mon argent", "gérer mon argent", "budget mensuel", "économiser". Also triggers on "monthly budget", "track my spending", "build a budget".
 ---
 
 # Budget Tracker

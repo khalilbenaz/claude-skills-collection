@@ -1,6 +1,6 @@
 ---
 name: dev-mobile-sdk-architect
-description: Architecture SDK mobile fintech (Kotlin Multiplatform). Conception modules, APIs, couches, design patterns, sécurité, performance. Se déclenche avec "architecture", "SDK", "multiplatform", "mobile backend", "module", "KMP", "SDK fintech".
+description: Architecture SDK mobile fintech (Kotlin Multiplatform). Conception modules, APIs, couches, design patterns, sécurité, performance. Se déclenche avec "architecture", "SDK", "multiplatform", "mobile backend", "module", "KMP", "SDK fintech". Also triggers on "mobile SDK design", "Kotlin Multiplatform SDK", "public API for an SDK".
 ---
 
 # Mobile SDK Architect (Fintech Kotlin)

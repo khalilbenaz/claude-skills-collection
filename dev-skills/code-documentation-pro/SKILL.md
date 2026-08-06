@@ -1,6 +1,6 @@
 ---
 name: code-documentation-pro
-description: Documentation de code avec commentaires, docstrings et annotations de qualité. Se déclenche avec "documenter mon code", "commentaires", "docstring", "JSDoc", "XML doc", "annotations", "code comments", "autodoc".
+description: Documentation de code avec commentaires, docstrings et annotations de qualité. Se déclenche avec "documenter mon code", "commentaires", "docstring", "JSDoc", "XML doc", "annotations", "code comments", "autodoc". Also triggers on "document this code", "write docstrings", "add code comments".
 ---
 
 # Code Documentation Pro

@@ -1,6 +1,6 @@
 ---
 name: design-patterns-advisor
-description: Conseille le pattern de conception adapté à un problème donné. Se déclenche avec "design pattern", "quel pattern", "singleton", "factory", "observer", "strategy", "SOLID", "pattern adapté".
+description: Conseille le pattern de conception adapté à un problème donné. Se déclenche avec "design pattern", "quel pattern", "singleton", "factory", "observer", "strategy", "SOLID", "pattern adapté". Also triggers on "which design pattern", "refactor to a pattern", "strategy vs factory".
 ---
 
 # Design Patterns Advisor

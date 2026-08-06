@@ -1,6 +1,6 @@
 ---
 name: power-automate-designer
-description: Création de workflows avec Power Automate — flows, triggers, connectors, expressions et intégration Office 365. Se déclenche avec "Power Automate", "Microsoft Flow", "automatisation Office 365", "flow Power Automate".
+description: Création de workflows avec Power Automate — flows, triggers, connectors, expressions et intégration Office 365. Se déclenche avec "Power Automate", "Microsoft Flow", "automatisation Office 365", "flow Power Automate". Also triggers on "Power Automate flow", "SharePoint automation".
 ---
 
 # Power Automate Designer

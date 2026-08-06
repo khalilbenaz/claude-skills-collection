@@ -1,6 +1,6 @@
 ---
 name: symptom-tracker
-description: Suit les symptômes de santé dans le temps et identifie les déclencheurs possibles. À utiliser quand l'utilisateur décrit un problème, une évolution, une douleur, une diarrhée, une fatigue, un inconfort digestif ou des épisodes répétés. Se déclenche aussi avec "j'ai mal", "je me sens", "ça revient souvent", "journal de santé", "préparer mon rendez-vous médecin", ou toute description de gêne physique ou mentale récurrente.
+description: Suit les symptômes de santé dans le temps et identifie les déclencheurs possibles. À utiliser quand l'utilisateur décrit un problème, une évolution, une douleur, une diarrhée, une fatigue, un inconfort digestif ou des épisodes répétés. Se déclenche aussi avec "j'ai mal", "je me sens", "ça revient souvent", "journal de santé", "préparer mon rendez-vous médecin", ou toute description de gêne physique ou mentale récurrente. Also triggers on "track my symptoms", "symptom diary", "symptom patterns over time".
 ---
 
 # Symptom Tracker

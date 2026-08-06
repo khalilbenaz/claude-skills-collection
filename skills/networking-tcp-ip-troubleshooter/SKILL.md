@@ -1,6 +1,6 @@
 ---
 name: networking-tcp-ip-troubleshooter
-description: Diagnostic et résolution de problèmes réseau TCP/IP incluant latence, perte de paquets, DNS et routing. Se déclenche avec "TCP/IP", "problème réseau", "latence réseau", "ping", "traceroute", "DNS", "perte de paquets"
+description: Diagnostic et résolution de problèmes réseau TCP/IP incluant latence, perte de paquets, DNS et routing. Se déclenche avec "TCP/IP", "problème réseau", "latence réseau", "ping", "traceroute", "DNS", "perte de paquets. Also triggers on "network troubleshooting", "packet loss", "high latency", "traceroute analysis".
 ---
 
 # TCP/IP Troubleshooter

@@ -1,6 +1,6 @@
 ---
 name: agent-api-caller-subagent
-description: Sous-agent spécialisé dans les appels API REST/GraphQL avec retry, auth et transformation de données. Se déclenche avec "sous-agent API", "API caller agent", "agent qui appelle une API", "REST agent", "HTTP agent", "API integration subagent", "external API agent".
+description: Sous-agent spécialisé dans les appels API REST/GraphQL avec retry, auth et transformation de données. Se déclenche avec "sous-agent API", "API caller agent", "agent qui appelle une API", "REST agent", "HTTP agent", "API integration subagent", "external API agent". Also triggers on "subagent that calls an API", "API calling agent", "agent HTTP requests".
 ---
 
 # API Caller Sub-Agent

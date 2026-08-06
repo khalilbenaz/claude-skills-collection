@@ -1,6 +1,6 @@
 ---
 name: dev-svelte-guide
-description: Développement d'applications Svelte et SvelteKit avec réactivité native, stores, SSR, routing et transitions. Se déclenche avec "Svelte", "SvelteKit", "store Svelte", "réactivité Svelte", "$:", "svelte:component".
+description: Développement d'applications Svelte et SvelteKit avec réactivité native, stores, SSR, routing et transitions. Se déclenche avec "Svelte", "SvelteKit", "store Svelte", "réactivité Svelte", "$:", "svelte:component". Also triggers on "Svelte component", "SvelteKit routing", "Svelte stores".
 ---
 
 # Guide Svelte / SvelteKit

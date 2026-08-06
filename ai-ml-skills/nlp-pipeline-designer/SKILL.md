@@ -1,6 +1,6 @@
 ---
 name: nlp-pipeline-designer
-description: Conception de pipelines NLP (tokenization, embeddings, NER, sentiment, summarization) — guide opérationnel avec snippets, critères de décision et anti-patterns. Se déclenche avec : \"NLP\", \"traitement du langage\", \"NER\", \"sentiment analysis\", \"text classification\", \"spaCy\", \"HuggingFace\". Se déclenche avec "NLP", "traitement du langage", "NER", "sentiment analysis", "text classification", "spaCy", "HuggingFace".
+description: Conception de pipelines NLP (tokenization, embeddings, NER, sentiment, summarization) — guide opérationnel avec snippets, critères de décision et anti-patterns. Se déclenche avec : \"NLP\", \"traitement du langage\", \"NER\", \"sentiment analysis\", \"text classification\", \"spaCy\", \"HuggingFace\". Se déclenche avec "NLP", "traitement du langage", "NER", "sentiment analysis", "text classification", "spaCy", "HuggingFace". Also triggers on "NLP pipeline", "named entity recognition", "embeddings pipeline".
 ---
 
 # NLP Pipeline Designer

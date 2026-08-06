@@ -1,6 +1,6 @@
 ---
 name: conflict-resolver
-description: Résolution de conflits entre agents ou sous-agents quand les résultats sont contradictoires, avec workflow de détection, arbitrage, merge et feedback loop. Se déclenche avec "conflit agent", "agent conflict", "résultats contradictoires", "agent disagreement", "contradiction agents", "arbitrage agent", "résoudre conflit agents".
+description: Résolution de conflits entre agents ou sous-agents quand les résultats sont contradictoires, avec workflow de détection, arbitrage, merge et feedback loop. Se déclenche avec "conflit agent", "agent conflict", "résultats contradictoires", "agent disagreement", "contradiction agents", "arbitrage agent", "résoudre conflit agents". Also triggers on "agents disagree", "conflicting agent results", "resolve agent conflict".
 ---
 
 # Agent Conflict Resolver

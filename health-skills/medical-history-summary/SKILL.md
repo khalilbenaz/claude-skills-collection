@@ -1,6 +1,6 @@
 ---
 name: medical-history-summary
-description: Résume un historique médical long en version courte, chronologique et réutilisable. À utiliser quand l'utilisateur fournit beaucoup d'informations de santé dispersées. Se déclenche aussi avec "résume mon historique", "récapitulatif médical", "fiche santé", "tout ce que j'ai eu", ou quand l'utilisateur donne des informations médicales éparpillées sur plusieurs messages.
+description: Résume un historique médical long en version courte, chronologique et réutilisable. À utiliser quand l'utilisateur fournit beaucoup d'informations de santé dispersées. Se déclenche aussi avec "résume mon historique", "récapitulatif médical", "fiche santé", "tout ce que j'ai eu", ou quand l'utilisateur donne des informations médicales éparpillées sur plusieurs messages. Also triggers on "summarize my medical history", "medical timeline", "history for a new doctor".
 ---
 
 # Medical History Summary

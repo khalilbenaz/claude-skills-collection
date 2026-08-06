@@ -1,6 +1,6 @@
 ---
 name: testing-framework
-description: Framework de test complet pour agents IA — tests unitaires, d'intégration, de bout en bout et adversariaux. Se déclenche avec "tester agent", "agent testing", "test agent IA", "agent CI/CD", "agent regression", "quality assurance agent", "agent test suite".
+description: Framework de test complet pour agents IA — tests unitaires, d'intégration, de bout en bout et adversariaux. Se déclenche avec "tester agent", "agent testing", "test agent IA", "agent CI/CD", "agent regression", "quality assurance agent", "agent test suite". Also triggers on "test my agent", "agent unit tests", "adversarial agent tests".
 ---
 
 # Agent Testing Framework

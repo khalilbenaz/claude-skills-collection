@@ -1,6 +1,6 @@
 ---
 name: agent-email-agent-builder
-description: Construction d'agents de gestion d'emails incluant tri, réponse automatique, extraction et classification. Se déclenche avec "email agent", "agent email", "tri automatique", "réponse automatique email", "classification email"
+description: Construction d'agents de gestion d'emails incluant tri, réponse automatique, extraction et classification. Se déclenche avec "email agent", "agent email", "tri automatique", "réponse automatique email", "classification email. Also triggers on "auto reply agent", "inbox triage agent".
 ---
 
 # Email Agent Builder

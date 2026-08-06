@@ -1,6 +1,6 @@
 ---
 name: dev-nextjs-guide
-description: Développement d'applications Next.js avec App Router, Server Components, SSR, ISR, API routes et middleware. Se déclenche avec "Next.js", "NextJS", "App Router", "Server Components", "SSR", "getServerSideProps".
+description: Développement d'applications Next.js avec App Router, Server Components, SSR, ISR, API routes et middleware. Se déclenche avec "Next.js", "NextJS", "App Router", "Server Components", "SSR", "getServerSideProps". Also triggers on "Next.js App Router", "ISR and SSR".
 ---
 
 # Guide Next.js (App Router — 2026)

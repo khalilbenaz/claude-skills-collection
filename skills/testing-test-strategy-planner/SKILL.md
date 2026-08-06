@@ -1,6 +1,6 @@
 ---
 name: testing-test-strategy-planner
-description: Planification de stratégie de test incluant la pyramide de tests, les quadrants de tests, la couverture et l'analyse de risques. Se déclenche avec "stratégie de test", "pyramide de tests", "test plan", "couverture de tests", "risk-based testing"
+description: Planification de stratégie de test incluant la pyramide de tests, les quadrants de tests, la couverture et l'analyse de risques. Se déclenche avec "stratégie de test", "pyramide de tests", "test plan", "couverture de tests", "risk-based testing. Also triggers on "test strategy", "testing pyramid", "what should we test".
 ---
 
 # Test Strategy Planner

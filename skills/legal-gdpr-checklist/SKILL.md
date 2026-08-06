@@ -1,6 +1,6 @@
 ---
 name: legal-gdpr-checklist
-description: Aide à vérifier la conformité RGPD/GDPR d'un site, d'une app ou d'un traitement de données. Se déclenche aussi avec "RGPD", "GDPR", "données personnelles", "politique de confidentialité", "cookies", "conformité", ou toute question de protection des données.
+description: Aide à vérifier la conformité RGPD/GDPR d'un site, d'une app ou d'un traitement de données. Se déclenche aussi avec "RGPD", "GDPR", "données personnelles", "politique de confidentialité", "cookies", "conformité", ou toute question de protection des données. Also triggers on "GDPR compliance", "privacy policy check", "data protection checklist".
 ---
 
 # GDPR / RGPD — Checklist de conformité

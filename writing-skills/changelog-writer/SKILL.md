@@ -1,6 +1,6 @@
 ---
 name: changelog-writer
-description: Génération de changelogs structurés depuis des commits Git — format Keep a Changelog, Conventional Commits, notes de release. À utiliser quand l'utilisateur veut générer un changelog, documenter une release ou structurer ses notes de version. Se déclenche aussi avec "changelog", "notes de release", "release notes", "historique des changements", "CHANGELOG.md", "version log".
+description: Génération de changelogs structurés depuis des commits Git — format Keep a Changelog, Conventional Commits, notes de release. À utiliser quand l'utilisateur veut générer un changelog, documenter une release ou structurer ses notes de version. Se déclenche aussi avec "changelog", "notes de release", "release notes", "historique des changements", "CHANGELOG.md", "version log". Also triggers on "write a changelog", "conventional commits summary".
 ---
 
 # Rédacteur de Changelog

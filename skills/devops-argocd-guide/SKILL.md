@@ -1,6 +1,6 @@
 ---
 name: devops-argocd-guide
-description: GitOps avec ArgoCD incluant applications, sync, rollbacks, multi-cluster et App of Apps pattern. Se déclenche avec "ArgoCD", "Argo CD", "GitOps", "sync ArgoCD", "application ArgoCD", "App of Apps"
+description: GitOps avec ArgoCD incluant applications, sync, rollbacks, multi-cluster et App of Apps pattern. Se déclenche avec "ArgoCD", "Argo CD", "GitOps", "sync ArgoCD", "application ArgoCD", "App of Apps. Also triggers on "ArgoCD application", "GitOps deployment", "sync and rollback".
 ---
 
 # ArgoCD Guide

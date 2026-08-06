@@ -1,6 +1,6 @@
 ---
 name: social-media-strategist
-description: Stratégie de contenu pour réseaux sociaux — calendrier éditorial, formats, engagement et KPIs par plateforme. Se déclenche avec "réseaux sociaux", "social media", "Instagram", "LinkedIn", "TikTok", "calendrier éditorial".
+description: Stratégie de contenu pour réseaux sociaux — calendrier éditorial, formats, engagement et KPIs par plateforme. Se déclenche avec "réseaux sociaux", "social media", "Instagram", "LinkedIn", "TikTok", "calendrier éditorial". Also triggers on "social media strategy", "content calendar", "grow my audience".
 ---
 
 # Social Media Strategist

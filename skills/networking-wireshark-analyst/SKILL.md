@@ -1,6 +1,6 @@
 ---
 name: networking-wireshark-analyst
-description: Analyse de trafic réseau avec Wireshark incluant capture, filtres, protocoles et diagnostic réseau. Se déclenche avec "Wireshark", "capture réseau", "analyse de trafic", "pcap", "packet capture", "tcpdump"
+description: Analyse de trafic réseau avec Wireshark incluant capture, filtres, protocoles et diagnostic réseau. Se déclenche avec "Wireshark", "capture réseau", "analyse de trafic", "pcap", "packet capture", "tcpdump. Also triggers on "Wireshark capture", "analyze a pcap", "packet analysis".
 ---
 
 # Wireshark Analyst

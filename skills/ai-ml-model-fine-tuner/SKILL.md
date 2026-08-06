@@ -1,6 +1,6 @@
 ---
 name: ai-ml-model-fine-tuner
-description: Guide pour le fine-tuning de modèles ML/LLM (LoRA, QLoRA, PEFT, datasets, hyperparamètres) — workflow étape par étape, snippets copiables, critères de choix, anti-patterns 2026. Se déclenche avec "fine-tuning", "fine-tune", "LoRA", "QLoRA", "PEFT", "adapter", "entraîner un modèle".
+description: Guide pour le fine-tuning de modèles ML/LLM (LoRA, QLoRA, PEFT, datasets, hyperparamètres) — workflow étape par étape, snippets copiables, critères de choix, anti-patterns 2026. Se déclenche avec "fine-tuning", "fine-tune", "LoRA", "QLoRA", "PEFT", "adapter", "entraîner un modèle". Also triggers on "fine-tune a model", "LoRA training", "train an LLM on my data".
 ---
 
 # Model Fine-Tuner

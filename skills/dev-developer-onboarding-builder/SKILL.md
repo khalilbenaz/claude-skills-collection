@@ -1,6 +1,6 @@
 ---
 name: dev-developer-onboarding-builder
-description: Création de processus d'onboarding pour nouveaux développeurs. Se déclenche avec "onboarding", "nouveau développeur", "intégration équipe", "setup poste", "getting started guide", "accueil développeur".
+description: Création de processus d'onboarding pour nouveaux développeurs. Se déclenche avec "onboarding", "nouveau développeur", "intégration équipe", "setup poste", "getting started guide", "accueil développeur". Also triggers on "onboard a new developer", "developer setup guide", "first week checklist".
 ---
 
 # Developer Onboarding Builder

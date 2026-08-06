@@ -1,6 +1,6 @@
 ---
 name: dev-wireframe-advisor
-description: Conseille sur la création de wireframes et mockups pour apps et sites. Se déclenche avec "wireframe", "maquette", "mockup", "prototype", "Figma", "UI layout", "comment structurer ma page", "disposition".
+description: Conseille sur la création de wireframes et mockups pour apps et sites. Se déclenche avec "wireframe", "maquette", "mockup", "prototype", "Figma", "UI layout", "comment structurer ma page", "disposition". Also triggers on "low-fidelity mockup", "sketch the screens".
 ---
 
 # Wireframe Advisor

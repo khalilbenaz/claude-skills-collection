@@ -1,6 +1,6 @@
 ---
 name: project-kickstart
-description: Structure le lancement d'un projet avec objectifs, livrables, étapes et risques. À utiliser quand l'utilisateur commence un nouveau projet. Se déclenche aussi avec "je lance un projet", "nouveau projet", "par où commencer", "plan de projet", "brief projet", "cahier des charges".
+description: Structure le lancement d'un projet avec objectifs, livrables, étapes et risques. À utiliser quand l'utilisateur commence un nouveau projet. Se déclenche aussi avec "je lance un projet", "nouveau projet", "par où commencer", "plan de projet", "brief projet", "cahier des charges". Also triggers on "kick off a project", "project charter", "scope and deliverables".
 ---
 
 # Project Kickstart

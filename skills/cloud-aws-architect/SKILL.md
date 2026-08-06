@@ -1,6 +1,6 @@
 ---
 name: cloud-aws-architect
-description: Architecture AWS couvrant EC2, Lambda, S3, RDS, VPC, IAM et CloudFormation. Se déclenche avec "AWS", "Amazon Web Services", "Lambda", "EC2", "S3", "CloudFormation", "architecture AWS"
+description: Architecture AWS couvrant EC2, Lambda, S3, RDS, VPC, IAM et CloudFormation. Se déclenche avec "AWS", "Amazon Web Services", "Lambda", "EC2", "S3", "CloudFormation", "architecture AWS. Also triggers on "AWS architecture", "design on AWS", "EC2 Lambda S3 setup".
 ---
 
 # AWS Architect

@@ -1,6 +1,6 @@
 ---
 name: dev-owasp-checker
-description: Vérifie un projet contre le OWASP Top 10 (2021) et propose des remédiations concrètes avec exemples de code. À utiliser pour vérifier la conformité OWASP. Se déclenche avec "OWASP", "top 10", "failles web", "sécurité web", "A01 broken access", "injection", "vérifier OWASP".
+description: Vérifie un projet contre le OWASP Top 10 (2021) et propose des remédiations concrètes avec exemples de code. À utiliser pour vérifier la conformité OWASP. Se déclenche avec "OWASP", "top 10", "failles web", "sécurité web", "A01 broken access", "injection", "vérifier OWASP". Also triggers on "OWASP Top 10 check", "web vulnerabilities", "is my app vulnerable".
 ---
 
 # OWASP Checker

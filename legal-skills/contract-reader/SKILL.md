@@ -1,6 +1,6 @@
 ---
 name: contract-reader
-description: Analyse un contrat en langage simple, identifie les clauses importantes et les points de vigilance. Se déclenche aussi avec "lire ce contrat", "analyser un contrat", "clause", "conditions générales", "CGV", "bail", ou toute demande de compréhension d'un document contractuel.
+description: Analyse un contrat en langage simple, identifie les clauses importantes et les points de vigilance. Se déclenche aussi avec "lire ce contrat", "analyser un contrat", "clause", "conditions générales", "CGV", "bail", ou toute demande de compréhension d'un document contractuel. Also triggers on "review this contract", "explain contract clauses", "what am I signing".
 ---
 
 # Contract Reader

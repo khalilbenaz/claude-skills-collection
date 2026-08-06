@@ -1,6 +1,6 @@
 ---
 name: tableau-designer
-description: Conception de dashboards Tableau incluant calculated fields, LOD expressions, actions et storytelling. Se déclenche avec "Tableau", "dashboard Tableau", "LOD expression", "calculated field", "Tableau Server"
+description: Conception de dashboards Tableau incluant calculated fields, LOD expressions, actions et storytelling. Se déclenche avec "Tableau", "dashboard Tableau", "LOD expression", "calculated field", "Tableau Server. Also triggers on "Tableau dashboard".
 ---
 
 # Tableau Designer

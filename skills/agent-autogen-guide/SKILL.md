@@ -1,6 +1,6 @@
 ---
 name: agent-autogen-guide
-description: Développement d'agents conversationnels avec Microsoft AutoGen. Création de group chats, agents spécialisés et workflows multi-agents avec exécution de code. Se déclenche avec "AutoGen", "Microsoft AutoGen", "autogen agent", "group chat agent", "ConversableAgent", "AssistantAgent", "UserProxyAgent", "coding agent", "agents qui conversent".
+description: Développement d'agents conversationnels avec Microsoft AutoGen. Création de group chats, agents spécialisés et workflows multi-agents avec exécution de code. Se déclenche avec "AutoGen", "Microsoft AutoGen", "autogen agent", "group chat agent", "ConversableAgent", "AssistantAgent", "UserProxyAgent", "coding agent", "agents qui conversent". Also triggers on "AutoGen agents", "group chat agents", "conversable agent".
 ---
 
 # AutoGen Guide — Agents Conversationnels Microsoft

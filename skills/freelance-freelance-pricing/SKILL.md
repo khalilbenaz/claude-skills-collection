@@ -1,6 +1,6 @@
 ---
 name: freelance-freelance-pricing
-description: Aide à définir sa stratégie de tarification freelance, calculer son TJM et négocier ses tarifs. Se déclenche avec "TJM", "tarif freelance", "combien facturer", "pricing freelance", "taux journalier".
+description: Aide à définir sa stratégie de tarification freelance, calculer son TJM et négocier ses tarifs. Se déclenche avec "TJM", "tarif freelance", "combien facturer", "pricing freelance", "taux journalier". Also triggers on "set my freelance rate", "day rate pricing", "how much to charge".
 ---
 
 # Freelance Pricing

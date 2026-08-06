@@ -1,6 +1,6 @@
 ---
 name: agent-task-decomposer
-description: Décomposition automatique de tâches complexes en sous-tâches pour distribution aux sous-agents. Se déclenche avec "décomposer tâche", "task decomposition", "découper en sous-tâches", "diviser le travail", "plan d'exécution agent", "agent planner", "work breakdown agent".
+description: Décomposition automatique de tâches complexes en sous-tâches pour distribution aux sous-agents. Se déclenche avec "décomposer tâche", "task decomposition", "découper en sous-tâches", "diviser le travail", "plan d'exécution agent", "agent planner", "work breakdown agent". Also triggers on "break down a task", "split work for agents".
 ---
 
 # Agent Task Decomposer

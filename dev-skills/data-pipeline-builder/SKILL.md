@@ -1,6 +1,6 @@
 ---
 name: data-pipeline-builder
-description: Conception de pipelines de données robustes et scalables. Se déclenche avec "data pipeline", "pipeline de données", "batch processing", "stream processing", "Apache Spark", "Airflow", "dbt", "data engineering".
+description: Conception de pipelines de données robustes et scalables. Se déclenche avec "data pipeline", "pipeline de données", "batch processing", "stream processing", "Apache Spark", "Airflow", "dbt", "data engineering". Also triggers on "build a data pipeline", "ingest data", "batch and streaming pipeline".
 ---
 
 # Data Pipeline Builder

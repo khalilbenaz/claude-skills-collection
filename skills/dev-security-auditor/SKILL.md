@@ -1,6 +1,6 @@
 ---
 name: dev-security-auditor
-description: Audit de sécurité complet d'une application ou d'un code source — OWASP Top 10, analyse de dépendances, configuration serveur, cryptographie, secrets exposés. À utiliser quand l'utilisateur veut vérifier la sécurité de son projet. Se déclenche avec "audit sécurité", "security audit", "vérifier la sécurité", "est-ce que mon code est sécurisé", "analyse de sécurité".
+description: Audit de sécurité complet d'une application ou d'un code source — OWASP Top 10, analyse de dépendances, configuration serveur, cryptographie, secrets exposés. À utiliser quand l'utilisateur veut vérifier la sécurité de son projet. Se déclenche avec "audit sécurité", "security audit", "vérifier la sécurité", "est-ce que mon code est sécurisé", "analyse de sécurité". Also triggers on "audit my codebase", "find security flaws".
 ---
 
 # Security Auditor

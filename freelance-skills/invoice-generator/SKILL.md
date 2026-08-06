@@ -1,6 +1,6 @@
 ---
 name: invoice-generator
-description: Aide à créer des factures conformes, gérer les mentions légales obligatoires et suivre les relances de paiement. Se déclenche avec "facture", "facturation", "mentions légales", "relance paiement", "devis freelance".
+description: Aide à créer des factures conformes, gérer les mentions légales obligatoires et suivre les relances de paiement. Se déclenche avec "facture", "facturation", "mentions légales", "relance paiement", "devis freelance". Also triggers on "create an invoice", "invoice a client", "payment reminder".
 ---
 
 # Invoice Generator

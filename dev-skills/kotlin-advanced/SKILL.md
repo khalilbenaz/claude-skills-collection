@@ -1,6 +1,6 @@
 ---
 name: kotlin-advanced
-description: Kotlin avancé pour Android fintech. Coroutines, Flows, Sealed classes, inline functions, delegates, reified types. Se déclenche avec "Kotlin avancé", "coroutines", "Flow", "sealed", "extension".
+description: Kotlin avancé pour Android fintech. Coroutines, Flows, Sealed classes, inline functions, delegates, reified types. Se déclenche avec "Kotlin avancé", "coroutines", "Flow", "sealed", "extension". Also triggers on "Kotlin coroutines", "Kotlin Flow".
 ---
 
 # Kotlin Advanced (Android Fintech)

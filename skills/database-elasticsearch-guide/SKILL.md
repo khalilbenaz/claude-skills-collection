@@ -1,6 +1,6 @@
 ---
 name: database-elasticsearch-guide
-description: Recherche et analyse avec Elasticsearch et la stack ELK. Se déclenche avec "Elasticsearch", "Elastic", "Kibana", "full-text search", "recherche plein texte", "ELK"
+description: Recherche et analyse avec Elasticsearch et la stack ELK. Se déclenche avec "Elasticsearch", "Elastic", "Kibana", "full-text search", "recherche plein texte", "ELK. Also triggers on "Elasticsearch query", "ELK stack", "full-text search setup".
 ---
 
 # Elasticsearch Guide

@@ -1,6 +1,6 @@
 ---
 name: design-critique
-description: Critique constructive d'interfaces et suggestions d'amélioration UX/UI. Se déclenche avec "critique mon design", "avis sur mon UI", "améliorer mon interface", "feedback design", "review UX", "est-ce que mon design est bon", "UI review".
+description: Critique constructive d'interfaces et suggestions d'amélioration UX/UI. Se déclenche avec "critique mon design", "avis sur mon UI", "améliorer mon interface", "feedback design", "review UX", "est-ce que mon design est bon", "UI review". Also triggers on "critique my UI", "design feedback", "review this interface".
 ---
 
 # Design Critique

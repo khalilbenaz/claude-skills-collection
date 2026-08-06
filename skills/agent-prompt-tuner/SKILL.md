@@ -1,6 +1,6 @@
 ---
 name: agent-prompt-tuner
-description: Optimisation systématique des prompts d'agents pour améliorer performance et fiabilité. Se déclenche avec "optimiser prompt agent", "agent prompt", "améliorer mon agent", "prompt tuning", "agent accuracy", "agent qui se trompe", "calibrer agent", "affiner prompt".
+description: Optimisation systématique des prompts d'agents pour améliorer performance et fiabilité. Se déclenche avec "optimiser prompt agent", "agent prompt", "améliorer mon agent", "prompt tuning", "agent accuracy", "agent qui se trompe", "calibrer agent", "affiner prompt". Also triggers on "tune agent prompt", "improve agent instructions", "prompt iteration for agents".
 ---
 
 # Agent Prompt Tuner

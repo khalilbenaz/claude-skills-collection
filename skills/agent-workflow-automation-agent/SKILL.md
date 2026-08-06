@@ -1,6 +1,6 @@
 ---
 name: agent-workflow-automation-agent
-description: Construction d'agents d'automatisation de workflows métier incluant RPA intelligent, déclencheurs et actions chaînées, orchestration d'étapes avec gestion d'erreurs et monitoring. Se déclenche avec "workflow agent", "RPA", "automatisation métier", "agent d'automatisation", "process automation"
+description: Construction d'agents d'automatisation de workflows métier incluant RPA intelligent, déclencheurs et actions chaînées, orchestration d'étapes avec gestion d'erreurs et monitoring. Se déclenche avec "workflow agent", "RPA", "automatisation métier", "agent d'automatisation", "process automation. Also triggers on "business process agent", "workflow automation agent", "intelligent RPA".
 ---
 
 # Workflow Automation Agent

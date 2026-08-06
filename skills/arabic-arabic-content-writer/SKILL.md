@@ -1,6 +1,6 @@
 ---
 name: arabic-arabic-content-writer
-description: Rédaction de contenu en arabe standard moderne (MSA) avec adaptation culturelle pour le public arabophone. Se déclenche avec "arabe", "العربية", "contenu arabe", "rédaction arabe", "arabic content".
+description: Rédaction de contenu en arabe standard moderne (MSA) avec adaptation culturelle pour le public arabophone. Se déclenche avec "arabe", "العربية", "contenu arabe", "rédaction arabe", "arabic content". Also triggers on "write in Arabic", "Arabic copywriting", "MSA content".
 ---
 
 # Arabic Content Writer

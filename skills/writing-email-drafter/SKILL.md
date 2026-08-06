@@ -1,6 +1,6 @@
 ---
 name: writing-email-drafter
-description: Rédige des emails professionnels ou personnels adaptés au contexte et à l'objectif. À utiliser quand l'utilisateur veut écrire un email important. Se déclenche aussi avec "écrire un email", "rédiger un mail", "comment formuler", "email professionnel", "répondre à ce mail".
+description: Rédige des emails professionnels ou personnels adaptés au contexte et à l'objectif. À utiliser quand l'utilisateur veut écrire un email important. Se déclenche aussi avec "écrire un email", "rédiger un mail", "comment formuler", "email professionnel", "répondre à ce mail". Also triggers on "draft an email", "write a professional email", "reply to this message".
 ---
 
 # Email Drafter

@@ -1,6 +1,6 @@
 ---
 name: mega-prompt-builder
-description: Construit un mega-prompt complet et structuré à partir d'un objectif simple. À utiliser quand l'utilisateur veut créer un prompt complexe et puissant de zéro. Se déclenche aussi avec "crée un prompt pour", "mega prompt", "prompt complet", "construis un prompt", "super prompt", ou toute demande de création de prompt élaboré.
+description: Construit un mega-prompt complet et structuré à partir d'un objectif simple. À utiliser quand l'utilisateur veut créer un prompt complexe et puissant de zéro. Se déclenche aussi avec "crée un prompt pour", "mega prompt", "prompt complet", "construis un prompt", "super prompt", ou toute demande de création de prompt élaboré. Also triggers on "build a full prompt", "write a prompt for me".
 ---
 
 # Mega-Prompt Builder

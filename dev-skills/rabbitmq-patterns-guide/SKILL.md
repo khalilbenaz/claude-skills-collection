@@ -1,6 +1,6 @@
 ---
 name: rabbitmq-patterns-guide
-description: Patterns de messaging avec RabbitMQ — exchanges, queues, routing, dead letter, pub/sub et intégration avec MassTransit/.NET. À utiliser quand l'utilisateur travaille avec RabbitMQ, conçoit des architectures event-driven ou implémente du messaging asynchrone. Se déclenche aussi avec "RabbitMQ", "exchange", "queue", "dead letter", "pub/sub RabbitMQ", "MassTransit", "message broker".
+description: Patterns de messaging avec RabbitMQ — exchanges, queues, routing, dead letter, pub/sub et intégration avec MassTransit/.NET. À utiliser quand l'utilisateur travaille avec RabbitMQ, conçoit des architectures event-driven ou implémente du messaging asynchrone. Se déclenche aussi avec "RabbitMQ", "exchange", "queue", "dead letter", "pub/sub RabbitMQ", "MassTransit", "message broker". Also triggers on "RabbitMQ exchange", "dead letter queue", "AMQP routing".
 ---
 
 # Guide des Patterns RabbitMQ

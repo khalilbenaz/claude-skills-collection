@@ -1,6 +1,6 @@
 ---
 name: dev-grpc-service-designer
-description: Conception de services gRPC, définition de contrats Protobuf, patterns de streaming et intégration dans des architectures microservices. À utiliser quand l'utilisateur conçoit des APIs gRPC, écrit des fichiers .proto ou implémente du streaming. Se déclenche aussi avec "gRPC", "protobuf", "fichier proto", "streaming gRPC", "service gRPC", "contrat protobuf".
+description: Conception de services gRPC, définition de contrats Protobuf, patterns de streaming et intégration dans des architectures microservices. À utiliser quand l'utilisateur conçoit des APIs gRPC, écrit des fichiers .proto ou implémente du streaming. Se déclenche aussi avec "gRPC", "protobuf", "fichier proto", "streaming gRPC", "service gRPC", "contrat protobuf". Also triggers on "gRPC service", "protobuf contract", "bidirectional streaming".
 ---
 
 # Concepteur de Services gRPC

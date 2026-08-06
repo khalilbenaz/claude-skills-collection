@@ -1,6 +1,6 @@
 ---
 name: travel-budget
-description: Estime et planifie le budget d'un voyage avec détail par poste de dépense. Se déclenche aussi avec "budget voyage", "combien coûte un voyage à", "estimer les frais", "voyage pas cher", ou toute question de budget voyage.
+description: Estime et planifie le budget d'un voyage avec détail par poste de dépense. Se déclenche aussi avec "budget voyage", "combien coûte un voyage à", "estimer les frais", "voyage pas cher", ou toute question de budget voyage. Also triggers on "trip budget", "how much will this trip cost", "travel expenses estimate".
 ---
 
 # Travel Budget

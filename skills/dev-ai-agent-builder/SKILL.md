@@ -1,6 +1,6 @@
 ---
 name: dev-ai-agent-builder
-description: Conception et implémentation d'agents IA autonomes avec outils, mémoire et orchestration. Se déclenche avec "agent IA", "AI agent", "autonomous agent", "tool use", "function calling", "agent framework", "LangChain agent", "CrewAI", "AutoGen", "agent loop", "ReAct".
+description: Conception et implémentation d'agents IA autonomes avec outils, mémoire et orchestration. Se déclenche avec "agent IA", "AI agent", "autonomous agent", "tool use", "function calling", "agent framework", "LangChain agent", "CrewAI", "AutoGen", "agent loop", "ReAct". Also triggers on "build an AI agent", "agent with tools and memory".
 ---
 
 # AI Agent Builder

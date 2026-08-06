@@ -1,6 +1,6 @@
 ---
 name: dev-pixel-art-advisor
-description: Guide de création de pixel art pour jeux et interfaces rétro. Se déclenche avec "pixel art", "sprite", "tileset", "pixel", "retro art", "8-bit", "16-bit", "Aseprite", "game art", "spritesheet".
+description: Guide de création de pixel art pour jeux et interfaces rétro. Se déclenche avec "pixel art", "sprite", "tileset", "pixel", "retro art", "8-bit", "16-bit", "Aseprite", "game art", "spritesheet". Also triggers on "retro sprites", "game art style".
 ---
 
 # Pixel Art Advisor

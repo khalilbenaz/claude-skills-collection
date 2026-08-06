@@ -1,6 +1,6 @@
 ---
 name: gcp-guide
-description: Services Google Cloud Platform incluant Cloud Run, BigQuery, GKE, Cloud Functions et Firestore. Se déclenche avec "GCP", "Google Cloud", "BigQuery", "Cloud Run", "GKE", "Firestore"
+description: Services Google Cloud Platform incluant Cloud Run, BigQuery, GKE, Cloud Functions et Firestore. Se déclenche avec "GCP", "Google Cloud", "BigQuery", "Cloud Run", "GKE", "Firestore. Also triggers on "BigQuery setup", "GKE cluster".
 ---
 
 # GCP Guide

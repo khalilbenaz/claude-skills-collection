@@ -1,6 +1,6 @@
 ---
 name: scalability-planner
-description: Planification de la scalabilité d'une application ou infrastructure. Se déclenche avec "scalabilité", "scaling", "montée en charge", "millions d'utilisateurs", "haute disponibilité", "scale", "horizontal scaling".
+description: Planification de la scalabilité d'une application ou infrastructure. Se déclenche avec "scalabilité", "scaling", "montée en charge", "millions d'utilisateurs", "haute disponibilité", "scale", "horizontal scaling". Also triggers on "scale my app", "handle more traffic", "horizontal scaling plan".
 ---
 
 # Scalability Planner

@@ -1,6 +1,6 @@
 ---
 name: devops-ansible-playbook-builder
-description: Automatisation d'infrastructure avec Ansible — playbooks, roles, inventaires, vault et modules. Se déclenche avec "Ansible", "playbook", "ansible-playbook", "Ansible role", "Ansible vault", "automatisation serveur".
+description: Automatisation d'infrastructure avec Ansible — playbooks, roles, inventaires, vault et modules. Se déclenche avec "Ansible", "playbook", "ansible-playbook", "Ansible role", "Ansible vault", "automatisation serveur". Also triggers on "Ansible playbook", "configuration management", "Ansible roles and vault".
 ---
 
 # Ansible Playbook Builder

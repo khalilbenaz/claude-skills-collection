@@ -1,6 +1,6 @@
 ---
 name: agent-mcp-server-builder
-description: Création de serveurs MCP (Model Context Protocol) pour exposer des outils, ressources et prompts aux LLMs. Se déclenche avec "MCP", "Model Context Protocol", "MCP server", "MCP tool", "MCP resource", "serveur MCP", "connecter Claude à", "exposer une API à Claude", "claude desktop config".
+description: Création de serveurs MCP (Model Context Protocol) pour exposer des outils, ressources et prompts aux LLMs. Se déclenche avec "MCP", "Model Context Protocol", "MCP server", "MCP tool", "MCP resource", "serveur MCP", "connecter Claude à", "exposer une API à Claude", "claude desktop config". Also triggers on "build an MCP server", "expose tools to Claude", "Model Context Protocol server".
 ---
 
 # MCP Server Builder

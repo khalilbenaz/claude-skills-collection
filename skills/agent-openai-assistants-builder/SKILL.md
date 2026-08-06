@@ -1,6 +1,6 @@
 ---
 name: agent-openai-assistants-builder
-description: Création d'assistants IA hébergés avec l'API OpenAI Assistants v2. File search avec vector stores, code interpreter, function calling, threads persistants et streaming. Se déclenche avec "OpenAI Assistants", "assistant API", "file search", "code interpreter", "thread", "run", "assistant OpenAI", "GPT assistant", "vector store OpenAI", "assistants v2".
+description: Création d'assistants IA hébergés avec l'API OpenAI Assistants v2. File search avec vector stores, code interpreter, function calling, threads persistants et streaming. Se déclenche avec "OpenAI Assistants", "assistant API", "file search", "code interpreter", "thread", "run", "assistant OpenAI", "GPT assistant", "vector store OpenAI", "assistants v2". Also triggers on "OpenAI Assistants API", "vector store file search", "code interpreter assistant".
 ---
 
 # OpenAI Assistants Builder — API Assistants v2

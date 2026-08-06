@@ -1,6 +1,6 @@
 ---
 name: gitlab-ci-guide
-description: Pipelines GitLab CI/CD — stages, jobs, runners, artifacts, environments et Auto DevOps. Se déclenche avec "GitLab CI", "gitlab-ci.yml", "pipeline GitLab", "runner GitLab", "GitLab CD".
+description: Pipelines GitLab CI/CD — stages, jobs, runners, artifacts, environments et Auto DevOps. Se déclenche avec "GitLab CI", "gitlab-ci.yml", "pipeline GitLab", "runner GitLab", "GitLab CD". Also triggers on "GitLab CI pipeline", ".gitlab-ci.yml", "GitLab runners".
 ---
 
 # Guide GitLab CI/CD

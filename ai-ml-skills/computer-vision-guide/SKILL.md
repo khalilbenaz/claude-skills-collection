@@ -1,6 +1,6 @@
 ---
 name: computer-vision-guide
-description: Guide computer vision (classification, détection, segmentation) avec PyTorch, TensorFlow, OpenCV — critères de choix de modèle, pipelines annotés, snippets copiables, optimisation pour le déploiement edge/cloud. Se déclenche avec "computer vision", "détection d'objets", "YOLO", "classification d'images", "segmentation".
+description: Guide computer vision (classification, détection, segmentation) avec PyTorch, TensorFlow, OpenCV — critères de choix de modèle, pipelines annotés, snippets copiables, optimisation pour le déploiement edge/cloud. Se déclenche avec "computer vision", "détection d'objets", "YOLO", "classification d'images", "segmentation". Also triggers on "image classification", "object detection", "segmentation model".
 ---
 
 # Computer Vision Guide

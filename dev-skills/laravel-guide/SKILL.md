@@ -1,6 +1,6 @@
 ---
 name: laravel-guide
-description: Développement PHP Laravel avec Eloquent ORM, Blade templates, migrations, middleware, queues et Sanctum. Se déclenche avec "Laravel", "Eloquent", "Blade", "artisan", "migration Laravel", "PHP Laravel".
+description: Développement PHP Laravel avec Eloquent ORM, Blade templates, migrations, middleware, queues et Sanctum. Se déclenche avec "Laravel", "Eloquent", "Blade", "artisan", "migration Laravel", "PHP Laravel". Also triggers on "Laravel app".
 ---
 
 # Guide Laravel

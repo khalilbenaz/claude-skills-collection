@@ -1,6 +1,6 @@
 ---
 name: dimensional-modeling
-description: Modélisation dimensionnelle pour le data warehousing — schéma en étoile, flocon, tables de faits et dimensions, slowly changing dimensions. À utiliser quand l'utilisateur conçoit un data warehouse, modélise des faits/dimensions ou met en place du reporting analytique. Se déclenche aussi avec "schéma en étoile", "star schema", "table de faits", "dimension", "data warehouse", "SCD", "slowly changing dimension", "modélisation dimensionnelle".
+description: Modélisation dimensionnelle pour le data warehousing — schéma en étoile, flocon, tables de faits et dimensions, slowly changing dimensions. À utiliser quand l'utilisateur conçoit un data warehouse, modélise des faits/dimensions ou met en place du reporting analytique. Se déclenche aussi avec "schéma en étoile", "star schema", "table de faits", "dimension", "data warehouse", "SCD", "slowly changing dimension", "modélisation dimensionnelle". Also triggers on "fact and dimension tables", "data warehouse modeling".
 ---
 
 # Modélisation Dimensionnelle

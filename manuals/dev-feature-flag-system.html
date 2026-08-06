@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-feature-flag-system — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Concevoir et implémenter un système de feature flags pour des déploiements progressifs, A/B testing, canary releases et kill switches.">
+<meta name="description" content="Concevoir et implémenter un système de feature flags pour des déploiements progressifs, A/B testing, canary releases et kill switches — conception, SDK (OpenFeature, LaunchDarkly, Unleash, Microsoft.FeatureManagement .NET), rollout, monitoring et nettoyage.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-feature-flag-system</h1>
-<p class="lead">Concevoir et implémenter un système de feature flags pour des déploiements progressifs, A/B testing, canary releases et kill switches.</p>
+<p class="lead">Concevoir et implémenter un système de feature flags pour des déploiements progressifs, A/B testing, canary releases et kill switches — conception, SDK (OpenFeature, LaunchDarkly, Unleash, Microsoft.FeatureManagement .NET), rollout, monitoring et nettoyage.</p>
 
 
 
@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/dev-feature-flag-system</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">feature flag</span><span class="trigger">feature toggle</span><span class="trigger">déploiement progressif</span><span class="trigger">A/B test</span><span class="trigger">canary deployment</span><span class="trigger">kill switch</span></div></div>
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">feature flag</span><span class="trigger">feature toggle</span><span class="trigger">toggles</span><span class="trigger">déploiement progressif</span><span class="trigger">A/B test</span><span class="trigger">canary deployment</span><span class="trigger">kill switch</span><span class="trigger">LaunchDarkly</span><span class="trigger">OpenFeature</span><span class="trigger">Unleash</span><span class="trigger">feature management .NET</span><span class="trigger">progressive rollout</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>
@@ -193,8 +193,112 @@ unleash flags archive --key checkout_v2</code></pre>
 <li>[ ] Flag archivé dans le gestionnaire (pas supprimé — garder l'historique)</li>
 </ul>
 <hr>
-<h2>Critères de décision : self-hosted vs SaaS</h2>
-<table><thead><tr><th>Critère</th><th>Self-hosted (Unleash, Flagsmith)</th><th>SaaS (LaunchDarkly, GrowthBook)</th></tr></thead><tbody><tr><td>Data sovereignty requise</td><td>✅</td><td>❌</td></tr><tr><td>Budget &lt; 500 $/mois</td><td>✅</td><td>❌</td></tr><tr><td>Streaming temps réel critique</td><td>❌ (polling)</td><td>✅ (SSE/WebSocket)</td></tr><tr><td>Équipe &lt; 5 devs</td><td>❌ (overhead ops)</td><td>✅</td></tr><tr><td>A/B stats intégrées</td><td>❌</td><td>✅ GrowthBook open source</td></tr></tbody></table>
+<h2>Implémentation .NET</h2>
+<p><strong>Microsoft.FeatureManagement</strong> — le plus court chemin sur .NET, gratuit, piloté par la configuration.</p>
+<pre><code class="lang-bash">dotnet add package Microsoft.FeatureManagement.AspNetCore</code></pre>
+<pre><code class="lang-csharp">// Program.cs
+builder.Services.AddFeatureManagement()
+    .AddFeatureFilter&lt;PercentageFilter&gt;()
+    .AddFeatureFilter&lt;TimeWindowFilter&gt;()
+    .AddFeatureFilter&lt;TargetingFilter&gt;();
+
+// Optionnel : définitions pilotées par Azure App Configuration
+builder.Configuration.AddAzureAppConfiguration(opts =&gt;
+    opts.Connect(&quot;&lt;connection-string&gt;&quot;)
+        .UseFeatureFlags(ff =&gt; ff.CacheExpirationInterval = TimeSpan.FromSeconds(30)));</code></pre>
+<pre><code class="lang-json">// appsettings.json — les 3 patterns qui couvrent 90 % des cas
+{
+  &quot;FeatureManagement&quot;: {
+    &quot;SimpleFlag&quot;: true,
+
+    &quot;RolloutFlag&quot;: {
+      &quot;EnabledFor&quot;: [{ &quot;Name&quot;: &quot;Percentage&quot;, &quot;Parameters&quot;: { &quot;Value&quot;: 10 } }]
+    },
+
+    &quot;TargetedFlag&quot;: {
+      &quot;EnabledFor&quot;: [{
+        &quot;Name&quot;: &quot;Targeting&quot;,
+        &quot;Parameters&quot;: {
+          &quot;Audience&quot;: {
+            &quot;Users&quot;: [&quot;admin@company.com&quot;],
+            &quot;Groups&quot;: [
+              { &quot;Name&quot;: &quot;beta&quot;, &quot;RolloutPercentage&quot;: 100 },
+              { &quot;Name&quot;: &quot;all&quot;,  &quot;RolloutPercentage&quot;: 5 }
+            ],
+            &quot;DefaultRolloutPercentage&quot;: 0
+          }
+        }
+      }]
+    },
+
+    &quot;HolidayPromo&quot;: {
+      &quot;EnabledFor&quot;: [{
+        &quot;Name&quot;: &quot;TimeWindow&quot;,
+        &quot;Parameters&quot;: { &quot;Start&quot;: &quot;2026-12-20T00:00:00Z&quot;, &quot;End&quot;: &quot;2026-12-31T23:59:59Z&quot; }
+      }]
+    }
+  }
+}</code></pre>
+<pre><code class="lang-csharp">// Gate au niveau contrôleur
+[FeatureGate(&quot;NewDashboard&quot;)]
+[ApiController]
+public class DashboardController : ControllerBase { }
+
+// Évaluation avec fallback explicite
+public class PaymentService(IFeatureManager fm)
+{
+    public async Task&lt;PaymentResult&gt; Process(PaymentRequest req)
+        =&gt; await fm.IsEnabledAsync(&quot;NewPaymentEngine&quot;)
+            ? await ProcessV2(req)
+            : await ProcessV1(req);   // la branche de repli reste toujours présente
+}</code></pre>
+<p><strong>OpenFeature .NET</strong> — même code métier quel que soit le provider derrière (LaunchDarkly, Unleash, custom).</p>
+<pre><code class="lang-bash">dotnet add package OpenFeature
+dotnet add package LaunchDarkly.OpenFeature.ServerProvider</code></pre>
+<pre><code class="lang-csharp">// Program.cs
+var ldConfig = Configuration.Builder(&quot;sdk-key-xxx&quot;).Build();
+await Api.Instance.SetProviderAsync(new Provider(ldConfig));
+builder.Services.AddSingleton(Api.Instance.GetClient());
+
+// Évaluation contextuelle
+public class FeatureFlagService(FeatureClient client)
+{
+    public Task&lt;bool&gt; IsNewEngineEnabledAsync(string userId, string country)
+    {
+        var ctx = EvaluationContext.Builder()
+            .Set(&quot;userId&quot;, userId)
+            .Set(&quot;country&quot;, country)
+            .Build();
+
+        // 2e argument = valeur par défaut sûre si le provider est indisponible
+        return client.GetBooleanValueAsync(&quot;new-payment-engine&quot;, false, ctx);
+    }
+
+    public Task&lt;double&gt; GetFeePercentageAsync()
+        =&gt; client.GetDoubleValueAsync(&quot;fee-percentage&quot;, 2.5);
+}</code></pre>
+<hr>
+<h2>Choisir un provider</h2>
+<table><thead><tr><th>Critère</th><th>Microsoft.FeatureManagement</th><th>Unleash / Flagsmith (self-hosted)</th><th>LaunchDarkly / GrowthBook (SaaS)</th></tr></thead><tbody><tr><td>Coût</td><td>Gratuit</td><td>Open source + coût ops</td><td>Payant (GrowthBook a une offre OSS)</td></tr><tr><td>Setup</td><td>Minimal (config .NET)</td><td>Moyen</td><td>Moyen</td></tr><tr><td>Ciblage</td><td>Basique (Targeting filter)</td><td>Avancé</td><td>Avancé (segments, règles)</td></tr><tr><td>Multi-langage</td><td>.NET uniquement</td><td>Multi-SDK</td><td>Multi-SDK</td></tr><tr><td>Data sovereignty</td><td>Selon hébergement</td><td>✅</td><td>❌</td></tr><tr><td>Streaming temps réel</td><td>Polling</td><td>Polling</td><td>✅ SSE/WebSocket</td></tr><tr><td>A/B stats intégrées</td><td>❌</td><td>❌</td><td>✅</td></tr><tr><td>Équipe &lt; 5 devs</td><td>✅</td><td>❌ (overhead ops)</td><td>✅</td></tr></tbody></table>
+<p><strong>Raccourci :</strong> projet .NET sans budget → Microsoft.FeatureManagement (+ Azure App Configuration). Produit multi-équipes avec A/B poussé → LaunchDarkly via OpenFeature. Souveraineté des données → Unleash self-hosted.</p>
+<hr>
+<h2>Monitoring &amp; gouvernance</h2>
+<table><thead><tr><th>Phase</th><th>Action</th><th>Responsable</th></tr></thead><tbody><tr><td>Création</td><td>nommer, documenter la finalité, fixer <code>expires</code></td><td>Dev</td></tr><tr><td>Dev</td><td>implémenter les deux branches + tests des deux états</td><td>Dev</td></tr><tr><td>Staging</td><td>activer à 100 %, valider</td><td>QA</td></tr><tr><td>Rollout prod</td><td>incrémenter par paliers</td><td>Product + Dev</td></tr><tr><td>Nettoyage</td><td>supprimer le flag <strong>et</strong> le code de la branche morte</td><td>Dev</td></tr></tbody></table>
+<p>Métriques à exposer (Prometheus/OTLP) :</p>
+<ul>
+<li><code>feature_flag_evaluation_total{flag, result}</code> — volume d'évaluations, détecte les flags zombies (0 évaluation) ;</li>
+<li><code>feature_flag_latency_ms{flag}</code> — alerter si l'évaluation part sur le réseau.</li>
+</ul>
+<pre><code class="lang-bash"># Recenser les flags encore référencés dans le code (candidats au nettoyage)
+grep -rE &quot;IsEnabledAsync|FeatureGate|getBooleanValue|GetBooleanValueAsync&quot; src/ \
+  | grep -v &quot;_test&quot; | sort | uniq</code></pre>
+<h3>Conventions de nommage</h3>
+<pre><code>&lt;domaine&gt;-&lt;feature&gt;-&lt;type&gt;
+payment-new-engine-release       # release toggle
+checkout-promo-experiment        # A/B test
+api-rate-limit-ops               # kill switch
+dashboard-v2-rollout             # rollout progressif</code></pre>
+<p>Préfixe par domaine → filtrage immédiat dans les dashboards et les <code>grep</code>.</p>
 <hr>
 <h2>Pièges et anti-patterns</h2>
 <p><strong>Flag spaghetti</strong> — plus de 3 niveaux de conditions imbriqués = refactoriser en permission flag ou configuration.</p>
@@ -211,6 +315,8 @@ flag_sidebar_color_blue / flag_sidebar_color_red / flag_sidebar_color_green
 getStringValue(&quot;sidebar_color&quot;, &quot;blue&quot;) // → &quot;blue&quot; | &quot;red&quot; | &quot;green&quot;</code></pre>
 <p><strong>Flag sans owner</strong> — chaque flag doit avoir un owner dans les métadonnées, sinon il devient orphelin.</p>
 <p><strong>Évaluation côté client non cachée</strong> — appeler le SDK à chaque render React sans cache = latence et surcoût réseau. Hydrater les flags au bootstrap de la session, pas à chaque composant.</p>
+<p><strong>Un flag à double rôle</strong> — le même flag utilisé comme A/B test <em>et</em> comme kill switch rend la décision opérationnelle ambiguë. Un flag = un seul rôle.</p>
+<p><strong>Évaluation dans une boucle serrée</strong> — évaluer une fois en début de requête et passer le résultat en paramètre, jamais à chaque itération (latence si le provider est distant).</p>
 <p><strong>Tests qui ne couvrent pas les deux états</strong> — tout flag doit avoir un test <code>enabled=true</code> ET <code>enabled=false</code>.</p>
 <pre><code class="lang-typescript">// Jest
 it.each([true, false])(&quot;checkout works when flag=%s&quot;, async (enabled) =&gt; {

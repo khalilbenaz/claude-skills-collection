@@ -1,6 +1,6 @@
 ---
 name: database-dynamodb-guide
-description: Modélisation et requêtes DynamoDB incluant single-table design, GSI, LSI, capacity modes et streams. Se déclenche avec "DynamoDB", "NoSQL AWS", "single-table design", "GSI", "partition key"
+description: Modélisation et requêtes DynamoDB incluant single-table design, GSI, LSI, capacity modes et streams. Se déclenche avec "DynamoDB", "NoSQL AWS", "single-table design", "GSI", "partition key. Also triggers on "DynamoDB single-table design", "GSI design", "DynamoDB capacity".
 ---
 
 # DynamoDB Guide

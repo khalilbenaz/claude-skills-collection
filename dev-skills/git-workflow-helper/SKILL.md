@@ -1,6 +1,6 @@
 ---
 name: git-workflow-helper
-description: Guide pour les opérations Git complexes, résolution de conflits et bonnes pratiques de workflow. À utiliser quand l'utilisateur est bloqué avec Git ou veut mettre en place un workflow. Se déclenche aussi avec "git merge conflict", "comment revert", "git rebase", "branching strategy", "j'ai cassé mon git", ou toute question Git avancée.
+description: Guide pour les opérations Git complexes, résolution de conflits et bonnes pratiques de workflow. À utiliser quand l'utilisateur est bloqué avec Git ou veut mettre en place un workflow. Se déclenche aussi avec "git merge conflict", "comment revert", "git rebase", "branching strategy", "j'ai cassé mon git", ou toute question Git avancée. Also triggers on "resolve merge conflict", "git branching strategy", "undo a commit".
 ---
 
 # Git Workflow Helper

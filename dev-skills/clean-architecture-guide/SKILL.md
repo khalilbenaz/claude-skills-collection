@@ -1,6 +1,6 @@
 ---
 name: clean-architecture-guide
-description: Guide d'implémentation de la Clean Architecture et Architecture Hexagonale. Se déclenche avec "clean architecture", "architecture hexagonale", "ports and adapters", "onion architecture", "séparation des couches", "dependency inversion".
+description: Guide d'implémentation de la Clean Architecture et Architecture Hexagonale. Se déclenche avec "clean architecture", "architecture hexagonale", "ports and adapters", "onion architecture", "séparation des couches", "dependency inversion". Also triggers on "hexagonal architecture".
 ---
 
 # Clean Architecture Guide

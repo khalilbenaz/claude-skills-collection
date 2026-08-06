@@ -1,6 +1,6 @@
 ---
 name: security-dependency-audit
-description: Audit de sécurité des dépendances — détection de vulnérabilités connues, mises à jour critiques et gestion du cycle de vie des packages. À utiliser quand l'utilisateur veut vérifier la sécurité de ses dépendances, mettre à jour des packages vulnérables ou mettre en place un processus d'audit continu. Se déclenche aussi avec "audit dépendances", "vulnérabilité npm", "CVE", "dépendance vulnérable", "npm audit", "dotnet audit", "supply chain security", "dependabot".
+description: Audit de sécurité des dépendances — détection de vulnérabilités connues, mises à jour critiques et gestion du cycle de vie des packages. À utiliser quand l'utilisateur veut vérifier la sécurité de ses dépendances, mettre à jour des packages vulnérables ou mettre en place un processus d'audit continu. Se déclenche aussi avec "audit dépendances", "vulnérabilité npm", "CVE", "dépendance vulnérable", "npm audit", "dotnet audit", "supply chain security", "dependabot". Also triggers on "dependency vulnerabilities", "npm audit findings", "outdated packages with CVEs".
 ---
 
 # Audit de Sécurité des Dépendances

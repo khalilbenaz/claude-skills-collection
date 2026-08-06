@@ -1,6 +1,6 @@
 ---
 name: ultra-concise-mode
-description: Force ultra-concise communication style — no filler, no pleasantries, tool-first, result-first, stop when done. Triggers on "concise mode", "short mode", "no filler", "talk short", "direct mode", "blunt mode".
+description: Force ultra-concise communication style — no filler, no pleasantries, tool-first, result-first, stop when done. Triggers on "concise mode", "short mode", "no filler", "talk short", "direct mode", "blunt mode". Also triggers on "be concise", "stop explaining", "short answers only".
 ---
 
 # Ultra Concise Mode

@@ -1,6 +1,6 @@
 ---
 name: linux-linux-admin-guide
-description: Administration Linux complète — gestion des utilisateurs, permissions, services, logs, cron et packages. Se déclenche avec "Linux", "administration Linux", "chmod", "chown", "systemctl", "apt", "yum".
+description: Administration Linux complète — gestion des utilisateurs, permissions, services, logs, cron et packages. Se déclenche avec "Linux", "administration Linux", "chmod", "chown", "systemctl", "apt", "yum". Also triggers on "Linux administration", "manage users and permissions", "systemd services and cron".
 ---
 
 # Linux Admin Guide

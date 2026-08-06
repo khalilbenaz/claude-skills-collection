@@ -1,6 +1,6 @@
 ---
 name: agent-customer-support-agent
-description: Construction d'agents de support client intelligents avec knowledge base, escalade et personnalisation. Se déclenche avec "agent support", "chatbot support", "customer support agent", "agent service client", "helpdesk agent", "FAQ bot", "support automatique", "ticket agent".
+description: Construction d'agents de support client intelligents avec knowledge base, escalade et personnalisation. Se déclenche avec "agent support", "chatbot support", "customer support agent", "agent service client", "helpdesk agent", "FAQ bot", "support automatique", "ticket agent". Also triggers on "customer service bot".
 ---
 
 # Customer Support Agent

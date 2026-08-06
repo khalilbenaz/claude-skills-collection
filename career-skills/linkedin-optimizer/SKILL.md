@@ -1,6 +1,6 @@
 ---
 name: linkedin-optimizer
-description: Optimise un profil LinkedIn pour plus de visibilité et d'opportunités. À utiliser quand l'utilisateur veut améliorer son profil LinkedIn. Se déclenche aussi avec "profil LinkedIn", "optimiser LinkedIn", "headline LinkedIn", "à propos LinkedIn", "résumé LinkedIn", "trouver un job sur LinkedIn".
+description: Optimise un profil LinkedIn pour plus de visibilité et d'opportunités. À utiliser quand l'utilisateur veut améliorer son profil LinkedIn. Se déclenche aussi avec "profil LinkedIn", "optimiser LinkedIn", "headline LinkedIn", "à propos LinkedIn", "résumé LinkedIn", "trouver un job sur LinkedIn". Also triggers on "optimize my LinkedIn", "LinkedIn headline", "LinkedIn profile review".
 ---
 
 # LinkedIn Optimizer

@@ -1,6 +1,6 @@
 ---
 name: grief-support
-description: Accompagne le deuil ou une perte significative avec écoute structurée, validation émotionnelle et orientation vers du soutien professionnel quand nécessaire. À utiliser quand l'utilisateur mentionne la perte d'un proche, une rupture, un deuil ou un sentiment de perte profonde. Se déclenche aussi avec "j'ai perdu quelqu'un", "décès", "deuil", "il/elle est mort(e)", "je n'arrive pas à faire mon deuil", "la perte de", ou toute mention de deuil ou de perte significative.
+description: Accompagne le deuil ou une perte significative avec écoute structurée, validation émotionnelle et orientation vers du soutien professionnel quand nécessaire. À utiliser quand l'utilisateur mentionne la perte d'un proche, une rupture, un deuil ou un sentiment de perte profonde. Se déclenche aussi avec "j'ai perdu quelqu'un", "décès", "deuil", "il/elle est mort(e)", "je n'arrive pas à faire mon deuil", "la perte de", ou toute mention de deuil ou de perte significative. Also triggers on "grief support", "I lost someone", "coping with loss".
 ---
 
 # Grief Support

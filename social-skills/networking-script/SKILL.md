@@ -1,6 +1,6 @@
 ---
 name: networking-script
-description: Prépare des scripts de networking pour événements, LinkedIn, emails de premier contact ou présentations. Se déclenche aussi avec "networking", "me présenter", "pitch", "premier contact", "événement pro", "elevator pitch", ou toute situation de mise en réseau professionnelle.
+description: Prépare des scripts de networking pour événements, LinkedIn, emails de premier contact ou présentations. Se déclenche aussi avec "networking", "me présenter", "pitch", "premier contact", "événement pro", "elevator pitch", ou toute situation de mise en réseau professionnelle. Also triggers on "networking script", "cold outreach message", "introduce myself at an event".
 ---
 
 # Networking Script

@@ -1,6 +1,6 @@
 ---
 name: dev-load-test-planner
-description: Planifie et exécute des tests de charge et performance. Se déclenche avec "test de charge", "load test", "stress test", "performance test", "k6", "JMeter", "Gatling", "benchmark", "combien d'utilisateurs".
+description: Planifie et exécute des tests de charge et performance. Se déclenche avec "test de charge", "load test", "stress test", "performance test", "k6", "JMeter", "Gatling", "benchmark", "combien d'utilisateurs". Also triggers on "how many users can we handle".
 ---
 
 # Load Test Planner

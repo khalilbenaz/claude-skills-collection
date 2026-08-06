@@ -1,6 +1,6 @@
 ---
 name: agent-sales-agent-builder
-description: Construction d'agents de vente IA pour prospection, qualification et suivi commercial. Se déclenche avec "sales agent", "agent commercial", "agent de vente", "prospection IA", "SDR agent", "lead qualification agent", "outreach agent", "follow-up automatique".
+description: Construction d'agents de vente IA pour prospection, qualification et suivi commercial. Se déclenche avec "sales agent", "agent commercial", "agent de vente", "prospection IA", "SDR agent", "lead qualification agent", "outreach agent", "follow-up automatique". Also triggers on "outbound prospecting agent".
 ---
 
 # Sales Agent Builder

@@ -1,6 +1,6 @@
 ---
 name: cloud-serverless-designer
-description: Conception d'architectures serverless couvrant Functions, event-driven, cold start et patterns avancés. Se déclenche avec "serverless", "functions as a service", "FaaS", "cold start", "event-driven serverless", "Azure Functions", "Lambda"
+description: Conception d'architectures serverless couvrant Functions, event-driven, cold start et patterns avancés. Se déclenche avec "serverless", "functions as a service", "FaaS", "cold start", "event-driven serverless", "Azure Functions", "Lambda. Also triggers on "serverless architecture", "event-driven functions", "cold start optimization".
 ---
 
 # Serverless Designer

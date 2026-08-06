@@ -1,6 +1,6 @@
 ---
 name: trip-planner
-description: Planifie un voyage complet avec itinéraire, activités, logistique et budget. À utiliser quand l'utilisateur veut organiser un voyage. Se déclenche aussi avec "planifier un voyage", "itinéraire", "je pars à", "quoi faire à", "voyage à", ou toute demande de planification de voyage.
+description: Planifie un voyage complet avec itinéraire, activités, logistique et budget. À utiliser quand l'utilisateur veut organiser un voyage. Se déclenche aussi avec "planifier un voyage", "itinéraire", "je pars à", "quoi faire à", "voyage à", ou toute demande de planification de voyage. Also triggers on "plan a trip", "itinerary", "things to do in".
 ---
 
 # Trip Planner

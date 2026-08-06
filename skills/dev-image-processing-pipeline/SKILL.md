@@ -1,6 +1,6 @@
 ---
 name: dev-image-processing-pipeline
-description: Pipeline traitement d'image mobile (Kotlin ML Kit, OpenCV, CameraX). Crop, rotation, enhancement, compression, validation qualité, OCR, KYC. Se déclenche avec "traitement image", "image pipeline", "camera", "ML Kit", "OpenCV".
+description: Pipeline traitement d'image mobile (Kotlin ML Kit, OpenCV, CameraX). Crop, rotation, enhancement, compression, validation qualité, OCR, KYC. Se déclenche avec "traitement image", "image pipeline", "camera", "ML Kit", "OpenCV". Also triggers on "image processing pipeline", "crop and enhance images", "on-device image ML".
 ---
 
 # Image Processing Pipeline (Mobile Kotlin)

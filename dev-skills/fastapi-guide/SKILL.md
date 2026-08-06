@@ -1,6 +1,6 @@
 ---
 name: fastapi-guide
-description: Développement d'APIs performantes avec FastAPI, Pydantic, async/await, OpenAPI et système de dépendances. Se déclenche avec "FastAPI", "Pydantic", "API Python", "async Python API", "uvicorn".
+description: Développement d'APIs performantes avec FastAPI, Pydantic, async/await, OpenAPI et système de dépendances. Se déclenche avec "FastAPI", "Pydantic", "API Python", "async Python API", "uvicorn". Also triggers on "FastAPI app", "Pydantic models".
 ---
 
 # Guide FastAPI

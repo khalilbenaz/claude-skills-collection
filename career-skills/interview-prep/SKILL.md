@@ -1,6 +1,6 @@
 ---
 name: interview-prep
-description: Prépare un entretien d'embauche avec questions probables, réponses structurées et simulation. À utiliser quand l'utilisateur a un entretien à venir. Se déclenche aussi avec "entretien d'embauche", "préparer mon entretien", "questions d'entretien", "comment répondre à", "simulation entretien".
+description: Prépare un entretien d'embauche avec questions probables, réponses structurées et simulation. À utiliser quand l'utilisateur a un entretien à venir. Se déclenche aussi avec "entretien d'embauche", "préparer mon entretien", "questions d'entretien", "comment répondre à", "simulation entretien". Also triggers on "prepare for an interview", "interview questions", "mock interview".
 ---
 
 # Interview Prep

@@ -1,6 +1,6 @@
 ---
 name: cloud-cloud-security-guide
-description: Sécurité cloud incluant IAM, encryption, networking, compliance, secrets management et CSPM. Se déclenche avec "sécurité cloud", "cloud security", "IAM", "encryption at rest", "CSPM", "compliance cloud"
+description: Sécurité cloud incluant IAM, encryption, networking, compliance, secrets management et CSPM. Se déclenche avec "sécurité cloud", "cloud security", "IAM", "encryption at rest", "CSPM", "compliance cloud. Also triggers on "IAM hardening", "secrets management in the cloud".
 ---
 
 # Cloud Security Guide

@@ -1,6 +1,6 @@
 ---
 name: dev-web-performance-optimizer
-description: Optimise les performances web (Core Web Vitals, loading, rendering). Se déclenche avec "performance web", "Core Web Vitals", "LCP", "FID", "CLS", "lighthouse score", "page speed", "site lent", "bundle size", "lazy loading".
+description: Optimise les performances web (Core Web Vitals, loading, rendering). Se déclenche avec "performance web", "Core Web Vitals", "LCP", "FID", "CLS", "lighthouse score", "page speed", "site lent", "bundle size", "lazy loading". Also triggers on "make my site faster", "LCP and CLS issues".
 ---
 
 # Web Performance Optimizer

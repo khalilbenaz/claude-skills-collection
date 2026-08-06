@@ -1,6 +1,6 @@
 ---
 name: social-boundary-setter
-description: Aide à poser des limites claires dans les relations personnelles ou professionnelles. Se déclenche aussi avec "poser des limites", "dire non", "je n'ose pas refuser", "trop sollicité", "envahissant", ou toute difficulté à établir des frontières relationnelles.
+description: Aide à poser des limites claires dans les relations personnelles ou professionnelles. Se déclenche aussi avec "poser des limites", "dire non", "je n'ose pas refuser", "trop sollicité", "envahissant", ou toute difficulté à établir des frontières relationnelles. Also triggers on "set boundaries", "say no politely", "protect my time".
 ---
 
 # Boundary Setter

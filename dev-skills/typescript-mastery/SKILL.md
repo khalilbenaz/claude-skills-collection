@@ -1,6 +1,6 @@
 ---
 name: typescript-mastery
-description: Maîtrise de TypeScript avec types avancés et patterns. Se déclenche avec "TypeScript", "TS", "types", "generics", "interface", "type guard", "utility types", "strict mode", "tsconfig".
+description: Maîtrise de TypeScript avec types avancés et patterns. Se déclenche avec "TypeScript", "TS", "types", "generics", "interface", "type guard", "utility types", "strict mode", "tsconfig". Also triggers on "TypeScript types", "fix this type error".
 ---
 
 # TypeScript Mastery

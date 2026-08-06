@@ -1,6 +1,6 @@
 ---
 name: adr-writer
-description: Rédaction d'Architecture Decision Records (ADR) pour documenter les choix d'architecture avec leur contexte, alternatives et conséquences. À utiliser quand l'utilisateur doit documenter une décision technique, justifier un choix d'architecture ou créer un historique des décisions. Se déclenche aussi avec "ADR", "architecture decision record", "décision d'architecture", "choix technique", "documenter une décision", "pourquoi ce choix".
+description: Rédaction d'Architecture Decision Records (ADR) pour documenter les choix d'architecture avec leur contexte, alternatives et conséquences. À utiliser quand l'utilisateur doit documenter une décision technique, justifier un choix d'architecture ou créer un historique des décisions. Se déclenche aussi avec "ADR", "architecture decision record", "décision d'architecture", "choix technique", "documenter une décision", "pourquoi ce choix". Also triggers on "write an ADR", "document a technical decision".
 ---
 
 # Rédacteur d'ADR (Architecture Decision Records)

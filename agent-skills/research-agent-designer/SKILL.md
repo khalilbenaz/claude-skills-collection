@@ -1,6 +1,6 @@
 ---
 name: research-agent-designer
-description: Design d'agents de recherche autonomes pour collecter, analyser et synthétiser de l'information. Se déclenche avec "research agent", "agent de recherche", "agent web", "web research agent", "deep research", "agent qui cherche", "collecte d'information automatique".
+description: Design d'agents de recherche autonomes pour collecter, analyser et synthétiser de l'information. Se déclenche avec "research agent", "agent de recherche", "agent web", "web research agent", "deep research", "agent qui cherche", "collecte d'information automatique". Also triggers on "deep research agent", "agent that gathers sources".
 ---
 
 # Research Agent Designer

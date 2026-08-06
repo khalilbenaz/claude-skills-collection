@@ -1,6 +1,6 @@
 ---
 name: marketing-email-marketing-designer
-description: Conception de campagnes email marketing — séquences automatisées, segmentation, A/B testing et délivrabilité. Se déclenche avec "email marketing", "newsletter", "mailing", "séquence email", "Mailchimp", "SendGrid".
+description: Conception de campagnes email marketing — séquences automatisées, segmentation, A/B testing et délivrabilité. Se déclenche avec "email marketing", "newsletter", "mailing", "séquence email", "Mailchimp", "SendGrid". Also triggers on "email campaign", "drip sequence", "improve email deliverability".
 ---
 
 # Email Marketing Designer

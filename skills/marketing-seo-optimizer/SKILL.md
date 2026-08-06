@@ -1,6 +1,6 @@
 ---
 name: marketing-seo-optimizer
-description: Optimisation SEO on-page et technique — meta tags, structured data, Core Web Vitals, sitemap et stratégie de mots-clés. Se déclenche avec "SEO", "référencement", "Google Search", "meta tags", "sitemap", "mots-clés".
+description: Optimisation SEO on-page et technique — meta tags, structured data, Core Web Vitals, sitemap et stratégie de mots-clés. Se déclenche avec "SEO", "référencement", "Google Search", "meta tags", "sitemap", "mots-clés". Also triggers on "SEO audit", "improve my ranking", "meta tags and structured data".
 ---
 
 # SEO Optimizer

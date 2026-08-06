@@ -1,6 +1,6 @@
 ---
 name: tax-prep-checklist
-description: Aide à préparer sa déclaration d'impôts avec une checklist de documents et étapes, adaptée au profil fiscal (salarié, freelance, auto-entrepreneur, SCI, mixte). À utiliser quand l'utilisateur veut préparer ses impôts ou organiser ses documents fiscaux. Se déclenche aussi avec "impôts", "déclaration fiscale", "documents pour les impôts", "préparer mes impôts", "saison fiscale".
+description: Aide à préparer sa déclaration d'impôts avec une checklist de documents et étapes, adaptée au profil fiscal (salarié, freelance, auto-entrepreneur, SCI, mixte). À utiliser quand l'utilisateur veut préparer ses impôts ou organiser ses documents fiscaux. Se déclenche aussi avec "impôts", "déclaration fiscale", "documents pour les impôts", "préparer mes impôts", "saison fiscale". Also triggers on "tax return checklist", "prepare my taxes", "tax documents".
 ---
 
 # Tax Prep Checklist

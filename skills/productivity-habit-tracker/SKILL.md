@@ -1,6 +1,6 @@
 ---
 name: productivity-habit-tracker
-description: Aide à mettre en place et suivre des habitudes avec un système structuré, des outils de suivi copiables et des critères d'ajustement. À utiliser quand l'utilisateur veut créer, suivre ou améliorer des habitudes. Se déclenche aussi avec "nouvelle habitude", "routine", "je veux commencer à", "habit tracker", "suivi d'habitudes", "discipline".
+description: Aide à mettre en place et suivre des habitudes avec un système structuré, des outils de suivi copiables et des critères d'ajustement. À utiliser quand l'utilisateur veut créer, suivre ou améliorer des habitudes. Se déclenche aussi avec "nouvelle habitude", "routine", "je veux commencer à", "habit tracker", "suivi d'habitudes", "discipline". Also triggers on "build a habit", "habit tracking", "stick to a routine".
 ---
 
 # Habit Tracker

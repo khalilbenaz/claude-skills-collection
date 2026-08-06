@@ -1,6 +1,6 @@
 ---
 name: selenium-guide
-description: Automatisation de tests avec Selenium WebDriver, couvrant les locators, les waits, le Page Object Model et Selenium Grid. Se déclenche avec "Selenium", "WebDriver", "test automatisé", "Page Object Model", "Selenium Grid"
+description: Automatisation de tests avec Selenium WebDriver, couvrant les locators, les waits, le Page Object Model et Selenium Grid. Se déclenche avec "Selenium", "WebDriver", "test automatisé", "Page Object Model", "Selenium Grid. Also triggers on "flaky UI tests".
 ---
 
 # Selenium WebDriver Guide

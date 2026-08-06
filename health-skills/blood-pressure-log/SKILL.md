@@ -1,6 +1,6 @@
 ---
 name: blood-pressure-log
-description: Suit la tension artérielle et/ou la glycémie dans le temps avec tableaux et tendances. À utiliser quand l'utilisateur note des mesures de tension ou de glycémie et veut les organiser. Se déclenche aussi avec "ma tension", "ma glycémie", "tensio", "12/8", "j'ai pris ma tension", "taux de sucre", ou toute mention de mesures de constantes vitales régulières.
+description: Suit la tension artérielle et/ou la glycémie dans le temps avec tableaux et tendances. À utiliser quand l'utilisateur note des mesures de tension ou de glycémie et veut les organiser. Se déclenche aussi avec "ma tension", "ma glycémie", "tensio", "12/8", "j'ai pris ma tension", "taux de sucre", ou toute mention de mesures de constantes vitales régulières. Also triggers on "blood pressure log", "track blood sugar", "BP readings over time".
 ---
 
 # Blood Pressure & Vitals Log

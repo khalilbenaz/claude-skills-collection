@@ -1,6 +1,6 @@
 ---
 name: red-flag-checker
-description: Repère les signes d'alerte nécessitant une évaluation médicale rapide. À utiliser quand l'utilisateur décrit des symptômes inquiétants, une aggravation brutale ou demande si une situation peut être urgente. Se déclenche aussi avec "c'est grave ?", "je dois aller aux urgences ?", "ça empire", "j'ai très mal", "je m'inquiète", ou toute description de détérioration rapide.
+description: Repère les signes d'alerte nécessitant une évaluation médicale rapide. À utiliser quand l'utilisateur décrit des symptômes inquiétants, une aggravation brutale ou demande si une situation peut être urgente. Se déclenche aussi avec "c'est grave ?", "je dois aller aux urgences ?", "ça empire", "j'ai très mal", "je m'inquiète", ou toute description de détérioration rapide. Also triggers on "is this serious", "warning signs", "should I see a doctor now".
 ---
 
 # Red Flag Checker

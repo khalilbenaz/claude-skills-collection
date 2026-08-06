@@ -1,6 +1,6 @@
 ---
 name: study-planner
-description: Organise un planning de révision ou d'étude avec répétition espacée, priorisation et checkpoints de rétention. À utiliser quand l'utilisateur prépare un examen ou veut organiser ses études. Se déclenche aussi avec "planning de révision", "organiser mes études", "je passe un examen", "comment réviser", "programme d'étude".
+description: Organise un planning de révision ou d'étude avec répétition espacée, priorisation et checkpoints de rétention. À utiliser quand l'utilisateur prépare un examen ou veut organiser ses études. Se déclenche aussi avec "planning de révision", "organiser mes études", "je passe un examen", "comment réviser", "programme d'étude". Also triggers on "study plan", "revision schedule", "spaced repetition planning".
 ---
 
 # Study Planner

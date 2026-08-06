@@ -1,6 +1,6 @@
 ---
 name: dev-rest-api-designer
-description: Conception d'APIs REST conformes aux standards et bonnes pratiques. Se déclenche avec "API REST", "concevoir une API", "endpoints", "REST design", "resource naming", "HTTP methods", "API versioning", "pagination".
+description: Conception d'APIs REST conformes aux standards et bonnes pratiques. Se déclenche avec "API REST", "concevoir une API", "endpoints", "REST design", "resource naming", "HTTP methods", "API versioning", "pagination". Also triggers on "design a REST API", "endpoint naming", "HTTP status codes", "pagination design".
 ---
 
 # REST API Designer

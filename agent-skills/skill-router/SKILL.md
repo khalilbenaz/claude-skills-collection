@@ -1,6 +1,6 @@
 ---
 name: skill-router
-description: Agent orchestrateur central qui analyse chaque demande utilisateur et ACTIVE automatiquement le skill ou l'agent le plus adapte. Se declenche AUTOMATIQUEMENT sur toute demande ambigue, multi-domaine ou quand l'utilisateur ne sait pas quel skill utiliser. Se declenche aussi avec "quel skill utiliser", "aide-moi a choisir", "qui peut m'aider", "route", "dispatch", "orchestrateur", "je ne sais pas par ou commencer".
+description: Agent orchestrateur central qui analyse chaque demande utilisateur et ACTIVE automatiquement le skill ou l'agent le plus adapte. Se declenche AUTOMATIQUEMENT sur toute demande ambigue, multi-domaine ou quand l'utilisateur ne sait pas quel skill utiliser. Se declenche aussi avec "quel skill utiliser", "aide-moi a choisir", "qui peut m'aider", "route", "dispatch", "orchestrateur", "je ne sais pas par ou commencer". Also triggers on "which skill should I use", "route my request", "pick the right skill".
 ---
 
 # Skill Router — Agent Orchestrateur Actif

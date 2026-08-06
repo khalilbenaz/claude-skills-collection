@@ -1,6 +1,6 @@
 ---
 name: dns-expert
-description: Configuration et dépannage DNS incluant zones, records, DNSSEC, résolution et intégration CDN. Se déclenche avec "DNS", "zone DNS", "enregistrement DNS", "CNAME", "A record", "DNSSEC", "résolution DNS"
+description: Configuration et dépannage DNS incluant zones, records, DNSSEC, résolution et intégration CDN. Se déclenche avec "DNS", "zone DNS", "enregistrement DNS", "CNAME", "A record", "DNSSEC", "résolution DNS. Also triggers on "DNS records", "DNS not resolving", "DNSSEC setup".
 ---
 
 # DNS Expert

@@ -1,6 +1,6 @@
 ---
 name: decision-matrix
-description: Aide à prendre une décision complexe en structurant les options et critères. À utiliser quand l'utilisateur hésite entre plusieurs choix. Se déclenche aussi avec "je ne sais pas quoi choisir", "avantages inconvénients", "comparer les options", "matrice de décision", "quel choix faire".
+description: Aide à prendre une décision complexe en structurant les options et critères. À utiliser quand l'utilisateur hésite entre plusieurs choix. Se déclenche aussi avec "je ne sais pas quoi choisir", "avantages inconvénients", "comparer les options", "matrice de décision", "quel choix faire". Also triggers on "help me decide", "weighted decision matrix", "compare options".
 ---
 
 # Decision Matrix

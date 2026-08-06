@@ -1,6 +1,6 @@
 ---
 name: medical-research-safe
-description: Résume prudemment des articles, recommandations ou contenus médicaux. À utiliser quand l'utilisateur demande une synthèse scientifique, une revue rapide, ou veut comprendre des informations de santé trouvées en ligne. Se déclenche aussi avec "j'ai lu que…", "est-ce vrai que…", "résume cet article", "cette étude dit que…", ou toute demande d'explication de contenu médical/scientifique.
+description: Résume prudemment des articles, recommandations ou contenus médicaux. À utiliser quand l'utilisateur demande une synthèse scientifique, une revue rapide, ou veut comprendre des informations de santé trouvées en ligne. Se déclenche aussi avec "j'ai lu que…", "est-ce vrai que…", "résume cet article", "cette étude dit que…", ou toute demande d'explication de contenu médical/scientifique. Also triggers on "what does this study say", "summarize medical research", "is this claim supported".
 ---
 
 # Medical Research Safe

@@ -1,6 +1,6 @@
 ---
 name: a2a-protocol-guide
-description: Guide du protocole Agent-to-Agent (A2A) de Google pour l'interopérabilité entre agents IA — découverte, communication et collaboration inter-agents, avec exemples de code, critères de décision et pièges à éviter. Se déclenche avec "A2A", "agent-to-agent", "protocole A2A", "Google A2A", "interopérabilité agents".
+description: Guide du protocole Agent-to-Agent (A2A) de Google pour l'interopérabilité entre agents IA — découverte, communication et collaboration inter-agents, avec exemples de code, critères de décision et pièges à éviter. Se déclenche avec "A2A", "agent-to-agent", "protocole A2A", "Google A2A", "interopérabilité agents". Also triggers on "agent-to-agent protocol", "agent interoperability", "connect two agents".
 ---
 
 # Guide du Protocole A2A

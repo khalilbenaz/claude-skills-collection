@@ -1,6 +1,6 @@
 ---
 name: sleep-journal
-description: Suit la qualité du sommeil, les habitudes nocturnes et les facteurs perturbateurs pour identifier des schémas et proposer des pistes d'hygiène du sommeil. À utiliser quand l'utilisateur se plaint d'insomnie, de fatigue au réveil, de réveils nocturnes ou de troubles du sommeil. Se déclenche aussi avec "je dors mal", "insomnie", "je me réveille la nuit", "je suis fatigué le matin", "sommeil perturbé", "cauchemars", ou toute mention de difficulté liée au sommeil.
+description: Suit la qualité du sommeil, les habitudes nocturnes et les facteurs perturbateurs pour identifier des schémas et proposer des pistes d'hygiène du sommeil. À utiliser quand l'utilisateur se plaint d'insomnie, de fatigue au réveil, de réveils nocturnes ou de troubles du sommeil. Se déclenche aussi avec "je dors mal", "insomnie", "je me réveille la nuit", "je suis fatigué le matin", "sommeil perturbé", "cauchemars", ou toute mention de difficulté liée au sommeil. Also triggers on "sleep diary", "track my sleep", "why do I sleep badly".
 ---
 
 # Sleep Journal

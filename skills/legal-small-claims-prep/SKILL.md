@@ -1,6 +1,6 @@
 ---
 name: legal-small-claims-prep
-description: Aide à préparer un petit litige (consommation, voisinage, facture contestée) avec dossier structuré. Se déclenche aussi avec "petit litige", "tribunal", "facture contestée", "arnaque", "remboursement refusé", "voisinage", ou toute préparation de recours pour un litige courant.
+description: Aide à préparer un petit litige (consommation, voisinage, facture contestée) avec dossier structuré. Se déclenche aussi avec "petit litige", "tribunal", "facture contestée", "arnaque", "remboursement refusé", "voisinage", ou toute préparation de recours pour un litige courant. Also triggers on "small claims case", "dispute a bill", "prepare a legal file".
 ---
 
 # Small Claims Prep

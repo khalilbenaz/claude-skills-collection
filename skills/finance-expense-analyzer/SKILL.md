@@ -1,6 +1,6 @@
 ---
 name: finance-expense-analyzer
-description: Analyse un relevé de dépenses et identifie les tendances, fuites d'argent et pistes d'économie. À utiliser quand l'utilisateur colle un relevé bancaire ou liste ses dépenses. Se déclenche aussi avec "analyse mes dépenses", "relevé bancaire", "où part mon argent", "trop de dépenses", "fuites d'argent".
+description: Analyse un relevé de dépenses et identifie les tendances, fuites d'argent et pistes d'économie. À utiliser quand l'utilisateur colle un relevé bancaire ou liste ses dépenses. Se déclenche aussi avec "analyse mes dépenses", "relevé bancaire", "où part mon argent", "trop de dépenses", "fuites d'argent". Also triggers on "analyze my expenses", "where is my money going", "spending trends".
 ---
 
 # Expense Analyzer

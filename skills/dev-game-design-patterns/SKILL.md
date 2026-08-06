@@ -1,6 +1,6 @@
 ---
 name: dev-game-design-patterns
-description: Patterns de conception spécifiques au développement de jeux vidéo. Se déclenche avec "game pattern", "game architecture", "ECS", "game loop", "state machine game", "component pattern", "game programming patterns".
+description: Patterns de conception spécifiques au développement de jeux vidéo. Se déclenche avec "game pattern", "game architecture", "ECS", "game loop", "state machine game", "component pattern", "game programming patterns". Also triggers on "game design patterns", "entity component system".
 ---
 
 # Game Design Patterns

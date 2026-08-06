@@ -1,6 +1,6 @@
 ---
 name: dev-ui-design-system-builder
-description: Création de design systems cohérents avec tokens, composants et guidelines. Se déclenche avec "design system", "composants UI", "tokens", "style guide", "atomic design", "Figma components", "UI library", "thème", "design tokens".
+description: Création de design systems cohérents avec tokens, composants et guidelines. Se déclenche avec "design system", "composants UI", "tokens", "style guide", "atomic design", "Figma components", "UI library", "thème", "design tokens". Also triggers on "component library".
 ---
 
 # UI Design System Builder

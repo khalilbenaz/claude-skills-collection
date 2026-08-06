@@ -1,6 +1,6 @@
 ---
 name: retro-facilitator
-description: Facilite les rétrospectives agile avec différents formats, génère des actions concrètes et assure le suivi des améliorations. Se déclenche avec "rétrospective", "retro", "sprint review", "amélioration continue", "what went well".
+description: Facilite les rétrospectives agile avec différents formats, génère des actions concrètes et assure le suivi des améliorations. Se déclenche avec "rétrospective", "retro", "sprint review", "amélioration continue", "what went well". Also triggers on "run a retrospective", "sprint retro format", "retro action items".
 ---
 
 # Retro Facilitator

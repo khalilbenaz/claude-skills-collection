@@ -1,6 +1,6 @@
 ---
 name: psy-addiction-awareness-log
-description: Aide à observer et suivre un comportement addictif (substances, écrans, jeux, alimentation) sans juger ni diagnostiquer. À utiliser quand l'utilisateur s'interroge sur sa consommation ou un comportement répétitif qu'il a du mal à contrôler. Se déclenche aussi avec "je fume trop", "j'arrête pas de scroller", "addiction", "je bois trop", "jeux d'argent", "je n'arrive pas à m'arrêter", ou toute mention de comportement compulsif ou de dépendance suspectée.
+description: Aide à observer et suivre un comportement addictif (substances, écrans, jeux, alimentation) sans juger ni diagnostiquer. À utiliser quand l'utilisateur s'interroge sur sa consommation ou un comportement répétitif qu'il a du mal à contrôler. Se déclenche aussi avec "je fume trop", "j'arrête pas de scroller", "addiction", "je bois trop", "jeux d'argent", "je n'arrive pas à m'arrêter", ou toute mention de comportement compulsif ou de dépendance suspectée. Also triggers on "addiction log", "track a compulsive habit", "screen or substance use log".
 ---
 
 # Addiction Awareness Log

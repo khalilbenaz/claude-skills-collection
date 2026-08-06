@@ -1,6 +1,6 @@
 ---
 name: state-synchronizer
-description: Synchronisation d'état entre agents et sous-agents travaillant en parallèle sur un état partagé. Se déclenche avec "synchronisation agent", "état partagé", "shared state", "agent sync", "concurrent agents", "state management multi-agent", "parallel agent state".
+description: Synchronisation d'état entre agents et sous-agents travaillant en parallèle sur un état partagé. Se déclenche avec "synchronisation agent", "état partagé", "shared state", "agent sync", "concurrent agents", "state management multi-agent", "parallel agent state". Also triggers on "shared state between agents", "sync agent state", "concurrent agent state".
 ---
 
 # Agent State Synchronizer

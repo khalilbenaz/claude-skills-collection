@@ -1,6 +1,6 @@
 ---
 name: ux-research-guide
-description: Guide de recherche UX : interviews, tests utilisateurs, personas et analyse. Se déclenche avec "UX research", "recherche utilisateur", "interview utilisateur", "test utilisateur", "persona", "user testing", "usability", "parcours utilisateur".
+description: Guide de recherche UX : interviews, tests utilisateurs, personas et analyse. Se déclenche avec "UX research", "recherche utilisateur", "interview utilisateur", "test utilisateur", "persona", "user testing", "usability", "parcours utilisateur". Also triggers on "user interviews", "usability testing".
 ---
 
 # UX Research Guide

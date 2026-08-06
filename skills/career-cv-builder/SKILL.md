@@ -1,6 +1,6 @@
 ---
 name: career-cv-builder
-description: Aide à créer ou améliorer un CV structuré, percutant et adapté au poste visé. À utiliser quand l'utilisateur veut rédiger, refaire ou optimiser son CV. Se déclenche aussi avec "mon CV", "refaire mon CV", "curriculum vitae", "résumé professionnel", "comment présenter mon parcours".
+description: Aide à créer ou améliorer un CV structuré, percutant et adapté au poste visé. À utiliser quand l'utilisateur veut rédiger, refaire ou optimiser son CV. Se déclenche aussi avec "mon CV", "refaire mon CV", "curriculum vitae", "résumé professionnel", "comment présenter mon parcours". Also triggers on "write my resume", "improve my CV", "tailor my resume to a job".
 ---
 
 # CV Builder

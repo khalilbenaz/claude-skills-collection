@@ -1,6 +1,6 @@
 ---
 name: client-contract-builder
-description: Aide à rédiger des contrats de prestation freelance avec les clauses essentielles, CGV et protection de la propriété intellectuelle. Se déclenche avec "contrat freelance", "CGV freelance", "clause", "propriété intellectuelle", "contrat prestation".
+description: Aide à rédiger des contrats de prestation freelance avec les clauses essentielles, CGV et protection de la propriété intellectuelle. Se déclenche avec "contrat freelance", "CGV freelance", "clause", "propriété intellectuelle", "contrat prestation". Also triggers on "freelance contract", "client agreement", "terms and conditions".
 ---
 
 # Client Contract Builder

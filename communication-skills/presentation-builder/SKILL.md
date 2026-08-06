@@ -1,6 +1,6 @@
 ---
 name: presentation-builder
-description: Création de présentations percutantes avec structure, storytelling, visuels et delivery. Se déclenche avec "présentation", "slides", "PowerPoint", "Keynote", "présenter", "pitch deck".
+description: Création de présentations percutantes avec structure, storytelling, visuels et delivery. Se déclenche avec "présentation", "slides", "PowerPoint", "Keynote", "présenter", "pitch deck". Also triggers on "build a presentation", "slide deck structure", "present my project".
 ---
 
 # Presentation Builder

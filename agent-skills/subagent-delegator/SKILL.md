@@ -1,6 +1,6 @@
 ---
 name: subagent-delegator
-description: Conception de systèmes de délégation parent-agent → sous-agents avec dispatch intelligent, suivi des tâches et agrégation des résultats. Se déclenche avec "sous-agent", "subagent", "délégation agent", "agent parent", "dispatch agent", "agent qui délègue", "spawner sous-agent", "delegate task".
+description: Conception de systèmes de délégation parent-agent → sous-agents avec dispatch intelligent, suivi des tâches et agrégation des résultats. Se déclenche avec "sous-agent", "subagent", "délégation agent", "agent parent", "dispatch agent", "agent qui délègue", "spawner sous-agent", "delegate task". Also triggers on "delegate to subagents", "task dispatch to agents", "parent agent delegation".
 ---
 
 # Subagent Delegator

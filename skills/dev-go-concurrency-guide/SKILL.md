@@ -1,6 +1,6 @@
 ---
 name: dev-go-concurrency-guide
-description: Développement Go avec focus sur la concurrence et les patterns idiomatiques. Se déclenche avec "Go", "Golang", "goroutine", "channel", "sync", "concurrency", "Go modules", "Go patterns", "interface Go".
+description: Développement Go avec focus sur la concurrence et les patterns idiomatiques. Se déclenche avec "Go", "Golang", "goroutine", "channel", "sync", "concurrency", "Go modules", "Go patterns", "interface Go". Also triggers on "Go goroutines", "channels in Go", "Go concurrency pattern".
 ---
 
 # Go Concurrency Guide

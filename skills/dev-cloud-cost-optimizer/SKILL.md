@@ -1,6 +1,6 @@
 ---
 name: dev-cloud-cost-optimizer
-description: Optimise les coûts cloud (Azure, AWS, GCP) avec workflow FinOps structuré — audit, right-sizing, réservations, Spot, stockage, scheduling, monitoring. Se déclenche avec "coût cloud", "facture Azure", "AWS bill", "optimiser les coûts", "réduire la facture", "reserved instances", "FinOps", "cloud spending".
+description: Optimise les coûts cloud (Azure, AWS, GCP) avec workflow FinOps structuré — audit, right-sizing, réservations, Spot, stockage, scheduling, monitoring. Se déclenche avec "coût cloud", "facture Azure", "AWS bill", "optimiser les coûts", "réduire la facture", "reserved instances", "FinOps", "cloud spending". Also triggers on "reduce cloud bill", "rightsizing instances".
 ---
 
 # Cloud Cost Optimizer

@@ -1,6 +1,6 @@
 ---
 name: ios-swift-advisor
-description: Développement iOS natif avec Swift, SwiftUI et UIKit. Se déclenche avec "iOS", "Swift", "SwiftUI", "UIKit", "Xcode", "iPhone app", "Apple", "Core Data", "Combine", "App Store".
+description: Développement iOS natif avec Swift, SwiftUI et UIKit. Se déclenche avec "iOS", "Swift", "SwiftUI", "UIKit", "Xcode", "iPhone app", "Apple", "Core Data", "Combine", "App Store". Also triggers on "iOS with Swift", "SwiftUI view", "UIKit navigation".
 ---
 
 # iOS Swift Advisor

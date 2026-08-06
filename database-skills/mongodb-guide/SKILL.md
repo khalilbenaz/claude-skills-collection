@@ -1,6 +1,6 @@
 ---
 name: mongodb-guide
-description: Modélisation et requêtes MongoDB. Se déclenche avec "MongoDB", "Mongo", "NoSQL", "aggregation pipeline", "sharding", "replica set"
+description: Modélisation et requêtes MongoDB. Se déclenche avec "MongoDB", "Mongo", "NoSQL", "aggregation pipeline", "sharding", "replica set. Also triggers on "MongoDB schema", "document model".
 ---
 
 # MongoDB Guide

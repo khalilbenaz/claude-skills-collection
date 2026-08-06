@@ -1,6 +1,6 @@
 ---
 name: devops-helm-chart-builder
-description: Conception de charts Helm pour Kubernetes — templates, values, dépendances et stratégies de déploiement. À utiliser quand l'utilisateur crée ou modifie des charts Helm, configure des déploiements K8s ou gère des releases. Se déclenche aussi avec "helm", "chart helm", "helm template", "values.yaml", "helm install", "helm upgrade", "kubernetes helm".
+description: Conception de charts Helm pour Kubernetes — templates, values, dépendances et stratégies de déploiement. À utiliser quand l'utilisateur crée ou modifie des charts Helm, configure des déploiements K8s ou gère des releases. Se déclenche aussi avec "helm", "chart helm", "helm template", "values.yaml", "helm install", "helm upgrade", "kubernetes helm". Also triggers on "Helm chart", "Helm values", "package a Kubernetes app".
 ---
 
 # Constructeur de Charts Helm

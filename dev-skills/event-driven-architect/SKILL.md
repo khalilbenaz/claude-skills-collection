@@ -1,6 +1,6 @@
 ---
 name: event-driven-architect
-description: Conception d'architectures événementielles avec messaging et event sourcing. Se déclenche avec "event driven", "événementiel", "RabbitMQ", "Kafka", "event sourcing", "CQRS", "message broker", "pub/sub", "async messaging".
+description: Conception d'architectures événementielles avec messaging et event sourcing. Se déclenche avec "event driven", "événementiel", "RabbitMQ", "Kafka", "event sourcing", "CQRS", "message broker", "pub/sub", "async messaging". Also triggers on "event-driven architecture", "pub/sub design".
 ---
 
 # Event-Driven Architect

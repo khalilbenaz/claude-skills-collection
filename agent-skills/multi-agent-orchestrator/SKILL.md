@@ -1,6 +1,6 @@
 ---
 name: multi-agent-orchestrator
-description: Conception de systèmes multi-agents avec patterns d'orchestration (supervisor, swarm, hierarchy, voting). Coordination entre agents spécialisés, routing sémantique, gestion d'état distribué, error handling. Se déclenche avec "multi-agent", "orchestration", "supervisor agent", "swarm", "agent coordination", "agent hierarchy", "agents qui collaborent", "répartir entre agents".
+description: Conception de systèmes multi-agents avec patterns d'orchestration (supervisor, swarm, hierarchy, voting). Coordination entre agents spécialisés, routing sémantique, gestion d'état distribué, error handling. Se déclenche avec "multi-agent", "orchestration", "supervisor agent", "swarm", "agent coordination", "agent hierarchy", "agents qui collaborent", "répartir entre agents". Also triggers on "multi-agent system", "orchestrate agents", "supervisor pattern".
 ---
 
 # Multi-Agent Orchestrator

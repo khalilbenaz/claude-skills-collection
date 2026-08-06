@@ -1,6 +1,6 @@
 ---
 name: semantic-kernel-guide
-description: Développement d'agents IA avec Microsoft Semantic Kernel en .NET/C# et Python. Plugins natifs, plugins prompts, planners, filters, AgentGroupChat et intégration enterprise Azure. Se déclenche avec "Semantic Kernel", "SK", "Microsoft Semantic Kernel", "kernel plugin", "planner", "agent .NET", "C# agent", "enterprise AI", "Azure OpenAI agent", "kernel function".
+description: Développement d'agents IA avec Microsoft Semantic Kernel en .NET/C# et Python. Plugins natifs, plugins prompts, planners, filters, AgentGroupChat et intégration enterprise Azure. Se déclenche avec "Semantic Kernel", "SK", "Microsoft Semantic Kernel", "kernel plugin", "planner", "agent .NET", "C# agent", "enterprise AI", "Azure OpenAI agent", "kernel function". Also triggers on "SK plugins", "agent in .NET with Semantic Kernel".
 ---
 
 # Semantic Kernel Guide — Agents IA Enterprise Microsoft

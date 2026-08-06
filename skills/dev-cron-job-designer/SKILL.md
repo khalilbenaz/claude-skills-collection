@@ -1,6 +1,6 @@
 ---
 name: dev-cron-job-designer
-description: Conception de tâches planifiées — cron expressions, scheduling patterns, monitoring et idempotence. Se déclenche avec "cron", "tâche planifiée", "scheduled task", "cron expression", "job scheduler", "crontab".
+description: Conception de tâches planifiées — cron expressions, scheduling patterns, monitoring et idempotence. Se déclenche avec "cron", "tâche planifiée", "scheduled task", "cron expression", "job scheduler", "crontab". Also triggers on "schedule a job", "recurring task design".
 ---
 
 # Cron Job Designer

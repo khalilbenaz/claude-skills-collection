@@ -1,6 +1,6 @@
 ---
 name: growth-hacking-strategist
-description: Stratégies de growth hacking — acquisition, activation, rétention, referral et revenue selon le framework AARRR. Se déclenche avec "growth hacking", "AARRR", "acquisition", "rétention", "viral loop", "growth".
+description: Stratégies de growth hacking — acquisition, activation, rétention, referral et revenue selon le framework AARRR. Se déclenche avec "growth hacking", "AARRR", "acquisition", "rétention", "viral loop", "growth". Also triggers on "growth strategy", "AARRR funnel", "acquisition and retention".
 ---
 
 # Growth Hacking Strategist

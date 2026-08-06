@@ -1,6 +1,6 @@
 ---
 name: crisis-escalation
-description: Détecte les signes de crise psychique et oriente vers une aide humaine immédiate. À utiliser quand l'utilisateur parle de suicide, automutilation, perte de contrôle, hallucinations, danger immédiat ou incapacité à rester en sécurité. Se déclenche aussi avec "je veux mourir", "je me fais du mal", "je ne vois pas d'issue", "j'ai des pensées noires", "je perds le contrôle", ou toute mention de danger pour soi-même.
+description: Détecte les signes de crise psychique et oriente vers une aide humaine immédiate. À utiliser quand l'utilisateur parle de suicide, automutilation, perte de contrôle, hallucinations, danger immédiat ou incapacité à rester en sécurité. Se déclenche aussi avec "je veux mourir", "je me fais du mal", "je ne vois pas d'issue", "j'ai des pensées noires", "je perds le contrôle", ou toute mention de danger pour soi-même. Also triggers on "mental health crisis", "I need help now", "suicidal thoughts support".
 ---
 
 # Crisis Escalation

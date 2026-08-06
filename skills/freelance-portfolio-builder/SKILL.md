@@ -1,6 +1,6 @@
 ---
 name: freelance-portfolio-builder
-description: Aide à construire un portfolio professionnel impactant avec une structure efficace, du storytelling et une optimisation SEO. Se déclenche avec "portfolio", "site personnel", "montrer mes projets", "portfolio développeur", "personal branding".
+description: Aide à construire un portfolio professionnel impactant avec une structure efficace, du storytelling et une optimisation SEO. Se déclenche avec "portfolio", "site personnel", "montrer mes projets", "portfolio développeur", "personal branding". Also triggers on "build a portfolio", "showcase my work", "case study for portfolio".
 ---
 
 # Portfolio Builder

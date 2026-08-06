@@ -1,6 +1,6 @@
 ---
 name: data-sql-advanced-analytics
-description: Requêtes SQL avancées pour l'analytique — window functions, CTEs récursives, pivots et optimisation de requêtes complexes. À utiliser quand l'utilisateur écrit des requêtes analytiques, utilise des fonctions de fenêtrage ou optimise des requêtes SQL lourdes. Se déclenche aussi avec "window function", "CTE récursive", "requête analytique", "PARTITION BY", "ROW_NUMBER", "RANK", "LAG", "LEAD", "pivot SQL".
+description: Requêtes SQL avancées pour l'analytique — window functions, CTEs récursives, pivots et optimisation de requêtes complexes. À utiliser quand l'utilisateur écrit des requêtes analytiques, utilise des fonctions de fenêtrage ou optimise des requêtes SQL lourdes. Se déclenche aussi avec "window function", "CTE récursive", "requête analytique", "PARTITION BY", "ROW_NUMBER", "RANK", "LAG", "LEAD", "pivot SQL". Also triggers on "recursive CTE", "advanced SQL query".
 ---
 
 # SQL Avancé pour l'Analytique

@@ -139,7 +139,6 @@ dev-face-matching-kyc skills/dev-face-matching-kyc dev
 dev-fastapi-guide skills/dev-fastapi-guide dev
 dev-feature-engineering-guide skills/dev-feature-engineering-guide dev
 dev-feature-flag-system skills/dev-feature-flag-system dev
-dev-feature-flags-manager skills/dev-feature-flags-manager dev
 dev-flutter-helper skills/dev-flutter-helper dev
 dev-game-design-patterns skills/dev-game-design-patterns dev
 dev-git-workflow-helper skills/dev-git-workflow-helper dev

@@ -1,6 +1,6 @@
 ---
 name: testing-chaos-engineering-guide
-description: Principes et outils de chaos engineering pour tester la résilience des systèmes distribués, incluant fault injection, game days, blast radius, et intégration CI/CD. Se déclenche avec "chaos engineering", "Chaos Monkey", "fault injection", "résilience", "Litmus", "game day"
+description: Principes et outils de chaos engineering pour tester la résilience des systèmes distribués, incluant fault injection, game days, blast radius, et intégration CI/CD. Se déclenche avec "chaos engineering", "Chaos Monkey", "fault injection", "résilience", "Litmus", "game day. Also triggers on "test system resilience".
 ---
 
 # Chaos Engineering Guide

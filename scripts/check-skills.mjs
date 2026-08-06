@@ -16,7 +16,7 @@
  *   - compteur codé en dur (README, index.html, package.json, plugin.json) désynchronisé.
  *
  * AVERTISSEMENTS (non bloquants) :
- *   - description courte (< 80 c.) ou sans terme déclencheur cité ;
+ *   - description courte (< 80 c.), sans terme déclencheur cité, ou sans déclencheur anglophone ;
  *   - corps très court (< 40 lignes) ;
  *   - CRLF ou espaces en fin de ligne.
  *
@@ -34,6 +34,12 @@ const SHORT_DESC = 80;
 const MAX_BODY_LINES = 500;
 const SHORT_BODY_LINES = 40;
 const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+// Un déclencheur est considéré « anglophone » s'il ne contient ni accent ni mot
+// grammatical français : la collection est en français, mais les prompts arrivent
+// souvent en anglais — chaque skill doit être atteignable dans les deux langues.
+const FR_WORDS = /\b(?:de|des|du|le|la|les|un|une|mon|ma|mes|pour|avec|dans|sur|par|au|aux|est|et|ou|que|qui|quoi|quel|quelle|comment|pourquoi|je|j'ai|ai|c'est|ça|cette|ce|mes|nos|votre|vos|faire|fait|dois|veux)\b/i;
+const isEnglishish = (t) => !/[àâäçéèêëîïôöùûüœæ]/i.test(t) && !FR_WORDS.test(t);
 
 const errors = [];
 const warnings = [];
@@ -86,6 +92,8 @@ for (const s of skills) {
     }
     if (!s.triggers.length) {
       warnings.push(`${where}: aucun terme déclencheur cité entre guillemets dans la description`);
+    } else if (!s.triggers.some(isEnglishish)) {
+      warnings.push(`${where}: aucun déclencheur en anglais — un prompt en anglais ne matchera pas (cf. "Also triggers on …")`);
     }
     const prev = byDescription.get(desc);
     if (prev) errors.push(`Description identique entre ${prev} et ${where}`);

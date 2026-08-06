@@ -1,6 +1,6 @@
 ---
 name: agent-supervisor-builder
-description: Construction d'agents superviseurs qui contrôlent, monitent et corrigent des sous-agents en temps réel. Se déclenche avec "supervisor agent", "agent superviseur", "contrôler sous-agents", "manager agent", "agent oversight", "superviser agents", "agent controller".
+description: Construction d'agents superviseurs qui contrôlent, monitent et corrigent des sous-agents en temps réel. Se déclenche avec "supervisor agent", "agent superviseur", "contrôler sous-agents", "manager agent", "agent oversight", "superviser agents", "agent controller". Also triggers on "agent that monitors agents", "corrective supervision".
 ---
 
 # Agent Supervisor Builder

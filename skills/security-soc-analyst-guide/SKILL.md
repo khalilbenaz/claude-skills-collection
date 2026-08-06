@@ -1,6 +1,6 @@
 ---
 name: security-soc-analyst-guide
-description: Guide pour analyste SOC — triage d'alertes, investigation, SIEM, indicateurs de compromission et playbooks de réponse. Se déclenche avec "SOC", "analyste SOC", "SIEM", "IoC", "incident de sécurité", "triage sécurité".
+description: Guide pour analyste SOC — triage d'alertes, investigation, SIEM, indicateurs de compromission et playbooks de réponse. Se déclenche avec "SOC", "analyste SOC", "SIEM", "IoC", "incident de sécurité", "triage sécurité". Also triggers on "SOC alert triage", "SIEM investigation", "indicators of compromise".
 ---
 
 # Guide Analyste SOC

@@ -1,6 +1,6 @@
 ---
 name: database-cassandra-guide
-description: Modélisation et administration Apache Cassandra incluant partition keys, clustering, compaction, réplication et tuning opérationnel. Se déclenche avec "Cassandra", "Apache Cassandra", "partition key", "CQL", "NoSQL distribué"
+description: Modélisation et administration Apache Cassandra incluant partition keys, clustering, compaction, réplication et tuning opérationnel. Se déclenche avec "Cassandra", "Apache Cassandra", "partition key", "CQL", "NoSQL distribué. Also triggers on "Cassandra data model", "partition key design", "wide column store".
 ---
 
 # Cassandra Guide

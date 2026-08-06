@@ -1,6 +1,6 @@
 ---
 name: complaint-letter-writer
-description: Rédige une lettre de réclamation formelle pour un litige consommateur, administratif ou professionnel. Se déclenche aussi avec "lettre de réclamation", "plainte", "mise en demeure", "je veux me plaindre", "courrier formel", ou toute rédaction de contestation officielle.
+description: Rédige une lettre de réclamation formelle pour un litige consommateur, administratif ou professionnel. Se déclenche aussi avec "lettre de réclamation", "plainte", "mise en demeure", "je veux me plaindre", "courrier formel", ou toute rédaction de contestation officielle. Also triggers on "complaint letter", "formal letter of dispute", "write to customer service".
 ---
 
 # Complaint Letter Writer

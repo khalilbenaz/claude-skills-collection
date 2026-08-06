@@ -1,6 +1,6 @@
 ---
 name: iot-raspberry-pi-setup
-description: Configuration et projets Raspberry Pi incluant OS, GPIO, serveurs et domotique. Se déclenche avec "Raspberry Pi", "RPi", "Raspbian", "GPIO", "domotique", "serveur Raspberry".
+description: Configuration et projets Raspberry Pi incluant OS, GPIO, serveurs et domotique. Se déclenche avec "Raspberry Pi", "RPi", "Raspbian", "GPIO", "domotique", "serveur Raspberry". Also triggers on "Raspberry Pi setup", "GPIO project", "home automation server".
 ---
 
 # Raspberry Pi Setup

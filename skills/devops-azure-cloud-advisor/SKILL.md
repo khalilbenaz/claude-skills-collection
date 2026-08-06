@@ -1,6 +1,6 @@
 ---
 name: devops-azure-cloud-advisor
-description: Conseils pour l'architecture et le déploiement sur Azure — App Service, Azure Functions, Container Apps, SQL Azure et bonnes pratiques cloud. À utiliser quand l'utilisateur déploie sur Azure, choisit des services cloud ou optimise ses coûts Azure. Se déclenche aussi avec "Azure", "App Service", "Azure Functions", "Container Apps", "Azure SQL", "déploiement Azure", "coûts Azure".
+description: Conseils pour l'architecture et le déploiement sur Azure — App Service, Azure Functions, Container Apps, SQL Azure et bonnes pratiques cloud. À utiliser quand l'utilisateur déploie sur Azure, choisit des services cloud ou optimise ses coûts Azure. Se déclenche aussi avec "Azure", "App Service", "Azure Functions", "Container Apps", "Azure SQL", "déploiement Azure", "coûts Azure". Also triggers on "Azure architecture", "App Service deployment".
 ---
 
 # Conseiller Azure Cloud

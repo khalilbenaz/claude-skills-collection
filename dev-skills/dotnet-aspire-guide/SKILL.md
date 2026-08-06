@@ -1,6 +1,6 @@
 ---
 name: dotnet-aspire-guide
-description: Guide .NET Aspire pour l'orchestration d'applications cloud-native, le service discovery, la télémétrie et l'intégration de composants distribués. À utiliser quand l'utilisateur travaille avec .NET Aspire, orchestre des microservices ou configure des composants cloud-native en .NET. Se déclenche aussi avec ".NET Aspire", "Aspire", "AppHost", "service discovery .NET", "orchestration cloud-native", "Aspire dashboard".
+description: Guide .NET Aspire pour l'orchestration d'applications cloud-native, le service discovery, la télémétrie et l'intégration de composants distribués. À utiliser quand l'utilisateur travaille avec .NET Aspire, orchestre des microservices ou configure des composants cloud-native en .NET. Se déclenche aussi avec ".NET Aspire", "Aspire", "AppHost", "service discovery .NET", "orchestration cloud-native", "Aspire dashboard". Also triggers on "cloud-native orchestration in .NET".
 ---
 
 # Guide .NET Aspire

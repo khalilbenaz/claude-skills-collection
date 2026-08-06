@@ -1,6 +1,6 @@
 ---
 name: agent-coding-agent-builder
-description: Construction d'agents de coding autonomes capables de lire, écrire et modifier du code. Se déclenche avec "coding agent", "agent de code", "agent développeur", "Devin", "SWE-agent", "agent qui code", "AI coder", "code generation agent", "auto-coder".
+description: Construction d'agents de coding autonomes capables de lire, écrire et modifier du code. Se déclenche avec "coding agent", "agent de code", "agent développeur", "Devin", "SWE-agent", "agent qui code", "AI coder", "code generation agent", "auto-coder". Also triggers on "build a coding agent", "autonomous coding agent", "SWE agent".
 ---
 
 # Coding Agent Builder

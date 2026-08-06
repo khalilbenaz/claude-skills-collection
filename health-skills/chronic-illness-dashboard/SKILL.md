@@ -1,6 +1,6 @@
 ---
 name: chronic-illness-dashboard
-description: Aide à organiser le suivi d'une maladie chronique (diabète, hypertension, asthme, thyroïde, etc.) avec tableau de bord structuré. À utiliser quand l'utilisateur mentionne une maladie chronique et veut organiser son suivi. Se déclenche aussi avec "je suis diabétique", "hypertension", "ma thyroïde", "maladie chronique", "suivi longue durée", "mon asthme", ou toute mention de pathologie nécessitant un suivi régulier.
+description: Aide à organiser le suivi d'une maladie chronique (diabète, hypertension, asthme, thyroïde, etc.) avec tableau de bord structuré. À utiliser quand l'utilisateur mentionne une maladie chronique et veut organiser son suivi. Se déclenche aussi avec "je suis diabétique", "hypertension", "ma thyroïde", "maladie chronique", "suivi longue durée", "mon asthme", ou toute mention de pathologie nécessitant un suivi régulier. Also triggers on "chronic illness tracking", "manage diabetes follow-up", "long-term condition log".
 ---
 
 # Chronic Illness Dashboard

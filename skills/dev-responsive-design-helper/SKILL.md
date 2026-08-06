@@ -1,6 +1,6 @@
 ---
 name: dev-responsive-design-helper
-description: Conception responsive et mobile-first pour tout type de site ou app web. Se déclenche avec "responsive", "mobile first", "media queries", "breakpoints", "adaptatif", "mobile", "tablette", "s'affiche mal sur mobile".
+description: Conception responsive et mobile-first pour tout type de site ou app web. Se déclenche avec "responsive", "mobile first", "media queries", "breakpoints", "adaptatif", "mobile", "tablette", "s'affiche mal sur mobile". Also triggers on "responsive design", "mobile-first layout".
 ---
 
 # Responsive Design Helper

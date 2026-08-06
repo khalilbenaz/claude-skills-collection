@@ -1,6 +1,6 @@
 ---
 name: dev-css-layout-solver
-description: Résout les problèmes de layout CSS avec Flexbox, Grid et techniques modernes. Se déclenche avec "CSS", "layout", "Flexbox", "Grid", "centrer", "aligner", "responsive", "mon layout est cassé", "overflow", "z-index".
+description: Résout les problèmes de layout CSS avec Flexbox, Grid et techniques modernes. Se déclenche avec "CSS", "layout", "Flexbox", "Grid", "centrer", "aligner", "responsive", "mon layout est cassé", "overflow", "z-index". Also triggers on "CSS layout issue", "flexbox centering", "grid layout", "why is my div misaligned".
 ---
 
 # CSS Layout Solver

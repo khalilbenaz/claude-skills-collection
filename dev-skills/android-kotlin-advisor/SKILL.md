@@ -1,6 +1,6 @@
 ---
 name: android-kotlin-advisor
-description: Développement Android natif avec Kotlin et Jetpack Compose — architecture MVVM/MVI, UI Compose, Hilt, Room, Coroutines, Flow, tests, Gradle KTS, Play Store. Se déclenche avec "Android", "Kotlin", "Jetpack Compose", "Android Studio", "Gradle", "Room", "Hilt", "Coroutines", "Play Store".
+description: Développement Android natif avec Kotlin et Jetpack Compose — architecture MVVM/MVI, UI Compose, Hilt, Room, Coroutines, Flow, tests, Gradle KTS, Play Store. Se déclenche avec "Android", "Kotlin", "Jetpack Compose", "Android Studio", "Gradle", "Room", "Hilt", "Coroutines", "Play Store". Also triggers on "Android with Kotlin", "MVVM on Android".
 ---
 
 # Android Kotlin Advisor

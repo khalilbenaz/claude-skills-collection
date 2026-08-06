@@ -1,6 +1,6 @@
 ---
 name: react-native-guide
-description: Guide de développement React Native avec Expo et navigation. Se déclenche avec "React Native", "Expo", "RN", "react-navigation", "native modules", "bridge", "mobile JavaScript", "Hermes".
+description: Guide de développement React Native avec Expo et navigation. Se déclenche avec "React Native", "Expo", "RN", "react-navigation", "native modules", "bridge", "mobile JavaScript", "Hermes". Also triggers on "React Native app", "Expo setup", "mobile navigation".
 ---
 
 # React Native Guide

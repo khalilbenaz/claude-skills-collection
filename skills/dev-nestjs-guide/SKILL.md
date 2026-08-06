@@ -1,6 +1,6 @@
 ---
 name: dev-nestjs-guide
-description: Développement backend NestJS avec modules, controllers, providers, pipes, guards et interceptors. Se déclenche avec "NestJS", "Nest.js", "module NestJS", "controller NestJS", "decorator NestJS".
+description: Développement backend NestJS avec modules, controllers, providers, pipes, guards et interceptors. Se déclenche avec "NestJS", "Nest.js", "module NestJS", "controller NestJS", "decorator NestJS". Also triggers on "NestJS module", "Nest guards and interceptors", "dependency injection in Nest".
 ---
 
 # Guide NestJS

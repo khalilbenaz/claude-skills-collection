@@ -1,6 +1,6 @@
 ---
 name: dev-gradle-build-expert
-description: Expert en configuration et optimisation Gradle pour Android Kotlin. Gère build.gradle, Kotlin DSL, dépendances, flavours, variants, performance, CI/CD et troubleshooting avancé. Se déclenche avec "gradle", "build error", "dépendance", "build config".
+description: Expert en configuration et optimisation Gradle pour Android Kotlin. Gère build.gradle, Kotlin DSL, dépendances, flavours, variants, performance, CI/CD et troubleshooting avancé. Se déclenche avec "gradle", "build error", "dépendance", "build config". Also triggers on "Gradle build", "Kotlin DSL build script", "speed up Gradle".
 ---
 
 # Gradle Build Expert (Android Kotlin)

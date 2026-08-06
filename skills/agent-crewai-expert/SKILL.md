@@ -1,6 +1,6 @@
 ---
 name: agent-crewai-expert
-description: Guide complet pour construire des systèmes multi-agents avec CrewAI. Création d'agents spécialisés, définition de tâches, orchestration de crews et intégration d'outils personnalisés. Se déclenche avec "CrewAI", "crew", "multi-agent CrewAI", "agent CrewAI", "tâche CrewAI", "créer un crew", "équipe d'agents", "orchestration agents", "agents collaboratifs".
+description: Guide complet pour construire des systèmes multi-agents avec CrewAI. Création d'agents spécialisés, définition de tâches, orchestration de crews et intégration d'outils personnalisés. Se déclenche avec "CrewAI", "crew", "multi-agent CrewAI", "agent CrewAI", "tâche CrewAI", "créer un crew", "équipe d'agents", "orchestration agents", "agents collaboratifs". Also triggers on "CrewAI crew", "build a crew of agents", "CrewAI tasks".
 ---
 
 # CrewAI Expert — Systèmes Multi-Agents Collaboratifs

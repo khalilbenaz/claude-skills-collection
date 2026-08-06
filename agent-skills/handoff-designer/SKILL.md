@@ -1,6 +1,6 @@
 ---
 name: handoff-designer
-description: Design de handoffs fluides entre agents — transfert de contexte, d'état et de responsabilité. Se déclenche avec "handoff", "transfert agent", "agent handoff", "passer la main", "relay agent", "agent transition", "changement d'agent", "routing entre agents".
+description: Design de handoffs fluides entre agents — transfert de contexte, d'état et de responsabilité. Se déclenche avec "handoff", "transfert agent", "agent handoff", "passer la main", "relay agent", "agent transition", "changement d'agent", "routing entre agents". Also triggers on "transfer context between agents", "agent escalation flow".
 ---
 
 # Agent Handoff Designer

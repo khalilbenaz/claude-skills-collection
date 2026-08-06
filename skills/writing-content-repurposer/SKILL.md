@@ -1,6 +1,6 @@
 ---
 name: writing-content-repurposer
-description: Transforme un contenu existant en plusieurs formats adaptés à différentes plateformes. À utiliser quand l'utilisateur veut recycler un article, une vidéo ou un podcast en posts sociaux, threads, newsletters, etc. Se déclenche aussi avec "transformer en post", "recycler mon contenu", "adapter pour LinkedIn", "thread Twitter", "résumé pour Instagram".
+description: Transforme un contenu existant en plusieurs formats adaptés à différentes plateformes. À utiliser quand l'utilisateur veut recycler un article, une vidéo ou un podcast en posts sociaux, threads, newsletters, etc. Se déclenche aussi avec "transformer en post", "recycler mon contenu", "adapter pour LinkedIn", "thread Twitter", "résumé pour Instagram". Also triggers on "repurpose this content", "turn a post into a thread", "adapt content per platform".
 ---
 
 # Content Repurposer

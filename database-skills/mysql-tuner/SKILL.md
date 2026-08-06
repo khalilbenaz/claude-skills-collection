@@ -1,6 +1,6 @@
 ---
 name: mysql-tuner
-description: Optimisation MySQL/MariaDB incluant slow query log, stratégie d'index, tuning InnoDB, réplication et monitoring. Se déclenche avec "MySQL", "MariaDB", "slow query", "InnoDB", "MySQL tuning", "requête MySQL lente"
+description: Optimisation MySQL/MariaDB incluant slow query log, stratégie d'index, tuning InnoDB, réplication et monitoring. Se déclenche avec "MySQL", "MariaDB", "slow query", "InnoDB", "MySQL tuning", "requête MySQL lente. Also triggers on "MySQL slow query", "InnoDB tuning", "MariaDB performance".
 ---
 
 # MySQL Tuner

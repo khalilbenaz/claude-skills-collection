@@ -1,6 +1,6 @@
 ---
 name: dev-ai-workflow-orchestrator
-description: Orchestration de workflows IA complexes avec chaînes et pipelines. Se déclenche avec "workflow IA", "LangChain", "LangGraph", "pipeline IA", "chaîne de prompts", "orchestration LLM", "AI pipeline", "multi-step AI".
+description: Orchestration de workflows IA complexes avec chaînes et pipelines. Se déclenche avec "workflow IA", "LangChain", "LangGraph", "pipeline IA", "chaîne de prompts", "orchestration LLM", "AI pipeline", "multi-step AI". Also triggers on "chain LLM calls", "orchestrate AI steps".
 ---
 
 # AI Workflow Orchestrator

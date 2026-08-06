@@ -1,6 +1,6 @@
 ---
 name: ocr-document-scanner
-description: OCR mobile et extraction de champs depuis CIN, passeport, permis, factures. Se déclenche avec "OCR", "scanner document", "extraire texte", "CIN", "passeport", "MRZ", "ID card", "document verification", "KYC document".
+description: OCR mobile et extraction de champs depuis CIN, passeport, permis, factures. Se déclenche avec "OCR", "scanner document", "extraire texte", "CIN", "passeport", "MRZ", "ID card", "document verification", "KYC document". Also triggers on "OCR a document", "extract fields from an ID", "scan an invoice".
 ---
 
 # OCR Document Scanner

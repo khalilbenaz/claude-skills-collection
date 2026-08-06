@@ -1,6 +1,6 @@
 ---
 name: linux-linux-troubleshooter
-description: Diagnostic de problèmes Linux — performance, disque, mémoire, réseau et processus. Se déclenche avec "Linux lent", "top", "htop", "df", "dmesg", "strace", "debug Linux".
+description: Diagnostic de problèmes Linux — performance, disque, mémoire, réseau et processus. Se déclenche avec "Linux lent", "top", "htop", "df", "dmesg", "strace", "debug Linux". Also triggers on "Linux troubleshooting", "server is slow", "disk full", "high memory usage".
 ---
 
 # Linux Troubleshooter

@@ -1,6 +1,6 @@
 ---
 name: management-stakeholder-communicator
-description: Aide à communiquer efficacement avec les parties prenantes via des rapports de statut, des présentations COPIL et des stratégies d'escalade. Se déclenche avec "stakeholder", "parties prenantes", "reporting", "status update", "comité de pilotage", "COPIL".
+description: Aide à communiquer efficacement avec les parties prenantes via des rapports de statut, des présentations COPIL et des stratégies d'escalade. Se déclenche avec "stakeholder", "parties prenantes", "reporting", "status update", "comité de pilotage", "COPIL". Also triggers on "stakeholder update", "status report", "communicate a delay".
 ---
 
 # Stakeholder Communicator

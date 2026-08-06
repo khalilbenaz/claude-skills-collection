@@ -1,6 +1,6 @@
 ---
 name: agent-browser-agent-builder
-description: Construction d'agents de navigation web autonomes incluant scraping intelligent, interaction DOM et gestion de sessions. Se déclenche avec "browser agent", "agent navigateur", "agent web autonome", "Puppeteer agent", "Playwright agent"
+description: Construction d'agents de navigation web autonomes incluant scraping intelligent, interaction DOM et gestion de sessions. Se déclenche avec "browser agent", "agent navigateur", "agent web autonome", "Puppeteer agent", "Playwright agent. Also triggers on "web browsing agent", "autonomous scraping agent".
 ---
 
 # Browser Agent Builder

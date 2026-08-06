@@ -73,7 +73,7 @@ Les avertissements (description peu descriptive, aucun déclencheur cité, corps
 ### Langue
 - Skills en **français** par défaut
 - Les termes techniques peuvent rester en anglais (API, SQL, CSS…)
-- La description du frontmatter doit inclure des phrases de déclenchement
+- La description du frontmatter doit inclure des phrases de déclenchement **en français ET en anglais** (segment `Also triggers on "…"`) : sans cela, un prompt en anglais ne déclenche pas le skill. `npm run check` le signale.
 
 ### Catégories existantes
 

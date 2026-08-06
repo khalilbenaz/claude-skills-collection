@@ -1,6 +1,6 @@
 ---
 name: technical-debt-manager
-description: Aide à identifier, prioriser et planifier le remboursement de la dette technique avec des métriques de suivi. Se déclenche avec "dette technique", "technical debt", "refactoring", "code legacy", "dette", "tech debt".
+description: Aide à identifier, prioriser et planifier le remboursement de la dette technique avec des métriques de suivi. Se déclenche avec "dette technique", "technical debt", "refactoring", "code legacy", "dette", "tech debt". Also triggers on "prioritize refactoring", "debt paydown plan".
 ---
 
 # Technical Debt Manager

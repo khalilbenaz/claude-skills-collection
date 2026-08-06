@@ -1,6 +1,6 @@
 ---
 name: psy-burnout-assessment
-description: Évalue les signes d'épuisement professionnel ou personnel et aide à structurer un plan d'action. À utiliser quand l'utilisateur décrit une fatigue intense liée au travail, un désengagement ou un sentiment de surcharge chronique. Se déclenche aussi avec "je suis épuisé", "burnout", "je n'en peux plus du travail", "je suis vidé", "surcharge", "je craque", ou toute description d'épuisement professionnel ou personnel prolongé.
+description: Évalue les signes d'épuisement professionnel ou personnel et aide à structurer un plan d'action. À utiliser quand l'utilisateur décrit une fatigue intense liée au travail, un désengagement ou un sentiment de surcharge chronique. Se déclenche aussi avec "je suis épuisé", "burnout", "je n'en peux plus du travail", "je suis vidé", "surcharge", "je craque", ou toute description d'épuisement professionnel ou personnel prolongé. Also triggers on "am I burning out", "burnout signs", "work exhaustion".
 ---
 
 # Burnout Assessment

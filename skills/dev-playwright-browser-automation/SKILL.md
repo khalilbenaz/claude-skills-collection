@@ -1,6 +1,6 @@
 ---
 name: dev-playwright-browser-automation
-description: Automatisation de navigateur via Playwright MCP — naviguer, cliquer, remplir des formulaires, prendre des captures d'écran et déboguer des pages web. À utiliser quand l'utilisateur veut interagir avec un navigateur, tester une interface ou automatiser des actions web. Se déclenche aussi avec "ouvre cette page", "teste le formulaire", "automatise le navigateur", "capture d'écran de la page", "remplis le formulaire".
+description: Automatisation de navigateur via Playwright MCP — naviguer, cliquer, remplir des formulaires, prendre des captures d'écran et déboguer des pages web. À utiliser quand l'utilisateur veut interagir avec un navigateur, tester une interface ou automatiser des actions web. Se déclenche aussi avec "ouvre cette page", "teste le formulaire", "automatise le navigateur", "capture d'écran de la page", "remplis le formulaire". Also triggers on "Playwright automation", "automate a browser", "fill a form automatically".
 ---
 
 # Automatisation Navigateur avec Playwright MCP

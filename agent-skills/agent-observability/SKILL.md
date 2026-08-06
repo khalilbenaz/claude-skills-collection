@@ -1,6 +1,6 @@
 ---
 name: agent-observability
-description: Observabilité complète pour agents IA — distributed tracing, métriques custom, log correlation et dashboards de supervision. Se déclenche avec "observabilité agent", "tracing agent", "métriques agent", "agent observability", "OpenTelemetry agent".
+description: Observabilité complète pour agents IA — distributed tracing, métriques custom, log correlation et dashboards de supervision. Se déclenche avec "observabilité agent", "tracing agent", "métriques agent", "agent observability", "OpenTelemetry agent". Also triggers on "trace my agent", "LLM metrics", "agent dashboards".
 ---
 
 # Agent Observability

@@ -1,6 +1,6 @@
 ---
 name: agent-claude-code-extension-builder
-description: Construction d'extensions et skills pour Claude Code — slash commands, hooks, intégration MCP et commandes personnalisées. Se déclenche avec "extension Claude Code", "skill Claude", "slash command", "Claude Code plugin", "custom command Claude".
+description: Construction d'extensions et skills pour Claude Code — slash commands, hooks, intégration MCP et commandes personnalisées. Se déclenche avec "extension Claude Code", "skill Claude", "slash command", "Claude Code plugin", "custom command Claude". Also triggers on "build a Claude Code plugin", "custom slash command", "Claude Code hooks".
 ---
 
 # Claude Code Extension Builder

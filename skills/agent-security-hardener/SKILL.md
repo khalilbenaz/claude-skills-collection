@@ -1,6 +1,6 @@
 ---
 name: agent-security-hardener
-description: Sécurisation d'agents IA contre injections, abus et fuites de données. Se déclenche avec "sécurité agent", "agent security", "prompt injection", "jailbreak", "agent abuse", "guardrails", "safe agent", "sécuriser mon agent", "agent en production sécurisé".
+description: Sécurisation d'agents IA contre injections, abus et fuites de données. Se déclenche avec "sécurité agent", "agent security", "prompt injection", "jailbreak", "agent abuse", "guardrails", "safe agent", "sécuriser mon agent", "agent en production sécurisé". Also triggers on "secure my agent", "prompt injection defense", "agent guardrails".
 ---
 
 # Agent Security Hardener

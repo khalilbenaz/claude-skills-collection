@@ -1,6 +1,6 @@
 ---
 name: health-lab-explainer
-description: Explique des résultats d'analyses médicales en langage simple. À utiliser quand l'utilisateur colle un bilan sanguin, une analyse, des valeurs biologiques ou demande ce que signifie chaque paramètre. Se déclenche aussi avec "mes résultats", "mon bilan", "NFS", "glycémie", "cholestérol", "TSH", "créatinine", "hémoglobine", "ferritine", "bilan hépatique", "ionogramme", ou toute mention de valeurs chiffrées avec unités médicales.
+description: Explique des résultats d'analyses médicales en langage simple. À utiliser quand l'utilisateur colle un bilan sanguin, une analyse, des valeurs biologiques ou demande ce que signifie chaque paramètre. Se déclenche aussi avec "mes résultats", "mon bilan", "NFS", "glycémie", "cholestérol", "TSH", "créatinine", "hémoglobine", "ferritine", "bilan hépatique", "ionogramme", ou toute mention de valeurs chiffrées avec unités médicales. Also triggers on "explain my lab results", "blood test results", "what does this test mean".
 ---
 
 # Lab Explainer

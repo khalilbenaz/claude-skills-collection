@@ -1,6 +1,6 @@
 ---
 name: cypress-e2e-guide
-description: Tests end-to-end avec Cypress, couvrant le setup, les commandes personnalisées, les fixtures, l'interception réseau et l'intégration CI. Se déclenche avec "Cypress", "test e2e", "end-to-end Cypress", "cy.get", "cypress.config"
+description: Tests end-to-end avec Cypress, couvrant le setup, les commandes personnalisées, les fixtures, l'interception réseau et l'intégration CI. Se déclenche avec "Cypress", "test e2e", "end-to-end Cypress", "cy.get", "cypress.config. Also triggers on "Cypress tests", "end-to-end testing", "intercept network in tests".
 ---
 
 # Cypress E2E Guide

@@ -1,6 +1,6 @@
 ---
 name: chrome-devtools-debugger
-description: Débogage et automatisation de navigateur via Chrome DevTools MCP. Inspecter des pages, analyser les performances, surveiller le réseau et automatiser des interactions. À utiliser quand l'utilisateur veut déboguer une page web, analyser les performances ou inspecter les requêtes réseau. Se déclenche aussi avec "devtools", "debug navigateur", "inspecter la page", "performances web", "requêtes réseau", "console chrome".
+description: Débogage et automatisation de navigateur via Chrome DevTools MCP. Inspecter des pages, analyser les performances, surveiller le réseau et automatiser des interactions. À utiliser quand l'utilisateur veut déboguer une page web, analyser les performances ou inspecter les requêtes réseau. Se déclenche aussi avec "devtools", "debug navigateur", "inspecter la page", "performances web", "requêtes réseau", "console chrome". Also triggers on "inspect a page", "debug in the browser", "check page performance".
 ---
 
 # Débogueur Chrome DevTools

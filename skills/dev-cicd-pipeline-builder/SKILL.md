@@ -1,6 +1,6 @@
 ---
 name: dev-cicd-pipeline-builder
-description: Conception de pipelines CI/CD pour tout type de plateforme. Se déclenche avec "CI/CD", "pipeline", "GitHub Actions", "Azure DevOps", "GitLab CI", "déploiement automatique", "continuous integration", "continuous deployment".
+description: Conception de pipelines CI/CD pour tout type de plateforme. Se déclenche avec "CI/CD", "pipeline", "GitHub Actions", "Azure DevOps", "GitLab CI", "déploiement automatique", "continuous integration", "continuous deployment". Also triggers on "set up CI/CD", "build pipeline", "automate deployment".
 ---
 
 # CI/CD Pipeline Builder

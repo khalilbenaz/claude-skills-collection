@@ -1,6 +1,6 @@
 ---
 name: education-learning-roadmap
-description: Crée une feuille de route d'apprentissage pour maîtriser un sujet ou une compétence. À utiliser quand l'utilisateur veut apprendre quelque chose de nouveau. Se déclenche aussi avec "je veux apprendre", "roadmap", "par où commencer pour", "parcours d'apprentissage", "comment devenir", "plan d'apprentissage".
+description: Crée une feuille de route d'apprentissage pour maîtriser un sujet ou une compétence. À utiliser quand l'utilisateur veut apprendre quelque chose de nouveau. Se déclenche aussi avec "je veux apprendre", "roadmap", "par où commencer pour", "parcours d'apprentissage", "comment devenir", "plan d'apprentissage". Also triggers on "learning roadmap", "how do I learn this", "study path".
 ---
 
 # Learning Roadmap

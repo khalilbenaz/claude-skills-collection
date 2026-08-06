@@ -1,6 +1,6 @@
 ---
 name: legal-tenant-rights-guide
-description: Informe sur les droits du locataire dans une situation donnée. Se déclenche aussi avec "droits du locataire", "mon propriétaire", "augmentation de loyer", "état des lieux", "expulsion", "dépôt de garantie", ou toute question de droit locatif.
+description: Informe sur les droits du locataire dans une situation donnée. Se déclenche aussi avec "droits du locataire", "mon propriétaire", "augmentation de loyer", "état des lieux", "expulsion", "dépôt de garantie", ou toute question de droit locatif. Also triggers on "tenant rights", "landlord dispute", "rent increase rules".
 ---
 
 # Tenant Rights Guide

@@ -1,6 +1,6 @@
 ---
 name: dev-tdd-coach
-description: Guide la pratique du Test-Driven Development pas à pas, avec exemples concrets, snippets copiables et anti-patterns. Se déclenche avec "TDD", "test driven", "red green refactor", "écrire le test d'abord", "BDD", "behaviour driven", "outside-in TDD".
+description: Guide la pratique du Test-Driven Development pas à pas, avec exemples concrets, snippets copiables et anti-patterns. Se déclenche avec "TDD", "test driven", "red green refactor", "écrire le test d'abord", "BDD", "behaviour driven", "outside-in TDD". Also triggers on "write the test first".
 ---
 
 # TDD Coach

@@ -1,6 +1,6 @@
 ---
 name: social-feedback-giver
-description: Aide à formuler un feedback constructif (positif ou négatif) de manière claire et bienveillante. Se déclenche aussi avec "donner un feedback", "comment dire que", "critique constructive", "évaluation", "dire ce qui ne va pas", ou toute formulation de retour à faire à quelqu'un.
+description: Aide à formuler un feedback constructif (positif ou négatif) de manière claire et bienveillante. Se déclenche aussi avec "donner un feedback", "comment dire que", "critique constructive", "évaluation", "dire ce qui ne va pas", ou toute formulation de retour à faire à quelqu'un. Also triggers on "give feedback", "constructive criticism", "feedback to a colleague".
 ---
 
 # Feedback Giver

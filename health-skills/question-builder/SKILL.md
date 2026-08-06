@@ -1,6 +1,6 @@
 ---
 name: question-builder
-description: Transforme un problème de santé en questions claires et utiles à poser à un médecin ou pharmacien. À utiliser quand l'utilisateur ne sait pas quoi demander en consultation. Se déclenche aussi avec "quoi demander au médecin", "je ne sais pas quoi dire", "questions pour ma consultation", "qu'est-ce que je devrais demander", ou toute hésitation sur quoi aborder avec un professionnel de santé.
+description: Transforme un problème de santé en questions claires et utiles à poser à un médecin ou pharmacien. À utiliser quand l'utilisateur ne sait pas quoi demander en consultation. Se déclenche aussi avec "quoi demander au médecin", "je ne sais pas quoi dire", "questions pour ma consultation", "qu'est-ce que je devrais demander", ou toute hésitation sur quoi aborder avec un professionnel de santé. Also triggers on "questions for my doctor", "what should I ask", "prepare medical questions".
 ---
 
 # Health Question Builder

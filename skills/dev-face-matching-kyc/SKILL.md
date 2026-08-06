@@ -1,6 +1,6 @@
 ---
 name: dev-face-matching-kyc
-description: Vérification biométrique d'identité : face matching selfie vs document, liveness detection, deepfake detection, pipeline KYC complet avec seuils décision, conformité RGPD/loi 09-08. Se déclenche avec "face matching", "vérification identité", "KYC biométrique", "selfie vs document", "liveness", "deepfake", "biometrie", "one-to-one matching".
+description: Vérification biométrique d'identité : face matching selfie vs document, liveness detection, deepfake detection, pipeline KYC complet avec seuils décision, conformité RGPD/loi 09-08. Se déclenche avec "face matching", "vérification identité", "KYC biométrique", "selfie vs document", "liveness", "deepfake", "biometrie", "one-to-one matching". Also triggers on "selfie vs ID verification", "KYC biometrics".
 ---
 
 # Face Matching KYC

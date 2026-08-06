@@ -1,6 +1,6 @@
 ---
 name: tailwind-expert
-description: Maîtrise de Tailwind CSS — utility-first, configuration custom, plugins, responsive design et dark mode. Se déclenche avec "Tailwind", "Tailwind CSS", "utility-first", "tailwind.config", "classes Tailwind".
+description: Maîtrise de Tailwind CSS — utility-first, configuration custom, plugins, responsive design et dark mode. Se déclenche avec "Tailwind", "Tailwind CSS", "utility-first", "tailwind.config", "classes Tailwind". Also triggers on "Tailwind classes", "Tailwind config", "dark mode with Tailwind".
 ---
 
 # Tailwind CSS Expert

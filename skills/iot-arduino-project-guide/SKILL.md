@@ -1,6 +1,6 @@
 ---
 name: iot-arduino-project-guide
-description: Développement de projets Arduino avec circuits, capteurs, code et communication série. Se déclenche avec "Arduino", "capteur", "servo", "GPIO", "circuit Arduino", "sketch".
+description: Développement de projets Arduino avec circuits, capteurs, code et communication série. Se déclenche avec "Arduino", "capteur", "servo", "GPIO", "circuit Arduino", "sketch". Also triggers on "Arduino project", "wire a sensor", "serial communication".
 ---
 
 # Arduino Project Guide

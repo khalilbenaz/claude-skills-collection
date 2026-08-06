@@ -1,6 +1,6 @@
 ---
 name: unity-game-helper
-description: Développement de jeux avec Unity et C#. Se déclenche avec "Unity", "game development", "jeu vidéo", "C# Unity", "GameObject", "ScriptableObject", "2D game", "3D game", "Unity Editor".
+description: Développement de jeux avec Unity et C#. Se déclenche avec "Unity", "game development", "jeu vidéo", "C# Unity", "GameObject", "ScriptableObject", "2D game", "3D game", "Unity Editor". Also triggers on "Unity game", "C# in Unity", "Unity physics".
 ---
 
 # Unity Game Helper

@@ -1,6 +1,6 @@
 ---
 name: dev-user-flow-designer
-description: Conception de parcours utilisateurs et flows d'interaction optimaux. Se déclenche avec "user flow", "parcours utilisateur", "flow", "onboarding flow", "checkout flow", "navigation", "funnel", "conversion".
+description: Conception de parcours utilisateurs et flows d'interaction optimaux. Se déclenche avec "user flow", "parcours utilisateur", "flow", "onboarding flow", "checkout flow", "navigation", "funnel", "conversion". Also triggers on "map the user journey".
 ---
 
 # User Flow Designer

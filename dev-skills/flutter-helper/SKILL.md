@@ -1,6 +1,6 @@
 ---
 name: flutter-helper
-description: Aide au développement Flutter/Dart avec bonnes pratiques, patterns, snippets copiables et diagnostics d'erreurs. Se déclenche avec "Flutter", "Dart", "Widget", "BLoC", "Riverpod", "Provider", "pub.dev", "MaterialApp", "flutter build".
+description: Aide au développement Flutter/Dart avec bonnes pratiques, patterns, snippets copiables et diagnostics d'erreurs. Se déclenche avec "Flutter", "Dart", "Widget", "BLoC", "Riverpod", "Provider", "pub.dev", "MaterialApp", "flutter build". Also triggers on "Flutter app", "Dart widget", "Flutter state management".
 ---
 
 # Flutter Helper

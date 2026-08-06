@@ -1,6 +1,6 @@
 ---
 name: azure-functions-expert
-description: Développement Azure Functions incluant triggers, bindings, Durable Functions, deployment et monitoring. Se déclenche avec "Azure Functions", "function Azure", "Durable Functions", "serverless Azure", "trigger Azure"
+description: Développement Azure Functions incluant triggers, bindings, Durable Functions, deployment et monitoring. Se déclenche avec "Azure Functions", "function Azure", "Durable Functions", "serverless Azure", "trigger Azure. Also triggers on "serverless on Azure", "function triggers and bindings".
 ---
 
 # Azure Functions Expert

@@ -1,6 +1,6 @@
 ---
 name: security-threat-modeling
-description: Modélisation des menaces pour applications et systèmes — identification des surfaces d'attaque, classification STRIDE, arbres d'attaque, scoring DREAD/CVSS et stratégies de mitigation priorisées. À utiliser quand l'utilisateur veut sécuriser une architecture, identifier des vulnérabilités potentielles ou réaliser une analyse de risques. Se déclenche aussi avec "threat modeling", "modélisation des menaces", "surface d'attaque", "STRIDE", "risques de sécurité", "analyse de menaces", "DREAD".
+description: Modélisation des menaces pour applications et systèmes — identification des surfaces d'attaque, classification STRIDE, arbres d'attaque, scoring DREAD/CVSS et stratégies de mitigation priorisées. À utiliser quand l'utilisateur veut sécuriser une architecture, identifier des vulnérabilités potentielles ou réaliser une analyse de risques. Se déclenche aussi avec "threat modeling", "modélisation des menaces", "surface d'attaque", "STRIDE", "risques de sécurité", "analyse de menaces", "DREAD". Also triggers on "STRIDE analysis", "attack surface review".
 ---
 
 # Modélisation des Menaces

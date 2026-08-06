@@ -1,6 +1,6 @@
 ---
 name: dev-express-guide
-description: Développement d'APIs Node.js avec Express, middleware, routing, gestion d'erreurs, authentification et bonnes pratiques de conception. Se déclenche avec "Express", "Express.js", "middleware Express", "Node.js API", "router Express".
+description: Développement d'APIs Node.js avec Express, middleware, routing, gestion d'erreurs, authentification et bonnes pratiques de conception. Se déclenche avec "Express", "Express.js", "middleware Express", "Node.js API", "router Express". Also triggers on "Express API", "Node.js middleware", "Express error handling".
 ---
 
 # Guide Express.js

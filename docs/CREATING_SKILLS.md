@@ -45,6 +45,12 @@ La description est le **mécanisme de déclenchement principal**. Claude décide
 - Inclure des phrases de déclenchement concrètes ("Se déclenche aussi avec...")
 - Être spécifique et "pushy" (mieux vaut trop déclencher que pas assez)
 
+**Déclencheurs bilingues — obligatoire :** la collection est rédigée en français, mais les prompts arrivent souvent en anglais. Chaque description liste ses déclencheurs français, puis une phrase `Also triggers on "…", "…"` avec les formulations anglaises correspondantes. `npm run check` avertit si aucun déclencheur anglophone n'est détecté.
+
+```yaml
+description: Revue de code structurée… Se déclenche aussi avec "revois mon code", "améliore ce code". Also triggers on "review my code", "check this PR", "is this code good".
+```
+
 **À éviter :**
 - Descriptions vagues ("Aide avec des trucs de santé")
 - Descriptions trop courtes (manque de contexte de déclenchement)
@@ -85,7 +91,7 @@ Instructions claires pour cette étape.
 ```markdown
 ---
 name: nom-du-skill
-description: [Ce que le skill fait]. À utiliser quand [contexte]. Se déclenche aussi avec "[phrase 1]", "[phrase 2]", "[phrase 3]", ou [description large].
+description: [Ce que le skill fait]. À utiliser quand [contexte]. Se déclenche aussi avec "[phrase FR 1]", "[phrase FR 2]", "[phrase FR 3]". Also triggers on "[EN phrase 1]", "[EN phrase 2]", "[EN phrase 3]".
 ---
 
 # Nom du Skill

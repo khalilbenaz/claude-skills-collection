@@ -1,6 +1,6 @@
 ---
 name: dev-unit-test-generator
-description: Génère des tests unitaires complets pour tout langage et framework. Se déclenche avec "test unitaire", "unit test", "tester mon code", "jest", "xunit", "pytest", "mocha", "JUnit", "écrire des tests", "couverture de tests".
+description: Génère des tests unitaires complets pour tout langage et framework. Se déclenche avec "test unitaire", "unit test", "tester mon code", "jest", "xunit", "pytest", "mocha", "JUnit", "écrire des tests", "couverture de tests". Also triggers on "write unit tests", "generate tests for this function", "mock dependencies in tests".
 ---
 
 # Unit Test Generator

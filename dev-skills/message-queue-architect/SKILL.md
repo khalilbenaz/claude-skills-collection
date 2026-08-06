@@ -1,6 +1,6 @@
 ---
 name: message-queue-architect
-description: Architecture de messaging avec RabbitMQ, Kafka, Azure Service Bus. Se déclenche avec "message queue", "RabbitMQ", "Kafka", "queue", "messaging", "async", "pub/sub", "broker", "consumer", "producer".
+description: Architecture de messaging avec RabbitMQ, Kafka, Azure Service Bus. Se déclenche avec "message queue", "RabbitMQ", "Kafka", "queue", "messaging", "async", "pub/sub", "broker", "consumer", "producer". Also triggers on "message queue design", "RabbitMQ or Kafka", "async messaging architecture".
 ---
 
 # Message Queue Architect

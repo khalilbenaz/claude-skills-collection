@@ -1,6 +1,6 @@
 ---
 name: communication-public-speaking-coach
-description: Coaching pour prise de parole en public avec préparation, gestion du stress et impact. Se déclenche avec "prise de parole", "public speaking", "conférence", "parler en public", "trac", "stress présentation".
+description: Coaching pour prise de parole en public avec préparation, gestion du stress et impact. Se déclenche avec "prise de parole", "public speaking", "conférence", "parler en public", "trac", "stress présentation". Also triggers on "stage fright", "rehearse a talk".
 ---
 
 # Public Speaking Coach

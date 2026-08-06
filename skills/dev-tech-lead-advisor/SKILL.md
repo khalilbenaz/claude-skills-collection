@@ -1,6 +1,6 @@
 ---
 name: dev-tech-lead-advisor
-description: Guide opérationnel pour tech leads : architecture, ADR/RFC, code reviews, mentoring, dette technique, standards et communication vers le management. Se déclenche avec "tech lead", "lead technique", "décision technique", "mentoring", "code review strategy", "technical leadership", "team lead dev".
+description: Guide opérationnel pour tech leads : architecture, ADR/RFC, code reviews, mentoring, dette technique, standards et communication vers le management. Se déclenche avec "tech lead", "lead technique", "décision technique", "mentoring", "code review strategy", "technical leadership", "team lead dev". Also triggers on "tech lead guidance", "run code reviews", "mentor developers", "manage technical debt".
 ---
 
 # Tech Lead Advisor

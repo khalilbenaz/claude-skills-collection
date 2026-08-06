@@ -1,6 +1,6 @@
 ---
 name: vpn-architect
-description: Conception et déploiement de VPN incluant WireGuard, OpenVPN, IPSec pour les architectures site-to-site et remote access. Se déclenche avec "VPN", "WireGuard", "OpenVPN", "IPSec", "tunnel VPN", "site-to-site"
+description: Conception et déploiement de VPN incluant WireGuard, OpenVPN, IPSec pour les architectures site-to-site et remote access. Se déclenche avec "VPN", "WireGuard", "OpenVPN", "IPSec", "tunnel VPN", "site-to-site. Also triggers on "set up a VPN", "WireGuard config", "site-to-site tunnel".
 ---
 
 # VPN Architect

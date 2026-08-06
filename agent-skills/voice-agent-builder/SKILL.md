@@ -1,6 +1,6 @@
 ---
 name: voice-agent-builder
-description: Construction d'agents vocaux conversationnels avec STT, TTS et gestion du dialogue. Se déclenche avec "voice agent", "agent vocal", "téléphone IA", "voice bot", "STT", "TTS", "speech to text", "conversational AI", "IVR intelligent", "Vapi", "LiveKit".
+description: Construction d'agents vocaux conversationnels avec STT, TTS et gestion du dialogue. Se déclenche avec "voice agent", "agent vocal", "téléphone IA", "voice bot", "STT", "TTS", "speech to text", "conversational AI", "IVR intelligent", "Vapi", "LiveKit". Also triggers on "speech to text agent", "phone bot".
 ---
 
 # Voice Agent Builder

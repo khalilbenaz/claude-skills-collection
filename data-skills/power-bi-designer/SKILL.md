@@ -1,6 +1,6 @@
 ---
 name: power-bi-designer
-description: Conception de dashboards Power BI — DAX, modèle de données, visualisations avancées et Row-Level Security. Se déclenche avec "Power BI", "DAX", "dashboard Power BI", "rapport Power BI", "modèle de données Power BI".
+description: Conception de dashboards Power BI — DAX, modèle de données, visualisations avancées et Row-Level Security. Se déclenche avec "Power BI", "DAX", "dashboard Power BI", "rapport Power BI", "modèle de données Power BI". Also triggers on "Power BI dashboard", "DAX measure".
 ---
 
 # Power BI Designer

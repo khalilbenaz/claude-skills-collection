@@ -1,6 +1,6 @@
 ---
 name: management-sprint-planner
-description: Aide à planifier des sprints agile, organiser le backlog, estimer les stories et gérer la capacité de l'équipe. Se déclenche avec "sprint", "sprint planning", "backlog", "vélocité", "agile", "scrum".
+description: Aide à planifier des sprints agile, organiser le backlog, estimer les stories et gérer la capacité de l'équipe. Se déclenche avec "sprint", "sprint planning", "backlog", "vélocité", "agile", "scrum". Also triggers on "plan a sprint", "groom the backlog", "team capacity planning".
 ---
 
 # Sprint Planner

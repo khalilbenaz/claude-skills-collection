@@ -1,6 +1,6 @@
 ---
 name: agent-tool-calling-architect
-description: Design et implémentation de systèmes de tool calling pour agents IA. Function calling, API wrapping, schema design, MCP server, parallel calls, sécurité et monitoring. Se déclenche avec "tool calling", "function calling", "tools agent", "API tools", "agent tools", "créer un outil", "custom tool", "tool schema", "MCP tool".
+description: Design et implémentation de systèmes de tool calling pour agents IA. Function calling, API wrapping, schema design, MCP server, parallel calls, sécurité et monitoring. Se déclenche avec "tool calling", "function calling", "tools agent", "API tools", "agent tools", "créer un outil", "custom tool", "tool schema", "MCP tool". Also triggers on "function calling schema", "give my agent tools".
 ---
 
 # Tool Calling Architect

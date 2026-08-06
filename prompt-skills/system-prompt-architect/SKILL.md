@@ -1,6 +1,6 @@
 ---
 name: system-prompt-architect
-description: Conçoit des system prompts robustes pour applications, agents IA ou chatbots personnalisés. À utiliser quand l'utilisateur développe un chatbot, un agent ou une app utilisant un LLM. Se déclenche aussi avec "system prompt", "instructions système", "custom GPT", "agent IA", "chatbot", "persona IA", ou toute conception de prompt système.
+description: Conçoit des system prompts robustes pour applications, agents IA ou chatbots personnalisés. À utiliser quand l'utilisateur développe un chatbot, un agent ou une app utilisant un LLM. Se déclenche aussi avec "system prompt", "instructions système", "custom GPT", "agent IA", "chatbot", "persona IA", ou toute conception de prompt système. Also triggers on "instructions for my chatbot", "agent persona prompt".
 ---
 
 # System Prompt Architect

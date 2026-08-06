@@ -1,6 +1,6 @@
 ---
 name: agent-code-review-subagent
-description: Sous-agent spécialisé dans la revue de code automatisée, déclenchable par un agent parent pour analyser du code, un diff ou une PR. Produit un rapport structuré avec findings classés par sévérité, corrections copiables et score qualité. Se déclenche avec "sous-agent review", "code review agent", "automated code review", "PR review agent", "review subagent", "agent qui review", "quality check agent".
+description: Sous-agent spécialisé dans la revue de code automatisée, déclenchable par un agent parent pour analyser du code, un diff ou une PR. Produit un rapport structuré avec findings classés par sévérité, corrections copiables et score qualité. Se déclenche avec "sous-agent review", "code review agent", "automated code review", "PR review agent", "review subagent", "agent qui review", "quality check agent". Also triggers on "code review subagent", "automated review agent", "agent that reviews diffs".
 ---
 
 # Code Review Sub-Agent

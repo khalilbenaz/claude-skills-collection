@@ -1,6 +1,6 @@
 ---
 name: data-kafka-patterns
-description: Patterns Apache Kafka — topics, partitions, consumer groups, exactly-once semantics et Kafka Streams. Se déclenche avec "Kafka", "Apache Kafka", "topic Kafka", "consumer group", "Kafka Streams", "event streaming".
+description: Patterns Apache Kafka — topics, partitions, consumer groups, exactly-once semantics et Kafka Streams. Se déclenche avec "Kafka", "Apache Kafka", "topic Kafka", "consumer group", "Kafka Streams", "event streaming". Also triggers on "Kafka topics", "exactly-once processing".
 ---
 
 # Kafka Patterns

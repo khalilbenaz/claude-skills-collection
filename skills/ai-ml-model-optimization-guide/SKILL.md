@@ -1,6 +1,6 @@
 ---
 name: ai-ml-model-optimization-guide
-description: Optimisation de modèles ML pour l'inférence (quantization, pruning, distillation, ONNX) — guide opérationnel avec snippets copiables, critères de choix et anti-patterns. Se déclenche avec \"quantization\", \"pruning\", \"distillation\", \"ONNX\", \"optimiser un modèle\", \"inférence rapide\". Se déclenche avec "quantization", "pruning", "distillation", "ONNX", "optimiser un modèle", "inférence rapide".
+description: Optimisation de modèles ML pour l'inférence (quantization, pruning, distillation, ONNX) — guide opérationnel avec snippets copiables, critères de choix et anti-patterns. Se déclenche avec \"quantization\", \"pruning\", \"distillation\", \"ONNX\", \"optimiser un modèle\", \"inférence rapide\". Se déclenche avec "quantization", "pruning", "distillation", "ONNX", "optimiser un modèle", "inférence rapide". Also triggers on "optimize inference", "quantize a model", "faster model serving".
 ---
 
 # Model Optimization Guide

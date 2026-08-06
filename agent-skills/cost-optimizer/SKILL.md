@@ -1,6 +1,6 @@
 ---
 name: cost-optimizer
-description: Optimisation des coûts des agents IA — tokens, API calls, modèles, caching, routing, budget controls. Se déclenche avec "coût agent", "agent cher", "réduire les coûts IA", "token optimization", "optimiser les tokens", "budget agent", "agent cost", "économiser sur l'API".
+description: Optimisation des coûts des agents IA — tokens, API calls, modèles, caching, routing, budget controls. Se déclenche avec "coût agent", "agent cher", "réduire les coûts IA", "token optimization", "optimiser les tokens", "budget agent", "agent cost", "économiser sur l'API". Also triggers on "reduce agent cost", "token cost optimization", "cheaper model routing".
 ---
 
 # Agent Cost Optimizer

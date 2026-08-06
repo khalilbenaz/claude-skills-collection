@@ -1,6 +1,6 @@
 ---
 name: child-milestone-tracker
-description: Suit le développement d'un enfant (moteur, langage, social, cognitif) et repère les étapes clés avec un tableau de suivi personnalisé, des activités adaptées et des signaux d'alerte clairs. Se déclenche aussi avec "développement de mon enfant", "mon bébé de X mois", "étapes bébé", "quand est-ce qu'il va marcher/parler", "mon enfant ne parle pas encore", "retard de développement", ou toute question sur le développement infantile.
+description: Suit le développement d'un enfant (moteur, langage, social, cognitif) et repère les étapes clés avec un tableau de suivi personnalisé, des activités adaptées et des signaux d'alerte clairs. Se déclenche aussi avec "développement de mon enfant", "mon bébé de X mois", "étapes bébé", "quand est-ce qu'il va marcher/parler", "mon enfant ne parle pas encore", "retard de développement", ou toute question sur le développement infantile. Also triggers on "child development milestones", "is my child on track", "developmental stages".
 ---
 
 # Child Milestone Tracker

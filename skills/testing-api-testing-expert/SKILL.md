@@ -1,6 +1,6 @@
 ---
 name: testing-api-testing-expert
-description: Tests d'API REST et GraphQL avec les outils majeurs du marché, incluant le contract testing, l'automatisation CI/CD et les tests de performance. Se déclenche avec "test API", "Postman", "Newman", "REST Assured", "contract testing", "Pact"
+description: Tests d'API REST et GraphQL avec les outils majeurs du marché, incluant le contract testing, l'automatisation CI/CD et les tests de performance. Se déclenche avec "test API", "Postman", "Newman", "REST Assured", "contract testing", "Pact. Also triggers on "API testing", "Postman or REST Assured tests".
 ---
 
 # API Testing Expert

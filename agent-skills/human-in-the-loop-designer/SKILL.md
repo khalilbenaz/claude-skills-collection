@@ -1,6 +1,6 @@
 ---
 name: human-in-the-loop-designer
-description: Design de systèmes human-in-the-loop pour agents IA avec approbation, correction et escalade. Se déclenche avec "human in the loop", "HITL", "approbation humaine", "validation humaine", "escalade agent", "agent supervisé", "intervention humaine", "approval workflow".
+description: Design de systèmes human-in-the-loop pour agents IA avec approbation, correction et escalade. Se déclenche avec "human in the loop", "HITL", "approbation humaine", "validation humaine", "escalade agent", "agent supervisé", "intervention humaine", "approval workflow". Also triggers on "approval step for agent", "human review of agent output".
 ---
 
 # Human-in-the-Loop Designer

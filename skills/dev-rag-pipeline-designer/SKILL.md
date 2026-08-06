@@ -1,6 +1,6 @@
 ---
 name: dev-rag-pipeline-designer
-description: Conception de pipelines RAG (Retrieval-Augmented Generation) — architecture, chunking, embeddings, vector stores, retrieval hybride, re-ranking, évaluation RAGAS. Se déclenche avec "RAG", "retrieval augmented", "vector database", "embeddings", "knowledge base", "Pinecone", "ChromaDB", "Weaviate", "chercher dans mes documents".
+description: Conception de pipelines RAG (Retrieval-Augmented Generation) — architecture, chunking, embeddings, vector stores, retrieval hybride, re-ranking, évaluation RAGAS. Se déclenche avec "RAG", "retrieval augmented", "vector database", "embeddings", "knowledge base", "Pinecone", "ChromaDB", "Weaviate", "chercher dans mes documents". Also triggers on "RAG pipeline", "chunking and embeddings", "vector search retrieval".
 ---
 
 # RAG Pipeline Designer

@@ -1,6 +1,6 @@
 ---
 name: dev-accessibility-checker
-description: Vérifie et améliore l'accessibilité web (WCAG 2.1/2.2). Se déclenche avec "accessibilité", "a11y", "WCAG", "screen reader", "ARIA", "contraste", "accessible", "handicap", "lecteur d'écran".
+description: Vérifie et améliore l'accessibilité web (WCAG 2.1/2.2). Se déclenche avec "accessibilité", "a11y", "WCAG", "screen reader", "ARIA", "contraste", "accessible", "handicap", "lecteur d'écran". Also triggers on "accessibility audit", "WCAG compliance", "screen reader issues".
 ---
 
 # Accessibility Checker

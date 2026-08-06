@@ -1,6 +1,6 @@
 ---
 name: prompt-engineering-pro
-description: Techniques avancées de prompt engineering pour LLMs — structure canonique, chain of thought, few-shot, output structuré, évaluation et défense anti-injection. Se déclenche avec "prompt engineering", "prompt", "system prompt", "few-shot", "chain of thought", "meilleur prompt", "optimiser mon prompt", "instructions LLM".
+description: Techniques avancées de prompt engineering pour LLMs — structure canonique, chain of thought, few-shot, output structuré, évaluation et défense anti-injection. Se déclenche avec "prompt engineering", "prompt", "system prompt", "few-shot", "chain of thought", "meilleur prompt", "optimiser mon prompt", "instructions LLM". Also triggers on "improve this prompt", "few-shot examples".
 ---
 
 # Prompt Engineering Pro

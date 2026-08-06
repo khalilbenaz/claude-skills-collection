@@ -1,6 +1,6 @@
 ---
 name: rate-limiter-designer
-description: Conception de systèmes de rate limiting et throttling pour APIs — algorithmes, stockage distribué, headers standards, snippets copiables ASP.NET Core / Node / Redis. Se déclenche avec "rate limit", "throttling", "limite de requêtes", "API abuse", "DDoS protection", "quota", "429 Too Many Requests".
+description: Conception de systèmes de rate limiting et throttling pour APIs — algorithmes, stockage distribué, headers standards, snippets copiables ASP.NET Core / Node / Redis. Se déclenche avec "rate limit", "throttling", "limite de requêtes", "API abuse", "DDoS protection", "quota", "429 Too Many Requests". Also triggers on "API quotas".
 ---
 
 # Rate Limiter Designer

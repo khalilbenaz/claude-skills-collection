@@ -1,6 +1,6 @@
 ---
 name: communication-storytelling-expert
-description: Techniques de storytelling pour communication professionnelle incluant narration, hook et structure. Se déclenche avec "storytelling", "raconter une histoire", "narratif", "hook", "structure narrative".
+description: Techniques de storytelling pour communication professionnelle incluant narration, hook et structure. Se déclenche avec "storytelling", "raconter une histoire", "narratif", "hook", "structure narrative". Also triggers on "narrative structure", "make my message stick".
 ---
 
 # Storytelling Expert

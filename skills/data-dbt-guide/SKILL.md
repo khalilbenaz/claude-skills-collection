@@ -1,6 +1,6 @@
 ---
 name: data-dbt-guide
-description: Transformation de données avec dbt — models, tests, sources, macros et documentation automatisée. Se déclenche avec "dbt", "data build tool", "dbt model", "dbt test", "transformation de données dbt".
+description: Transformation de données avec dbt — models, tests, sources, macros et documentation automatisée. Se déclenche avec "dbt", "data build tool", "dbt model", "dbt test", "transformation de données dbt". Also triggers on "dbt models", "dbt tests", "transform data with dbt".
 ---
 
 # Guide dbt

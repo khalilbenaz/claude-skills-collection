@@ -1,6 +1,6 @@
 ---
 name: mobile-app-architect
-description: Architecture d'applications mobiles (native, cross-platform, hybrid). Se déclenche avec "architecture mobile", "app mobile", "native vs cross-platform", "Flutter vs React Native", "MVVM", "Clean Architecture mobile", "offline first".
+description: Architecture d'applications mobiles (native, cross-platform, hybrid). Se déclenche avec "architecture mobile", "app mobile", "native vs cross-platform", "Flutter vs React Native", "MVVM", "Clean Architecture mobile", "offline first". Also triggers on "mobile app architecture", "offline-first mobile".
 ---
 
 # Mobile App Architect

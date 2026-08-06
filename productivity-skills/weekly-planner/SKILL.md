@@ -1,6 +1,6 @@
 ---
 name: weekly-planner
-description: Organise une semaine avec priorités, blocs de temps et objectifs. À utiliser quand l'utilisateur veut planifier sa semaine ou organiser ses tâches. Se déclenche aussi avec "planifier ma semaine", "organiser ma semaine", "to-do list", "planning hebdomadaire", "quoi faire cette semaine".
+description: Organise une semaine avec priorités, blocs de temps et objectifs. À utiliser quand l'utilisateur veut planifier sa semaine ou organiser ses tâches. Se déclenche aussi avec "planifier ma semaine", "organiser ma semaine", "to-do list", "planning hebdomadaire", "quoi faire cette semaine". Also triggers on "plan my week", "weekly priorities", "time blocking".
 ---
 
 # Weekly Planner

@@ -1,6 +1,6 @@
 ---
 name: postgres-expert
-description: Administration et optimisation PostgreSQL — diagnostic de performance, indexation, partitioning, tuning mémoire, VACUUM, backup/restore, JSONB, réplication. Se déclenche avec "PostgreSQL", "Postgres", "pg_stat", "JSONB", "partitioning", "VACUUM", "pg_dump"
+description: Administration et optimisation PostgreSQL — diagnostic de performance, indexation, partitioning, tuning mémoire, VACUUM, backup/restore, JSONB, réplication. Se déclenche avec "PostgreSQL", "Postgres", "pg_stat", "JSONB", "partitioning", "VACUUM", "pg_dump. Also triggers on "PostgreSQL performance", "Postgres index", "EXPLAIN ANALYZE", "table partitioning".
 ---
 
 # PostgreSQL Expert

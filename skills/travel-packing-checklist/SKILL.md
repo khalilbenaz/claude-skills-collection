@@ -1,6 +1,6 @@
 ---
 name: travel-packing-checklist
-description: Génère une checklist de voyage personnalisée selon la destination, la durée et le type de voyage. Se déclenche aussi avec "quoi emmener", "valise", "checklist voyage", "je pars en", "liste de voyage", ou toute préparation de bagages.
+description: Génère une checklist de voyage personnalisée selon la destination, la durée et le type de voyage. Se déclenche aussi avec "quoi emmener", "valise", "checklist voyage", "je pars en", "liste de voyage", ou toute préparation de bagages. Also triggers on "packing list", "what to pack", "travel checklist".
 ---
 
 # Packing Checklist — Guide opérationnel

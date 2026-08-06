@@ -1,6 +1,6 @@
 ---
 name: education-concept-explainer
-description: Explique un concept complexe de manière simple, progressive et avec des analogies. À utiliser quand l'utilisateur ne comprend pas quelque chose et a besoin d'une explication claire. Se déclenche aussi avec "explique-moi", "c'est quoi", "je ne comprends pas", "en termes simples", "comme si j'avais 5 ans".
+description: Explique un concept complexe de manière simple, progressive et avec des analogies. À utiliser quand l'utilisateur ne comprend pas quelque chose et a besoin d'une explication claire. Se déclenche aussi avec "explique-moi", "c'est quoi", "je ne comprends pas", "en termes simples", "comme si j'avais 5 ans". Also triggers on "explain this concept", "explain it simply", "help me understand".
 ---
 
 # Concept Explainer

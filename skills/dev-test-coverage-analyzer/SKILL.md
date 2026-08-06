@@ -1,6 +1,6 @@
 ---
 name: dev-test-coverage-analyzer
-description: Analyse et améliore la couverture de tests d'un projet. Se déclenche avec "couverture", "coverage", "code coverage", "branches non testées", "améliorer mes tests", "dead code", "mutation testing".
+description: Analyse et améliore la couverture de tests d'un projet. Se déclenche avec "couverture", "coverage", "code coverage", "branches non testées", "améliorer mes tests", "dead code", "mutation testing". Also triggers on "test coverage", "which code is untested", "coverage report".
 ---
 
 # Test Coverage Analyzer

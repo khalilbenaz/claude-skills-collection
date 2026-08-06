@@ -1,6 +1,6 @@
 ---
 name: writing-copywriting-assistant
-description: Aide à rédiger du contenu marketing persuasif (landing page, pub, réseaux sociaux, slogan). À utiliser quand l'utilisateur veut vendre, convaincre ou promouvoir. Se déclenche aussi avec "copywriting", "texte de vente", "landing page", "accroche", "pub", "post Instagram", "slogan", "description produit".
+description: Aide à rédiger du contenu marketing persuasif (landing page, pub, réseaux sociaux, slogan). À utiliser quand l'utilisateur veut vendre, convaincre ou promouvoir. Se déclenche aussi avec "copywriting", "texte de vente", "landing page", "accroche", "pub", "post Instagram", "slogan", "description produit". Also triggers on "write marketing copy", "landing page copy", "ad headline".
 ---
 
 # Copywriting Assistant

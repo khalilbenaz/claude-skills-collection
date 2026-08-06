@@ -1,6 +1,6 @@
 ---
 name: dev-code-reviewer
-description: Revue de code structurée avec détection de bugs, suggestions d'amélioration et bonnes pratiques. À utiliser quand l'utilisateur colle du code et demande un avis, une revue ou des améliorations. Se déclenche aussi avec "revois mon code", "code review", "améliore ce code", "qu'est-ce qui ne va pas dans mon code", "est-ce que ce code est bon".
+description: Revue de code structurée avec détection de bugs, suggestions d'amélioration et bonnes pratiques. À utiliser quand l'utilisateur colle du code et demande un avis, une revue ou des améliorations. Se déclenche aussi avec "revois mon code", "code review", "améliore ce code", "qu'est-ce qui ne va pas dans mon code", "est-ce que ce code est bon". Also triggers on "review my code", "check this PR", "is this code good".
 ---
 
 # Code Reviewer

@@ -1,6 +1,6 @@
 ---
 name: terraform-guide
-description: Guide Terraform pour l'Infrastructure as Code — modules, state management, workspaces et bonnes pratiques. À utiliser quand l'utilisateur écrit du Terraform, conçoit des modules ou gère de l'infrastructure cloud. Se déclenche aussi avec "terraform", "infrastructure as code", "terraform plan", "terraform apply", "module terraform", "tfstate", "HCL".
+description: Guide Terraform pour l'Infrastructure as Code — modules, state management, workspaces et bonnes pratiques. À utiliser quand l'utilisateur écrit du Terraform, conçoit des modules ou gère de l'infrastructure cloud. Se déclenche aussi avec "terraform", "infrastructure as code", "terraform plan", "terraform apply", "module terraform", "tfstate", "HCL". Also triggers on "Terraform module", "terraform state", "provision with Terraform".
 ---
 
 # Guide Terraform

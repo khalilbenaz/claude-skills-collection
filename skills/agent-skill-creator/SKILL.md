@@ -1,6 +1,6 @@
 ---
 name: agent-skill-creator
-description: Agent spécialisé dans la création de nouveaux skills pour Claude Code. Génère des SKILL.md complets et structurés à partir d'une description de besoin. Se déclenche avec "créer un skill", "nouveau skill", "skill creator", "générer un skill", "fabriquer un skill", "skill factory", "template skill", "je veux un skill pour", "create a skill", "new skill", "build a skill".
+description: Agent spécialisé dans la création de nouveaux skills pour Claude Code. Génère des SKILL.md complets et structurés à partir d'une description de besoin. Se déclenche avec "créer un skill", "nouveau skill", "skill creator", "générer un skill", "fabriquer un skill", "skill factory", "template skill", "je veux un skill pour", "create a skill", "new skill", "build a skill". Also triggers on "write a SKILL.md", "new Claude skill".
 ---
 
 # Skill Creator — Fabrique de Skills pour Claude Code

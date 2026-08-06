@@ -1,6 +1,6 @@
 ---
 name: database-sql-server-tuner
-description: Optimisation et administration SQL Server. Se déclenche avec "SQL Server", "SSMS", "execution plan", "index SQL Server", "Always On", "tempdb"
+description: Optimisation et administration SQL Server. Se déclenche avec "SQL Server", "SSMS", "execution plan", "index SQL Server", "Always On", "tempdb. Also triggers on "SQL Server performance", "T-SQL tuning", "execution plan analysis".
 ---
 
 # SQL Server Tuner

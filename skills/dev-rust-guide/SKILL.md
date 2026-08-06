@@ -1,6 +1,6 @@
 ---
 name: dev-rust-guide
-description: Guide Rust pour ownership, lifetimes et patterns systèmes. Se déclenche avec "Rust", "ownership", "borrow checker", "lifetime", "cargo", "traits", "async Rust", "systems programming", "memory safety".
+description: Guide Rust pour ownership, lifetimes et patterns systèmes. Se déclenche avec "Rust", "ownership", "borrow checker", "lifetime", "cargo", "traits", "async Rust", "systems programming", "memory safety". Also triggers on "Rust ownership", "borrow checker error", "lifetimes in Rust".
 ---
 
 # Rust Guide

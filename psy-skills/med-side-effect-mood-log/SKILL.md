@@ -1,6 +1,6 @@
 ---
 name: med-side-effect-mood-log
-description: Suit l'humeur, le sommeil, l'appétit et les effets secondaires possibles d'un traitement psychiatrique sans donner de consigne médicale. Se déclenche aussi avec "depuis que je prends…", "effets secondaires antidépresseur", "mon traitement me fait…", "je dors mal depuis le médicament", ou toute mention de changement d'état sous traitement psychotrope.
+description: Suit l'humeur, le sommeil, l'appétit et les effets secondaires possibles d'un traitement psychiatrique sans donner de consigne médicale. Se déclenche aussi avec "depuis que je prends…", "effets secondaires antidépresseur", "mon traitement me fait…", "je dors mal depuis le médicament", ou toute mention de changement d'état sous traitement psychotrope. Also triggers on "psychiatric medication log", "mood and side effects", "treatment follow-up log".
 ---
 
 # Med Side Effect & Mood Log

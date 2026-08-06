@@ -1,6 +1,6 @@
 ---
 name: supplement-checker
-description: Analyse de façon prudente l'usage d'un supplément, ses objectifs, ses effets gênants possibles et les questions à poser à un professionnel. À utiliser pour vitamines, plantes, probiotiques, oméga-3, moringa, magnésium et autres compléments. Se déclenche aussi avec "je prends du…", "complément alimentaire", "vitamine", "supplément", "plante médicinale", "est-ce que X est bon pour…".
+description: Analyse de façon prudente l'usage d'un supplément, ses objectifs, ses effets gênants possibles et les questions à poser à un professionnel. À utiliser pour vitamines, plantes, probiotiques, oméga-3, moringa, magnésium et autres compléments. Se déclenche aussi avec "je prends du…", "complément alimentaire", "vitamine", "supplément", "plante médicinale", "est-ce que X est bon pour…". Also triggers on "is this supplement useful", "supplement side effects", "vitamin interactions".
 ---
 
 # Supplement Checker

@@ -1,6 +1,6 @@
 ---
 name: dev-health-check-monitor
-description: Implémentation de health checks ASP.NET Core, readiness/liveness probes et intégration Kubernetes. À utiliser quand l'utilisateur configure des endpoints de santé, des probes K8s ou du monitoring applicatif. Se déclenche aussi avec "health check", "liveness probe", "readiness probe", "endpoint santé", "health endpoint", "ASP.NET health", "monitoring applicatif".
+description: Implémentation de health checks ASP.NET Core, readiness/liveness probes et intégration Kubernetes. À utiliser quand l'utilisateur configure des endpoints de santé, des probes K8s ou du monitoring applicatif. Se déclenche aussi avec "health check", "liveness probe", "readiness probe", "endpoint santé", "health endpoint", "ASP.NET health", "monitoring applicatif". Also triggers on "health check endpoint", "readiness and liveness probes", "Kubernetes probes".
 ---
 
 # Health Checks & Monitoring

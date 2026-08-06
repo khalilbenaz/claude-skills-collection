@@ -1,6 +1,6 @@
 ---
 name: dev-sqlite-guide
-description: Guide pour écrire des requêtes SQL et concevoir des schémas SQLite avec les bonnes pratiques. À utiliser quand l'utilisateur travaille avec SQLite, écrit des requêtes SQL ou conçoit des schémas de base de données. Se déclenche aussi avec "requête SQL", "schéma SQLite", "base de données SQLite", "migration SQL", "table SQLite", "query SQL".
+description: Guide pour écrire des requêtes SQL et concevoir des schémas SQLite avec les bonnes pratiques. À utiliser quand l'utilisateur travaille avec SQLite, écrit des requêtes SQL ou conçoit des schémas de base de données. Se déclenche aussi avec "requête SQL", "schéma SQLite", "base de données SQLite", "migration SQL", "table SQLite", "query SQL". Also triggers on "SQLite schema", "SQLite query", "embedded database".
 ---
 
 # Guide SQLite

@@ -1,6 +1,6 @@
 ---
 name: finance-investment-journal
-description: Aide à documenter et suivre des décisions d'investissement avec raisonnement et résultats. À utiliser quand l'utilisateur parle d'investissements et veut les organiser. Se déclenche aussi avec "mes investissements", "journal d'investissement", "portefeuille", "j'ai investi dans", "suivi placements".
+description: Aide à documenter et suivre des décisions d'investissement avec raisonnement et résultats. À utiliser quand l'utilisateur parle d'investissements et veut les organiser. Se déclenche aussi avec "mes investissements", "journal d'investissement", "portefeuille", "j'ai investi dans", "suivi placements". Also triggers on "investment journal", "track my trades", "document an investment thesis".
 ---
 
 # Investment Journal

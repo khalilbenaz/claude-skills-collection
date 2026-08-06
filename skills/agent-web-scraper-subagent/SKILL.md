@@ -1,6 +1,6 @@
 ---
 name: agent-web-scraper-subagent
-description: Construction d'un sous-agent spécialisé dans la collecte de données web pour un agent parent. Crawling, extraction, parsing et retour structuré. Se déclenche avec "sous-agent web", "scraper agent", "agent qui collecte", "web extraction agent", "crawl agent", "agent browsing", "browser subagent".
+description: Construction d'un sous-agent spécialisé dans la collecte de données web pour un agent parent. Crawling, extraction, parsing et retour structuré. Se déclenche avec "sous-agent web", "scraper agent", "agent qui collecte", "web extraction agent", "crawl agent", "agent browsing", "browser subagent". Also triggers on "web scraping agent", "crawl a website", "extract data from pages".
 ---
 
 # Web Scraper Sub-Agent

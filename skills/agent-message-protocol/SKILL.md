@@ -1,6 +1,6 @@
 ---
 name: agent-message-protocol
-description: Design de protocoles de communication entre agents et sous-agents — formats de messages, routing, delivery guarantees, ACK/NACK, versioning et middleware. Se déclenche avec "protocole agent", "message protocol", "communication agent", "agent messaging", "inter-agent communication", "message format agent", "agent API interne".
+description: Design de protocoles de communication entre agents et sous-agents — formats de messages, routing, delivery guarantees, ACK/NACK, versioning et middleware. Se déclenche avec "protocole agent", "message protocol", "communication agent", "agent messaging", "inter-agent communication", "message format agent", "agent API interne". Also triggers on "agent message format", "inter-agent messaging", "agent protocol design".
 ---
 
 # Agent Message Protocol

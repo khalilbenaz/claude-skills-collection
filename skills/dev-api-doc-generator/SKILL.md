@@ -1,6 +1,6 @@
 ---
 name: dev-api-doc-generator
-description: Génère une documentation d'API claire et structurée à partir de code, routes ou descriptions. À utiliser quand l'utilisateur veut documenter une API REST, GraphQL ou des endpoints. Se déclenche aussi avec "documente mon API", "swagger", "endpoint documentation", "API docs", ou quand l'utilisateur montre des routes/controllers.
+description: Génère une documentation d'API claire et structurée à partir de code, routes ou descriptions. À utiliser quand l'utilisateur veut documenter une API REST, GraphQL ou des endpoints. Se déclenche aussi avec "documente mon API", "swagger", "endpoint documentation", "API docs", ou quand l'utilisateur montre des routes/controllers. Also triggers on "document my API", "generate API docs", "OpenAPI documentation".
 ---
 
 # API Doc Generator

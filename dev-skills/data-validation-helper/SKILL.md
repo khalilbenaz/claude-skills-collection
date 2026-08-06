@@ -1,6 +1,6 @@
 ---
 name: data-validation-helper
-description: Validation et qualité des données dans les pipelines. Se déclenche avec "data quality", "validation des données", "data contract", "schema validation", "Great Expectations", "données incorrectes", "data testing".
+description: Validation et qualité des données dans les pipelines. Se déclenche avec "data quality", "validation des données", "data contract", "schema validation", "Great Expectations", "données incorrectes", "data testing". Also triggers on "validate input data", "reject bad records".
 ---
 
 # Data Validation Helper

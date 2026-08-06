@@ -1,6 +1,6 @@
 ---
 name: parenting-bedtime-routine-builder
-description: Crée une routine du coucher adaptée à l'âge de l'enfant. Se déclenche aussi avec "routine du soir", "mon enfant ne veut pas dormir", "coucher difficile", "rituel du coucher", ou toute difficulté liée au sommeil de l'enfant.
+description: Crée une routine du coucher adaptée à l'âge de l'enfant. Se déclenche aussi avec "routine du soir", "mon enfant ne veut pas dormir", "coucher difficile", "rituel du coucher", ou toute difficulté liée au sommeil de l'enfant. Also triggers on "bedtime routine", "child won't sleep", "evening routine for kids".
 ---
 
 # Bedtime Routine Builder

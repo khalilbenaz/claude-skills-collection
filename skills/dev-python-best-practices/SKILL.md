@@ -1,6 +1,6 @@
 ---
 name: dev-python-best-practices
-description: Bonnes pratiques Python pour code propre, performant et maintenable. Se déclenche avec "Python", "PEP 8", "pythonic", "virtualenv", "pip", "poetry", "FastAPI", "Django", "asyncio", "type hints".
+description: Bonnes pratiques Python pour code propre, performant et maintenable. Se déclenche avec "Python", "PEP 8", "pythonic", "virtualenv", "pip", "poetry", "FastAPI", "Django", "asyncio", "type hints". Also triggers on "Pythonic code", "Python project structure", "type hints and linting".
 ---
 
 # Python Best Practices

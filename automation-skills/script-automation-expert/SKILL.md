@@ -1,6 +1,6 @@
 ---
 name: script-automation-expert
-description: Automatisation par scripts (PowerShell, Python, Bash) pour tâches répétitives — cron jobs, batch processing et orchestration. Se déclenche avec "automatiser", "script d'automatisation", "tâche répétitive", "batch", "cron job", "PowerShell automation".
+description: Automatisation par scripts (PowerShell, Python, Bash) pour tâches répétitives — cron jobs, batch processing et orchestration. Se déclenche avec "automatiser", "script d'automatisation", "tâche répétitive", "batch", "cron job", "PowerShell automation". Also triggers on "automate a repetitive task", "cron job script", "batch processing script".
 ---
 
 # Script Automation Expert

@@ -1,6 +1,6 @@
 ---
 name: psy-psychiatry-visit-prep
-description: Prépare un rendez-vous chez le psychiatre avec symptômes, chronologie, traitements et questions prioritaires. Se déclenche aussi avec "rendez-vous psychiatre", "je vois mon psy(chiatre)", "consultation psychiatrique", "préparer mon rdv psy", ou toute mention de visite chez un psychiatre.
+description: Prépare un rendez-vous chez le psychiatre avec symptômes, chronologie, traitements et questions prioritaires. Se déclenche aussi avec "rendez-vous psychiatre", "je vois mon psy(chiatre)", "consultation psychiatrique", "préparer mon rdv psy", ou toute mention de visite chez un psychiatre. Also triggers on "prepare for a psychiatrist appointment", "symptoms timeline for psychiatry", "medication questions".
 ---
 
 # Psychiatry Visit Prep

@@ -1,6 +1,6 @@
 ---
 name: health-medication-schedule
-description: Organise les prises de médicaments et compléments dans une journée sans remplacer l'ordonnance. À utiliser quand l'utilisateur veut un planning horaire simple ou éviter les oublis. Se déclenche aussi avec "planning médicaments", "quand prendre mes cachets", "organiser mes prises", "rappel médicament", "emploi du temps traitement".
+description: Organise les prises de médicaments et compléments dans une journée sans remplacer l'ordonnance. À utiliser quand l'utilisateur veut un planning horaire simple ou éviter les oublis. Se déclenche aussi avec "planning médicaments", "quand prendre mes cachets", "organiser mes prises", "rappel médicament", "emploi du temps traitement". Also triggers on "medication schedule", "when to take my pills", "organize my treatment".
 ---
 
 # Medication Schedule

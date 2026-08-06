@@ -1,6 +1,6 @@
 ---
 name: dev-bug-debugger
-description: Aide à diagnostiquer et résoudre un bug en suivant une méthodologie structurée. À utiliser quand l'utilisateur a une erreur, un comportement inattendu ou un crash. Se déclenche aussi avec "j'ai un bug", "ça ne marche pas", "erreur", "crash", "pourquoi ça fait ça", "TypeError", "undefined", ou tout message d'erreur collé.
+description: Aide à diagnostiquer et résoudre un bug en suivant une méthodologie structurée. À utiliser quand l'utilisateur a une erreur, un comportement inattendu ou un crash. Se déclenche aussi avec "j'ai un bug", "ça ne marche pas", "erreur", "crash", "pourquoi ça fait ça", "TypeError", "undefined", ou tout message d'erreur collé. Also triggers on "debug this", "why does this fail", "find the root cause", "fix this bug".
 ---
 
 # Bug Debugger

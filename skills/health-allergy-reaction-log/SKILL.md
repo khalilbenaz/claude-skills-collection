@@ -1,6 +1,6 @@
 ---
 name: health-allergy-reaction-log
-description: Suit les réactions allergiques ou suspectées, identifie les déclencheurs et prépare un dossier structuré pour l'allergologue. À utiliser quand l'utilisateur décrit des réactions cutanées, respiratoires ou digestives suspectes. Se déclenche aussi avec "réaction allergique", "urticaire", "j'ai gonflé", "allergie", "éternuements", "yeux qui piquent", "eczéma", ou toute mention de réaction inexpliquée après exposition.
+description: Suit les réactions allergiques ou suspectées, identifie les déclencheurs et prépare un dossier structuré pour l'allergologue. À utiliser quand l'utilisateur décrit des réactions cutanées, respiratoires ou digestives suspectes. Se déclenche aussi avec "réaction allergique", "urticaire", "j'ai gonflé", "allergie", "éternuements", "yeux qui piquent", "eczéma", ou toute mention de réaction inexpliquée après exposition. Also triggers on "allergy log", "track allergic reactions", "find my allergy triggers".
 ---
 
 # Allergy Reaction Log

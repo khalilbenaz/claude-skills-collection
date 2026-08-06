@@ -1,6 +1,6 @@
 ---
 name: local-phrase-book
-description: Génère un mini guide de phrases essentielles dans la langue locale d'une destination. Se déclenche aussi avec "phrases utiles en", "comment dire en", "vocabulaire voyage", "expressions locales", ou toute demande de vocabulaire de voyage.
+description: Génère un mini guide de phrases essentielles dans la langue locale d'une destination. Se déclenche aussi avec "phrases utiles en", "comment dire en", "vocabulaire voyage", "expressions locales", ou toute demande de vocabulaire de voyage. Also triggers on "useful phrases", "basic local language", "phrasebook for my trip".
 ---
 
 # Local Phrase Book

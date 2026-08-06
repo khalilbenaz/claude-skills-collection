@@ -1,6 +1,6 @@
 ---
 name: monitoring-setup
-description: Monitoring et observabilité pour agents IA en production — traces distribuées, métriques LLM, alertes coût/qualité, dashboards, debugging. Se déclenche avec "monitoring agent", "observabilité agent", "LangSmith", "traces agent", "agent logs", "surveiller mon agent", "agent debugging", "agent analytics".
+description: Monitoring et observabilité pour agents IA en production — traces distribuées, métriques LLM, alertes coût/qualité, dashboards, debugging. Se déclenche avec "monitoring agent", "observabilité agent", "LangSmith", "traces agent", "agent logs", "surveiller mon agent", "agent debugging", "agent analytics". Also triggers on "monitor my agent", "agent alerting", "agent cost alerts".
 ---
 
 # Agent Monitoring Setup

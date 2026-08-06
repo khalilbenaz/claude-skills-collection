@@ -1,6 +1,6 @@
 ---
 name: homework-helper
-description: Aide un parent à accompagner son enfant dans ses devoirs sans faire à sa place. Se déclenche aussi avec "devoirs", "aide scolaire", "mon enfant ne comprend pas", "exercice de maths/français", "comment expliquer", ou toute demande d'aide pédagogique parentale.
+description: Aide un parent à accompagner son enfant dans ses devoirs sans faire à sa place. Se déclenche aussi avec "devoirs", "aide scolaire", "mon enfant ne comprend pas", "exercice de maths/français", "comment expliquer", ou toute demande d'aide pédagogique parentale. Also triggers on "help with homework", "support my child studying", "homework routine".
 ---
 
 # Homework Helper

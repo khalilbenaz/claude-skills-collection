@@ -1,6 +1,6 @@
 ---
 name: dev-azure-devops-pipeline-advisor
-description: Conception de pipelines CI/CD avec Azure DevOps (YAML pipelines, stages, templates, déploiement multi-environnement). À utiliser quand l'utilisateur travaille avec Azure DevOps, configure des pipelines YAML ou gère des releases. Se déclenche aussi avec "azure devops", "pipeline YAML", "azure pipeline", "CI/CD azure", "release pipeline", "azure artifacts".
+description: Conception de pipelines CI/CD avec Azure DevOps (YAML pipelines, stages, templates, déploiement multi-environnement). À utiliser quand l'utilisateur travaille avec Azure DevOps, configure des pipelines YAML ou gère des releases. Se déclenche aussi avec "azure devops", "pipeline YAML", "azure pipeline", "CI/CD azure", "release pipeline", "azure artifacts". Also triggers on "Azure DevOps pipeline", "multi-stage deployment".
 ---
 
 # Conseiller Azure DevOps Pipelines

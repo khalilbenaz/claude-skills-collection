@@ -1,6 +1,6 @@
 ---
 name: react-component-builder
-description: Crée des composants React/Vue/Angular/Svelte optimisés et réutilisables. Se déclenche avec "composant React", "component", "Vue component", "Angular component", "Svelte", "hooks", "state management", "créer un composant".
+description: Crée des composants React/Vue/Angular/Svelte optimisés et réutilisables. Se déclenche avec "composant React", "component", "Vue component", "Angular component", "Svelte", "hooks", "state management", "créer un composant". Also triggers on "React component", "reusable component", "hooks and props design".
 ---
 
 # React Component Builder

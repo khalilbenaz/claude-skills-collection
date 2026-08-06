@@ -1,6 +1,6 @@
 ---
 name: agent-file-processor-subagent
-description: Sous-agent de traitement de fichiers — lecture, parsing, transformation et génération de fichiers multiformats. Se déclenche avec "sous-agent fichier", "file processing agent", "agent qui traite des fichiers", "PDF agent", "Excel agent", "document processor", "file parser agent".
+description: Sous-agent de traitement de fichiers — lecture, parsing, transformation et génération de fichiers multiformats. Se déclenche avec "sous-agent fichier", "file processing agent", "agent qui traite des fichiers", "PDF agent", "Excel agent", "document processor", "file parser agent". Also triggers on "agent that parses files", "document processing subagent".
 ---
 
 # File Processor Sub-Agent

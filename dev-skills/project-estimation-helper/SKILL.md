@@ -1,6 +1,6 @@
 ---
 name: project-estimation-helper
-description: Estimation de projets logiciels avec méthodes éprouvées, buffers calibrés et communication honnête des fourchettes. Se déclenche avec "estimation", "combien de temps", "planning", "story points", "estimation projet", "délai", "effort", "PERT", "t-shirt sizing".
+description: Estimation de projets logiciels avec méthodes éprouvées, buffers calibrés et communication honnête des fourchettes. Se déclenche avec "estimation", "combien de temps", "planning", "story points", "estimation projet", "délai", "effort", "PERT", "t-shirt sizing". Also triggers on "estimate this project", "how long will it take", "story point estimation".
 ---
 
 # Project Estimation Helper

@@ -1,6 +1,6 @@
 ---
 name: social-conflict-resolver
-description: Aide à analyser et résoudre un conflit interpersonnel avec méthode structurée. Se déclenche aussi avec "conflit", "dispute", "on ne s'entend plus", "désaccord", "problème avec quelqu'un", ou toute situation de conflit relationnel.
+description: Aide à analyser et résoudre un conflit interpersonnel avec méthode structurée. Se déclenche aussi avec "conflit", "dispute", "on ne s'entend plus", "désaccord", "problème avec quelqu'un", ou toute situation de conflit relationnel. Also triggers on "resolve a conflict", "we keep arguing", "interpersonal conflict".
 ---
 
 # Conflict Resolver

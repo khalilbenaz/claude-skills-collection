@@ -1,6 +1,6 @@
 ---
 name: dev-dotnet-csharp-advisor
-description: Développement .NET/C# avec ASP.NET Core, EF Core et patterns modernes. Se déclenche avec ".NET", "C#", "ASP.NET", "EF Core", "Entity Framework", "Minimal API", "Blazor", "LINQ", "NuGet", "dotnet".
+description: Développement .NET/C# avec ASP.NET Core, EF Core et patterns modernes. Se déclenche avec ".NET", "C#", "ASP.NET", "EF Core", "Entity Framework", "Minimal API", "Blazor", "LINQ", "NuGet", "dotnet". Also triggers on "C# best practices", "EF Core query".
 ---
 
 # .NET/C# Advisor

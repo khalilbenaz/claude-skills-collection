@@ -1,6 +1,6 @@
 ---
 name: psy-breathing-exercise-guide
-description: Guide des exercices de respiration pour calmer le stress, l'anxiété ou une montée de panique. À utiliser quand l'utilisateur cherche un moyen rapide de se calmer ou demande un exercice de relaxation. Se déclenche aussi avec "exercice de respiration", "je veux me calmer", "technique de relaxation", "cohérence cardiaque", "respiration carrée", "j'ai besoin de me poser", ou toute demande d'outil de régulation émotionnelle immédiat.
+description: Guide des exercices de respiration pour calmer le stress, l'anxiété ou une montée de panique. À utiliser quand l'utilisateur cherche un moyen rapide de se calmer ou demande un exercice de relaxation. Se déclenche aussi avec "exercice de respiration", "je veux me calmer", "technique de relaxation", "cohérence cardiaque", "respiration carrée", "j'ai besoin de me poser", ou toute demande d'outil de régulation émotionnelle immédiat. Also triggers on "breathing exercise", "calm down now", "box breathing".
 ---
 
 # Breathing Exercise Guide

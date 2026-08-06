@@ -1,6 +1,6 @@
 ---
 name: education-exam-prep
-description: Prépare un examen avec quiz de test, points clés et stratégie de révision. À utiliser quand l'utilisateur veut se tester ou préparer un examen spécifique. Se déclenche aussi avec "teste-moi", "quiz", "préparer l'examen", "QCM", "révision active", "simule un examen".
+description: Prépare un examen avec quiz de test, points clés et stratégie de révision. À utiliser quand l'utilisateur veut se tester ou préparer un examen spécifique. Se déclenche aussi avec "teste-moi", "quiz", "préparer l'examen", "QCM", "révision active", "simule un examen". Also triggers on "prepare for an exam", "practice quiz", "revision strategy".
 ---
 
 # Exam Prep

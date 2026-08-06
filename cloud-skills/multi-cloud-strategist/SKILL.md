@@ -1,6 +1,6 @@
 ---
 name: multi-cloud-strategist
-description: Stratégie multi-cloud et cloud hybride couvrant la portabilité, le vendor lock-in et le networking inter-cloud. Se déclenche avec "multi-cloud", "hybrid cloud", "vendor lock-in", "cloud agnostic", "cloud hybride"
+description: Stratégie multi-cloud et cloud hybride couvrant la portabilité, le vendor lock-in et le networking inter-cloud. Se déclenche avec "multi-cloud", "hybrid cloud", "vendor lock-in", "cloud agnostic", "cloud hybride. Also triggers on "multi-cloud strategy", "avoid vendor lock-in".
 ---
 
 # Multi-Cloud Strategist

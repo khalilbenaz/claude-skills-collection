@@ -1,6 +1,6 @@
 ---
 name: linux-security-hardener
-description: Durcissement sécurité Linux — SSH, fail2ban, SELinux, audit, gestion des utilisateurs et mises à jour. Se déclenche avec "sécurité Linux", "hardening Linux", "SSH sécurisé", "fail2ban", "SELinux", "audit Linux".
+description: Durcissement sécurité Linux — SSH, fail2ban, SELinux, audit, gestion des utilisateurs et mises à jour. Se déclenche avec "sécurité Linux", "hardening Linux", "SSH sécurisé", "fail2ban", "SELinux", "audit Linux". Also triggers on "harden a Linux server", "SSH hardening", "fail2ban and SELinux".
 ---
 
 # Linux Security Hardener

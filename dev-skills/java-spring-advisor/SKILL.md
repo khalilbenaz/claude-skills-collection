@@ -1,6 +1,6 @@
 ---
 name: java-spring-advisor
-description: Développement Java avec Spring Boot, Spring Security et l'écosystème Spring. Se déclenche avec "Java", "Spring Boot", "Spring", "JPA", "Hibernate", "Maven", "Gradle", "Spring Security", "microservices Java".
+description: Développement Java avec Spring Boot, Spring Security et l'écosystème Spring. Se déclenche avec "Java", "Spring Boot", "Spring", "JPA", "Hibernate", "Maven", "Gradle", "Spring Security", "microservices Java". Also triggers on "Java bean configuration".
 ---
 
 # Java Spring Advisor

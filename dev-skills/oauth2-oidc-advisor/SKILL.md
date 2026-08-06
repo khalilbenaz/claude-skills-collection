@@ -1,6 +1,6 @@
 ---
 name: oauth2-oidc-advisor
-description: Implémentation d'OAuth2, OpenID Connect, JWT et gestion des tokens pour sécuriser des APIs et applications web. À utiliser quand l'utilisateur configure de l'authentification, des tokens JWT, ou intègre un identity provider. Se déclenche aussi avec "OAuth2", "OIDC", "OpenID Connect", "JWT", "token", "refresh token", "identity provider", "Keycloak", "Azure AD", "Auth0".
+description: Implémentation d'OAuth2, OpenID Connect, JWT et gestion des tokens pour sécuriser des APIs et applications web. À utiliser quand l'utilisateur configure de l'authentification, des tokens JWT, ou intègre un identity provider. Se déclenche aussi avec "OAuth2", "OIDC", "OpenID Connect", "JWT", "token", "refresh token", "identity provider", "Keycloak", "Azure AD", "Auth0". Also triggers on "OAuth2 flow", "JWT validation", "refresh tokens".
 ---
 
 # Conseiller OAuth2 / OIDC

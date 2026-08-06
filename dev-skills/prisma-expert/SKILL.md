@@ -1,6 +1,6 @@
 ---
 name: prisma-expert
-description: Expert Prisma ORM pour la conception de schémas, les migrations, l'optimisation de requêtes, la modélisation de relations et les opérations base de données. À utiliser quand l'utilisateur travaille avec Prisma, a des problèmes de schéma, de migration ou de performance de requêtes. Se déclenche aussi avec "prisma", "schema prisma", "migration prisma", "prisma client", "requête prisma lente", "relation prisma".
+description: Expert Prisma ORM pour la conception de schémas, les migrations, l'optimisation de requêtes, la modélisation de relations et les opérations base de données. À utiliser quand l'utilisateur travaille avec Prisma, a des problèmes de schéma, de migration ou de performance de requêtes. Se déclenche aussi avec "prisma", "schema prisma", "migration prisma", "prisma client", "requête prisma lente", "relation prisma". Also triggers on "Prisma schema", "Prisma migration", "Prisma query performance".
 ---
 
 # Expert Prisma ORM

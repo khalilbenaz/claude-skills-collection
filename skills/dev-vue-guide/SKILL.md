@@ -1,6 +1,6 @@
 ---
 name: dev-vue-guide
-description: Développement d'applications Vue.js 3 avec Composition API, Pinia, Vue Router, composants réactifs et bonnes pratiques. Se déclenche avec "Vue", "Vue.js", "Composition API", "Pinia", "Vue Router", "composant Vue".
+description: Développement d'applications Vue.js 3 avec Composition API, Pinia, Vue Router, composants réactifs et bonnes pratiques. Se déclenche avec "Vue", "Vue.js", "Composition API", "Pinia", "Vue Router", "composant Vue". Also triggers on "Vue 3 app", "Pinia store".
 ---
 
 # Guide Vue.js 3

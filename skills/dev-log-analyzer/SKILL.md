@@ -1,6 +1,6 @@
 ---
 name: dev-log-analyzer
-description: Analyse de logs pour diagnostiquer problèmes et patterns. Se déclenche avec "logs", "analyser les logs", "erreur dans les logs", "log parsing", "structured logging", "Serilog", "ELK", "debug production".
+description: Analyse de logs pour diagnostiquer problèmes et patterns. Se déclenche avec "logs", "analyser les logs", "erreur dans les logs", "log parsing", "structured logging", "Serilog", "ELK", "debug production". Also triggers on "analyze these logs", "find errors in logs", "log patterns".
 ---
 
 # Log Analyzer

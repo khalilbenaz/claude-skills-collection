@@ -1,6 +1,6 @@
 ---
 name: chain-of-thought-designer
-description: Conçoit des prompts avec raisonnement en chaîne pour des tâches complexes nécessitant de la logique multi-étapes. À utiliser pour analyse, résolution de problèmes, mathématiques, logique ou décisions complexes. Se déclenche aussi avec "chain of thought", "raisonnement étape par étape", "prompt logique", "tâche complexe", "décomposer le raisonnement", ou toute tâche nécessitant un raisonnement structuré.
+description: Conçoit des prompts avec raisonnement en chaîne pour des tâches complexes nécessitant de la logique multi-étapes. À utiliser pour analyse, résolution de problèmes, mathématiques, logique ou décisions complexes. Se déclenche aussi avec "chain of thought", "raisonnement étape par étape", "prompt logique", "tâche complexe", "décomposer le raisonnement", ou toute tâche nécessitant un raisonnement structuré. Also triggers on "chain of thought prompt", "step-by-step reasoning prompt", "make the model reason".
 ---
 
 # Chain of Thought Designer

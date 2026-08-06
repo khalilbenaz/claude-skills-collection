@@ -1,6 +1,6 @@
 ---
 name: dev-feature-engineering-guide
-description: Techniques de feature engineering pour améliorer les modèles ML. Se déclenche avec "feature engineering", "features", "transformation de données", "encoding", "normalisation", "feature selection", "feature store".
+description: Techniques de feature engineering pour améliorer les modèles ML. Se déclenche avec "feature engineering", "features", "transformation de données", "encoding", "normalisation", "feature selection", "feature store". Also triggers on "build ML features".
 ---
 
 # Feature Engineering Guide

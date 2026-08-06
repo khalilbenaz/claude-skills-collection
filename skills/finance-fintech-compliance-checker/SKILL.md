@@ -1,6 +1,6 @@
 ---
 name: finance-fintech-compliance-checker
-description: Vérification de conformité pour applications fintech — PCI-DSS, KYC/AML, PSD2, RGPD appliqué aux données financières. À utiliser quand l'utilisateur développe une application de paiement, un wallet ou un service financier et doit vérifier la conformité réglementaire. Se déclenche aussi avec "PCI-DSS", "KYC", "AML", "PSD2", "conformité paiement", "compliance fintech", "données bancaires", "carte de crédit sécurité".
+description: Vérification de conformité pour applications fintech — PCI-DSS, KYC/AML, PSD2, RGPD appliqué aux données financières. À utiliser quand l'utilisateur développe une application de paiement, un wallet ou un service financier et doit vérifier la conformité réglementaire. Se déclenche aussi avec "PCI-DSS", "KYC", "AML", "PSD2", "conformité paiement", "compliance fintech", "données bancaires", "carte de crédit sécurité". Also triggers on "PCI-DSS compliance", "KYC and AML requirements", "PSD2 compliance".
 ---
 
 # Vérificateur de Conformité Fintech

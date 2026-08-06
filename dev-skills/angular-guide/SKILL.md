@@ -1,6 +1,6 @@
 ---
 name: angular-guide
-description: Développement d'applications Angular avec modules, composants, services, RxJS, routing et formulaires réactifs. Se déclenche avec "Angular", "NgModule", "RxJS", "Angular CLI", "composant Angular", "service Angular".
+description: Développement d'applications Angular avec modules, composants, services, RxJS, routing et formulaires réactifs. Se déclenche avec "Angular", "NgModule", "RxJS", "Angular CLI", "composant Angular", "service Angular". Also triggers on "Angular app", "RxJS observables", "Angular reactive forms".
 ---
 
 # Guide Angular (v17+)

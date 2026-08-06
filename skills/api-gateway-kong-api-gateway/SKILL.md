@@ -1,6 +1,6 @@
 ---
 name: api-gateway-kong-api-gateway
-description: Configuration de Kong API Gateway — services, routes, plugins, rate limiting, authentification et monitoring. À utiliser quand l'utilisateur configure Kong, gère des APIs avec Kong ou implémente des plugins. Se déclenche aussi avec "Kong", "Kong Gateway", "Kong plugin", "Kong route", "API gateway Kong", "kong.yml", "Kong declarative".
+description: Configuration de Kong API Gateway — services, routes, plugins, rate limiting, authentification et monitoring. À utiliser quand l'utilisateur configure Kong, gère des APIs avec Kong ou implémente des plugins. Se déclenche aussi avec "Kong", "Kong Gateway", "Kong plugin", "Kong route", "API gateway Kong", "kong.yml", "Kong declarative". Also triggers on "Kong plugins", "API gateway with Kong".
 ---
 
 # Kong API Gateway

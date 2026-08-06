@@ -1,6 +1,6 @@
 ---
 name: security-compliance-checker
-description: Vérification de conformité sécurité incluant ISO 27001, SOC 2, HIPAA, NIST et audit trail. Se déclenche avec "ISO 27001", "SOC 2", "HIPAA", "NIST", "conformité sécurité", "audit sécurité", "compliance"
+description: Vérification de conformité sécurité incluant ISO 27001, SOC 2, HIPAA, NIST et audit trail. Se déclenche avec "ISO 27001", "SOC 2", "HIPAA", "NIST", "conformité sécurité", "audit sécurité", "compliance. Also triggers on "ISO 27001 compliance", "SOC 2 readiness", "security audit trail".
 ---
 
 # Compliance Checker

@@ -1,6 +1,6 @@
 ---
 name: api-gateway-yarp-gateway-designer
-description: Conception d'API Gateway avec YARP (Yet Another Reverse Proxy) en .NET — routing, load balancing, rate limiting, transformations et authentification. À utiliser quand l'utilisateur implémente un reverse proxy ou une gateway API avec YARP en .NET. Se déclenche aussi avec "YARP", "reverse proxy .NET", "API gateway .NET", "YARP routing", "proxy .NET", "load balancer .NET".
+description: Conception d'API Gateway avec YARP (Yet Another Reverse Proxy) en .NET — routing, load balancing, rate limiting, transformations et authentification. À utiliser quand l'utilisateur implémente un reverse proxy ou une gateway API avec YARP en .NET. Se déclenche aussi avec "YARP", "reverse proxy .NET", "API gateway .NET", "YARP routing", "proxy .NET", "load balancer .NET". Also triggers on "YARP reverse proxy", "YARP gateway", "gateway in ASP.NET Core".
 ---
 
 # API Gateway avec YARP

@@ -1,6 +1,6 @@
 ---
 name: dev-graphql-builder
-description: Conception et implémentation de schémas et résolveurs GraphQL. Se déclenche avec "GraphQL", "schema", "query", "mutation", "subscription", "resolver", "Apollo", "Hot Chocolate".
+description: Conception et implémentation de schémas et résolveurs GraphQL. Se déclenche avec "GraphQL", "schema", "query", "mutation", "subscription", "resolver", "Apollo", "Hot Chocolate". Also triggers on "GraphQL schema", "resolvers", "N+1 in GraphQL".
 ---
 
 # GraphQL Builder

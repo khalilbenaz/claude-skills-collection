@@ -1,6 +1,6 @@
 ---
 name: dev-monitoring-setup
-description: Mise en place de monitoring, alerting et observabilité. Se déclenche avec "monitoring", "alerting", "observabilité", "Prometheus", "Grafana", "logs", "metrics", "tracing", "dashboards", "Application Insights".
+description: Mise en place de monitoring, alerting et observabilité. Se déclenche avec "monitoring", "alerting", "observabilité", "Prometheus", "Grafana", "logs", "metrics", "tracing", "dashboards", "Application Insights". Also triggers on "set up monitoring", "alerting rules", "observability stack", "dashboards and metrics".
 ---
 
 # Monitoring Setup

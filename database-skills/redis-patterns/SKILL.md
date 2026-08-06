@@ -1,6 +1,6 @@
 ---
 name: redis-patterns
-description: Patterns d'utilisation Redis pour le cache, pub/sub, streams et sessions. Se déclenche avec "Redis", "cache distribué", "pub/sub Redis", "Redis streams", "session store"
+description: Patterns d'utilisation Redis pour le cache, pub/sub, streams et sessions. Se déclenche avec "Redis", "cache distribué", "pub/sub Redis", "Redis streams", "session store. Also triggers on "Redis cache", "Redis pub/sub".
 ---
 
 # Redis Patterns

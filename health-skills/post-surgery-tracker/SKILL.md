@@ -1,6 +1,6 @@
 ---
 name: post-surgery-tracker
-description: Suit la récupération après une opération chirurgicale avec suivi structuré des symptômes, douleurs, cicatrisation, médicaments et rendez-vous. À utiliser quand l'utilisateur mentionne une opération récente ou une convalescence. Se déclenche aussi avec "après mon opération", "post-opératoire", "convalescence", "ma cicatrice", "j'ai été opéré", "je suis en convalescence", "récupération après chirurgie", ou toute mention de récupération chirurgicale.
+description: Suit la récupération après une opération chirurgicale avec suivi structuré des symptômes, douleurs, cicatrisation, médicaments et rendez-vous. À utiliser quand l'utilisateur mentionne une opération récente ou une convalescence. Se déclenche aussi avec "après mon opération", "post-opératoire", "convalescence", "ma cicatrice", "j'ai été opéré", "je suis en convalescence", "récupération après chirurgie", ou toute mention de récupération chirurgicale. Also triggers on "recovery after surgery", "post-op tracking", "wound healing log".
 ---
 
 # Post-Surgery Tracker

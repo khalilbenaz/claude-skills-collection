@@ -1,6 +1,6 @@
 ---
 name: therapy-journal
-description: Transforme une expérience émotionnelle ou relationnelle en journal structuré utile pour une thérapie ou un suivi personnel. Se déclenche aussi avec "j'ai vécu quelque chose de difficile", "je veux écrire ce que je ressens", "journal thérapie", "préparer ma séance", ou quand l'utilisateur raconte une situation émotionnellement chargée.
+description: Transforme une expérience émotionnelle ou relationnelle en journal structuré utile pour une thérapie ou un suivi personnel. Se déclenche aussi avec "j'ai vécu quelque chose de difficile", "je veux écrire ce que je ressens", "journal thérapie", "préparer ma séance", ou quand l'utilisateur raconte une situation émotionnellement chargée. Also triggers on "therapy journal", "journal an emotional experience", "notes for my therapist".
 ---
 
 # Therapy Journal

@@ -1,6 +1,6 @@
 ---
 name: emotional-checkin
-description: Fait un point émotionnel bref, bienveillant et structuré sans poser de diagnostic. À utiliser quand l'utilisateur dit qu'il se sent mal, stressé, vide, anxieux, triste, irritable ou dépassé. Se déclenche aussi avec "je me sens mal", "je suis stressé", "j'en ai marre", "je suis à bout", "je me sens vide", "je suis irritable", ou toute expression de mal-être émotionnel.
+description: Fait un point émotionnel bref, bienveillant et structuré sans poser de diagnostic. À utiliser quand l'utilisateur dit qu'il se sent mal, stressé, vide, anxieux, triste, irritable ou dépassé. Se déclenche aussi avec "je me sens mal", "je suis stressé", "j'en ai marre", "je suis à bout", "je me sens vide", "je suis irritable", ou toute expression de mal-être émotionnel. Also triggers on "emotional check-in", "how am I feeling", "name my emotions".
 ---
 
 # Emotional Check-in

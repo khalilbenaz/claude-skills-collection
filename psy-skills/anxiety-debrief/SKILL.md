@@ -1,6 +1,6 @@
 ---
 name: anxiety-debrief
-description: Débriefe un épisode d'anxiété, de panique ou de stress intense et aide à en extraire des observations utiles pour mieux se connaître. Se déclenche aussi avec "j'ai eu une crise d'angoisse", "j'ai paniqué", "mon cœur battait très fort", "j'ai eu du mal à respirer", "j'étais paralysé", "j'ai failli m'évanouir", "je me suis senti hors de moi", ou toute description d'épisode de stress aigu.
+description: Débriefe un épisode d'anxiété, de panique ou de stress intense et aide à en extraire des observations utiles pour mieux se connaître. Se déclenche aussi avec "j'ai eu une crise d'angoisse", "j'ai paniqué", "mon cœur battait très fort", "j'ai eu du mal à respirer", "j'étais paralysé", "j'ai failli m'évanouir", "je me suis senti hors de moi", ou toute description d'épisode de stress aigu. Also triggers on "anxiety attack debrief", "panic episode", "I felt very anxious".
 ---
 
 # Débriefing d'anxiété

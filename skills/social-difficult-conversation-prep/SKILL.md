@@ -1,6 +1,6 @@
 ---
 name: social-difficult-conversation-prep
-description: Prépare une conversation difficile (conflit, annonce, confrontation) avec structure et formulations. Se déclenche aussi avec "conversation difficile", "comment dire à", "je dois annoncer", "confronter", "aborder un sujet délicat", ou toute préparation de discussion sensible.
+description: Prépare une conversation difficile (conflit, annonce, confrontation) avec structure et formulations. Se déclenche aussi avec "conversation difficile", "comment dire à", "je dois annoncer", "confronter", "aborder un sujet délicat", ou toute préparation de discussion sensible. Also triggers on "difficult conversation", "how do I tell them", "confront someone".
 ---
 
 # Difficult Conversation Prep

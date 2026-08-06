@@ -1,6 +1,6 @@
 ---
 name: health-pain-journal
-description: Journal de douleur chronique ou récurrente pour suivre localisation, intensité, déclencheurs et évolution. À utiliser quand l'utilisateur décrit des douleurs répétées, chroniques ou difficiles à expliquer. Se déclenche aussi avec "j'ai mal depuis longtemps", "douleur chronique", "la douleur revient", "mal de dos", "migraine", "douleurs articulaires", ou toute description de douleur persistante ou récurrente.
+description: Journal de douleur chronique ou récurrente pour suivre localisation, intensité, déclencheurs et évolution. À utiliser quand l'utilisateur décrit des douleurs répétées, chroniques ou difficiles à expliquer. Se déclenche aussi avec "j'ai mal depuis longtemps", "douleur chronique", "la douleur revient", "mal de dos", "migraine", "douleurs articulaires", ou toute description de douleur persistante ou récurrente. Also triggers on "pain diary", "track my pain", "pain intensity log".
 ---
 
 # Pain Journal

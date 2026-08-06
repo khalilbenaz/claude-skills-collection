@@ -1,6 +1,6 @@
 ---
 name: devops-docker-swarm-guide
-description: Orchestration avec Docker Swarm incluant services, stacks, overlay networks, secrets, rolling updates et haute disponibilité. Se déclenche avec "Docker Swarm", "swarm mode", "docker service", "docker stack", "overlay network"
+description: Orchestration avec Docker Swarm incluant services, stacks, overlay networks, secrets, rolling updates et haute disponibilité. Se déclenche avec "Docker Swarm", "swarm mode", "docker service", "docker stack", "overlay network. Also triggers on "Docker Swarm stack", "swarm services", "rolling update in Swarm".
 ---
 
 # Docker Swarm Guide

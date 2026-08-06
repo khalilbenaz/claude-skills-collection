@@ -1,6 +1,6 @@
 ---
 name: darija-translator
-description: Traduction et adaptation entre français/anglais et darija marocaine, avec prise en compte du contexte culturel, des variantes régionales et du registre. Se déclenche avec "darija", "الدارجة", "marocain", "traduire en darija", "dialecte marocain".
+description: Traduction et adaptation entre français/anglais et darija marocaine, avec prise en compte du contexte culturel, des variantes régionales et du registre. Se déclenche avec "darija", "الدارجة", "marocain", "traduire en darija", "dialecte marocain". Also triggers on "translate to Moroccan Arabic", "darija translation", "Moroccan dialect".
 ---
 
 # Darija Translator

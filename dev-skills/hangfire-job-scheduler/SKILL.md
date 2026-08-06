@@ -1,6 +1,6 @@
 ---
 name: hangfire-job-scheduler
-description: Planification et gestion de background jobs avec Hangfire en .NET. Patterns de retry, scheduling récurrent, queues, monitoring, idempotence et bonnes pratiques 2026. À utiliser quand l'utilisateur travaille avec Hangfire, des tâches de fond ou du job scheduling en .NET. Se déclenche aussi avec "hangfire", "background job", "tâche de fond .NET", "job récurrent", "cron job C#", "fire and forget".
+description: Planification et gestion de background jobs avec Hangfire en .NET. Patterns de retry, scheduling récurrent, queues, monitoring, idempotence et bonnes pratiques 2026. À utiliser quand l'utilisateur travaille avec Hangfire, des tâches de fond ou du job scheduling en .NET. Se déclenche aussi avec "hangfire", "background job", "tâche de fond .NET", "job récurrent", "cron job C#", "fire and forget". Also triggers on "Hangfire jobs", "background jobs in .NET", "recurring job scheduling".
 ---
 
 # Hangfire Job Scheduler

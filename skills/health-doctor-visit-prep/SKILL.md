@@ -1,6 +1,6 @@
 ---
 name: health-doctor-visit-prep
-description: Prépare un rendez-vous médical avec un résumé structuré, une chronologie et des questions à poser. À utiliser quand l'utilisateur veut aller chez le médecin, le gastro, l'endocrino, l'ORL ou un spécialiste. Se déclenche aussi avec "rendez-vous médecin", "je vois le docteur", "consultation", "préparer ma visite", "qu'est-ce que je dis au médecin".
+description: Prépare un rendez-vous médical avec un résumé structuré, une chronologie et des questions à poser. À utiliser quand l'utilisateur veut aller chez le médecin, le gastro, l'endocrino, l'ORL ou un spécialiste. Se déclenche aussi avec "rendez-vous médecin", "je vois le docteur", "consultation", "préparer ma visite", "qu'est-ce que je dis au médecin". Also triggers on "prepare for a doctor visit", "summary for my doctor", "questions for the appointment".
 ---
 
 # Doctor Visit Prep

@@ -1,6 +1,6 @@
 ---
 name: screen-time-planner
-description: Aide à établir des règles de temps d'écran adaptées à l'âge de l'enfant. Se déclenche aussi avec "temps d'écran", "tablette", "mon enfant est toujours sur le téléphone", "limite écran", ou toute question de gestion des écrans pour enfants.
+description: Aide à établir des règles de temps d'écran adaptées à l'âge de l'enfant. Se déclenche aussi avec "temps d'écran", "tablette", "mon enfant est toujours sur le téléphone", "limite écran", ou toute question de gestion des écrans pour enfants. Also triggers on "screen time rules", "limit device time", "kids and screens".
 ---
 
 # Screen Time Planner

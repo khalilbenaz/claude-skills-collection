@@ -17,7 +17,7 @@ Un skill est un fichier d'instructions (`SKILL.md`) qui donne à Claude un workf
 /plugin install claude-skills-collection
 ```
 
-Les 349 skills deviennent des slash commands, **préfixées par leur catégorie** : `/dev-code-reviewer`, `/health-symptom-tracker`, `/career-interview-prep`…
+Les 348 skills deviennent des slash commands, **préfixées par leur catégorie** : `/dev-code-reviewer`, `/health-symptom-tracker`, `/career-interview-prep`…
 
 ### Méthode 2 — À la carte (un skill ou une catégorie)
 
@@ -56,7 +56,7 @@ iex "& { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills
 ## Trouver le bon skill
 
 - **Catalogue en ligne** avec recherche instantanée : <https://khalilbenaz.github.io/claude-skills-collection/manuals/>
-- **Catalogue Markdown** : [SKILL_CATALOG.md](./SKILL_CATALOG.md) — 349 skills, leurs déclencheurs, par catégorie
+- **Catalogue Markdown** : [SKILL_CATALOG.md](./SKILL_CATALOG.md) — 348 skills, leurs déclencheurs, par catégorie
 - **Index machine-lisible** : [`skills.json`](../skills.json)
 - **En session** : décrivez simplement votre besoin — ou lancez `/agent-skill-router` pour vous faire orienter
 
@@ -90,7 +90,7 @@ Une fois installé, le skill se déclenche **automatiquement** quand votre deman
 R : Oui — plusieurs noms à la suite, ou `--category <préfixe>` pour une catégorie entière. Chaque skill se déclenche indépendamment selon le contexte.
 
 **Q : Plugin complet ou installation à la carte ?**
-R : Le plugin expose les 349 skills d'un coup (pratique, mais toutes les descriptions sont chargées en contexte à chaque session). L'installation à la carte garde le contexte léger — recommandée si vous n'utilisez qu'une poignée de domaines.
+R : Le plugin expose les 348 skills d'un coup (pratique, mais toutes les descriptions sont chargées en contexte à chaque session). L'installation à la carte garde le contexte léger — recommandée si vous n'utilisez qu'une poignée de domaines.
 
 **Q : Les skills fonctionnent-ils en anglais ?**
 R : Ils sont conçus en français mais Claude s'adaptera si vous écrivez en anglais.

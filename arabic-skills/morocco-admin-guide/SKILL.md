@@ -1,6 +1,6 @@
 ---
 name: morocco-admin-guide
-description: Guide des démarches administratives marocaines pour les professionnels et entrepreneurs (CNSS, impôts, registre de commerce, auto-entrepreneur). Se déclenche avec "démarches Maroc", "CNSS", "registre de commerce", "administration marocaine", "impôts Maroc", "auto-entrepreneur Maroc".
+description: Guide des démarches administratives marocaines pour les professionnels et entrepreneurs (CNSS, impôts, registre de commerce, auto-entrepreneur). Se déclenche avec "démarches Maroc", "CNSS", "registre de commerce", "administration marocaine", "impôts Maroc", "auto-entrepreneur Maroc". Also triggers on "Morocco paperwork", "CNSS registration", "Moroccan tax procedure".
 ---
 
 # Morocco Admin Guide

@@ -1,6 +1,6 @@
 ---
 name: database-migration-helper
-description: Gestion des migrations de bases de données et changements de schéma avec stratégies zero-downtime, rollback et data migration. Se déclenche avec "migration", "database migration", "changer le schéma", "EF migrations", "Flyway", "Liquibase", "ALTER TABLE", "zero downtime migration".
+description: Gestion des migrations de bases de données et changements de schéma avec stratégies zero-downtime, rollback et data migration. Se déclenche avec "migration", "database migration", "changer le schéma", "EF migrations", "Flyway", "Liquibase", "ALTER TABLE", "zero downtime migration". Also triggers on "schema change", "zero-downtime migration".
 ---
 
 # Database Migration Helper

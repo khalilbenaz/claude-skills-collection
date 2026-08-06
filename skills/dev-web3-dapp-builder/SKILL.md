@@ -1,6 +1,6 @@
 ---
 name: dev-web3-dapp-builder
-description: Développement d'applications décentralisées (dApps) Web3. Se déclenche avec "dApp", "Web3", "blockchain app", "ethers.js", "wagmi", "Hardhat", "Foundry", "MetaMask", "wallet connect".
+description: Développement d'applications décentralisées (dApps) Web3. Se déclenche avec "dApp", "Web3", "blockchain app", "ethers.js", "wagmi", "Hardhat", "Foundry", "MetaMask", "wallet connect". Also triggers on "build a dApp", "connect a wallet", "smart contract frontend".
 ---
 
 # Web3 dApp Builder

@@ -1,12 +1,12 @@
 # 🧠 Claude Skills Collection
 
-La plus grande collection open-source de skills pour Claude — **349 skills** couvrant **34 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
+La plus grande collection open-source de skills pour Claude — **348 skills** couvrant **34 domaines** du développement, de la sécurité, des agents IA, du DevOps, de la data, et de la vie quotidienne.
 
 > Un skill transforme Claude en assistant spécialisé avec un workflow structuré étape par étape.
 
-[![Skills](https://img.shields.io/badge/skills-349-blue)]()[![Categories](https://img.shields.io/badge/catégories-34-green)]()
+[![Skills](https://img.shields.io/badge/skills-348-blue)]()[![Categories](https://img.shields.io/badge/catégories-34-green)]()
 [![License](https://img.shields.io/badge/license-MIT-yellow)]()
-[![Language](https://img.shields.io/badge/langue-Français-red)]()
+[![Language](https://img.shields.io/badge/langue-Français%20%2B%20déclencheurs%20EN-red)]()
 
 ---
 
@@ -19,7 +19,7 @@ La plus grande collection open-source de skills pour Claude — **349 skills** c
 /plugin install claude-skills-collection
 ```
 
-Les 349 skills deviennent des slash commands (`/dev-docker-composer`, `/agent-spawner`, `/cloud-aws-architect`, `/security-threat-modeling`…).
+Les 348 skills deviennent des slash commands (`/dev-docker-composer`, `/agent-spawner`, `/cloud-aws-architect`, `/security-threat-modeling`…).
 
 ### 2. À la carte — un skill, ou une catégorie
 
@@ -65,7 +65,7 @@ La CI ([`validate.yml`](./.github/workflows/validate.yml)) rejoue check + tests 
 
 | Catégorie | Skills | Commandes | Source |
 |-----------|-------:|-----------|--------|
-| 💻 Développement | 112 | `/dev-*` | [`dev-skills/`](./dev-skills) |
+| 💻 Développement | 111 | `/dev-*` | [`dev-skills/`](./dev-skills) |
 | 🤖 Agents IA | 53 | `/agent-*` | [`agent-skills/`](./agent-skills) |
 | 🩺 Santé | 16 | `/health-*` | [`health-skills/`](./health-skills) |
 | 🧘 Bien-être | 12 | `/psy-*` | [`psy-skills/`](./psy-skills) |
@@ -99,7 +99,7 @@ La CI ([`validate.yml`](./.github/workflows/validate.yml)) rejoue check + tests 
 | 💼 Business | 2 | `/business-*` | [`business-skills/`](./business-skills) |
 | 🧩 Méta | 2 | _sans préfixe_ | [`meta-skills/`](./meta-skills) |
 | 📄 Documentation | 1 | `/docs-*` | [`docs/`](./docs) |
-| **Total** | **349** | | 34 catégories |
+| **Total** | **348** | | 34 catégories |
 
 <!-- END:CATEGORIES -->
 
@@ -154,7 +154,7 @@ zip ../../crewai-expert.skill SKILL.md
 | Document | Contenu |
 |----------|---------|
 | [🚀 Getting Started](./docs/GETTING_STARTED.md) | Installation, utilisation, FAQ |
-| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 349 skills avec déclencheurs et livrables |
+| [📚 Skill Catalog](./docs/SKILL_CATALOG.md) | Catalogue complet — 348 skills avec déclencheurs et livrables |
 | [🛠️ Creating Skills](./docs/CREATING_SKILLS.md) | Guide + template pour créer son propre skill |
 | [🧭 Design Principles](./docs/DESIGN_PRINCIPLES.md) | 8 principes de conception |
 | [🤝 Contributing](./docs/CONTRIBUTING.md) | Comment contribuer |
@@ -212,6 +212,6 @@ MIT — Libre d'utilisation, modification et redistribution.
 ---
 
 <p align="center">
-  <strong>349 skills • 34 catégories • 100% open-source</strong><br>
+  <strong>348 skills • 34 catégories • 100% open-source</strong><br>
   Fait avec 🤖💻🔒🧠🎨 par <a href="https://github.com/khalilbenaz">@khalilbenaz</a>
 </p>

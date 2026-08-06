@@ -1,6 +1,6 @@
 ---
 name: pencil-ui-designer
-description: Agent designer UI/UX autonome qui génère des interfaces complètes en fichiers HTML autonomes (Tailwind CSS + JS vanilla). À utiliser quand l'utilisateur veut créer, générer ou maquetter une interface, un écran, une app, un site web, un dashboard, une landing page ou un formulaire. Se déclenche avec "design moi", "crée une interface", "génère une maquette", "build me a UI", "create a mockup", "design a screen", "/pencil".
+description: Agent designer UI/UX autonome qui génère des interfaces complètes en fichiers HTML autonomes (Tailwind CSS + JS vanilla). À utiliser quand l'utilisateur veut créer, générer ou maquetter une interface, un écran, une app, un site web, un dashboard, une landing page ou un formulaire. Se déclenche avec "design moi", "crée une interface", "génère une maquette", "build me a UI", "create a mockup", "design a screen", "/pencil". Also triggers on "design a UI", "generate an interface mockup", "landing page design".
 ---
 
 # Pencil — Agent Designer UI/UX IA

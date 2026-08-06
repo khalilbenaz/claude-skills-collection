@@ -1,6 +1,6 @@
 ---
 name: productivity-meeting-summarizer
-description: Résume une réunion avec décisions, actions et prochaines étapes. À utiliser quand l'utilisateur colle des notes de réunion ou décrit ce qui s'est dit. Se déclenche aussi avec "résume la réunion", "compte-rendu", "meeting notes", "qu'est-ce qu'on a décidé", "PV de réunion".
+description: Résume une réunion avec décisions, actions et prochaines étapes. À utiliser quand l'utilisateur colle des notes de réunion ou décrit ce qui s'est dit. Se déclenche aussi avec "résume la réunion", "compte-rendu", "meeting notes", "qu'est-ce qu'on a décidé", "PV de réunion". Also triggers on "summarize this meeting", "action items from a call".
 ---
 
 # Meeting Summarizer

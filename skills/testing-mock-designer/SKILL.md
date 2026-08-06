@@ -1,6 +1,6 @@
 ---
 name: testing-mock-designer
-description: Conception de mocks, stubs et fakes pour les tests unitaires et d'intégration avec les principaux frameworks de mocking. Se déclenche avec "mock", "stub", "fake", "Moq", "NSubstitute", "Mockito", "jest.mock", "test double"
+description: Conception de mocks, stubs et fakes pour les tests unitaires et d'intégration avec les principaux frameworks de mocking. Se déclenche avec "mock", "stub", "fake", "Moq", "NSubstitute", "Mockito", "jest.mock", "test double. Also triggers on "mock a dependency", "stubs and fakes", "test doubles".
 ---
 
 # Mock Designer

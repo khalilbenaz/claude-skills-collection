@@ -1,6 +1,6 @@
 ---
 name: websocket-designer
-description: Conception de systèmes temps réel avec WebSocket — SignalR, Socket.io, scaling horizontal et stratégies de reconnexion. Se déclenche avec "WebSocket", "temps réel", "SignalR", "Socket.io", "real-time", "push notifications".
+description: Conception de systèmes temps réel avec WebSocket — SignalR, Socket.io, scaling horizontal et stratégies de reconnexion. Se déclenche avec "WebSocket", "temps réel", "SignalR", "Socket.io", "real-time", "push notifications". Also triggers on "WebSocket design", "real-time updates", "SignalR or Socket.io scaling".
 ---
 
 # WebSocket Designer

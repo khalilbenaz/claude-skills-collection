@@ -1,6 +1,6 @@
 ---
 name: dev-docker-composer
-description: Création et optimisation de Dockerfiles et docker-compose pour tout type de projet. Se déclenche avec "Docker", "Dockerfile", "docker-compose", "conteneur", "container", "image Docker", "multi-stage build", "optimiser mon image".
+description: Création et optimisation de Dockerfiles et docker-compose pour tout type de projet. Se déclenche avec "Docker", "Dockerfile", "docker-compose", "conteneur", "container", "image Docker", "multi-stage build", "optimiser mon image". Also triggers on "write a Dockerfile", "docker-compose setup", "containerize my app".
 ---
 
 # Docker Composer

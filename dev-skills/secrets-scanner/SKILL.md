@@ -1,6 +1,6 @@
 ---
 name: secrets-scanner
-description: Détecte les secrets, clés API et credentials exposés dans le code source, l'historique Git et les fichiers de configuration. À utiliser pour vérifier qu'aucun secret n'est dans le code. Se déclenche avec "secrets", "clé API exposée", "credential leak", "mot de passe dans le code", "token exposé", ".env", "secret scanner".
+description: Détecte les secrets, clés API et credentials exposés dans le code source, l'historique Git et les fichiers de configuration. À utiliser pour vérifier qu'aucun secret n'est dans le code. Se déclenche avec "secrets", "clé API exposée", "credential leak", "mot de passe dans le code", "token exposé", ".env", "secret scanner". Also triggers on "exposed secrets", "leaked API key", "scan git history for credentials".
 ---
 
 # Secrets Scanner

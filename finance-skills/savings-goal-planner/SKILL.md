@@ -1,6 +1,6 @@
 ---
 name: savings-goal-planner
-description: Aide à planifier un objectif d'épargne avec calcul, timeline et stratégie. À utiliser quand l'utilisateur veut épargner pour un achat, un voyage, un fonds d'urgence. Se déclenche aussi avec "je veux économiser", "objectif épargne", "combien mettre de côté", "fonds d'urgence", "épargner pour".
+description: Aide à planifier un objectif d'épargne avec calcul, timeline et stratégie. À utiliser quand l'utilisateur veut épargner pour un achat, un voyage, un fonds d'urgence. Se déclenche aussi avec "je veux économiser", "objectif épargne", "combien mettre de côté", "fonds d'urgence", "épargner pour". Also triggers on "savings goal", "how much should I save", "save for a purchase".
 ---
 
 # Savings Goal Planner
