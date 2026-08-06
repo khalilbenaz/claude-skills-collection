@@ -16,7 +16,7 @@ description: Création d'assistants IA hébergés avec l'API OpenAI Assistants v
 | Contrôle total du contexte | ❌ Géré par OpenAI | ✅ Contrôle complet |
 | Coût optimisé (volume élevé) | ❌ + coût tools/storage | ✅ Tokens seuls |
 
-**Choisir Assistants API** pour les MVP avec RAG ou analyse de données sans backend complexe.  
+**Choisir Assistants API** pour les MVP avec RAG ou analyse de données sans backend complexe.
 **Choisir Chat Completions** quand la latence, le coût, ou le contrôle du contexte sont prioritaires.
 
 ## Workflow en 10 étapes
@@ -103,8 +103,8 @@ client.beta.assistants.update(
 )
 ```
 
-**Formats supportés** : PDF, DOCX, TXT, MD, HTML, JSON, CSV, Python, JS/TS, C/C++, Java, etc.  
-**Taille max par fichier** : 512 MB, 5 000 000 tokens après parsing.  
+**Formats supportés** : PDF, DOCX, TXT, MD, HTML, JSON, CSV, Python, JS/TS, C/C++, Java, etc.
+**Taille max par fichier** : 512 MB, 5 000 000 tokens après parsing.
 **Coût de stockage** : ~$0.10/GB/jour — configurer `expires_after` systématiquement.
 
 ### 4. Threads : une session par utilisateur

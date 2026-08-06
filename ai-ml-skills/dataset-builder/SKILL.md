@@ -1,12 +1,6 @@
 ---
 name: dataset-builder
-description: "Construction et curation de datasets pour l'entraînement ML (nettoyage, augmentation, annotation, split, versioning, qualité, datacard)"
-triggers:
-  - "dataset"
-  - "données d'entraînement"
-  - "annotation"
-  - "data augmentation"
-  - "train/test split"
+description: Construction et curation de datasets pour l'entraînement ML (nettoyage, augmentation, annotation, split, versioning, qualité, datacard). Se déclenche avec "dataset", "données d'entraînement", "annotation", "data augmentation", "train/test split".
 ---
 
 # Dataset Builder

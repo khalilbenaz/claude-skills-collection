@@ -93,9 +93,9 @@ Stocker dans `/docs/adr/ADR-NNN-titre-court.md`. Numérotation séquentielle, ja
 ```markdown
 # ADR-001 : Utiliser PostgreSQL comme base de données principale
 
-**Statut** : Accepted  
-**Date** : 2026-03-15  
-**Auteur** : @khalil  
+**Statut** : Accepted
+**Date** : 2026-03-15
+**Auteur** : @khalil
 **Remplacé par** : —
 
 ## Contexte
@@ -113,8 +113,8 @@ Adopter PostgreSQL 16 (géré via RDS), avec schéma versionné par Flyway.
 | DynamoDB | Modèle de coût imprévisible, jointures impossibles |
 
 ## Conséquences
-**Positif** : transactions ACID garanties, écosystème outillage riche.  
-**Négatif** : coût opérationnel RDS, compétence DBA requise.  
+**Positif** : transactions ACID garanties, écosystème outillage riche.
+**Négatif** : coût opérationnel RDS, compétence DBA requise.
 **Neutre** : migrations Flyway obligatoires dès le sprint 1.
 ```
 
@@ -131,9 +131,9 @@ Utiliser quand la décision est ouverte au débat (> 2 équipes concernées, imp
 ```markdown
 # RFC-012 : Stratégie d'authentification inter-services
 
-**Statut** : Draft | In Review | Accepted | Rejected  
-**Deadline feedback** : 2026-07-01  
-**Auteur** : @khalil  
+**Statut** : Draft | In Review | Accepted | Rejected
+**Deadline feedback** : 2026-07-01
+**Auteur** : @khalil
 **Reviewers** : @ops-lead, @security-team
 
 ## Résumé (TL;DR)

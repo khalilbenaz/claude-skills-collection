@@ -109,7 +109,7 @@ Template de bilan :
 ```
 Semaine du [date]
 Score : /7
-Bloqueur : 
+Bloqueur :
 Ajustement :
 Prochaine cible :
 ```

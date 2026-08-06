@@ -6,50 +6,12 @@
  *
  * Usage : node scripts/build-manuals.mjs
  */
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, statSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { ROOT, REPO, RAW, CATEGORY_META, loadSkills } from './lib/skills.mjs';
 
-const ROOT = join(import.meta.dirname, '..');
 const OUT = join(ROOT, 'manuals');
-const REPO = 'https://github.com/khalilbenaz/claude-skills-collection';
-const RAW = 'https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main';
 
-const CATEGORY_META = {
-  'agent-skills':         { label: 'Agents IA',        icon: '🤖', color: '#7c5cfc' },
-  'ai-ml-skills':         { label: 'AI / ML',          icon: '🧠', color: '#9b7fff' },
-  'api-gateway-skills':   { label: 'API Gateway',      icon: '🚪', color: '#60a5fa' },
-  'arabic-skills':        { label: 'Arabe / Maroc',    icon: '🌍', color: '#34d399' },
-  'automation-skills':    { label: 'Automatisation',   icon: '⚙️', color: '#fb923c' },
-  'business-skills':      { label: 'Business',         icon: '💼', color: '#fbbf24' },
-  'career-skills':        { label: 'Carrière',         icon: '🎯', color: '#f472b6' },
-  'cloud-skills':         { label: 'Cloud',            icon: '☁️', color: '#22d3ee' },
-  'communication-skills': { label: 'Communication',    icon: '🗣️', color: '#f87171' },
-  'data-skills':          { label: 'Data',             icon: '📊', color: '#34d399' },
-  'database-skills':      { label: 'Bases de données', icon: '🗄️', color: '#60a5fa' },
-  'dev-skills':           { label: 'Développement',    icon: '💻', color: '#7c5cfc' },
-  'devops-skills':        { label: 'DevOps',           icon: '🔁', color: '#fb923c' },
-  'docs-skills':          { label: 'Documentation',    icon: '📄', color: '#8888a0' },
-  'docs':                 { label: 'Documentation',    icon: '📄', color: '#8888a0' },
-  'education-skills':     { label: 'Éducation',        icon: '🎓', color: '#fbbf24' },
-  'finance-skills':       { label: 'Finance',          icon: '💰', color: '#34d399' },
-  'freelance-skills':     { label: 'Freelance',        icon: '🧾', color: '#f472b6' },
-  'health-skills':        { label: 'Santé',            icon: '🩺', color: '#f87171' },
-  'iot-skills':           { label: 'IoT',              icon: '📡', color: '#22d3ee' },
-  'legal-skills':         { label: 'Juridique',        icon: '⚖️', color: '#8888a0' },
-  'linux-skills':         { label: 'Linux',            icon: '🐧', color: '#fbbf24' },
-  'management-skills':    { label: 'Management',       icon: '📋', color: '#60a5fa' },
-  'marketing-skills':     { label: 'Marketing',        icon: '📣', color: '#f472b6' },
-  'networking-skills':    { label: 'Réseaux',          icon: '🌐', color: '#22d3ee' },
-  'parenting-skills':     { label: 'Parentalité',      icon: '👨‍👩‍👧', color: '#fb923c' },
-  'productivity-skills':  { label: 'Productivité',     icon: '⏱️', color: '#34d399' },
-  'prompt-skills':        { label: 'Prompting',        icon: '✍️', color: '#9b7fff' },
-  'psy-skills':           { label: 'Bien-être',        icon: '🧘', color: '#f472b6' },
-  'security-skills':      { label: 'Sécurité',         icon: '🔒', color: '#f87171' },
-  'social-skills':        { label: 'Relations',        icon: '🤝', color: '#fbbf24' },
-  'testing-skills':       { label: 'Tests',            icon: '🧪', color: '#34d399' },
-  'travel-skills':        { label: 'Voyage',           icon: '✈️', color: '#22d3ee' },
-  'writing-skills':       { label: 'Écriture',         icon: '🖊️', color: '#9b7fff' },
-};
 
 // Apps en ligne associées à certains skills
 const LIVE_APPS = {
@@ -280,50 +242,10 @@ function mdToHtml(md) {
   return html.join('\n');
 }
 
-// ---------- frontmatter ----------
-function parseFrontmatter(raw) {
-  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
-  if (!m) return { meta: {}, body: raw };
-  const meta = {};
-  let current = null;
-  for (const l of m[1].split(/\r?\n/)) {
-    const kv = l.match(/^(\w[\w-]*):\s*(.*)$/);
-    if (kv) { current = kv[1]; meta[current] = kv[2].replace(/^["']|["']$/g, ''); }
-    else if (current && /^\s+/.test(l)) meta[current] += ' ' + l.trim();
-  }
-  return { meta, body: m[2] };
-}
-
-// Extrait les déclencheurs cités ("...") de la description
-function extractTriggers(desc) {
-  const triggers = [...desc.matchAll(/[«"“]([^»"”]{2,60})[»"”]/g)].map((m) => m[1].trim());
-  return [...new Set(triggers)].slice(0, 12);
-}
-
-// Coupe la description en résumé (avant "À utiliser" / "Se déclenche")
-function summary(desc) {
-  const cut = desc.split(/\s+(?:À utiliser|A utiliser|Se déclenche|Use when|Trigger)/i)[0];
-  return cut.replace(/\s*[—–-]\s*$/, '').trim();
-}
-
 // ---------- collect ----------
-// Source de vérité : <cat>-skills/, docs/, meta-skills/. Le nom public est PRÉFIXÉ
-// par la catégorie (identique au payload skills/ du plugin) pour éviter les collisions.
-const prefixOf = (cat) => (cat === 'docs' ? 'docs' : cat === 'meta-skills' ? '' : cat.replace(/-skills$/, ''));
-const categories = readdirSync(ROOT).filter((d) => (d.endsWith('-skills') || d === 'docs') && statSync(join(ROOT, d)).isDirectory());
-const skills = [];
-for (const cat of categories.sort()) {
-  for (const dir of readdirSync(join(ROOT, cat)).sort()) {
-    const skillPath = join(ROOT, cat, dir, 'SKILL.md');
-    if (!existsSync(skillPath)) continue;
-    const raw = readFileSync(skillPath, 'utf8');
-    const { meta, body } = parseFrontmatter(raw);
-    const prefix = prefixOf(cat);
-    const name = prefix ? `${prefix}-${dir}` : dir; // nom public préfixé
-    const desc = meta.description || '';
-    skills.push({ name, dir, cat, prefix, desc, body, triggers: extractTriggers(desc), summary: summary(desc) });
-  }
-}
+// Source de vérité : <cat>-skills/, docs/, meta-skills/ (cf. scripts/lib/skills.mjs).
+// Le nom public est PRÉFIXÉ par la catégorie, comme le payload skills/ du plugin.
+const skills = loadSkills().map((s) => ({ ...s, desc: s.description, triggers: s.triggers.slice(0, 12) }));
 
 // Résolution des références de USE_CASES : un step peut citer le nom complet
 // (career-cv-builder) ou le nom court (cv-builder). Les collisions de nom court
@@ -590,5 +512,5 @@ for (const s of skills) writeFileSync(join(OUT, `${s.name}.html`), skillPage(s))
 writeFileSync(join(OUT, 'index.html'), catalogPage());
 writeFileSync(join(OUT, 'usecases.html'), usecasesPage());
 // Index machine-lisible consommé par install.sh / install.ps1
-writeFileSync(join(OUT, 'skills.index'), skills.map((s) => `${s.name} skills/${s.name}`).join('\n') + '\n');
+writeFileSync(join(OUT, 'skills.index'), skills.map((s) => `${s.name} skills/${s.name} ${s.prefix || 'meta'}`).join('\n') + '\n');
 console.log(`✓ ${skills.length} manuels générés dans manuals/ (+ index.html, skills.index)`);

@@ -13,18 +13,11 @@
  *
  * Usage : node scripts/build-skills.mjs
  */
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, statSync } from 'node:fs';
+import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { ROOT, loadSkills, prefixOf } from './lib/skills.mjs';
 
-const ROOT = join(import.meta.dirname, '..');
 const OUT = join(ROOT, 'skills');
-
-// catégorie source -> préfixe appliqué aux noms de skills
-const prefixOf = (cat) => {
-  if (cat === 'docs') return 'docs';
-  if (cat === 'meta-skills') return ''; // skills globaux : pas de préfixe
-  return cat.replace(/-skills$/, '');
-};
 
 // Domaines « humains » : ton bienveillant + disclaimer au lieu du ton concis/direct.
 const HUMAN = new Set(['psy', 'health', 'social', 'parenting', 'legal']);
@@ -70,55 +63,38 @@ function setName(frontmatter, name) {
 }
 
 function build() {
-  const cats = readdirSync(ROOT).filter(
-    (d) => (d.endsWith('-skills') || d === 'docs') && statSync(join(ROOT, d)).isDirectory()
-  );
-
   // skills/ est un artefact : on le régénère intégralement.
   rmSync(OUT, { recursive: true, force: true });
   mkdirSync(OUT, { recursive: true });
 
   const generated = [];
-  const seen = new Map(); // nom préfixé -> source (détection de collision)
+  const seen = new Map(); // nom public -> source (détection de collision)
 
-  for (const cat of cats.sort()) {
-    for (const dir of readdirSync(join(ROOT, cat)).sort()) {
-      const srcPath = join(ROOT, cat, dir, 'SKILL.md');
-      if (!existsSync(srcPath)) continue;
-
-      const raw = readFileSync(srcPath, 'utf8');
-      const eol = raw.includes('\r\n') ? '\r\n' : '\n';
-      const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
-      if (!m) {
-        console.warn(`⚠ frontmatter manquant, ignoré : ${cat}/${dir}`);
-        continue;
-      }
-
-      const prefix = prefixOf(cat);
-      const name = prefix ? `${prefix}-${dir}` : dir;
-
-      if (seen.has(name)) {
-        throw new Error(`Collision de nom « ${name} » : ${seen.get(name)} et ${cat}/${dir}`);
-      }
-      seen.set(name, `${cat}/${dir}`);
-
-      const frontmatter = setName(m[1], name);
-      let body = m[2].replace(/^[\r\n]+/, '').replace(/[\s﻿]+$/, ''); // trim début/fin
-
-      const rules = rulesFor(cat);
-      const rulesBlock = rules ? `${eol}${eol}${eol}${rules.join(eol)}` : '';
-
-      const content =
-        `---${eol}${frontmatter.split(/\r?\n/).join(eol)}${eol}---${eol}${eol}` +
-        body.split(/\r?\n/).join(eol) +
-        rulesBlock +
-        eol;
-
-      const destDir = join(OUT, name);
-      mkdirSync(destDir, { recursive: true });
-      writeFileSync(join(destDir, 'SKILL.md'), content);
-      generated.push(name);
+  for (const s of loadSkills()) {
+    if (!s.parsed) {
+      console.warn(`⚠ frontmatter manquant, ignoré : ${s.relPath}`);
+      continue;
     }
+    if (seen.has(s.name)) {
+      throw new Error(`Collision de nom « ${s.name} » : ${seen.get(s.name)} et ${s.relPath}`);
+    }
+    seen.set(s.name, s.relPath);
+
+    const eol = s.raw.includes('\r\n') ? '\r\n' : '\n';
+    const frontmatter = setName(s.frontmatter, s.name);
+    const rules = rulesFor(s.cat);
+    const rulesBlock = rules ? `${eol}${eol}${eol}${rules.join(eol)}` : '';
+
+    const content =
+      `---${eol}${frontmatter.split(/\r?\n/).join(eol)}${eol}---${eol}${eol}` +
+      s.body.split(/\r?\n/).join(eol) +
+      rulesBlock +
+      eol;
+
+    const destDir = join(OUT, s.name);
+    mkdirSync(destDir, { recursive: true });
+    writeFileSync(join(destDir, 'SKILL.md'), content);
+    generated.push(s.name);
   }
 
   console.log(`✓ ${generated.length} skills générés dans skills/ (source unique : <cat>-skills/, docs/, meta-skills/)`);

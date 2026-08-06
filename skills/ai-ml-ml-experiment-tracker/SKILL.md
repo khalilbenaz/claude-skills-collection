@@ -1,12 +1,6 @@
 ---
 name: ai-ml-ml-experiment-tracker
-description: "Suivi d'expériences ML avec MLflow, W&B, versioning de modèles et comparaison de métriques. Se déclenche avec : 'MLflow', 'Weights & Biases', 'experiment tracking', 'suivi d'expériences', 'model registry'"
-triggers:
-  - "MLflow"
-  - "Weights & Biases"
-  - "experiment tracking"
-  - "suivi d'expériences"
-  - "model registry"
+description: Suivi d'expériences ML avec MLflow, W&B, versioning de modèles et comparaison de métriques. Se déclenche avec : 'MLflow', 'Weights & Biases', 'experiment tracking', 'suivi d'expériences', 'model registry'. Se déclenche avec "MLflow", "Weights & Biases", "experiment tracking", "suivi d'expériences", "model registry".
 ---
 
 # ML Experiment Tracker

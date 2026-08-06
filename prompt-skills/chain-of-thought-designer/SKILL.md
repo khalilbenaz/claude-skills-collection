@@ -121,7 +121,7 @@ Structure type à copier :
 
 ```
 [CONTEXTE / RÔLE]
-Tu es un expert en [domaine]. 
+Tu es un expert en [domaine].
 
 [TÂCHE]
 [Description précise de ce que tu demandes]

@@ -98,7 +98,7 @@ cp -r claude-skills-collection/skills/agent-openai-assistants-builder ~/.claude/
 <h1>OpenAI Assistants Builder — API Assistants v2</h1>
 <h2>Critères de décision : Assistants API vs Chat Completions</h2>
 <table><thead><tr><th>Besoin</th><th>Assistants API</th><th>Chat Completions</th></tr></thead><tbody><tr><td>Mémoire de conversation persistante</td><td>✅ Threads gérés par OpenAI</td><td>❌ À gérer soi-même</td></tr><tr><td>Recherche sémantique dans des fichiers</td><td>✅ file_search natif</td><td>❌ RAG custom requis</td></tr><tr><td>Exécution de code Python</td><td>✅ code_interpreter sandbox</td><td>❌ Sandbox custom requis</td></tr><tr><td>Latence minimale (&lt; 500ms)</td><td>❌ Overhead run lifecycle</td><td>✅ Réponse directe</td></tr><tr><td>Contrôle total du contexte</td><td>❌ Géré par OpenAI</td><td>✅ Contrôle complet</td></tr><tr><td>Coût optimisé (volume élevé)</td><td>❌ + coût tools/storage</td><td>✅ Tokens seuls</td></tr></tbody></table>
-<p><strong>Choisir Assistants API</strong> pour les MVP avec RAG ou analyse de données sans backend complexe.   <strong>Choisir Chat Completions</strong> quand la latence, le coût, ou le contrôle du contexte sont prioritaires.</p>
+<p><strong>Choisir Assistants API</strong> pour les MVP avec RAG ou analyse de données sans backend complexe. <strong>Choisir Chat Completions</strong> quand la latence, le coût, ou le contrôle du contexte sont prioritaires.</p>
 <h2>Workflow en 10 étapes</h2>
 <h3>1. Installation et initialisation</h3>
 <pre><code class="lang-bash">pip install openai&gt;=1.57.0 tenacity</code></pre>
@@ -167,7 +167,7 @@ client.beta.assistants.update(
     assistant_id=assistant.id,
     tool_resources={&quot;file_search&quot;: {&quot;vector_store_ids&quot;: [vector_store.id]}},
 )</code></pre>
-<p><strong>Formats supportés</strong> : PDF, DOCX, TXT, MD, HTML, JSON, CSV, Python, JS/TS, C/C++, Java, etc.   <strong>Taille max par fichier</strong> : 512 MB, 5 000 000 tokens après parsing.   <strong>Coût de stockage</strong> : ~$0.10/GB/jour — configurer <code>expires_after</code> systématiquement.</p>
+<p><strong>Formats supportés</strong> : PDF, DOCX, TXT, MD, HTML, JSON, CSV, Python, JS/TS, C/C++, Java, etc. <strong>Taille max par fichier</strong> : 512 MB, 5 000 000 tokens après parsing. <strong>Coût de stockage</strong> : ~$0.10/GB/jour — configurer <code>expires_after</code> systématiquement.</p>
 <h3>4. Threads : une session par utilisateur</h3>
 <pre><code class="lang-python"># Créer un thread et stocker thread_id par user_id en base de données
 thread = client.beta.threads.create(

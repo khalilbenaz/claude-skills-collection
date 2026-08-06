@@ -94,12 +94,12 @@ Template complet copiable :
 ```markdown
 # Post-Mortem : [Titre court et factuel]
 
-**Date** : YYYY-MM-DD  
-**Durée** : HH:MM (détection → résolution complète)  
-**Sévérité** : SEV1 / SEV2 / SEV3  
-**Statut** : Brouillon / En revue / Finalisé  
-**Auteur** : [Nom]  
-**Réviseurs** : [Noms]  
+**Date** : YYYY-MM-DD
+**Durée** : HH:MM (détection → résolution complète)
+**Sévérité** : SEV1 / SEV2 / SEV3
+**Statut** : Brouillon / En revue / Finalisé
+**Auteur** : [Nom]
+**Réviseurs** : [Noms]
 
 ---
 

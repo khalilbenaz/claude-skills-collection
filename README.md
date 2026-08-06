@@ -10,368 +10,100 @@ La plus grande collection open-source de skills pour Claude — **349 skills** c
 
 ---
 
-## Installation (Claude Code Plugin)
+## 📥 Installation
+
+### 1. Toute la collection, en plugin Claude Code
 
 ```bash
 /plugin marketplace add https://github.com/khalilbenaz/claude-skills-collection
 /plugin install claude-skills-collection
 ```
 
-Une fois installé, tous les 349 skills sont disponibles comme slash commands dans Claude Code. Par exemple :
+Les 349 skills deviennent des slash commands (`/dev-docker-composer`, `/agent-spawner`, `/cloud-aws-architect`, `/security-threat-modeling`…).
 
-```
-/dev-docker-composer
-/agent-spawner
-/cloud-aws-architect
-/security-threat-modeling
+### 2. À la carte — un skill, ou une catégorie
+
+Plus léger : seuls les skills choisis sont copiés dans `~/.claude/skills`.
+
+```bash
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- dev-code-reviewer --launch
+curl -fsSL .../install.sh | sh -s -- --category security     # les 8 skills sécurité
+curl -fsSL .../install.sh | sh -s -- --search redis          # chercher avant d'installer
+curl -fsSL .../install.sh | sh -s -- --list                  # catégories et volumes
+
+# Windows (PowerShell)
+iex "& { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.ps1) } dev-code-reviewer -Launch"
 ```
 
-> 📖 **Catalogue & manuels en ligne** : [khalilbenaz.github.io/claude-skills-collection/manuals](https://khalilbenaz.github.io/claude-skills-collection/manuals/) — un manuel détaillé par skill, recherche instantanée, et installation en 1 commande.
+> 📖 **Catalogue & manuels en ligne** : [khalilbenaz.github.io/claude-skills-collection/manuals](https://khalilbenaz.github.io/claude-skills-collection/manuals/) — un manuel détaillé par skill, recherche instantanée, installation en 1 commande.
+> 🤖 **Index machine-lisible** : [`skills.json`](./skills.json) (nom, catégorie, résumé, déclencheurs, chemins) pour vos propres outils.
 
 ---
 
 ## 🏗️ Architecture & build
 
 - **Source de vérité unique** : les dossiers `<catégorie>-skills/`, `docs/` et `meta-skills/` (noms courts, `kebab-case`). C'est là qu'on édite les skills.
-- **`skills/`** (payload du plugin) et **`manuals/`** (site) sont **générés** — ne jamais les éditer à la main. Chaque skill du plugin est **préfixé par sa catégorie** (`dev-skills/docker-composer` → `dev-docker-composer`) pour éviter les collisions de slash-commands.
+- **Artefacts générés — ne jamais les éditer à la main** : `skills/` (payload du plugin), `manuals/` (site), `docs/SKILL_CATALOG.md` et `skills.json`. Chaque skill du plugin est **préfixé par sa catégorie** (`dev-skills/docker-composer` → `dev-docker-composer`) pour éviter les collisions de slash-commands.
 - Un bloc **Communication Rules** adapté au domaine est ajouté à la génération (concis pour le technique, bienveillant + disclaimer pour les domaines humains).
 
 ```bash
-npm run check      # valide le frontmatter et les collisions
-npm run build      # check + régénère skills/ et manuals/
+npm run check          # frontmatter strict, collisions, longueurs, liens, compteurs
+npm test               # tests des scripts de build (parsing, nommage, artefacts)
+npm run build          # check + skills/ + manuals/ + catalogue + skills.json
 ```
 
-La CI ([`validate.yml`](./.github/workflows/validate.yml)) échoue si les artefacts ne sont pas régénérés. Détails : [CONTRIBUTING](./docs/CONTRIBUTING.md).
+`npm run check` échoue notamment sur : clé de frontmatter non supportée par Claude Code, `description` > 1024 c., corps > 500 lignes, deux skills à description identique, collision de nom public, compteur de skills désynchronisé entre `README`, `index.html`, `package.json` et les manifestes du plugin.
+
+La CI ([`validate.yml`](./.github/workflows/validate.yml)) rejoue check + tests + build et échoue si un artefact committé n'est pas à jour. Détails : [CONTRIBUTING](./docs/CONTRIBUTING.md).
 
 ---
 
 ## 📦 Catégories
 
-| Catégorie | Skills | Description |
-|-----------|--------|-------------|
-| 🤖 [Agent Skills](./agent-skills) | 53 | Agents IA : frameworks, sous-agents, hiérarchies, délégation, communication, pipelines, déploiement, sécurité, **orchestrateur intelligent**, **workflows multi-agent** |
-| 💻 [Dev Skills](./dev-skills) | 112 | Développement complet : sécurité, architecture, DevOps, frontend, mobile, IA, langages, data, testing, UX/UI, blockchain, game dev, **.NET, gRPC, Prisma, RabbitMQ, OAuth2** |
-| 🔧 [DevOps Skills](./devops-skills) | 9 | Terraform, Helm, Prometheus/Grafana, Azure, GitHub Actions, GitLab CI, ArgoCD, Ansible, Docker Swarm |
-| 📊 [Data Skills](./data-skills) | 8 | SQL avancé, modélisation dimensionnelle, qualité des données, dbt, Kafka, Power BI, Tableau, gouvernance |
-| 🔒 [Security Skills](./security-skills) | 8 | Threat modeling, API hardening, audit de dépendances, conformité, zero-trust, réponse incident, SOC |
-| 🌐 [API Gateway Skills](./api-gateway-skills) | 3 | **NOUVEAU** — YARP, Kong, Ocelot |
-| 🏥 [Health Skills](./health-skills) | 16 | Suivi santé, analyses, consultations, douleurs, allergies |
-| 🧠 [Psy Skills](./psy-skills) | 12 | Santé mentale, émotions, thérapie, crise, burnout |
-| 🎯 [Prompt Skills](./prompt-skills) | 6 | Optimisation, création et debug de prompts IA |
-| ⚡ [Productivity Skills](./productivity-skills) | 6 | Planning, réunions, décisions, habitudes, projets, **post-mortem d'incident** |
-| 💰 [Finance Skills](./finance-skills) | 6 | Budget, dépenses, épargne, investissement, impôts, **conformité fintech** |
-| 📚 [Education Skills](./education-skills) | 5 | Révisions, flashcards, examens, apprentissage |
-| ✍️ [Writing Skills](./writing-skills) | 6 | Blog, emails, copywriting, relecture, contenu, **changelog** |
-| 🎯 [Career Skills](./career-skills) | 5 | CV, entretiens, salaire, LinkedIn, reconversion |
-| ✈️ [Travel Skills](./travel-skills) | 5 | Itinéraire, bagages, visa, budget voyage, langues |
-| 🤝 [Social Skills](./social-skills) | 5 | Conversations difficiles, conflits, networking, limites |
-| 👶 [Parenting Skills](./parenting-skills) | 5 | Développement enfant, devoirs, écrans, coucher |
-| ⚖️ [Legal Skills](./legal-skills) | 5 | Contrats, droits locataire, réclamations, RGPD |
+<!-- BEGIN:CATEGORIES (généré par npm run build:catalog — ne pas éditer) -->
 
----
+| Catégorie | Skills | Commandes | Source |
+|-----------|-------:|-----------|--------|
+| 💻 Développement | 112 | `/dev-*` | [`dev-skills/`](./dev-skills) |
+| 🤖 Agents IA | 53 | `/agent-*` | [`agent-skills/`](./agent-skills) |
+| 🩺 Santé | 16 | `/health-*` | [`health-skills/`](./health-skills) |
+| 🧘 Bien-être | 12 | `/psy-*` | [`psy-skills/`](./psy-skills) |
+| 🗄️ Bases de données | 9 | `/database-*` | [`database-skills/`](./database-skills) |
+| 🔁 DevOps | 9 | `/devops-*` | [`devops-skills/`](./devops-skills) |
+| 📊 Data | 8 | `/data-*` | [`data-skills/`](./data-skills) |
+| 🔒 Sécurité | 8 | `/security-*` | [`security-skills/`](./security-skills) |
+| 🧠 AI / ML | 7 | `/ai-ml-*` | [`ai-ml-skills/`](./ai-ml-skills) |
+| ☁️ Cloud | 7 | `/cloud-*` | [`cloud-skills/`](./cloud-skills) |
+| 💰 Finance | 6 | `/finance-*` | [`finance-skills/`](./finance-skills) |
+| ⏱️ Productivité | 6 | `/productivity-*` | [`productivity-skills/`](./productivity-skills) |
+| ✍️ Prompting | 6 | `/prompt-*` | [`prompt-skills/`](./prompt-skills) |
+| 🧪 Tests | 6 | `/testing-*` | [`testing-skills/`](./testing-skills) |
+| 🖊️ Écriture | 6 | `/writing-*` | [`writing-skills/`](./writing-skills) |
+| ⚙️ Automatisation | 5 | `/automation-*` | [`automation-skills/`](./automation-skills) |
+| 🎯 Carrière | 5 | `/career-*` | [`career-skills/`](./career-skills) |
+| 🎓 Éducation | 5 | `/education-*` | [`education-skills/`](./education-skills) |
+| ⚖️ Juridique | 5 | `/legal-*` | [`legal-skills/`](./legal-skills) |
+| 🐧 Linux | 5 | `/linux-*` | [`linux-skills/`](./linux-skills) |
+| 📋 Management | 5 | `/management-*` | [`management-skills/`](./management-skills) |
+| 📣 Marketing | 5 | `/marketing-*` | [`marketing-skills/`](./marketing-skills) |
+| 🌐 Réseaux | 5 | `/networking-*` | [`networking-skills/`](./networking-skills) |
+| 👨‍👩‍👧 Parentalité | 5 | `/parenting-*` | [`parenting-skills/`](./parenting-skills) |
+| 🤝 Relations | 5 | `/social-*` | [`social-skills/`](./social-skills) |
+| ✈️ Voyage | 5 | `/travel-*` | [`travel-skills/`](./travel-skills) |
+| 🗣️ Communication | 4 | `/communication-*` | [`communication-skills/`](./communication-skills) |
+| 🧾 Freelance | 4 | `/freelance-*` | [`freelance-skills/`](./freelance-skills) |
+| 📡 IoT | 4 | `/iot-*` | [`iot-skills/`](./iot-skills) |
+| 🚪 API Gateway | 3 | `/api-gateway-*` | [`api-gateway-skills/`](./api-gateway-skills) |
+| 🌍 Arabe / Maroc | 3 | `/arabic-*` | [`arabic-skills/`](./arabic-skills) |
+| 💼 Business | 2 | `/business-*` | [`business-skills/`](./business-skills) |
+| 🧩 Méta | 2 | _sans préfixe_ | [`meta-skills/`](./meta-skills) |
+| 📄 Documentation | 1 | `/docs-*` | [`docs/`](./docs) |
+| **Total** | **349** | | 34 catégories |
 
-## 🤖 Agent Skills — 53 Skills en 10 sous-catégories
+<!-- END:CATEGORIES -->
 
-### 🧭 Orchestration & Routing (2)
-| Skill | Déclencheur |
-|-------|-------------|
-| [skill-router](./agent-skills/skill-router) | _"quel skill utiliser", "aide-moi à choisir", "orchestrateur", "dispatch", "route"_ |
-| [workflows](./meta-skills/workflows) | _"workflow", "orchestrer des agents", "fan-out", "multi-agent", "paralléliser des sous-agents", "audit exhaustif", "vérification adversariale"_ |
-
-### 🔧 Frameworks (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [crewai-expert](./agent-skills/crewai-expert) | _"CrewAI", "crew", "équipe d'agents"_ |
-| [autogen-guide](./agent-skills/autogen-guide) | _"AutoGen", "GroupChat", "ConversableAgent"_ |
-| [langgraph-designer](./agent-skills/langgraph-designer) | _"LangGraph", "state machine agent", "conditional edges"_ |
-| [semantic-kernel-guide](./agent-skills/semantic-kernel-guide) | _"Semantic Kernel", "agent .NET", "C# agent"_ |
-| [openai-assistants-builder](./agent-skills/openai-assistants-builder) | _"OpenAI Assistants", "file search", "code interpreter"_ |
-
-### 🧩 Patterns (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [multi-agent-orchestrator](./agent-skills/multi-agent-orchestrator) | _"multi-agent", "orchestration", "supervisor", "swarm"_ |
-| [agent-memory-designer](./agent-skills/memory-designer) | _"mémoire agent", "long-term memory", "vector memory"_ |
-| [tool-calling-architect](./agent-skills/tool-calling-architect) | _"tool calling", "function calling", "MCP tool"_ |
-| [agent-evaluation-framework](./agent-skills/evaluation-framework) | _"évaluer agent", "benchmark", "agent metrics"_ |
-| [human-in-the-loop-designer](./agent-skills/human-in-the-loop-designer) | _"human in the loop", "approbation humaine", "HITL"_ |
-
-### 🏗️ Infrastructure (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [mcp-server-builder](./agent-skills/mcp-server-builder) | _"MCP", "Model Context Protocol", "serveur MCP"_ |
-| [agent-deployment-guide](./agent-skills/deployment-guide) | _"déployer agent", "agent en production", "agent API"_ |
-| [agent-monitoring-setup](./agent-skills/monitoring-setup) | _"monitoring agent", "LangSmith", "traces agent"_ |
-| [agent-cost-optimizer](./agent-skills/cost-optimizer) | _"coût agent", "réduire les coûts IA", "token optimization"_ |
-| [agent-security-hardener](./agent-skills/security-hardener) | _"sécurité agent", "prompt injection", "guardrails"_ |
-
-### 🎯 Use Cases (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [coding-agent-builder](./agent-skills/coding-agent-builder) | _"coding agent", "agent développeur", "Devin", "SWE-agent"_ |
-| [research-agent-designer](./agent-skills/research-agent-designer) | _"research agent", "deep research", "agent qui cherche"_ |
-| [data-analyst-agent](./agent-skills/data-analyst-agent) | _"data analyst agent", "agent pandas", "agent SQL"_ |
-| [customer-support-agent](./agent-skills/customer-support-agent) | _"agent support", "chatbot support", "helpdesk agent"_ |
-| [sales-agent-builder](./agent-skills/sales-agent-builder) | _"sales agent", "agent commercial", "SDR agent"_ |
-
-### 🚀 Avancé (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [agent-testing-framework](./agent-skills/testing-framework) | _"tester agent", "agent testing", "agent CI/CD"_ |
-| [agent-prompt-tuner](./agent-skills/prompt-tuner) | _"optimiser prompt agent", "prompt tuning", "calibrer agent"_ |
-| [agent-context-manager](./agent-skills/context-manager) | _"context window", "token limit", "context overflow"_ |
-| [voice-agent-builder](./agent-skills/voice-agent-builder) | _"voice agent", "agent vocal", "Vapi", "LiveKit"_ |
-| [agent-marketplace-creator](./agent-skills/marketplace-creator) | _"marketplace agent", "agent store", "agent registry"_ |
-
-### 👨‍👦 Sous-Agents Core (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [subagent-delegator](./agent-skills/subagent-delegator) | _"sous-agent", "délégation", "agent parent", "dispatch"_ |
-| [agent-hierarchy-designer](./agent-skills/hierarchy-designer) | _"hiérarchie agent", "manager agent", "worker agent", "arbre d'agents"_ |
-| [agent-task-decomposer](./agent-skills/task-decomposer) | _"décomposer tâche", "sous-tâches", "work breakdown", "agent planner"_ |
-| [agent-result-aggregator](./agent-skills/result-aggregator) | _"agréger résultats", "fusionner", "combiner outputs", "synthèse"_ |
-| [agent-supervisor-builder](./agent-skills/supervisor-builder) | _"supervisor", "contrôler sous-agents", "agent oversight"_ |
-
-### 🔩 Sous-Agents Spécialisés (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [web-scraper-subagent](./agent-skills/web-scraper-subagent) | _"sous-agent web", "scraper agent", "browser subagent"_ |
-| [code-review-subagent](./agent-skills/code-review-subagent) | _"sous-agent review", "PR review agent", "quality check"_ |
-| [api-caller-subagent](./agent-skills/api-caller-subagent) | _"sous-agent API", "HTTP agent", "REST agent"_ |
-| [file-processor-subagent](./agent-skills/file-processor-subagent) | _"sous-agent fichier", "PDF agent", "Excel agent"_ |
-| [database-query-subagent](./agent-skills/database-query-subagent) | _"sous-agent DB", "SQL agent", "NL2SQL", "text-to-SQL"_ |
-
-### 📡 Communication & Coordination (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [agent-message-protocol](./agent-skills/message-protocol) | _"protocole agent", "message protocol", "inter-agent communication"_ |
-| [agent-handoff-designer](./agent-skills/handoff-designer) | _"handoff", "transfert agent", "passer la main", "relay"_ |
-| [agent-consensus-builder](./agent-skills/consensus-builder) | _"consensus", "vote agents", "décision collective", "agent debate"_ |
-| [agent-conflict-resolver](./agent-skills/conflict-resolver) | _"conflit agent", "résultats contradictoires", "arbitrage"_ |
-| [agent-state-synchronizer](./agent-skills/state-synchronizer) | _"synchronisation", "état partagé", "shared state", "concurrent agents"_ |
-
-### ⚙️ Sous-Agents Avancés (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [agent-spawner](./agent-skills/spawner) | _"spawner", "créer agent dynamiquement", "agent factory"_ |
-| [agent-pool-manager](./agent-skills/pool-manager) | _"pool agent", "agent reuse", "warm agents", "worker pool"_ |
-| [agent-retry-strategist](./agent-skills/retry-strategist) | _"retry agent", "fallback", "error recovery", "circuit breaker"_ |
-| [agent-load-balancer](./agent-skills/load-balancer) | _"load balancer", "distribution charge", "répartir tâches"_ |
-| [agent-pipeline-composer](./agent-skills/pipeline-composer) | _"pipeline agent", "chaîne d'agents", "agent DAG", "sequential"_ |
-
----
-
-## 💻 Dev Skills — 92 Skills en 17 sous-catégories
-
-### 🔒 Sécurité (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [security-auditor](./dev-skills/security-auditor) | _"audit sécurité", "vérifier la sécurité"_ |
-| [owasp-checker](./dev-skills/owasp-checker) | _"OWASP", "top 10", "failles web"_ |
-| [secrets-scanner](./dev-skills/secrets-scanner) | _"secrets", "clé API exposée", "credential leak"_ |
-| [pentest-assistant](./dev-skills/pentest-assistant) | _"pentest", "test d'intrusion", "red team"_ |
-| [vulnerability-analyzer](./dev-skills/vulnerability-analyzer) | _"vulnérabilité", "CVE", "CVSS"_ |
-
-### 🏗️ Architecture (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [microservices-designer](./dev-skills/microservices-designer) | _"microservices", "bounded context", "décomposition"_ |
-| [design-patterns-advisor](./dev-skills/design-patterns-advisor) | _"design pattern", "SOLID", "factory", "strategy"_ |
-| [system-design-helper](./dev-skills/system-design-helper) | _"system design", "architecture système", "scalability"_ |
-| [clean-architecture-guide](./dev-skills/clean-architecture-guide) | _"clean architecture", "hexagonale", "ports and adapters"_ |
-| [event-driven-architect](./dev-skills/event-driven-architect) | _"event driven", "RabbitMQ", "Kafka", "CQRS"_ |
-
-### 🚀 DevOps & CI/CD (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [docker-composer](./dev-skills/docker-composer) | _"Docker", "Dockerfile", "docker-compose"_ |
-| [cicd-pipeline-builder](./dev-skills/cicd-pipeline-builder) | _"CI/CD", "pipeline", "GitHub Actions", "Azure DevOps"_ |
-| [kubernetes-helper](./dev-skills/kubernetes-helper) | _"Kubernetes", "K8s", "kubectl", "helm"_ |
-| [infrastructure-as-code](./dev-skills/infrastructure-as-code) | _"Terraform", "IaC", "Bicep", "Pulumi"_ |
-| [monitoring-setup](./dev-skills/monitoring-setup) | _"monitoring", "Prometheus", "Grafana", "alerting"_ |
-
-### 🔌 Backend & API (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [rest-api-designer](./dev-skills/rest-api-designer) | _"API REST", "endpoints", "pagination", "versioning"_ |
-| [graphql-builder](./dev-skills/graphql-builder) | _"GraphQL", "schema", "resolver", "Apollo"_ |
-| [message-queue-architect](./dev-skills/message-queue-architect) | _"message queue", "RabbitMQ", "Kafka", "pub/sub"_ |
-| [caching-strategy](./dev-skills/caching-strategy) | _"cache", "Redis", "cache invalidation"_ |
-| [rate-limiter-designer](./dev-skills/rate-limiter-designer) | _"rate limit", "throttling", "429"_ |
-
-### 🧪 Testing (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [unit-test-generator](./dev-skills/unit-test-generator) | _"test unitaire", "Jest", "xUnit", "pytest"_ |
-| [integration-test-builder](./dev-skills/integration-test-builder) | _"test d'intégration", "Testcontainers", "E2E"_ |
-| [load-test-planner](./dev-skills/load-test-planner) | _"test de charge", "k6", "JMeter", "stress test"_ |
-| [test-coverage-analyzer](./dev-skills/test-coverage-analyzer) | _"couverture", "coverage", "mutation testing"_ |
-| [tdd-coach](./dev-skills/tdd-coach) | _"TDD", "red green refactor", "BDD"_ |
-
-### ⚡ Performance & Cloud (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [performance-profiler](./dev-skills/performance-profiler) | _"performance", "lent", "memory leak", "profiling"_ |
-| [cloud-cost-optimizer](./dev-skills/cloud-cost-optimizer) | _"coût cloud", "facture Azure", "FinOps"_ |
-| [scalability-planner](./dev-skills/scalability-planner) | _"scalabilité", "scaling", "montée en charge"_ |
-| [database-migration-helper](./dev-skills/database-migration-helper) | _"migration", "EF migrations", "zero downtime"_ |
-| [log-analyzer](./dev-skills/log-analyzer) | _"logs", "ELK", "debug production"_ |
-
-### 🎨 Frontend & Web (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [react-component-builder](./dev-skills/react-component-builder) | _"composant React", "Vue", "Angular", "Svelte"_ |
-| [css-layout-solver](./dev-skills/css-layout-solver) | _"CSS", "Flexbox", "Grid", "centrer", "layout"_ |
-| [accessibility-checker](./dev-skills/accessibility-checker) | _"accessibilité", "a11y", "WCAG", "ARIA"_ |
-| [responsive-design-helper](./dev-skills/responsive-design-helper) | _"responsive", "mobile first", "media queries"_ |
-| [web-performance-optimizer](./dev-skills/web-performance-optimizer) | _"Core Web Vitals", "LCP", "Lighthouse"_ |
-
-### 🎨 UX/UI Design (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [ux-research-guide](./dev-skills/ux-research-guide) | _"UX research", "persona", "test utilisateur"_ |
-| [ui-design-system-builder](./dev-skills/ui-design-system-builder) | _"design system", "design tokens", "Figma"_ |
-| [wireframe-advisor](./dev-skills/wireframe-advisor) | _"wireframe", "maquette", "mockup", "prototype"_ |
-| [user-flow-designer](./dev-skills/user-flow-designer) | _"user flow", "parcours utilisateur", "onboarding"_ |
-| [design-critique](./dev-skills/design-critique) | _"critique mon design", "UI review", "feedback"_ |
-| [pencil-ui-designer](./dev-skills/pencil-ui-designer) | _"design moi", "génère une maquette", "landing page", "dashboard", "app mobile", "/pencil"_ |
-
-### 📱 Mobile (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [mobile-app-architect](./dev-skills/mobile-app-architect) | _"architecture mobile", "native vs cross-platform"_ |
-| [flutter-helper](./dev-skills/flutter-helper) | _"Flutter", "Dart", "BLoC", "Riverpod"_ |
-| [react-native-guide](./dev-skills/react-native-guide) | _"React Native", "Expo", "Hermes"_ |
-| [ios-swift-advisor](./dev-skills/ios-swift-advisor) | _"iOS", "Swift", "SwiftUI", "Xcode"_ |
-| [android-kotlin-advisor](./dev-skills/android-kotlin-advisor) | _"Android", "Kotlin", "Jetpack Compose"_ |
-
-### 🤖 IA & Agents (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [ai-agent-builder](./dev-skills/ai-agent-builder) | _"agent IA", "autonomous agent", "CrewAI", "ReAct"_ |
-| [prompt-engineering-pro](./dev-skills/prompt-engineering-pro) | _"prompt engineering", "chain of thought", "few-shot"_ |
-| [llm-integration-guide](./dev-skills/llm-integration-guide) | _"API OpenAI", "Claude API", "Ollama", "LLM local"_ |
-| [rag-pipeline-designer](./dev-skills/rag-pipeline-designer) | _"RAG", "vector database", "ChromaDB", "Pinecone"_ |
-| [ai-workflow-orchestrator](./dev-skills/ai-workflow-orchestrator) | _"LangChain", "LangGraph", "pipeline IA"_ |
-
-### 🔤 Langages Spécifiques (6)
-| Skill | Déclencheur |
-|-------|-------------|
-| [python-best-practices](./dev-skills/python-best-practices) | _"Python", "PEP 8", "FastAPI", "Django", "asyncio"_ |
-| [typescript-mastery](./dev-skills/typescript-mastery) | _"TypeScript", "generics", "utility types", "strict"_ |
-| [rust-guide](./dev-skills/rust-guide) | _"Rust", "ownership", "borrow checker", "lifetime"_ |
-| [go-concurrency-guide](./dev-skills/go-concurrency-guide) | _"Go", "goroutine", "channel", "concurrency"_ |
-| [java-spring-advisor](./dev-skills/java-spring-advisor) | _"Java", "Spring Boot", "JPA", "Hibernate"_ |
-| [dotnet-csharp-advisor](./dev-skills/dotnet-csharp-advisor) | _".NET", "C#", "ASP.NET", "EF Core", "LINQ"_ |
-
-### 📊 Data & ML (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [data-pipeline-builder](./dev-skills/data-pipeline-builder) | _"data pipeline", "Airflow", "dbt", "Spark"_ |
-| [ml-model-deployer](./dev-skills/ml-model-deployer) | _"MLOps", "model serving", "MLflow"_ |
-| [feature-engineering-guide](./dev-skills/feature-engineering-guide) | _"feature engineering", "feature store", "encoding"_ |
-| [data-validation-helper](./dev-skills/data-validation-helper) | _"data quality", "Great Expectations", "validation"_ |
-| [etl-designer](./dev-skills/etl-designer) | _"ETL", "ELT", "data integration", "SSIS"_ |
-
-### ⛓️ Blockchain & Game Dev (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [smart-contract-auditor](./dev-skills/smart-contract-auditor) | _"smart contract", "Solidity", "audit blockchain"_ |
-| [web3-dapp-builder](./dev-skills/web3-dapp-builder) | _"dApp", "Web3", "ethers.js", "wagmi"_ |
-| [unity-game-helper](./dev-skills/unity-game-helper) | _"Unity", "game development", "C# Unity"_ |
-| [game-design-patterns](./dev-skills/game-design-patterns) | _"game pattern", "ECS", "game loop", "state machine"_ |
-| [pixel-art-advisor](./dev-skills/pixel-art-advisor) | _"pixel art", "sprite", "tileset", "Aseprite"_ |
-
-### 🛠️ Outils & Fondamentaux (6)
-| Skill | Déclencheur |
-|-------|-------------|
-| [api-doc-generator](./dev-skills/api-doc-generator) | _"documenter mon API", "swagger", "OpenAPI"_ |
-| [bug-debugger](./dev-skills/bug-debugger) | _"j'ai un bug", "ça ne marche pas", "erreur"_ |
-| [code-reviewer](./dev-skills/code-reviewer) | _"revois mon code", "code review"_ |
-| [database-query-optimizer](./dev-skills/database-query-optimizer) | _"requête lente", "optimiser SQL", "EXPLAIN"_ |
-| [git-workflow-helper](./dev-skills/git-workflow-helper) | _"git merge conflict", "branching strategy"_ |
-| [regex-builder](./dev-skills/regex-builder) | _"regex", "expression régulière", "pattern matching"_ |
-
-### 📝 Soft Skills Dev (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [technical-writing-guide](./dev-skills/technical-writing-guide) | _"documentation technique", "ADR", "RFC", "README"_ |
-| [code-documentation-pro](./dev-skills/code-documentation-pro) | _"documenter mon code", "docstring", "JSDoc"_ |
-| [project-estimation-helper](./dev-skills/project-estimation-helper) | _"estimation", "combien de temps", "story points"_ |
-| [tech-lead-advisor](./dev-skills/tech-lead-advisor) | _"tech lead", "mentoring", "décision technique"_ |
-| [developer-onboarding-builder](./dev-skills/developer-onboarding-builder) | _"onboarding", "nouveau développeur", "getting started"_ |
-
-### 🔷 .NET & Backend avancé (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [dotnet-aspire-guide](./dev-skills/dotnet-aspire-guide) | _".NET Aspire", "Aspire", "AppHost", "orchestration cloud-native"_ |
-| [grpc-service-designer](./dev-skills/grpc-service-designer) | _"gRPC", "protobuf", "fichier .proto", "streaming gRPC"_ |
-| [hangfire-job-scheduler](./dev-skills/hangfire-job-scheduler) | _"Hangfire", "background job", "tâche de fond .NET", "cron job C#"_ |
-| [health-check-monitor](./dev-skills/health-check-monitor) | _"health check", "liveness probe", "readiness probe", "endpoint santé"_ |
-| [oauth2-oidc-advisor](./dev-skills/oauth2-oidc-advisor) | _"OAuth2", "OIDC", "JWT", "refresh token", "Keycloak"_ |
-
-### 📨 Messaging & Patterns distribués (3)
-| Skill | Déclencheur |
-|-------|-------------|
-| [rabbitmq-patterns-guide](./dev-skills/rabbitmq-patterns-guide) | _"RabbitMQ", "MassTransit", "exchange", "dead letter"_ |
-| [outbox-pattern-guide](./dev-skills/outbox-pattern-guide) | _"outbox pattern", "saga", "transaction distribuée", "dual write"_ |
-| [feature-flags-manager](./dev-skills/feature-flags-manager) | _"LaunchDarkly", "OpenFeature", "feature toggle", "déploiement progressif"_ |
-
-### 📝 API & Contrats (2)
-| Skill | Déclencheur |
-|-------|-------------|
-| [openapi-contract-first](./dev-skills/openapi-contract-first) | _"OpenAPI", "Swagger", "contract first", "spécification API"_ |
-| [azure-devops-pipeline-advisor](./dev-skills/azure-devops-pipeline-advisor) | _"azure devops", "pipeline YAML", "azure pipeline", "CI/CD azure"_ |
-
-### 🌐 Navigateur & ORM (5)
-| Skill | Déclencheur |
-|-------|-------------|
-| [playwright-browser-automation](./dev-skills/playwright-browser-automation) | _"Playwright", "automatise le navigateur", "teste le formulaire"_ |
-| [chrome-devtools-debugger](./dev-skills/chrome-devtools-debugger) | _"devtools", "debug navigateur", "inspecter la page"_ |
-| [prisma-expert](./dev-skills/prisma-expert) | _"Prisma", "schema prisma", "migration prisma"_ |
-| [sqlite-guide](./dev-skills/sqlite-guide) | _"SQLite", "requête SQL", "schéma SQLite"_ |
-| [feature-flag-system](./dev-skills/feature-flag-system) | _"feature flag", "A/B test", "canary deployment"_ |
-
----
-
-## 🔧 DevOps Skills — 4 Skills
-
-| Skill | Déclencheur |
-|-------|-------------|
-| [terraform-guide](./devops-skills/terraform-guide) | _"Terraform", "HCL", "tfstate", "terraform plan"_ |
-| [helm-chart-builder](./devops-skills/helm-chart-builder) | _"Helm", "chart helm", "values.yaml", "helm install"_ |
-| [prometheus-grafana-setup](./devops-skills/prometheus-grafana-setup) | _"Prometheus", "Grafana", "PromQL", "alerting", "dashboard"_ |
-| [azure-cloud-advisor](./devops-skills/azure-cloud-advisor) | _"Azure", "App Service", "Container Apps", "Azure Functions"_ |
-
----
-
-## 📊 Data Skills — 3 Skills
-
-| Skill | Déclencheur |
-|-------|-------------|
-| [sql-advanced-analytics](./data-skills/sql-advanced-analytics) | _"window function", "CTE récursive", "PARTITION BY", "ROW_NUMBER"_ |
-| [dimensional-modeling](./data-skills/dimensional-modeling) | _"schéma en étoile", "star schema", "table de faits", "SCD", "data warehouse"_ |
-| [data-quality-checker](./data-skills/quality-checker) | _"qualité données", "doublons", "validation données", "anomalie"_ |
-
----
-
-## 🔒 Security Skills — 3 Skills
-
-| Skill | Déclencheur |
-|-------|-------------|
-| [threat-modeling](./security-skills/threat-modeling) | _"threat modeling", "STRIDE", "surface d'attaque", "analyse de menaces"_ |
-| [api-security-hardener](./security-skills/api-security-hardener) | _"sécurité API", "rate limiting", "OWASP API", "headers sécurité"_ |
-| [dependency-audit](./security-skills/dependency-audit) | _"audit dépendances", "CVE", "npm audit", "supply chain security"_ |
-
----
-
-## 🌐 API Gateway Skills — 3 Skills
-
-| Skill | Déclencheur |
-|-------|-------------|
-| [yarp-gateway-designer](./api-gateway-skills/yarp-gateway-designer) | _"YARP", "reverse proxy .NET", "API gateway .NET"_ |
-| [kong-api-gateway](./api-gateway-skills/kong-api-gateway) | _"Kong", "Kong Gateway", "Kong plugin"_ |
-| [ocelot-gateway-guide](./api-gateway-skills/ocelot-gateway-guide) | _"Ocelot", "ocelot.json", "API gateway Ocelot"_ |
+Détail skill par skill, avec déclencheurs : **[docs/SKILL_CATALOG.md](./docs/SKILL_CATALOG.md)**.
 
 ---
 
@@ -399,21 +131,20 @@ La CI ([`validate.yml`](./.github/workflows/validate.yml)) échoue si les artefa
 - **[mega-prompt-builder](./prompt-skills/mega-prompt-builder)** — _"Crée un prompt pour X"_ → mega-prompt structuré complet
 - **[system-prompt-architect](./prompt-skills/system-prompt-architect)** — _"System prompt pour mon chatbot"_ → prompt système robuste
 
+
 ---
 
-## 🚀 Installation rapide
+## 🚀 Autres usages
 
 ```bash
-# Cloner le repo
+# Claude.ai (hors Claude Code) : packager un skill en .skill
 git clone https://github.com/khalilbenaz/claude-skills-collection.git
-
-# Packager un skill
-cd claude-skills-collection/agent-skills/crewai-expert
+cd claude-skills-collection/skills/agent-crewai-expert
 zip ../../crewai-expert.skill SKILL.md
-
-# → Importer le fichier .skill dans Claude.ai (Paramètres → Skills)
+# → Importer le .skill dans Claude.ai (Paramètres → Skills)
 ```
 
+📖 Guide complet : **[docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)**
 📖 Guide complet : **[docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)**
 
 ---

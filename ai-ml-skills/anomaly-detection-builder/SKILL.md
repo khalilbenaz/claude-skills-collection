@@ -1,12 +1,6 @@
 ---
 name: anomaly-detection-builder
-description: "Conception de systèmes de détection d'anomalies (statistique, ML, deep learning) — arbre de décision, snippets copiables, anti-patterns, déploiement production"
-triggers:
-  - "anomaly detection"
-  - "détection d'anomalies"
-  - "outlier"
-  - "fraud detection"
-  - "anomalie"
+description: Conception de systèmes de détection d'anomalies (statistique, ML, deep learning) — arbre de décision, snippets copiables, anti-patterns, déploiement production. Se déclenche avec "anomaly detection", "détection d'anomalies", "outlier", "fraud detection", "anomalie".
 ---
 
 # Anomaly Detection Builder

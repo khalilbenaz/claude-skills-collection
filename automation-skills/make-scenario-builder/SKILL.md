@@ -119,7 +119,7 @@ Champ : record_id  (Text, clé unique)
 Champ : processed_at  (Date)
 
 # Logique dans le scénario
-[Search a record] → existe ? 
+[Search a record] → existe ?
     Oui → skip (Router vers rien)
     Non → [traitement] → [Add/Replace a record]
 ```

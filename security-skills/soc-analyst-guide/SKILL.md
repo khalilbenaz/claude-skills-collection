@@ -164,12 +164,12 @@ misp-modules -m add_attribute --event-id <EVENT_ID> --type ip-dst --value <IP> \
 
 ```
 Incident ID : IR-YYYY-NNN
-Date/Heure détection : 
-Date/Heure clôture : 
-Analyste : 
+Date/Heure détection :
+Date/Heure clôture :
+Analyste :
 Sévérité finale : [P1/P2/P3/P4]
-Assets impactés : 
-Vecteur initial : 
+Assets impactés :
+Vecteur initial :
 Timeline (UTC) :
   - HH:MM — [action/observation]
 IoCs extraits : [IP, hash, domaine, compte]

@@ -116,7 +116,7 @@ Bandwidth sortante : 1 KB × 230 RPS × 8 bits ≈ 1.8 Mbps</code></pre>
 <p><strong>Règle :</strong> si RPS &lt; 1 k → un seul serveur suffit probablement. &gt; 10 k → scaling horizontal obligatoire. &gt; 100 k → sharding + CDN + cache agressif.</p>
 <hr>
 <h3>3. Architecture haut niveau</h3>
-<p>Partir toujours du schéma minimal : <strong>Client → LB → App Servers → DB</strong>.   Ajouter des couches uniquement si les estimations l'imposent.</p>
+<p>Partir toujours du schéma minimal : <strong>Client → LB → App Servers → DB</strong>. Ajouter des couches uniquement si les estimations l'imposent.</p>
 <pre><code>[Client]
    │ HTTPS
 [CDN / WAF]          ← assets statiques, protection DDoS

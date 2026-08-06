@@ -1,349 +1,349 @@
-agent-a2a-protocol-guide skills/agent-a2a-protocol-guide
-agent-agent-observability skills/agent-agent-observability
-agent-api-caller-subagent skills/agent-api-caller-subagent
-agent-autogen-guide skills/agent-autogen-guide
-agent-browser-agent-builder skills/agent-browser-agent-builder
-agent-claude-code-extension-builder skills/agent-claude-code-extension-builder
-agent-code-review-subagent skills/agent-code-review-subagent
-agent-coding-agent-builder skills/agent-coding-agent-builder
-agent-conflict-resolver skills/agent-conflict-resolver
-agent-consensus-builder skills/agent-consensus-builder
-agent-context-manager skills/agent-context-manager
-agent-cost-optimizer skills/agent-cost-optimizer
-agent-crewai-expert skills/agent-crewai-expert
-agent-customer-support-agent skills/agent-customer-support-agent
-agent-data-analyst-agent skills/agent-data-analyst-agent
-agent-database-query-subagent skills/agent-database-query-subagent
-agent-deployment-guide skills/agent-deployment-guide
-agent-email-agent-builder skills/agent-email-agent-builder
-agent-evaluation-framework skills/agent-evaluation-framework
-agent-file-processor-subagent skills/agent-file-processor-subagent
-agent-handoff-designer skills/agent-handoff-designer
-agent-hierarchy-designer skills/agent-hierarchy-designer
-agent-human-in-the-loop-designer skills/agent-human-in-the-loop-designer
-agent-langgraph-designer skills/agent-langgraph-designer
-agent-load-balancer skills/agent-load-balancer
-agent-marketplace-creator skills/agent-marketplace-creator
-agent-mcp-server-builder skills/agent-mcp-server-builder
-agent-memory-designer skills/agent-memory-designer
-agent-message-protocol skills/agent-message-protocol
-agent-monitoring-setup skills/agent-monitoring-setup
-agent-multi-agent-orchestrator skills/agent-multi-agent-orchestrator
-agent-openai-assistants-builder skills/agent-openai-assistants-builder
-agent-pipeline-composer skills/agent-pipeline-composer
-agent-pool-manager skills/agent-pool-manager
-agent-prompt-tuner skills/agent-prompt-tuner
-agent-research-agent-designer skills/agent-research-agent-designer
-agent-result-aggregator skills/agent-result-aggregator
-agent-retry-strategist skills/agent-retry-strategist
-agent-sales-agent-builder skills/agent-sales-agent-builder
-agent-security-hardener skills/agent-security-hardener
-agent-semantic-kernel-guide skills/agent-semantic-kernel-guide
-agent-skill-creator skills/agent-skill-creator
-agent-skill-router skills/agent-skill-router
-agent-spawner skills/agent-spawner
-agent-state-synchronizer skills/agent-state-synchronizer
-agent-subagent-delegator skills/agent-subagent-delegator
-agent-supervisor-builder skills/agent-supervisor-builder
-agent-task-decomposer skills/agent-task-decomposer
-agent-testing-framework skills/agent-testing-framework
-agent-tool-calling-architect skills/agent-tool-calling-architect
-agent-voice-agent-builder skills/agent-voice-agent-builder
-agent-web-scraper-subagent skills/agent-web-scraper-subagent
-agent-workflow-automation-agent skills/agent-workflow-automation-agent
-ai-ml-anomaly-detection-builder skills/ai-ml-anomaly-detection-builder
-ai-ml-computer-vision-guide skills/ai-ml-computer-vision-guide
-ai-ml-dataset-builder skills/ai-ml-dataset-builder
-ai-ml-ml-experiment-tracker skills/ai-ml-ml-experiment-tracker
-ai-ml-model-fine-tuner skills/ai-ml-model-fine-tuner
-ai-ml-model-optimization-guide skills/ai-ml-model-optimization-guide
-ai-ml-nlp-pipeline-designer skills/ai-ml-nlp-pipeline-designer
-api-gateway-kong-api-gateway skills/api-gateway-kong-api-gateway
-api-gateway-ocelot-gateway-guide skills/api-gateway-ocelot-gateway-guide
-api-gateway-yarp-gateway-designer skills/api-gateway-yarp-gateway-designer
-arabic-arabic-content-writer skills/arabic-arabic-content-writer
-arabic-darija-translator skills/arabic-darija-translator
-arabic-morocco-admin-guide skills/arabic-morocco-admin-guide
-automation-make-scenario-builder skills/automation-make-scenario-builder
-automation-n8n-workflow-designer skills/automation-n8n-workflow-designer
-automation-power-automate-designer skills/automation-power-automate-designer
-automation-script-automation-expert skills/automation-script-automation-expert
-automation-zapier-workflow-builder skills/automation-zapier-workflow-builder
-business-commercial-proposal-generic skills/business-commercial-proposal-generic
-business-it-commercial-proposal skills/business-it-commercial-proposal
-career-cv-builder skills/career-cv-builder
-career-interview-prep skills/career-interview-prep
-career-linkedin-optimizer skills/career-linkedin-optimizer
-career-salary-negotiation skills/career-salary-negotiation
-career-transition-planner skills/career-transition-planner
-cloud-aws-architect skills/cloud-aws-architect
-cloud-azure-functions-expert skills/cloud-azure-functions-expert
-cloud-cloud-migration-planner skills/cloud-cloud-migration-planner
-cloud-cloud-security-guide skills/cloud-cloud-security-guide
-cloud-gcp-guide skills/cloud-gcp-guide
-cloud-multi-cloud-strategist skills/cloud-multi-cloud-strategist
-cloud-serverless-designer skills/cloud-serverless-designer
-communication-pitch-deck-designer skills/communication-pitch-deck-designer
-communication-presentation-builder skills/communication-presentation-builder
-communication-public-speaking-coach skills/communication-public-speaking-coach
-communication-storytelling-expert skills/communication-storytelling-expert
-data-data-governance-guide skills/data-data-governance-guide
-data-dbt-guide skills/data-dbt-guide
-data-dimensional-modeling skills/data-dimensional-modeling
-data-kafka-patterns skills/data-kafka-patterns
-data-power-bi-designer skills/data-power-bi-designer
-data-quality-checker skills/data-quality-checker
-data-sql-advanced-analytics skills/data-sql-advanced-analytics
-data-tableau-designer skills/data-tableau-designer
-database-cassandra-guide skills/database-cassandra-guide
-database-database-design-advisor skills/database-database-design-advisor
-database-dynamodb-guide skills/database-dynamodb-guide
-database-elasticsearch-guide skills/database-elasticsearch-guide
-database-mongodb-guide skills/database-mongodb-guide
-database-mysql-tuner skills/database-mysql-tuner
-database-postgres-expert skills/database-postgres-expert
-database-redis-patterns skills/database-redis-patterns
-database-sql-server-tuner skills/database-sql-server-tuner
-dev-accessibility-checker skills/dev-accessibility-checker
-dev-ai-agent-builder skills/dev-ai-agent-builder
-dev-ai-workflow-orchestrator skills/dev-ai-workflow-orchestrator
-dev-android-kotlin-advisor skills/dev-android-kotlin-advisor
-dev-angular-guide skills/dev-angular-guide
-dev-api-doc-generator skills/dev-api-doc-generator
-dev-azure-devops-pipeline-advisor skills/dev-azure-devops-pipeline-advisor
-dev-bug-debugger skills/dev-bug-debugger
-dev-caching-strategy skills/dev-caching-strategy
-dev-chrome-devtools-debugger skills/dev-chrome-devtools-debugger
-dev-cicd-pipeline-builder skills/dev-cicd-pipeline-builder
-dev-clean-architecture-guide skills/dev-clean-architecture-guide
-dev-cloud-cost-optimizer skills/dev-cloud-cost-optimizer
-dev-code-documentation-pro skills/dev-code-documentation-pro
-dev-code-reviewer skills/dev-code-reviewer
-dev-cron-job-designer skills/dev-cron-job-designer
-dev-css-layout-solver skills/dev-css-layout-solver
-dev-data-pipeline-builder skills/dev-data-pipeline-builder
-dev-data-validation-helper skills/dev-data-validation-helper
-dev-database-migration-helper skills/dev-database-migration-helper
-dev-database-query-optimizer skills/dev-database-query-optimizer
-dev-design-critique skills/dev-design-critique
-dev-design-patterns-advisor skills/dev-design-patterns-advisor
-dev-developer-onboarding-builder skills/dev-developer-onboarding-builder
-dev-django-guide skills/dev-django-guide
-dev-docker-composer skills/dev-docker-composer
-dev-dotnet-aspire-guide skills/dev-dotnet-aspire-guide
-dev-dotnet-csharp-advisor skills/dev-dotnet-csharp-advisor
-dev-etl-designer skills/dev-etl-designer
-dev-event-driven-architect skills/dev-event-driven-architect
-dev-express-guide skills/dev-express-guide
-dev-face-matching-kyc skills/dev-face-matching-kyc
-dev-fastapi-guide skills/dev-fastapi-guide
-dev-feature-engineering-guide skills/dev-feature-engineering-guide
-dev-feature-flag-system skills/dev-feature-flag-system
-dev-feature-flags-manager skills/dev-feature-flags-manager
-dev-flutter-helper skills/dev-flutter-helper
-dev-game-design-patterns skills/dev-game-design-patterns
-dev-git-workflow-helper skills/dev-git-workflow-helper
-dev-go-concurrency-guide skills/dev-go-concurrency-guide
-dev-gradle-build-expert skills/dev-gradle-build-expert
-dev-graphql-builder skills/dev-graphql-builder
-dev-grpc-service-designer skills/dev-grpc-service-designer
-dev-hangfire-job-scheduler skills/dev-hangfire-job-scheduler
-dev-health-check-monitor skills/dev-health-check-monitor
-dev-image-processing-pipeline skills/dev-image-processing-pipeline
-dev-infrastructure-as-code skills/dev-infrastructure-as-code
-dev-integration-test-builder skills/dev-integration-test-builder
-dev-ios-swift-advisor skills/dev-ios-swift-advisor
-dev-java-spring-advisor skills/dev-java-spring-advisor
-dev-kotlin-advanced skills/dev-kotlin-advanced
-dev-kubernetes-helper skills/dev-kubernetes-helper
-dev-laravel-guide skills/dev-laravel-guide
-dev-llm-integration-guide skills/dev-llm-integration-guide
-dev-load-test-planner skills/dev-load-test-planner
-dev-log-analyzer skills/dev-log-analyzer
-dev-message-queue-architect skills/dev-message-queue-architect
-dev-microservices-designer skills/dev-microservices-designer
-dev-ml-model-deployer skills/dev-ml-model-deployer
-dev-mobile-app-architect skills/dev-mobile-app-architect
-dev-mobile-sdk-architect skills/dev-mobile-sdk-architect
-dev-monitoring-setup skills/dev-monitoring-setup
-dev-nestjs-guide skills/dev-nestjs-guide
-dev-nextjs-guide skills/dev-nextjs-guide
-dev-nginx-configurator skills/dev-nginx-configurator
-dev-oauth2-oidc-advisor skills/dev-oauth2-oidc-advisor
-dev-ocr-document-scanner skills/dev-ocr-document-scanner
-dev-openapi-contract-first skills/dev-openapi-contract-first
-dev-outbox-pattern-guide skills/dev-outbox-pattern-guide
-dev-owasp-checker skills/dev-owasp-checker
-dev-pencil-ui-designer skills/dev-pencil-ui-designer
-dev-pentest-assistant skills/dev-pentest-assistant
-dev-performance-profiler skills/dev-performance-profiler
-dev-pixel-art-advisor skills/dev-pixel-art-advisor
-dev-playwright-browser-automation skills/dev-playwright-browser-automation
-dev-prisma-expert skills/dev-prisma-expert
-dev-project-estimation-helper skills/dev-project-estimation-helper
-dev-prompt-engineering-pro skills/dev-prompt-engineering-pro
-dev-python-best-practices skills/dev-python-best-practices
-dev-rabbitmq-patterns-guide skills/dev-rabbitmq-patterns-guide
-dev-rag-pipeline-designer skills/dev-rag-pipeline-designer
-dev-rate-limiter-designer skills/dev-rate-limiter-designer
-dev-react-component-builder skills/dev-react-component-builder
-dev-react-native-guide skills/dev-react-native-guide
-dev-regex-builder skills/dev-regex-builder
-dev-responsive-design-helper skills/dev-responsive-design-helper
-dev-rest-api-designer skills/dev-rest-api-designer
-dev-rust-guide skills/dev-rust-guide
-dev-scalability-planner skills/dev-scalability-planner
-dev-secrets-scanner skills/dev-secrets-scanner
-dev-security-auditor skills/dev-security-auditor
-dev-smart-contract-auditor skills/dev-smart-contract-auditor
-dev-sqlite-guide skills/dev-sqlite-guide
-dev-svelte-guide skills/dev-svelte-guide
-dev-system-design-helper skills/dev-system-design-helper
-dev-tailwind-expert skills/dev-tailwind-expert
-dev-tdd-coach skills/dev-tdd-coach
-dev-tech-lead-advisor skills/dev-tech-lead-advisor
-dev-technical-writing-guide skills/dev-technical-writing-guide
-dev-test-coverage-analyzer skills/dev-test-coverage-analyzer
-dev-typescript-mastery skills/dev-typescript-mastery
-dev-ui-design-system-builder skills/dev-ui-design-system-builder
-dev-unit-test-generator skills/dev-unit-test-generator
-dev-unity-game-helper skills/dev-unity-game-helper
-dev-user-flow-designer skills/dev-user-flow-designer
-dev-ux-research-guide skills/dev-ux-research-guide
-dev-vue-guide skills/dev-vue-guide
-dev-vulnerability-analyzer skills/dev-vulnerability-analyzer
-dev-web-performance-optimizer skills/dev-web-performance-optimizer
-dev-web3-dapp-builder skills/dev-web3-dapp-builder
-dev-websocket-designer skills/dev-websocket-designer
-dev-wireframe-advisor skills/dev-wireframe-advisor
-devops-ansible-playbook-builder skills/devops-ansible-playbook-builder
-devops-argocd-guide skills/devops-argocd-guide
-devops-azure-cloud-advisor skills/devops-azure-cloud-advisor
-devops-docker-swarm-guide skills/devops-docker-swarm-guide
-devops-github-actions-expert skills/devops-github-actions-expert
-devops-gitlab-ci-guide skills/devops-gitlab-ci-guide
-devops-helm-chart-builder skills/devops-helm-chart-builder
-devops-prometheus-grafana-setup skills/devops-prometheus-grafana-setup
-devops-terraform-guide skills/devops-terraform-guide
-docs-adr-writer skills/docs-adr-writer
-education-concept-explainer skills/education-concept-explainer
-education-exam-prep skills/education-exam-prep
-education-flashcard-generator skills/education-flashcard-generator
-education-learning-roadmap skills/education-learning-roadmap
-education-study-planner skills/education-study-planner
-finance-budget-tracker skills/finance-budget-tracker
-finance-expense-analyzer skills/finance-expense-analyzer
-finance-fintech-compliance-checker skills/finance-fintech-compliance-checker
-finance-investment-journal skills/finance-investment-journal
-finance-savings-goal-planner skills/finance-savings-goal-planner
-finance-tax-prep-checklist skills/finance-tax-prep-checklist
-freelance-client-contract-builder skills/freelance-client-contract-builder
-freelance-freelance-pricing skills/freelance-freelance-pricing
-freelance-invoice-generator skills/freelance-invoice-generator
-freelance-portfolio-builder skills/freelance-portfolio-builder
-health-allergy-reaction-log skills/health-allergy-reaction-log
-health-blood-pressure-log skills/health-blood-pressure-log
-health-chronic-illness-dashboard skills/health-chronic-illness-dashboard
-health-diet-trigger-journal skills/health-diet-trigger-journal
-health-doctor-visit-prep skills/health-doctor-visit-prep
-health-lab-explainer skills/health-lab-explainer
-health-medical-history-summary skills/health-medical-history-summary
-health-medical-research-safe skills/health-medical-research-safe
-health-medication-schedule skills/health-medication-schedule
-health-pain-journal skills/health-pain-journal
-health-post-surgery-tracker skills/health-post-surgery-tracker
-health-question-builder skills/health-question-builder
-health-red-flag-checker skills/health-red-flag-checker
-health-sleep-journal skills/health-sleep-journal
-health-supplement-checker skills/health-supplement-checker
-health-symptom-tracker skills/health-symptom-tracker
-iot-arduino-project-guide skills/iot-arduino-project-guide
-iot-edge-computing-designer skills/iot-edge-computing-designer
-iot-mqtt-architect skills/iot-mqtt-architect
-iot-raspberry-pi-setup skills/iot-raspberry-pi-setup
-legal-complaint-letter-writer skills/legal-complaint-letter-writer
-legal-contract-reader skills/legal-contract-reader
-legal-gdpr-checklist skills/legal-gdpr-checklist
-legal-small-claims-prep skills/legal-small-claims-prep
-legal-tenant-rights-guide skills/legal-tenant-rights-guide
-linux-bash-scripting-expert skills/linux-bash-scripting-expert
-linux-linux-admin-guide skills/linux-linux-admin-guide
-linux-linux-security-hardener skills/linux-linux-security-hardener
-linux-linux-troubleshooter skills/linux-linux-troubleshooter
-linux-systemd-manager skills/linux-systemd-manager
-management-retro-facilitator skills/management-retro-facilitator
-management-sprint-planner skills/management-sprint-planner
-management-stakeholder-communicator skills/management-stakeholder-communicator
-management-team-velocity-tracker skills/management-team-velocity-tracker
-management-technical-debt-manager skills/management-technical-debt-manager
-marketing-analytics-interpreter skills/marketing-analytics-interpreter
-marketing-email-marketing-designer skills/marketing-email-marketing-designer
-marketing-growth-hacking-strategist skills/marketing-growth-hacking-strategist
-marketing-seo-optimizer skills/marketing-seo-optimizer
-marketing-social-media-strategist skills/marketing-social-media-strategist
-ultra-concise-mode skills/ultra-concise-mode
-workflows skills/workflows
-networking-dns-expert skills/networking-dns-expert
-networking-firewall-configurator skills/networking-firewall-configurator
-networking-tcp-ip-troubleshooter skills/networking-tcp-ip-troubleshooter
-networking-vpn-architect skills/networking-vpn-architect
-networking-wireshark-analyst skills/networking-wireshark-analyst
-parenting-bedtime-routine-builder skills/parenting-bedtime-routine-builder
-parenting-child-milestone-tracker skills/parenting-child-milestone-tracker
-parenting-homework-helper skills/parenting-homework-helper
-parenting-parent-self-care skills/parenting-parent-self-care
-parenting-screen-time-planner skills/parenting-screen-time-planner
-productivity-decision-matrix skills/productivity-decision-matrix
-productivity-habit-tracker skills/productivity-habit-tracker
-productivity-incident-postmortem-guide skills/productivity-incident-postmortem-guide
-productivity-meeting-summarizer skills/productivity-meeting-summarizer
-productivity-project-kickstart skills/productivity-project-kickstart
-productivity-weekly-planner skills/productivity-weekly-planner
-prompt-chain-of-thought-designer skills/prompt-chain-of-thought-designer
-prompt-debugger skills/prompt-debugger
-prompt-mega-prompt-builder skills/prompt-mega-prompt-builder
-prompt-optimizer skills/prompt-optimizer
-prompt-system-prompt-architect skills/prompt-system-prompt-architect
-prompt-translator skills/prompt-translator
-psy-addiction-awareness-log skills/psy-addiction-awareness-log
-psy-anxiety-debrief skills/psy-anxiety-debrief
-psy-breathing-exercise-guide skills/psy-breathing-exercise-guide
-psy-burnout-assessment skills/psy-burnout-assessment
-psy-cbt-thought-record skills/psy-cbt-thought-record
-psy-crisis-escalation skills/psy-crisis-escalation
-psy-emotional-checkin skills/psy-emotional-checkin
-psy-grief-support skills/psy-grief-support
-psy-med-side-effect-mood-log skills/psy-med-side-effect-mood-log
-psy-psychiatry-visit-prep skills/psy-psychiatry-visit-prep
-psy-psychology-visit-prep skills/psy-psychology-visit-prep
-psy-therapy-journal skills/psy-therapy-journal
-security-api-security-hardener skills/security-api-security-hardener
-security-compliance-checker skills/security-compliance-checker
-security-dependency-audit skills/security-dependency-audit
-security-incident-response-plan skills/security-incident-response-plan
-security-security-audit-automation skills/security-security-audit-automation
-security-soc-analyst-guide skills/security-soc-analyst-guide
-security-threat-modeling skills/security-threat-modeling
-security-zero-trust-architect skills/security-zero-trust-architect
-social-boundary-setter skills/social-boundary-setter
-social-conflict-resolver skills/social-conflict-resolver
-social-difficult-conversation-prep skills/social-difficult-conversation-prep
-social-feedback-giver skills/social-feedback-giver
-social-networking-script skills/social-networking-script
-testing-api-testing-expert skills/testing-api-testing-expert
-testing-chaos-engineering-guide skills/testing-chaos-engineering-guide
-testing-cypress-e2e-guide skills/testing-cypress-e2e-guide
-testing-mock-designer skills/testing-mock-designer
-testing-selenium-guide skills/testing-selenium-guide
-testing-test-strategy-planner skills/testing-test-strategy-planner
-travel-budget skills/travel-budget
-travel-local-phrase-book skills/travel-local-phrase-book
-travel-packing-checklist skills/travel-packing-checklist
-travel-trip-planner skills/travel-trip-planner
-travel-visa-checker skills/travel-visa-checker
-writing-blog-post-writer skills/writing-blog-post-writer
-writing-changelog-writer skills/writing-changelog-writer
-writing-content-repurposer skills/writing-content-repurposer
-writing-copywriting-assistant skills/writing-copywriting-assistant
-writing-email-drafter skills/writing-email-drafter
-writing-proofreader-fr skills/writing-proofreader-fr
+agent-a2a-protocol-guide skills/agent-a2a-protocol-guide agent
+agent-agent-observability skills/agent-agent-observability agent
+agent-api-caller-subagent skills/agent-api-caller-subagent agent
+agent-autogen-guide skills/agent-autogen-guide agent
+agent-browser-agent-builder skills/agent-browser-agent-builder agent
+agent-claude-code-extension-builder skills/agent-claude-code-extension-builder agent
+agent-code-review-subagent skills/agent-code-review-subagent agent
+agent-coding-agent-builder skills/agent-coding-agent-builder agent
+agent-conflict-resolver skills/agent-conflict-resolver agent
+agent-consensus-builder skills/agent-consensus-builder agent
+agent-context-manager skills/agent-context-manager agent
+agent-cost-optimizer skills/agent-cost-optimizer agent
+agent-crewai-expert skills/agent-crewai-expert agent
+agent-customer-support-agent skills/agent-customer-support-agent agent
+agent-data-analyst-agent skills/agent-data-analyst-agent agent
+agent-database-query-subagent skills/agent-database-query-subagent agent
+agent-deployment-guide skills/agent-deployment-guide agent
+agent-email-agent-builder skills/agent-email-agent-builder agent
+agent-evaluation-framework skills/agent-evaluation-framework agent
+agent-file-processor-subagent skills/agent-file-processor-subagent agent
+agent-handoff-designer skills/agent-handoff-designer agent
+agent-hierarchy-designer skills/agent-hierarchy-designer agent
+agent-human-in-the-loop-designer skills/agent-human-in-the-loop-designer agent
+agent-langgraph-designer skills/agent-langgraph-designer agent
+agent-load-balancer skills/agent-load-balancer agent
+agent-marketplace-creator skills/agent-marketplace-creator agent
+agent-mcp-server-builder skills/agent-mcp-server-builder agent
+agent-memory-designer skills/agent-memory-designer agent
+agent-message-protocol skills/agent-message-protocol agent
+agent-monitoring-setup skills/agent-monitoring-setup agent
+agent-multi-agent-orchestrator skills/agent-multi-agent-orchestrator agent
+agent-openai-assistants-builder skills/agent-openai-assistants-builder agent
+agent-pipeline-composer skills/agent-pipeline-composer agent
+agent-pool-manager skills/agent-pool-manager agent
+agent-prompt-tuner skills/agent-prompt-tuner agent
+agent-research-agent-designer skills/agent-research-agent-designer agent
+agent-result-aggregator skills/agent-result-aggregator agent
+agent-retry-strategist skills/agent-retry-strategist agent
+agent-sales-agent-builder skills/agent-sales-agent-builder agent
+agent-security-hardener skills/agent-security-hardener agent
+agent-semantic-kernel-guide skills/agent-semantic-kernel-guide agent
+agent-skill-creator skills/agent-skill-creator agent
+agent-skill-router skills/agent-skill-router agent
+agent-spawner skills/agent-spawner agent
+agent-state-synchronizer skills/agent-state-synchronizer agent
+agent-subagent-delegator skills/agent-subagent-delegator agent
+agent-supervisor-builder skills/agent-supervisor-builder agent
+agent-task-decomposer skills/agent-task-decomposer agent
+agent-testing-framework skills/agent-testing-framework agent
+agent-tool-calling-architect skills/agent-tool-calling-architect agent
+agent-voice-agent-builder skills/agent-voice-agent-builder agent
+agent-web-scraper-subagent skills/agent-web-scraper-subagent agent
+agent-workflow-automation-agent skills/agent-workflow-automation-agent agent
+ai-ml-anomaly-detection-builder skills/ai-ml-anomaly-detection-builder ai-ml
+ai-ml-computer-vision-guide skills/ai-ml-computer-vision-guide ai-ml
+ai-ml-dataset-builder skills/ai-ml-dataset-builder ai-ml
+ai-ml-ml-experiment-tracker skills/ai-ml-ml-experiment-tracker ai-ml
+ai-ml-model-fine-tuner skills/ai-ml-model-fine-tuner ai-ml
+ai-ml-model-optimization-guide skills/ai-ml-model-optimization-guide ai-ml
+ai-ml-nlp-pipeline-designer skills/ai-ml-nlp-pipeline-designer ai-ml
+api-gateway-kong-api-gateway skills/api-gateway-kong-api-gateway api-gateway
+api-gateway-ocelot-gateway-guide skills/api-gateway-ocelot-gateway-guide api-gateway
+api-gateway-yarp-gateway-designer skills/api-gateway-yarp-gateway-designer api-gateway
+arabic-arabic-content-writer skills/arabic-arabic-content-writer arabic
+arabic-darija-translator skills/arabic-darija-translator arabic
+arabic-morocco-admin-guide skills/arabic-morocco-admin-guide arabic
+automation-make-scenario-builder skills/automation-make-scenario-builder automation
+automation-n8n-workflow-designer skills/automation-n8n-workflow-designer automation
+automation-power-automate-designer skills/automation-power-automate-designer automation
+automation-script-automation-expert skills/automation-script-automation-expert automation
+automation-zapier-workflow-builder skills/automation-zapier-workflow-builder automation
+business-commercial-proposal-generic skills/business-commercial-proposal-generic business
+business-it-commercial-proposal skills/business-it-commercial-proposal business
+career-cv-builder skills/career-cv-builder career
+career-interview-prep skills/career-interview-prep career
+career-linkedin-optimizer skills/career-linkedin-optimizer career
+career-salary-negotiation skills/career-salary-negotiation career
+career-transition-planner skills/career-transition-planner career
+cloud-aws-architect skills/cloud-aws-architect cloud
+cloud-azure-functions-expert skills/cloud-azure-functions-expert cloud
+cloud-cloud-migration-planner skills/cloud-cloud-migration-planner cloud
+cloud-cloud-security-guide skills/cloud-cloud-security-guide cloud
+cloud-gcp-guide skills/cloud-gcp-guide cloud
+cloud-multi-cloud-strategist skills/cloud-multi-cloud-strategist cloud
+cloud-serverless-designer skills/cloud-serverless-designer cloud
+communication-pitch-deck-designer skills/communication-pitch-deck-designer communication
+communication-presentation-builder skills/communication-presentation-builder communication
+communication-public-speaking-coach skills/communication-public-speaking-coach communication
+communication-storytelling-expert skills/communication-storytelling-expert communication
+data-data-governance-guide skills/data-data-governance-guide data
+data-dbt-guide skills/data-dbt-guide data
+data-dimensional-modeling skills/data-dimensional-modeling data
+data-kafka-patterns skills/data-kafka-patterns data
+data-power-bi-designer skills/data-power-bi-designer data
+data-quality-checker skills/data-quality-checker data
+data-sql-advanced-analytics skills/data-sql-advanced-analytics data
+data-tableau-designer skills/data-tableau-designer data
+database-cassandra-guide skills/database-cassandra-guide database
+database-database-design-advisor skills/database-database-design-advisor database
+database-dynamodb-guide skills/database-dynamodb-guide database
+database-elasticsearch-guide skills/database-elasticsearch-guide database
+database-mongodb-guide skills/database-mongodb-guide database
+database-mysql-tuner skills/database-mysql-tuner database
+database-postgres-expert skills/database-postgres-expert database
+database-redis-patterns skills/database-redis-patterns database
+database-sql-server-tuner skills/database-sql-server-tuner database
+dev-accessibility-checker skills/dev-accessibility-checker dev
+dev-ai-agent-builder skills/dev-ai-agent-builder dev
+dev-ai-workflow-orchestrator skills/dev-ai-workflow-orchestrator dev
+dev-android-kotlin-advisor skills/dev-android-kotlin-advisor dev
+dev-angular-guide skills/dev-angular-guide dev
+dev-api-doc-generator skills/dev-api-doc-generator dev
+dev-azure-devops-pipeline-advisor skills/dev-azure-devops-pipeline-advisor dev
+dev-bug-debugger skills/dev-bug-debugger dev
+dev-caching-strategy skills/dev-caching-strategy dev
+dev-chrome-devtools-debugger skills/dev-chrome-devtools-debugger dev
+dev-cicd-pipeline-builder skills/dev-cicd-pipeline-builder dev
+dev-clean-architecture-guide skills/dev-clean-architecture-guide dev
+dev-cloud-cost-optimizer skills/dev-cloud-cost-optimizer dev
+dev-code-documentation-pro skills/dev-code-documentation-pro dev
+dev-code-reviewer skills/dev-code-reviewer dev
+dev-cron-job-designer skills/dev-cron-job-designer dev
+dev-css-layout-solver skills/dev-css-layout-solver dev
+dev-data-pipeline-builder skills/dev-data-pipeline-builder dev
+dev-data-validation-helper skills/dev-data-validation-helper dev
+dev-database-migration-helper skills/dev-database-migration-helper dev
+dev-database-query-optimizer skills/dev-database-query-optimizer dev
+dev-design-critique skills/dev-design-critique dev
+dev-design-patterns-advisor skills/dev-design-patterns-advisor dev
+dev-developer-onboarding-builder skills/dev-developer-onboarding-builder dev
+dev-django-guide skills/dev-django-guide dev
+dev-docker-composer skills/dev-docker-composer dev
+dev-dotnet-aspire-guide skills/dev-dotnet-aspire-guide dev
+dev-dotnet-csharp-advisor skills/dev-dotnet-csharp-advisor dev
+dev-etl-designer skills/dev-etl-designer dev
+dev-event-driven-architect skills/dev-event-driven-architect dev
+dev-express-guide skills/dev-express-guide dev
+dev-face-matching-kyc skills/dev-face-matching-kyc dev
+dev-fastapi-guide skills/dev-fastapi-guide dev
+dev-feature-engineering-guide skills/dev-feature-engineering-guide dev
+dev-feature-flag-system skills/dev-feature-flag-system dev
+dev-feature-flags-manager skills/dev-feature-flags-manager dev
+dev-flutter-helper skills/dev-flutter-helper dev
+dev-game-design-patterns skills/dev-game-design-patterns dev
+dev-git-workflow-helper skills/dev-git-workflow-helper dev
+dev-go-concurrency-guide skills/dev-go-concurrency-guide dev
+dev-gradle-build-expert skills/dev-gradle-build-expert dev
+dev-graphql-builder skills/dev-graphql-builder dev
+dev-grpc-service-designer skills/dev-grpc-service-designer dev
+dev-hangfire-job-scheduler skills/dev-hangfire-job-scheduler dev
+dev-health-check-monitor skills/dev-health-check-monitor dev
+dev-image-processing-pipeline skills/dev-image-processing-pipeline dev
+dev-infrastructure-as-code skills/dev-infrastructure-as-code dev
+dev-integration-test-builder skills/dev-integration-test-builder dev
+dev-ios-swift-advisor skills/dev-ios-swift-advisor dev
+dev-java-spring-advisor skills/dev-java-spring-advisor dev
+dev-kotlin-advanced skills/dev-kotlin-advanced dev
+dev-kubernetes-helper skills/dev-kubernetes-helper dev
+dev-laravel-guide skills/dev-laravel-guide dev
+dev-llm-integration-guide skills/dev-llm-integration-guide dev
+dev-load-test-planner skills/dev-load-test-planner dev
+dev-log-analyzer skills/dev-log-analyzer dev
+dev-message-queue-architect skills/dev-message-queue-architect dev
+dev-microservices-designer skills/dev-microservices-designer dev
+dev-ml-model-deployer skills/dev-ml-model-deployer dev
+dev-mobile-app-architect skills/dev-mobile-app-architect dev
+dev-mobile-sdk-architect skills/dev-mobile-sdk-architect dev
+dev-monitoring-setup skills/dev-monitoring-setup dev
+dev-nestjs-guide skills/dev-nestjs-guide dev
+dev-nextjs-guide skills/dev-nextjs-guide dev
+dev-nginx-configurator skills/dev-nginx-configurator dev
+dev-oauth2-oidc-advisor skills/dev-oauth2-oidc-advisor dev
+dev-ocr-document-scanner skills/dev-ocr-document-scanner dev
+dev-openapi-contract-first skills/dev-openapi-contract-first dev
+dev-outbox-pattern-guide skills/dev-outbox-pattern-guide dev
+dev-owasp-checker skills/dev-owasp-checker dev
+dev-pencil-ui-designer skills/dev-pencil-ui-designer dev
+dev-pentest-assistant skills/dev-pentest-assistant dev
+dev-performance-profiler skills/dev-performance-profiler dev
+dev-pixel-art-advisor skills/dev-pixel-art-advisor dev
+dev-playwright-browser-automation skills/dev-playwright-browser-automation dev
+dev-prisma-expert skills/dev-prisma-expert dev
+dev-project-estimation-helper skills/dev-project-estimation-helper dev
+dev-prompt-engineering-pro skills/dev-prompt-engineering-pro dev
+dev-python-best-practices skills/dev-python-best-practices dev
+dev-rabbitmq-patterns-guide skills/dev-rabbitmq-patterns-guide dev
+dev-rag-pipeline-designer skills/dev-rag-pipeline-designer dev
+dev-rate-limiter-designer skills/dev-rate-limiter-designer dev
+dev-react-component-builder skills/dev-react-component-builder dev
+dev-react-native-guide skills/dev-react-native-guide dev
+dev-regex-builder skills/dev-regex-builder dev
+dev-responsive-design-helper skills/dev-responsive-design-helper dev
+dev-rest-api-designer skills/dev-rest-api-designer dev
+dev-rust-guide skills/dev-rust-guide dev
+dev-scalability-planner skills/dev-scalability-planner dev
+dev-secrets-scanner skills/dev-secrets-scanner dev
+dev-security-auditor skills/dev-security-auditor dev
+dev-smart-contract-auditor skills/dev-smart-contract-auditor dev
+dev-sqlite-guide skills/dev-sqlite-guide dev
+dev-svelte-guide skills/dev-svelte-guide dev
+dev-system-design-helper skills/dev-system-design-helper dev
+dev-tailwind-expert skills/dev-tailwind-expert dev
+dev-tdd-coach skills/dev-tdd-coach dev
+dev-tech-lead-advisor skills/dev-tech-lead-advisor dev
+dev-technical-writing-guide skills/dev-technical-writing-guide dev
+dev-test-coverage-analyzer skills/dev-test-coverage-analyzer dev
+dev-typescript-mastery skills/dev-typescript-mastery dev
+dev-ui-design-system-builder skills/dev-ui-design-system-builder dev
+dev-unit-test-generator skills/dev-unit-test-generator dev
+dev-unity-game-helper skills/dev-unity-game-helper dev
+dev-user-flow-designer skills/dev-user-flow-designer dev
+dev-ux-research-guide skills/dev-ux-research-guide dev
+dev-vue-guide skills/dev-vue-guide dev
+dev-vulnerability-analyzer skills/dev-vulnerability-analyzer dev
+dev-web-performance-optimizer skills/dev-web-performance-optimizer dev
+dev-web3-dapp-builder skills/dev-web3-dapp-builder dev
+dev-websocket-designer skills/dev-websocket-designer dev
+dev-wireframe-advisor skills/dev-wireframe-advisor dev
+devops-ansible-playbook-builder skills/devops-ansible-playbook-builder devops
+devops-argocd-guide skills/devops-argocd-guide devops
+devops-azure-cloud-advisor skills/devops-azure-cloud-advisor devops
+devops-docker-swarm-guide skills/devops-docker-swarm-guide devops
+devops-github-actions-expert skills/devops-github-actions-expert devops
+devops-gitlab-ci-guide skills/devops-gitlab-ci-guide devops
+devops-helm-chart-builder skills/devops-helm-chart-builder devops
+devops-prometheus-grafana-setup skills/devops-prometheus-grafana-setup devops
+devops-terraform-guide skills/devops-terraform-guide devops
+docs-adr-writer skills/docs-adr-writer docs
+education-concept-explainer skills/education-concept-explainer education
+education-exam-prep skills/education-exam-prep education
+education-flashcard-generator skills/education-flashcard-generator education
+education-learning-roadmap skills/education-learning-roadmap education
+education-study-planner skills/education-study-planner education
+finance-budget-tracker skills/finance-budget-tracker finance
+finance-expense-analyzer skills/finance-expense-analyzer finance
+finance-fintech-compliance-checker skills/finance-fintech-compliance-checker finance
+finance-investment-journal skills/finance-investment-journal finance
+finance-savings-goal-planner skills/finance-savings-goal-planner finance
+finance-tax-prep-checklist skills/finance-tax-prep-checklist finance
+freelance-client-contract-builder skills/freelance-client-contract-builder freelance
+freelance-freelance-pricing skills/freelance-freelance-pricing freelance
+freelance-invoice-generator skills/freelance-invoice-generator freelance
+freelance-portfolio-builder skills/freelance-portfolio-builder freelance
+health-allergy-reaction-log skills/health-allergy-reaction-log health
+health-blood-pressure-log skills/health-blood-pressure-log health
+health-chronic-illness-dashboard skills/health-chronic-illness-dashboard health
+health-diet-trigger-journal skills/health-diet-trigger-journal health
+health-doctor-visit-prep skills/health-doctor-visit-prep health
+health-lab-explainer skills/health-lab-explainer health
+health-medical-history-summary skills/health-medical-history-summary health
+health-medical-research-safe skills/health-medical-research-safe health
+health-medication-schedule skills/health-medication-schedule health
+health-pain-journal skills/health-pain-journal health
+health-post-surgery-tracker skills/health-post-surgery-tracker health
+health-question-builder skills/health-question-builder health
+health-red-flag-checker skills/health-red-flag-checker health
+health-sleep-journal skills/health-sleep-journal health
+health-supplement-checker skills/health-supplement-checker health
+health-symptom-tracker skills/health-symptom-tracker health
+iot-arduino-project-guide skills/iot-arduino-project-guide iot
+iot-edge-computing-designer skills/iot-edge-computing-designer iot
+iot-mqtt-architect skills/iot-mqtt-architect iot
+iot-raspberry-pi-setup skills/iot-raspberry-pi-setup iot
+legal-complaint-letter-writer skills/legal-complaint-letter-writer legal
+legal-contract-reader skills/legal-contract-reader legal
+legal-gdpr-checklist skills/legal-gdpr-checklist legal
+legal-small-claims-prep skills/legal-small-claims-prep legal
+legal-tenant-rights-guide skills/legal-tenant-rights-guide legal
+linux-bash-scripting-expert skills/linux-bash-scripting-expert linux
+linux-linux-admin-guide skills/linux-linux-admin-guide linux
+linux-linux-security-hardener skills/linux-linux-security-hardener linux
+linux-linux-troubleshooter skills/linux-linux-troubleshooter linux
+linux-systemd-manager skills/linux-systemd-manager linux
+management-retro-facilitator skills/management-retro-facilitator management
+management-sprint-planner skills/management-sprint-planner management
+management-stakeholder-communicator skills/management-stakeholder-communicator management
+management-team-velocity-tracker skills/management-team-velocity-tracker management
+management-technical-debt-manager skills/management-technical-debt-manager management
+marketing-analytics-interpreter skills/marketing-analytics-interpreter marketing
+marketing-email-marketing-designer skills/marketing-email-marketing-designer marketing
+marketing-growth-hacking-strategist skills/marketing-growth-hacking-strategist marketing
+marketing-seo-optimizer skills/marketing-seo-optimizer marketing
+marketing-social-media-strategist skills/marketing-social-media-strategist marketing
+ultra-concise-mode skills/ultra-concise-mode meta
+workflows skills/workflows meta
+networking-dns-expert skills/networking-dns-expert networking
+networking-firewall-configurator skills/networking-firewall-configurator networking
+networking-tcp-ip-troubleshooter skills/networking-tcp-ip-troubleshooter networking
+networking-vpn-architect skills/networking-vpn-architect networking
+networking-wireshark-analyst skills/networking-wireshark-analyst networking
+parenting-bedtime-routine-builder skills/parenting-bedtime-routine-builder parenting
+parenting-child-milestone-tracker skills/parenting-child-milestone-tracker parenting
+parenting-homework-helper skills/parenting-homework-helper parenting
+parenting-parent-self-care skills/parenting-parent-self-care parenting
+parenting-screen-time-planner skills/parenting-screen-time-planner parenting
+productivity-decision-matrix skills/productivity-decision-matrix productivity
+productivity-habit-tracker skills/productivity-habit-tracker productivity
+productivity-incident-postmortem-guide skills/productivity-incident-postmortem-guide productivity
+productivity-meeting-summarizer skills/productivity-meeting-summarizer productivity
+productivity-project-kickstart skills/productivity-project-kickstart productivity
+productivity-weekly-planner skills/productivity-weekly-planner productivity
+prompt-chain-of-thought-designer skills/prompt-chain-of-thought-designer prompt
+prompt-debugger skills/prompt-debugger prompt
+prompt-mega-prompt-builder skills/prompt-mega-prompt-builder prompt
+prompt-optimizer skills/prompt-optimizer prompt
+prompt-system-prompt-architect skills/prompt-system-prompt-architect prompt
+prompt-translator skills/prompt-translator prompt
+psy-addiction-awareness-log skills/psy-addiction-awareness-log psy
+psy-anxiety-debrief skills/psy-anxiety-debrief psy
+psy-breathing-exercise-guide skills/psy-breathing-exercise-guide psy
+psy-burnout-assessment skills/psy-burnout-assessment psy
+psy-cbt-thought-record skills/psy-cbt-thought-record psy
+psy-crisis-escalation skills/psy-crisis-escalation psy
+psy-emotional-checkin skills/psy-emotional-checkin psy
+psy-grief-support skills/psy-grief-support psy
+psy-med-side-effect-mood-log skills/psy-med-side-effect-mood-log psy
+psy-psychiatry-visit-prep skills/psy-psychiatry-visit-prep psy
+psy-psychology-visit-prep skills/psy-psychology-visit-prep psy
+psy-therapy-journal skills/psy-therapy-journal psy
+security-api-security-hardener skills/security-api-security-hardener security
+security-compliance-checker skills/security-compliance-checker security
+security-dependency-audit skills/security-dependency-audit security
+security-incident-response-plan skills/security-incident-response-plan security
+security-security-audit-automation skills/security-security-audit-automation security
+security-soc-analyst-guide skills/security-soc-analyst-guide security
+security-threat-modeling skills/security-threat-modeling security
+security-zero-trust-architect skills/security-zero-trust-architect security
+social-boundary-setter skills/social-boundary-setter social
+social-conflict-resolver skills/social-conflict-resolver social
+social-difficult-conversation-prep skills/social-difficult-conversation-prep social
+social-feedback-giver skills/social-feedback-giver social
+social-networking-script skills/social-networking-script social
+testing-api-testing-expert skills/testing-api-testing-expert testing
+testing-chaos-engineering-guide skills/testing-chaos-engineering-guide testing
+testing-cypress-e2e-guide skills/testing-cypress-e2e-guide testing
+testing-mock-designer skills/testing-mock-designer testing
+testing-selenium-guide skills/testing-selenium-guide testing
+testing-test-strategy-planner skills/testing-test-strategy-planner testing
+travel-budget skills/travel-budget travel
+travel-local-phrase-book skills/travel-local-phrase-book travel
+travel-packing-checklist skills/travel-packing-checklist travel
+travel-trip-planner skills/travel-trip-planner travel
+travel-visa-checker skills/travel-visa-checker travel
+writing-blog-post-writer skills/writing-blog-post-writer writing
+writing-changelog-writer skills/writing-changelog-writer writing
+writing-content-repurposer skills/writing-content-repurposer writing
+writing-copywriting-assistant skills/writing-copywriting-assistant writing
+writing-email-drafter skills/writing-email-drafter writing
+writing-proofreader-fr skills/writing-proofreader-fr writing

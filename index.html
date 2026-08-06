@@ -1212,33 +1212,36 @@
 <section id="install">
     <div class="section-label fade-in">Installation</div>
     <h2 class="fade-in">Pret en 30 secondes.</h2>
-    <p class="section-desc fade-in">Clone, package, importe. C'est tout.</p>
+    <p class="section-desc fade-in">Toute la collection en plugin, ou juste les skills dont tu as besoin.</p>
 
     <div class="steps">
         <div class="step fade-in">
             <div class="step-number">01</div>
-            <h3>Cloner</h3>
-            <p>Clone le repo sur ta machine pour acceder aux 349 skills.</p>
+            <h3>Plugin complet</h3>
+            <p>Deux commandes dans Claude Code : les 349 skills deviennent des slash commands.</p>
         </div>
         <div class="step fade-in">
             <div class="step-number">02</div>
-            <h3>Packager</h3>
-            <p>Zip le SKILL.md du skill voulu en fichier .skill.</p>
+            <h3>Ou a la carte</h3>
+            <p>Un skill, ou une categorie entiere, copies dans ~/.claude/skills. Contexte leger.</p>
         </div>
         <div class="step fade-in">
             <div class="step-number">03</div>
-            <h3>Importer</h3>
-            <p>Importe le .skill dans Claude via Parametres &rarr; Skills.</p>
+            <h3>Utiliser</h3>
+            <p>Tape la slash command, ou decris simplement ton besoin : le skill se declenche.</p>
         </div>
     </div>
 
     <div class="code-block fade-in">
-        <span class="comment"># Cloner la collection</span><br>
-        <span class="cmd">git clone</span> <span class="path">https://github.com/khalilbenaz/claude-skills-collection.git</span><br><br>
-        <span class="comment"># Packager un skill (exemple : gRPC)</span><br>
-        <span class="cmd">cd</span> <span class="path">claude-skills-collection/dev-skills/grpc-service-designer</span><br>
-        <span class="cmd">zip</span> <span class="flag">../../grpc-service-designer.skill</span> SKILL.md<br><br>
-        <span class="comment"># Importer dans Claude.ai &rarr; Parametres &rarr; Skills</span>
+        <span class="comment"># 1. Toute la collection, en plugin Claude Code</span><br>
+        <span class="cmd">/plugin marketplace add</span> <span class="path">https://github.com/khalilbenaz/claude-skills-collection</span><br>
+        <span class="cmd">/plugin install</span> <span class="path">claude-skills-collection</span><br><br>
+        <span class="comment"># 2. Ou a la carte : un skill, une categorie, ou une recherche</span><br>
+        <span class="cmd">curl</span> <span class="flag">-fsSL</span> <span class="path">https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh</span> | <span class="cmd">sh -s --</span> dev-code-reviewer <span class="flag">--launch</span><br>
+        <span class="cmd">curl</span> <span class="flag">-fsSL</span> <span class="path">.../install.sh</span> | <span class="cmd">sh -s --</span> <span class="flag">--category</span> security<br>
+        <span class="cmd">curl</span> <span class="flag">-fsSL</span> <span class="path">.../install.sh</span> | <span class="cmd">sh -s --</span> <span class="flag">--search</span> redis<br><br>
+        <span class="comment"># Windows (PowerShell)</span><br>
+        <span class="cmd">iex</span> "&amp; { $(iwr -useb <span class="path">.../install.ps1</span>) } dev-code-reviewer <span class="flag">-Launch</span>"
     </div>
 </section>
 

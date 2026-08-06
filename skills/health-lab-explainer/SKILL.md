@@ -65,7 +65,7 @@ Exemple :
 ```
 TSH = 6,8 mUI/L (norme : 0,4–4,0)
 → Une TSH élevée peut indiquer que la thyroïde travaille moins vite que la normale.
-  Causes fréquentes : hypothyroïdie débutante, prise de certains médicaments, 
+  Causes fréquentes : hypothyroïdie débutante, prise de certains médicaments,
   prélèvement tardif. Le médecin demandera probablement une T4 libre pour compléter.
 ```
 

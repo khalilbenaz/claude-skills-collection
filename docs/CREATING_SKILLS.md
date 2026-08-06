@@ -20,6 +20,14 @@ description: Description claire de ce que fait le skill et quand il doit se déc
 ---
 ```
 
+Contraintes vérifiées par `npm run check` :
+
+| Clé | Règle |
+|-----|-------|
+| `name` | **obligatoire**, `kebab-case`, identique au nom du dossier |
+| `description` | **obligatoire**, une seule ligne logique, 40 à 1024 caractères |
+| autres clés | seules `allowed-tools`, `license`, `model` sont acceptées — toute autre clé (`triggers:`, `tags:`…) est **ignorée par Claude Code** et rejetée par le validateur : mettez ces informations dans `description` |
+
 ### 2. Corps Markdown (le workflow)
 
 Le corps contient les instructions que Claude suivra. C'est le cœur du skill.
@@ -67,7 +75,8 @@ Instructions claires pour cette étape.
 - Utilise des tableaux pour structurer les sorties
 - Inclus des exemples quand possible
 - Ajoute des garde-fous (règles, rappels)
-- Reste sous 500 lignes dans le SKILL.md
+- Reste sous 500 lignes dans le SKILL.md (limite appliquée par `npm run check`)
+- Ressources annexes optionnelles : `references/`, `assets/`, `scripts/`, `templates/` dans le dossier du skill — les liens relatifs vers ces dossiers sont vérifiés au build
 
 ---
 
@@ -100,17 +109,24 @@ description: [Ce que le skill fait]. À utiliser quand [contexte]. Se déclenche
 
 ---
 
-## Packager son skill
+## Intégrer son skill à la collection
 
-### Option 1 — Manuellement
+1. Créez le dossier dans la bonne catégorie source : `<categorie>-skills/mon-skill/SKILL.md`
+2. Validez et régénérez les artefacts :
+
 ```bash
-cd mon-skill/
-zip ../mon-skill.skill SKILL.md
+npm run check      # frontmatter, longueurs, collisions, compteurs
+npm test           # tests des scripts de build
+npm run build      # skills/, manuals/, catalogues
 ```
 
-### Option 2 — Avec le script de packaging
+Le skill devient la slash command `/<categorie>-mon-skill` (préfixe ajouté à la génération).
+
+## Packager un skill pour Claude.ai
+
 ```bash
-python -m scripts.package_skill ./mon-skill
+cd skills/categorie-mon-skill/     # payload généré (avec les Communication Rules)
+zip ../../mon-skill.skill SKILL.md
 ```
 
 Le fichier `.skill` est simplement un `.zip` contenant le `SKILL.md`.
@@ -119,7 +135,7 @@ Le fichier `.skill` est simplement un `.zip` contenant le `SKILL.md`.
 
 ## Tester son skill
 
-1. Installez le skill dans Claude
+1. Installez le skill dans Claude (`sh install.sh <nom-du-skill>` ou copie dans `~/.claude/skills`)
 2. Essayez 5-10 phrases de déclenchement différentes
 3. Vérifiez que le workflow est suivi correctement
 4. Ajustez la description si le skill ne se déclenche pas assez

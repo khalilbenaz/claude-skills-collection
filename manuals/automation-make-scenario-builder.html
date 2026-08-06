@@ -172,7 +172,7 @@ Champ : record_id  (Text, clé unique)
 Champ : processed_at  (Date)
 
 # Logique dans le scénario
-[Search a record] → existe ? 
+[Search a record] → existe ?
     Oui → skip (Router vers rien)
     Non → [traitement] → [Add/Replace a record]</code></pre>
 <p>Quota : 1 Data Store par scénario sur Free, illimité sur payant. Taille max : 1 MB (Free) / variable (payant).</p>

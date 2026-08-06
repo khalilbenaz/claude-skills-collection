@@ -134,7 +134,7 @@ git log --all --full-history -- "**/*.env" "**/*secret*" "**/*key*"
 
 Pièges fréquents :
 - `.env` committé (vérifier `.gitignore`)
-- Clés hardcodées dans le code : `API_KEY = "sk-..."` 
+- Clés hardcodées dans le code : `API_KEY = "sk-..."`
 - Credentials dans les logs applicatifs
 - Secrets en clair dans les variables d'environnement exposées via `/actuator/env` (Spring) ou debug endpoints
 

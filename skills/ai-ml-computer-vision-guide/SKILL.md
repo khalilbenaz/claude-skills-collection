@@ -1,12 +1,6 @@
 ---
 name: ai-ml-computer-vision-guide
-description: "Guide computer vision (classification, détection, segmentation) avec PyTorch, TensorFlow, OpenCV — critères de choix de modèle, pipelines annotés, snippets copiables, optimisation pour le déploiement edge/cloud"
-triggers:
-  - "computer vision"
-  - "détection d'objets"
-  - "YOLO"
-  - "classification d'images"
-  - "segmentation"
+description: Guide computer vision (classification, détection, segmentation) avec PyTorch, TensorFlow, OpenCV — critères de choix de modèle, pipelines annotés, snippets copiables, optimisation pour le déploiement edge/cloud. Se déclenche avec "computer vision", "détection d'objets", "YOLO", "classification d'images", "segmentation".
 ---
 
 # Computer Vision Guide

@@ -8,7 +8,9 @@
     "check": "node scripts/check-skills.mjs",
     "build:skills": "node scripts/build-skills.mjs",
     "build:manuals": "node scripts/build-manuals.mjs",
-    "build": "npm run check && npm run build:skills && npm run build:manuals"
+    "build:catalog": "node scripts/build-catalog.mjs",
+    "build": "npm run check && npm run build:skills && npm run build:manuals && npm run build:catalog",
+    "test": "node scripts/test.mjs"
   },
   "repository": {
     "type": "git",
@@ -30,6 +32,7 @@
     "skills",
     ".claude-plugin",
     "docs",
+    "skills.json",
     "README.md",
     "LICENSE"
   ]

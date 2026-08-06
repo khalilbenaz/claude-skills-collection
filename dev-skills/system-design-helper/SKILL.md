@@ -35,7 +35,7 @@ Bandwidth sortante : 1 KB × 230 RPS × 8 bits ≈ 1.8 Mbps
 
 ### 3. Architecture haut niveau
 
-Partir toujours du schéma minimal : **Client → LB → App Servers → DB**.  
+Partir toujours du schéma minimal : **Client → LB → App Servers → DB**.
 Ajouter des couches uniquement si les estimations l'imposent.
 
 ```

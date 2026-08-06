@@ -4,19 +4,42 @@ Merci de vouloir contribuer ! Voici comment faire.
 
 ## Source de vérité & artefacts générés
 
-> ⚠️ **N'éditez jamais `skills/` ni `manuals/` à la main.** Ce sont des artefacts générés.
+> ⚠️ **N'éditez jamais un artefact généré à la main** : il serait écrasé au prochain build.
 
 - **Source éditable** : les dossiers `categorie-skills/`, `docs/` et `meta-skills/` (noms courts, `kebab-case`).
-- **`skills/`** : payload du plugin, **généré** — chaque skill y est préfixé par sa catégorie (`dev-skills/docker-composer` → `dev-docker-composer`) pour éviter les collisions de slash-commands.
-- **`manuals/`** : site de documentation, **généré**.
+- **Généré** :
+  | Artefact | Rôle | Script |
+  |----------|------|--------|
+  | `skills/` | payload du plugin (nom **préfixé** par la catégorie : `dev-skills/docker-composer` → `dev-docker-composer`, pour éviter les collisions de slash-commands) | `build-skills.mjs` |
+  | `manuals/` | site de documentation + `skills.index` consommé par les installeurs | `build-manuals.mjs` |
+  | `docs/SKILL_CATALOG.md`, `skills.json`, bloc `CATEGORIES` du `README` | catalogues lisible et machine-lisible | `build-catalog.mjs` |
+
+Le chargement des skills source est mutualisé dans [`scripts/lib/skills.mjs`](../scripts/lib/skills.mjs) : un seul parsing pour la validation, les builds et les catalogues.
 
 Après toute modification d'un skill source, régénérez et committez les artefacts :
 
 ```bash
-npm run build      # = check + build:skills + build:manuals
+npm run check      # validation stricte des sources
+npm test           # tests des scripts de build
+npm run build      # check + skills/ + manuals/ + catalogues
 ```
 
-La CI (`.github/workflows/validate.yml`) valide les sources et **échoue si `skills/` ou `manuals/` ne sont pas à jour**.
+La CI (`.github/workflows/validate.yml`) rejoue check + tests + build et **échoue si un artefact committé n'est pas à jour**.
+
+### Ce que `npm run check` refuse
+
+| Règle | Seuil |
+|-------|-------|
+| Clé de frontmatter non supportée par Claude Code (seuls `name`, `description`, `allowed-tools`, `license`, `model`) | erreur |
+| `name` ≠ nom du dossier, ou dossier non `kebab-case` | erreur |
+| Nom public (préfixe + dossier) trop long | > 64 caractères |
+| `description` hors bornes | < 40 ou > 1024 caractères |
+| Corps vide, ou trop long pour le budget de contexte | > 500 lignes |
+| Deux skills avec la **même** description, ou collision de nom public | erreur |
+| Ressource embarquée (`./references/…`, `./assets/…`) introuvable | erreur |
+| Compteur de skills désynchronisé (`README`, `index.html`, `package.json`, manifestes du plugin) | erreur |
+
+Les avertissements (description peu descriptive, aucun déclencheur cité, corps très court, CRLF, espaces en fin de ligne) ne bloquent pas la CI mais doivent être traités.
 
 ## Ajouter un nouveau skill
 
@@ -27,7 +50,7 @@ La CI (`.github/workflows/validate.yml`) valide les sources et **échoue si `ski
    ```
 3. **Respectez** le format standard (voir [CREATING_SKILLS.md](./CREATING_SKILLS.md))
 4. **Testez** le skill avec au moins 5 phrases de déclenchement
-5. **Lancez** `npm run build` pour régénérer `skills/` et `manuals/`
+5. **Lancez** `npm run build` pour régénérer les artefacts (et committez-les)
 6. **Ouvrez** une Pull Request avec :
    - Description du skill
    - Exemples de déclenchement
@@ -53,18 +76,10 @@ La CI (`.github/workflows/validate.yml`) valide les sources et **échoue si `ski
 - La description du frontmatter doit inclure des phrases de déclenchement
 
 ### Catégories existantes
-| Catégorie | Contenu |
-|-----------|---------|
-| health-skills | Santé physique |
-| psy-skills | Santé mentale |
-| dev-skills | Développement |
-| productivity-skills | Productivité |
-| finance-skills | Finance personnelle |
-| education-skills | Apprentissage |
-| writing-skills | Rédaction |
-| career-skills | Carrière |
 
-Pour une **nouvelle catégorie**, ouvrez d'abord une issue pour en discuter.
+La liste à jour (34 catégories, avec volumes et préfixes) est dans le [README](../README.md#-catégories) et le [catalogue](./SKILL_CATALOG.md).
+
+Pour une **nouvelle catégorie** : ouvrez d'abord une issue. Côté code, il faut créer le dossier `<nom>-skills/` **et** ajouter son entrée (libellé, icône, couleur) dans `CATEGORY_META` de [`scripts/lib/skills.mjs`](../scripts/lib/skills.mjs) — `npm test` échoue tant que la catégorie n'a pas de libellé dédié.
 
 ## Code de conduite
 

@@ -42,7 +42,7 @@ Score rapide 1-5 ; ne justifie que les cases ≤ 3.
 
 ### Rôle + contexte
 ```
-Tu es un [rôle expert] travaillant pour [contexte]. 
+Tu es un [rôle expert] travaillant pour [contexte].
 Ton audience est [profil]. Ton objectif est [but précis].
 ```
 

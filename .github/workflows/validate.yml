@@ -21,17 +21,21 @@ jobs:
       - name: Valider les skills source
         run: node scripts/check-skills.mjs
 
-      - name: Régénérer les artefacts (skills/ + manuals/)
+      - name: Tests des scripts de build
+        run: node scripts/test.mjs
+
+      - name: Régénérer les artefacts (skills/, manuals/, catalogue)
         run: |
           node scripts/build-skills.mjs
           node scripts/build-manuals.mjs
+          node scripts/build-catalog.mjs
 
       - name: Vérifier que les artefacts committés sont à jour
         run: |
-          if ! git diff --quiet -- skills manuals; then
-            echo "::error::skills/ ou manuals/ ne sont pas synchronisés avec les sources."
+          if ! git diff --quiet -- skills manuals docs/SKILL_CATALOG.md skills.json README.md; then
+            echo "::error::les artefacts générés ne sont pas synchronisés avec les sources."
             echo "Lancez 'npm run build' puis committez le résultat."
-            git diff --stat -- skills manuals
+            git diff --stat -- skills manuals docs/SKILL_CATALOG.md skills.json README.md
             exit 1
           fi
           echo "✓ Artefacts à jour."
