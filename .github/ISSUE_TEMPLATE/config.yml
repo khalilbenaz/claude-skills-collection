@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Question ou idée
+    url: https://github.com/khalilbenaz/claude-skills-collection/discussions
+    about: Pour discuter d'un usage, d'une idée de skill ou demander de l'aide.

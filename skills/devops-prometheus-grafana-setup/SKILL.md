@@ -1,6 +1,6 @@
 ---
 name: devops-prometheus-grafana-setup
-description: Configuration de Prometheus et Grafana pour le monitoring d'applications et d'infrastructure — métriques, alertes, dashboards, scraping, PromQL, Alertmanager. À utiliser quand l'utilisateur met en place du monitoring, configure des alertes ou crée des dashboards Grafana. Se déclenche aussi avec "Prometheus", "Grafana", "monitoring", "métriques", "alerting", "dashboard Grafana", "PromQL", "scraping". Also triggers on "Prometheus metrics", "Grafana dashboard", "alerting rules", "PromQL query".
+description: Configuration de Prometheus et Grafana — scraping, exporters, règles d'alerte, Alertmanager, PromQL et construction de dashboards. À utiliser pour l'outillage lui-même ; pour décider quoi mesurer, voir dev-monitoring-setup. Se déclenche aussi avec "Prometheus", "Grafana", "monitoring", "alerting", "dashboard Grafana", "PromQL", "scraping", "Alertmanager". Also triggers on "Prometheus metrics", "Grafana dashboard", "alerting rules", "PromQL query".
 ---
 
 # Setup Prometheus & Grafana

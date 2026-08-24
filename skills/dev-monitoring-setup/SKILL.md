@@ -1,6 +1,6 @@
 ---
 name: dev-monitoring-setup
-description: Mise en place de monitoring, alerting et observabilité. Se déclenche avec "monitoring", "alerting", "observabilité", "Prometheus", "Grafana", "logs", "metrics", "tracing", "dashboards", "Application Insights". Also triggers on "set up monitoring", "alerting rules", "observability stack", "dashboards and metrics".
+description: Stratégie de monitoring applicatif — quoi instrumenter, SLO/SLI, golden signals, budget d'erreur, corrélation logs/traces/métriques et instrumentation OpenTelemetry ou Application Insights. Pour configurer Prometheus et Grafana, voir devops-prometheus-grafana-setup. Se déclenche avec "observabilité", "SLO", "SLI", "golden signals", "budget d'erreur", "quoi monitorer", "instrumenter mon application", "OpenTelemetry", "Application Insights". Also triggers on "what to monitor", "define SLOs", "instrument my app".
 ---
 
 # Monitoring Setup

@@ -1,6 +1,6 @@
 ---
 name: performance-profiler
-description: Diagnostic et optimisation des performances d'applications. Se déclenche avec "performance", "lent", "optimiser", "profiling", "memory leak", "CPU", "latence", "bottleneck", "mon app est lente", "temps de réponse". Also triggers on "profile my app", "why is it slow", "CPU and memory bottleneck".
+description: Diagnostic et optimisation des performances d'une application — profiling CPU et mémoire, latence, fuites, goulots d'étranglement. Se déclenche avec "lent", "profiling", "memory leak", "CPU", "latence", "bottleneck", "goulot d'étranglement", "mon app est lente", "temps de réponse". Also triggers on "profile my app", "why is it slow", "CPU and memory bottleneck".
 ---
 
 # Performance Profiler

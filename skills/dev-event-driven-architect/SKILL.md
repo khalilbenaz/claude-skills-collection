@@ -1,6 +1,6 @@
 ---
 name: dev-event-driven-architect
-description: Conception d'architectures événementielles avec messaging et event sourcing. Se déclenche avec "event driven", "événementiel", "RabbitMQ", "Kafka", "event sourcing", "CQRS", "message broker", "pub/sub", "async messaging". Also triggers on "event-driven architecture", "pub/sub design".
+description: Conception d'architectures événementielles — event sourcing, CQRS, chorégraphie vs orchestration, idempotence, ordre et rejeu des événements. Porte sur les patterns ; pour l'implémentation transactionnelle (outbox, saga) voir dev-outbox-pattern-guide, pour le choix d'un broker voir dev-message-queue-architect. Se déclenche avec "event driven", "architecture événementielle", "event sourcing", "CQRS", "chorégraphie", "event store", "idempotence", "rejeu d'événements". Also triggers on "event-driven architecture", "event sourcing design", "CQRS read model".
 ---
 
 # Event-Driven Architect

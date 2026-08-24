@@ -1,0 +1,44 @@
+name: 🐛 Un skill ne se comporte pas comme prévu
+description: Un skill se déclenche mal, donne un résultat faux, ou son contenu est obsolète.
+labels: ["bug"]
+body:
+  - type: input
+    id: skill
+    attributes:
+      label: Skill concerné
+      description: Le nom public, tel qu'il apparaît en slash command.
+      placeholder: dev-docker-composer
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Nature du problème
+      options:
+        - Le skill ne se déclenche pas quand il devrait
+        - Un autre skill se déclenche à sa place
+        - Le contenu est faux ou obsolète
+        - Le workflow est incomplet ou bloque
+        - Autre
+    validations:
+      required: true
+  - type: textarea
+    id: prompt
+    attributes:
+      label: Ce que vous avez demandé à Claude
+      description: Le prompt exact, si possible. C'est la donnée la plus utile pour un problème de déclenchement.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Résultat attendu vs obtenu
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version de Claude Code
+      description: "`claude --version`"
+      placeholder: "2.1.241"

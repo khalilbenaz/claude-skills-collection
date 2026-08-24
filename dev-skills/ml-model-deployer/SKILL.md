@@ -1,6 +1,6 @@
 ---
 name: ml-model-deployer
-description: Déploiement de modèles ML en production (MLOps). Se déclenche avec "déployer un modèle", "ML deployment", "MLOps", "model serving", "inference", "model registry", "ML pipeline", "TensorFlow Serving", "MLflow". Also triggers on "deploy an ML model", "MLOps serving", "model API endpoint".
+description: Mise en production d'un modèle ML déjà entraîné (MLOps) — packaging, serving, endpoint d'inférence, scaling, détection de drift et rollback. Couvre le déploiement, pas le suivi d'entraînement (voir ai-ml-ml-experiment-tracker). Se déclenche avec "déployer un modèle", "ML deployment", "MLOps", "model serving", "inference endpoint", "TensorFlow Serving", "model drift". Also triggers on "deploy an ML model", "model API endpoint", "serve a model in production".
 ---
 
 # ML Model Deployer

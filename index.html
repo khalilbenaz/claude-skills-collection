@@ -1212,7 +1212,7 @@
 <section id="install">
     <div class="section-label fade-in">Installation</div>
     <h2 class="fade-in">Pret en 30 secondes.</h2>
-    <p class="section-desc fade-in">Toute la collection en plugin, ou juste les skills dont tu as besoin.</p>
+    <p class="section-desc fade-in">Toute la collection, un bundle thematique, ou juste les skills dont tu as besoin.</p>
 
     <div class="steps">
         <div class="step fade-in">
@@ -1222,8 +1222,8 @@
         </div>
         <div class="step fade-in">
             <div class="step-number">02</div>
-            <h3>Ou a la carte</h3>
-            <p>Un skill, ou une categorie entiere, copies dans ~/.claude/skills. Contexte leger.</p>
+            <h3>Ou un bundle</h3>
+            <p>Sept plugins thematiques. Le bundle securite coute ~1 800 tokens de contexte contre ~56 000 pour tout.</p>
         </div>
         <div class="step fade-in">
             <div class="step-number">03</div>
@@ -1233,15 +1233,95 @@
     </div>
 
     <div class="code-block fade-in">
-        <span class="comment"># 1. Toute la collection, en plugin Claude Code</span><br>
+        <span class="comment"># 1. Toute la collection, en plugin Claude Code (~56 000 tokens de contexte permanent)</span><br>
         <span class="cmd">/plugin marketplace add</span> <span class="path">https://github.com/khalilbenaz/claude-skills-collection</span><br>
         <span class="cmd">/plugin install</span> <span class="path">claude-skills-collection</span><br><br>
-        <span class="comment"># 2. Ou a la carte : un skill, une categorie, ou une recherche</span><br>
+        <span class="comment"># 2. Ou un seul bundle : meme marketplace, un dixieme du contexte</span><br>
+        <span class="cmd">/plugin install</span> <span class="path">claude-skills-security</span><br><br>
+        <span class="comment"># 3. Ou a la carte : un skill, une categorie, ou une recherche</span><br>
         <span class="cmd">curl</span> <span class="flag">-fsSL</span> <span class="path">https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh</span> | <span class="cmd">sh -s --</span> dev-code-reviewer <span class="flag">--launch</span><br>
         <span class="cmd">curl</span> <span class="flag">-fsSL</span> <span class="path">.../install.sh</span> | <span class="cmd">sh -s --</span> <span class="flag">--category</span> security<br>
         <span class="cmd">curl</span> <span class="flag">-fsSL</span> <span class="path">.../install.sh</span> | <span class="cmd">sh -s --</span> <span class="flag">--search</span> redis<br><br>
         <span class="comment"># Windows (PowerShell)</span><br>
         <span class="cmd">iex</span> "&amp; { $(iwr -useb <span class="path">.../install.ps1</span>) } dev-code-reviewer <span class="flag">-Launch</span>"
+    </div>
+
+    <h3 style="margin:3.5rem 0 0.5rem;font-size:1.3rem;">Les sept bundles</h3>
+    <p class="section-desc fade-in" style="margin-bottom:1.5rem;">Chaque bundle s'installe seul et ne charge que ses propres skills. Le nom et la description de chaque skill installe sont injectes dans le contexte de <em>toutes</em> tes sessions&nbsp;: c'est ce que mesure la colonne contexte.</p>
+
+    <div class="categories-grid">
+        <!-- BEGIN:BUNDLES (genere par npm run build:marketplace - ne pas editer) -->
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">💻</div>
+                <div class="cat-count">120 skills</div>
+            </div>
+            <div class="cat-name">Développement &amp; tests</div>
+            <div class="cat-desc">Skills de développement : langages et frameworks, architecture, API, tests, performance, debug, documentation.</div>
+            <div class="cat-desc" style="margin-top:0.75rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--accent-light);">/plugin install claude-skills-dev</div>
+            <div class="cat-desc" style="margin-top:0.35rem;font-size:0.75rem;">~18 594 tokens de contexte</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">🤖</div>
+                <div class="cat-count">68 skills</div>
+            </div>
+            <div class="cat-name">Agents IA, LLM &amp; prompting</div>
+            <div class="cat-desc">Conception d’agents et de systèmes multi-agents, serveurs MCP, orchestration LLM, RAG, fine-tuning, ingénierie de prompts.</div>
+            <div class="cat-desc" style="margin-top:0.75rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--accent-light);">/plugin install claude-skills-agents</div>
+            <div class="cat-desc" style="margin-top:0.35rem;font-size:0.75rem;">~11 598 tokens de contexte</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">☁️</div>
+                <div class="cat-count">40 skills</div>
+            </div>
+            <div class="cat-name">Cloud, DevOps &amp; réseaux</div>
+            <div class="cat-desc">AWS/Azure/GCP, Kubernetes, Terraform, CI/CD, administration Linux, réseaux, API gateways, automatisation et IoT.</div>
+            <div class="cat-desc" style="margin-top:0.75rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--accent-light);">/plugin install claude-skills-cloud-ops</div>
+            <div class="cat-desc" style="margin-top:0.35rem;font-size:0.75rem;">~5 853 tokens de contexte</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">📊</div>
+                <div class="cat-count">19 skills</div>
+            </div>
+            <div class="cat-name">Data &amp; bases de données</div>
+            <div class="cat-desc">Modélisation et optimisation de bases (Postgres, SQL Server, MongoDB, Redis…), pipelines ETL, dbt, Kafka, BI et qualité de données.</div>
+            <div class="cat-desc" style="margin-top:0.75rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--accent-light);">/plugin install claude-skills-data</div>
+            <div class="cat-desc" style="margin-top:0.35rem;font-size:0.75rem;">~2 717 tokens de contexte</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">🔒</div>
+                <div class="cat-count">10 skills</div>
+            </div>
+            <div class="cat-name">Sécurité</div>
+            <div class="cat-desc">Threat modeling, durcissement d’API, audit de dépendances, réponse à incident, conformité et architecture zero-trust.</div>
+            <div class="cat-desc" style="margin-top:0.75rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--accent-light);">/plugin install claude-skills-security</div>
+            <div class="cat-desc" style="margin-top:0.35rem;font-size:0.75rem;">~1 780 tokens de contexte</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">💼</div>
+                <div class="cat-count">39 skills</div>
+            </div>
+            <div class="cat-name">Business, carrière &amp; écriture</div>
+            <div class="cat-desc">Propositions commerciales, CV et entretiens, freelancing, marketing et SEO, management d’équipe, rédaction et productivité.</div>
+            <div class="cat-desc" style="margin-top:0.75rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--accent-light);">/plugin install claude-skills-business</div>
+            <div class="cat-desc" style="margin-top:0.35rem;font-size:0.75rem;">~6 225 tokens de contexte</div>
+        </div>
+        <div class="cat-card fade-in">
+            <div class="cat-header">
+                <div class="cat-icon">🌱</div>
+                <div class="cat-count">64 skills</div>
+            </div>
+            <div class="cat-name">Santé, bien-être &amp; vie quotidienne</div>
+            <div class="cat-desc">Suivi de santé, bien-être psychologique, parentalité, relations, apprentissage, budget personnel, démarches juridiques et voyage. Accompagnement, jamais un avis professionnel.</div>
+            <div class="cat-desc" style="margin-top:0.75rem;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--accent-light);">/plugin install claude-skills-life</div>
+            <div class="cat-desc" style="margin-top:0.35rem;font-size:0.75rem;">~11 664 tokens de contexte</div>
+        </div>
+        <!-- END:BUNDLES -->
     </div>
 </section>
 

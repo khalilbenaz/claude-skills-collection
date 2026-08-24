@@ -54,6 +54,11 @@ t('extractTriggers : guillemets droits et typographiques, dédupliqués', () => 
   eq(extractTriggers('X. Se déclenche avec "rate limit", «throttling», “rate limit”.'), ['rate limit', 'throttling']);
 });
 
+t('extractTriggers : la virgule entre deux termes n\'est pas un déclencheur', () => {
+  eq(extractTriggers('X. Se déclenche avec "monitoring", "alerting", "tracing".'), ['monitoring', 'alerting', 'tracing']);
+  eq(extractTriggers('Rien de citable ici : "", ", ", " ".'), []);
+});
+
 t('summaryOf : coupe avant la liste de déclencheurs', () => {
   eq(summaryOf('Rôle du skill — détails. Se déclenche avec "x".'), 'Rôle du skill — détails.');
   eq(summaryOf('Sans déclencheur.'), 'Sans déclencheur.');

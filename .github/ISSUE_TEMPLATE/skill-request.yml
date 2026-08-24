@@ -1,0 +1,45 @@
+name: ✨ Proposer un nouveau skill
+description: Un domaine qui manque à la collection.
+labels: ["skill request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Avant d'ouvrir : cherchez dans [le catalogue](https://khalilbenaz.github.io/claude-skills-collection/manuals/).
+        348 skills existent déjà — le vôtre est peut-être une amélioration d'un skill existant plutôt qu'un nouveau.
+  - type: input
+    id: name
+    attributes:
+      label: Nom proposé
+      placeholder: dev-graphql-schema-designer
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: Catégorie
+      options: [dev, agent, ai-ml, api-gateway, arabic, automation, business, career, cloud, communication, data, database, devops, docs, education, finance, freelance, health, iot, legal, linux, management, marketing, meta, networking, parenting, productivity, prompt, psy, security, social, testing, travel, writing, autre]
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Quelle tâche concrète ce skill résout-il ?
+      description: Décrivez une situation réelle où Claude, sans ce skill, répond de façon générique ou incomplète.
+    validations:
+      required: true
+  - type: textarea
+    id: triggers
+    attributes:
+      label: Phrases qui devraient le déclencher
+      description: Une par ligne, en français et en anglais. Elles doivent être spécifiques — un déclencheur générique ("performance", "architecture") entre en collision avec d'autres skills.
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: overlap
+    attributes:
+      label: Vérifications
+      options:
+        - label: J'ai cherché dans le catalogue et aucun skill existant ne couvre ce besoin.
+          required: true

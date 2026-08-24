@@ -1,6 +1,6 @@
 ---
 name: kubernetes-helper
-description: Aide à la configuration et au déploiement sur Kubernetes. Se déclenche avec "Kubernetes", "K8s", "kubectl", "pod", "deployment", "service", "ingress", "helm", "cluster", "namespace". Also triggers on "Kubernetes manifest", "deploy to k8s", "pod is crashlooping".
+description: Aide à la configuration et au déploiement sur Kubernetes. Se déclenche avec "Kubernetes", "K8s", "kubectl", "pod", "deployment", "service Kubernetes", "ingress", "helm", "cluster", "namespace". Also triggers on "Kubernetes manifest", "deploy to k8s", "pod is crashlooping".
 ---
 
 # Kubernetes Helper

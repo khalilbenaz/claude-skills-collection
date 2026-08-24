@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-ml-model-deployer — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Déploiement de modèles ML en production (MLOps).">
+<meta name="description" content="Mise en production d'un modèle ML déjà entraîné (MLOps) — packaging, serving, endpoint d'inférence, scaling, détection de drift et rollback. Couvre le déploiement, pas le suivi d'entraînement (voir ai-ml-ml-experiment-tracker).">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-ml-model-deployer</h1>
-<p class="lead">Déploiement de modèles ML en production (MLOps).</p>
+<p class="lead">Mise en production d'un modèle ML déjà entraîné (MLOps) — packaging, serving, endpoint d'inférence, scaling, détection de drift et rollback. Couvre le déploiement, pas le suivi d'entraînement (voir ai-ml-ml-experiment-tracker).</p>
 
 
 
@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/dev-ml-model-deployer</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">déployer un modèle</span><span class="trigger">ML deployment</span><span class="trigger">MLOps</span><span class="trigger">model serving</span><span class="trigger">inference</span><span class="trigger">model registry</span><span class="trigger">ML pipeline</span><span class="trigger">TensorFlow Serving</span><span class="trigger">MLflow</span><span class="trigger">deploy an ML model</span><span class="trigger">MLOps serving</span><span class="trigger">model API endpoint</span></div></div>
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">déployer un modèle</span><span class="trigger">ML deployment</span><span class="trigger">MLOps</span><span class="trigger">model serving</span><span class="trigger">inference endpoint</span><span class="trigger">TensorFlow Serving</span><span class="trigger">model drift</span><span class="trigger">deploy an ML model</span><span class="trigger">model API endpoint</span><span class="trigger">serve a model in production</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>

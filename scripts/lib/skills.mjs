@@ -86,11 +86,23 @@ export function parseSkillFile(raw) {
   return { frontmatter, body, meta, keys };
 }
 
-/** Termes déclencheurs cités entre guillemets dans la description. */
+/**
+ * Termes déclencheurs cités entre guillemets dans la description.
+ *
+ * Le contenu capturé doit comporter au moins une lettre ou un chiffre : sans ça,
+ * la séparation `"terme a", "terme b"` produit un faux déclencheur `, ` (le
+ * guillemet fermant du premier et l'ouvrant du second forment une paire valide).
+ */
 export function extractTriggers(desc) {
-  const found = [...desc.matchAll(/[«"“]([^»"”]{2,60})[»"”]/g)].map((m) => m[1].trim());
+  const found = [...desc.matchAll(/[«"“]([^»"”]{2,60})[»"”]/g)]
+    .map((m) => m[1].trim())
+    .filter((t) => /[\p{L}\p{N}]/u.test(t));
   return [...new Set(found)];
 }
+
+/** Forme normalisée d'un déclencheur, pour comparer deux skills entre eux. */
+export const normalizeTrigger = (t) =>
+  t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
 
 /** Résumé = description tronquée avant la liste de déclencheurs. */
 export function summaryOf(desc) {
@@ -144,3 +156,148 @@ export function countsByCategory(skills) {
 
 /** Résout un dossier local depuis un skill (pour la validation des liens relatifs). */
 export const skillDir = (s) => dirname(s.path);
+
+/* ------------------------------------------------------------------ *
+ * Bundles — plugins thématiques publiés par la même marketplace.
+ *
+ * Installer les 348 skills d'un coup impose au contexte de Claude Code
+ * un index de 348 entrées, dont l'essentiel est hors-sujet pour un
+ * utilisateur donné. Chaque bundle est une entrée `plugins[]` distincte
+ * de `.claude-plugin/marketplace.json`, avec `source: "./"` et la liste
+ * explicite des dossiers de `skills/` qui le composent — le pattern
+ * documenté pour plusieurs plugins partageant un même `skills/` à la
+ * racine de la marketplace.
+ *
+ * `cats` partitionne les catégories : chaque catégorie appartient à
+ * exactement un bundle (garanti par check-skills). `meta-skills/` est la
+ * seule exception : ces skills (skill-router, workflows) sont ajoutés à
+ * tous les bundles.
+ * ------------------------------------------------------------------ */
+
+/** Catégories ajoutées à chaque bundle (skills transverses). */
+export const CORE_CATS = ['meta-skills'];
+
+export const BUNDLES = [
+  {
+    id: 'dev',
+    icon: '💻',
+    label: 'Développement & tests',
+    tags: ['development', 'testing', 'architecture', 'frontend', 'backend'],
+    cats: ['dev-skills', 'testing-skills', 'docs'],
+    description:
+      'Skills de développement : langages et frameworks, architecture, API, tests, performance, debug, documentation.',
+  },
+  {
+    id: 'agents',
+    icon: '🤖',
+    label: 'Agents IA, LLM & prompting',
+    tags: ['ai', 'agents', 'llm', 'prompting', 'mcp'],
+    cats: ['agent-skills', 'ai-ml-skills', 'prompt-skills'],
+    description:
+      'Conception d’agents et de systèmes multi-agents, serveurs MCP, orchestration LLM, RAG, fine-tuning, ingénierie de prompts.',
+  },
+  {
+    id: 'cloud-ops',
+    icon: '☁️',
+    label: 'Cloud, DevOps & réseaux',
+    tags: ['cloud', 'devops', 'kubernetes', 'linux', 'networking'],
+    cats: [
+      'cloud-skills',
+      'devops-skills',
+      'linux-skills',
+      'networking-skills',
+      'iot-skills',
+      'api-gateway-skills',
+      'automation-skills',
+    ],
+    description:
+      'AWS/Azure/GCP, Kubernetes, Terraform, CI/CD, administration Linux, réseaux, API gateways, automatisation et IoT.',
+  },
+  {
+    id: 'data',
+    icon: '📊',
+    label: 'Data & bases de données',
+    tags: ['data', 'database', 'sql', 'analytics', 'etl'],
+    cats: ['data-skills', 'database-skills'],
+    description:
+      'Modélisation et optimisation de bases (Postgres, SQL Server, MongoDB, Redis…), pipelines ETL, dbt, Kafka, BI et qualité de données.',
+  },
+  {
+    id: 'security',
+    icon: '🔒',
+    label: 'Sécurité',
+    tags: ['security', 'appsec', 'compliance', 'threat-modeling'],
+    cats: ['security-skills'],
+    description:
+      'Threat modeling, durcissement d’API, audit de dépendances, réponse à incident, conformité et architecture zero-trust.',
+  },
+  {
+    id: 'business',
+    icon: '💼',
+    label: 'Business, carrière & écriture',
+    tags: ['business', 'career', 'marketing', 'management', 'writing'],
+    cats: [
+      'business-skills',
+      'career-skills',
+      'freelance-skills',
+      'marketing-skills',
+      'management-skills',
+      'communication-skills',
+      'writing-skills',
+      'productivity-skills',
+    ],
+    description:
+      'Propositions commerciales, CV et entretiens, freelancing, marketing et SEO, management d’équipe, rédaction et productivité.',
+  },
+  {
+    id: 'life',
+    icon: '🌱',
+    label: 'Santé, bien-être & vie quotidienne',
+    tags: ['health', 'wellbeing', 'personal', 'education', 'finance'],
+    cats: [
+      'health-skills',
+      'psy-skills',
+      'parenting-skills',
+      'social-skills',
+      'education-skills',
+      'legal-skills',
+      'finance-skills',
+      'travel-skills',
+      'arabic-skills',
+    ],
+    description:
+      'Suivi de santé, bien-être psychologique, parentalité, relations, apprentissage, budget personnel, démarches juridiques et voyage. Accompagnement, jamais un avis professionnel.',
+  },
+];
+
+/** id du bundle contenant une catégorie donnée, ou null (meta = tous). */
+export function bundleOf(cat) {
+  if (CORE_CATS.includes(cat)) return null;
+  return BUNDLES.find((b) => b.cats.includes(cat))?.id ?? null;
+}
+
+/** { bundleId: Skill[] } — les skills `meta` sont ajoutés à chaque bundle. */
+export function skillsByBundle(skills) {
+  const core = skills.filter((s) => CORE_CATS.includes(s.cat));
+  const out = {};
+  for (const b of BUNDLES) {
+    out[b.id] = [...skills.filter((s) => b.cats.includes(s.cat)), ...core].sort((a, z) =>
+      a.name.localeCompare(z.name),
+    );
+  }
+  return out;
+}
+
+/**
+ * Coût contexte permanent d'un lot de skills, en tokens.
+ *
+ * Le nom + la description de CHAQUE skill installé sont injectés dans le
+ * contexte de toutes les sessions, que le skill serve ou non. CALIB est calé
+ * sur les mesures réelles de `claude plugin details` (Claude Code 2.1.241) :
+ * 1 784 tok pour le bundle security, 18 283 pour dev, 55 795 pour la collection
+ * complète — soit un facteur stable de ~1,5 sur l'estimation caractères/4
+ * (surcoût de mise en forme du bloc injecté).
+ */
+export const CALIB = 1.5;
+export const estTokens = (list) =>
+  Math.round(CALIB * list.reduce((n, s) => n + (s.name.length + s.description.length) / 4 + 12, 0));

@@ -190,3 +190,10 @@ Niveaux de sévérité :
 | Mythril | Analyse symbolique | `myth analyze file.sol` |
 | Certora | Vérification formelle | `certoraRun spec.conf` |
 | Tenderly | Simulation fork + debug | UI + CLI |
+
+## Cadre de l'audit
+
+- Auditer uniquement du code qu'on est autorisé à examiner ; un contrat déployé est public, pas son exploitation.
+- Les preuves de concept restent sur un réseau de test ou un fork local. Ne jamais exécuter d'exploit contre un contrat en production, même pour « démontrer » une faille.
+- Un audit ne garantit pas l'absence de vulnérabilité : le formuler explicitement dans le rapport, avec le périmètre exact des fichiers et versions couverts.
+- Divulgation responsable : contacter l'équipe et convenir d'un délai de correction avant toute publication.

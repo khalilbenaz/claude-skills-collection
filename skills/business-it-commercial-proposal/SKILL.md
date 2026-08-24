@@ -1,6 +1,6 @@
 ---
 name: business-it-commercial-proposal
-description: Génération d'offres commerciales professionnelles pour des projets ou services IT. Se déclenche avec "offre commerciale", "proposition commerciale", "devis IT", "appel d'offres", "offre de service", "proposal IT", "réponse à AO", "offre technique et financière". Also triggers on "IT project proposal", "software quote", "SOW for a client".
+description: Génération d'offres commerciales pour des projets IT — lots techniques, chiffrage jour-homme, hypothèses, SLA, TMA et annexes techniques. Se déclenche avec "offre commerciale IT", "proposition commerciale IT", "devis IT", "appel d'offres", "offre technique et financière", "chiffrage jour-homme", "SOW", "réponse à AO". Also triggers on "IT project proposal", "software quote", "SOW for a client".
 ---
 
 # IT Commercial Proposal Generator

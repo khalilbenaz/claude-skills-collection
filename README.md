@@ -5,8 +5,10 @@ La plus grande collection open-source de skills pour Claude — **348 skills** c
 > Un skill transforme Claude en assistant spécialisé avec un workflow structuré étape par étape.
 
 [![Skills](https://img.shields.io/badge/skills-348-blue)]()[![Categories](https://img.shields.io/badge/catégories-34-green)]()
-[![License](https://img.shields.io/badge/license-MIT-yellow)]()
+[![License](https://img.shields.io/badge/license-MIT-yellow)]()[![Bundles](https://img.shields.io/badge/bundles-7-purple)]()
 [![Language](https://img.shields.io/badge/langue-Français%20%2B%20déclencheurs%20EN-red)]()
+
+🇬🇧 [English README](./README.en.md) — installation, bundles and context cost.
 
 ---
 
@@ -21,7 +23,35 @@ La plus grande collection open-source de skills pour Claude — **348 skills** c
 
 Les 348 skills deviennent des slash commands (`/dev-docker-composer`, `/agent-spawner`, `/cloud-aws-architect`, `/security-threat-modeling`…).
 
-### 2. À la carte — un skill, ou une catégorie
+> ⚠️ Le nom **et la description** de chaque skill installé sont chargés dans le contexte de **chaque** session, que le skill serve ou non. La collection complète coûte ainsi ~56 000 tokens permanents. Si vous n'avez besoin que d'un domaine, installez un bundle (ci-dessous) : c'est le même dépôt, la même marketplace, un dixième du coût.
+
+### 2. Un bundle thématique — recommandé
+
+Sept plugins découpent la collection par domaine. Chacun s'installe seul et ne charge que ses propres skills.
+
+```bash
+/plugin marketplace add https://github.com/khalilbenaz/claude-skills-collection
+/plugin install claude-skills-security     # 10 skills, ~1 800 tokens de contexte
+```
+
+<!-- BEGIN:BUNDLES (généré par npm run build:marketplace — ne pas éditer) -->
+
+| Plugin | Domaine | Skills | Contexte permanent | Contenu |
+|--------|---------|-------:|-------------------:|---------|
+| `claude-skills-dev` | Développement & tests | 120 | ~18 594 tok | Skills de développement : langages et frameworks, architecture, API, tests, performance, debug, documentation. |
+| `claude-skills-agents` | Agents IA, LLM & prompting | 68 | ~11 598 tok | Conception d’agents et de systèmes multi-agents, serveurs MCP, orchestration LLM, RAG, fine-tuning, ingénierie de prompts. |
+| `claude-skills-cloud-ops` | Cloud, DevOps & réseaux | 40 | ~5 853 tok | AWS/Azure/GCP, Kubernetes, Terraform, CI/CD, administration Linux, réseaux, API gateways, automatisation et IoT. |
+| `claude-skills-data` | Data & bases de données | 19 | ~2 717 tok | Modélisation et optimisation de bases (Postgres, SQL Server, MongoDB, Redis…), pipelines ETL, dbt, Kafka, BI et qualité de données. |
+| `claude-skills-security` | Sécurité | 10 | ~1 780 tok | Threat modeling, durcissement d’API, audit de dépendances, réponse à incident, conformité et architecture zero-trust. |
+| `claude-skills-business` | Business, carrière & écriture | 39 | ~6 225 tok | Propositions commerciales, CV et entretiens, freelancing, marketing et SEO, management d’équipe, rédaction et productivité. |
+| `claude-skills-life` | Santé, bien-être & vie quotidienne | 64 | ~11 664 tok | Suivi de santé, bien-être psychologique, parentalité, relations, apprentissage, budget personnel, démarches juridiques et voyage. Accompagnement, jamais un avis professionnel. |
+| `claude-skills-collection` | Tout | 348 | ~56 385 tok | Les 7 bundles réunis |
+
+<!-- END:BUNDLES -->
+
+Le coût de contexte est une estimation calibrée sur `claude plugin details` ; `npm run check` le recalcule à chaque build.
+
+### 3. À la carte — un skill, ou une catégorie
 
 Plus léger : seuls les skills choisis sont copiés dans `~/.claude/skills`.
 
@@ -44,18 +74,23 @@ iex "& { $(iwr -useb https://raw.githubusercontent.com/khalilbenaz/claude-skills
 ## 🏗️ Architecture & build
 
 - **Source de vérité unique** : les dossiers `<catégorie>-skills/`, `docs/` et `meta-skills/` (noms courts, `kebab-case`). C'est là qu'on édite les skills.
-- **Artefacts générés — ne jamais les éditer à la main** : `skills/` (payload du plugin), `manuals/` (site), `docs/SKILL_CATALOG.md` et `skills.json`. Chaque skill du plugin est **préfixé par sa catégorie** (`dev-skills/docker-composer` → `dev-docker-composer`) pour éviter les collisions de slash-commands.
+- **Artefacts générés — ne jamais les éditer à la main** : `skills/` (payload du plugin), `manuals/` (site), `docs/SKILL_CATALOG.md`, `skills.json` et `.claude-plugin/marketplace.json` (les 7 bundles + le plugin complet). Chaque skill du plugin est **préfixé par sa catégorie** (`dev-skills/docker-composer` → `dev-docker-composer`) pour éviter les collisions de slash-commands.
 - Un bloc **Communication Rules** adapté au domaine est ajouté à la génération (concis pour le technique, bienveillant + disclaimer pour les domaines humains).
 
 ```bash
-npm run check          # frontmatter strict, collisions, longueurs, liens, compteurs
+npm run check          # frontmatter strict, collisions, longueurs, liens, compteurs, coût contexte
+npm run check:routing  # deux skills qui se disputent les mêmes déclencheurs
 npm test               # tests des scripts de build (parsing, nommage, artefacts)
-npm run build          # check + skills/ + manuals/ + catalogue + skills.json
+npm run build          # check + routing + skills/ + manuals/ + catalogue + marketplace
 ```
 
-`npm run check` échoue notamment sur : clé de frontmatter non supportée par Claude Code, `description` > 1024 c., corps > 500 lignes, deux skills à description identique, collision de nom public, compteur de skills désynchronisé entre `README`, `index.html`, `package.json` et les manifestes du plugin.
+`npm run check` échoue notamment sur : clé de frontmatter non supportée par Claude Code, `description` > 1024 c., corps > 500 lignes, deux skills à description identique, collision de nom public, catégorie rattachée à zéro ou plusieurs bundles, compteur de skills désynchronisé entre `README`, `index.html`, `package.json` et les manifestes du plugin. Il affiche aussi le coût de contexte permanent de chaque bundle.
 
-La CI ([`validate.yml`](./.github/workflows/validate.yml)) rejoue check + tests + build et échoue si un artefact committé n'est pas à jour. Détails : [CONTRIBUTING](./docs/CONTRIBUTING.md).
+`npm run check:routing` échoue si deux skills partagent au moins deux déclencheurs cités, ou portent le même nom de dossier dans deux catégories — un prompt contenant ces mots serait routé au hasard. Les homonymies légitimes se déclarent, avec justification, dans [`scripts/routing-allowlist.json`](./scripts/routing-allowlist.json).
+
+> ⚠️ `.claude-plugin/plugin.json` ne doit pas exister : les entrées de `marketplace.json` sont en `strict: false` et portent toutes les métadonnées. Sa seule présence fait échouer le chargement de **tous** les plugins (« conflicting manifests »). Le build s'arrête si le fichier réapparaît.
+
+La CI ([`validate.yml`](./.github/workflows/validate.yml)) rejoue check + routing + tests + build et échoue si un artefact committé n'est pas à jour. Détails : [CONTRIBUTING](./docs/CONTRIBUTING.md).
 
 ---
 
@@ -191,7 +226,14 @@ Chaque skill embarque un bloc de règles de communication, **ajouté automatique
 
 ## 🤝 Contribuer
 
-Les contributions sont bienvenues ! Voir le [guide de contribution](./docs/CONTRIBUTING.md).
+Les contributions sont bienvenues.
+
+- **Guide complet** : [CONTRIBUTING](./docs/CONTRIBUTING.md) — source de vérité, artefacts générés, règles de validation.
+- **Signaler un skill qui se déclenche mal ou dit faux** : [ouvrir une issue](https://github.com/khalilbenaz/claude-skills-collection/issues/new/choose). Le prompt exact que vous avez tapé est la donnée la plus utile.
+- **Proposer un skill** : vérifiez d'abord [le catalogue](https://khalilbenaz.github.io/claude-skills-collection/manuals/) — 348 skills existent, le vôtre est peut-être une amélioration d'un skill existant.
+- **Sécurité** : [SECURITY.md](./SECURITY.md). Les failles se signalent en advisory privé, pas en issue publique.
+
+Deux règles qui font échouer la CI et qu'on oublie souvent : éditer un artefact généré au lieu de la source, et écrire une description dont les déclencheurs empiètent sur un skill existant (`npm run check:routing`).
 
 ---
 

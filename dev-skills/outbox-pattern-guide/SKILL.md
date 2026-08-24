@@ -1,6 +1,6 @@
 ---
 name: outbox-pattern-guide
-description: Implémentation du pattern Outbox et Saga pour garantir la cohérence transactionnelle dans les architectures microservices. À utiliser quand l'utilisateur a besoin de fiabiliser la communication entre services, gérer des transactions distribuées ou implémenter des sagas. Se déclenche aussi avec "outbox pattern", "saga pattern", "transaction distribuée", "cohérence éventuelle", "dual write", "event sourcing", "transactional outbox". Also triggers on "distributed transaction consistency".
+description: Implémentation des patterns Outbox et Saga pour garantir la cohérence transactionnelle entre microservices. À utiliser quand l'utilisateur doit fiabiliser la publication d'événements liée à une transaction base de données, ou orchestrer une transaction distribuée. Se déclenche aussi avec "outbox pattern", "transactional outbox", "saga pattern", "transaction distribuée", "cohérence éventuelle", "dual write", "inbox pattern". Also triggers on "distributed transaction consistency", "transactional outbox".
 ---
 
 # Guide du Pattern Outbox & Saga
