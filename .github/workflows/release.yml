@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag à publier (ex. v1.1.0)"
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Vérifier que le tag correspond à package.json
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          PKG="v$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::le tag $TAG ne correspond pas à la version de package.json ($PKG)."
+            echo "Les manifestes du plugin embarquent la version de package.json :"
+            echo "publier un tag divergent ferait annoncer une fausse version aux installations."
+            exit 1
+          fi
+          echo "✓ $TAG == $PKG"
+
+      - name: Valider et régénérer
+        run: |
+          node scripts/check-skills.mjs
+          node scripts/check-routing.mjs
+          node scripts/test.mjs
+          node scripts/build-skills.mjs
+          node scripts/build-manuals.mjs
+          node scripts/build-catalog.mjs
+          node scripts/build-marketplace.mjs
+
+      - name: Refuser un tag posé sur des artefacts périmés
+        run: |
+          if ! git diff --quiet -- skills manuals docs/SKILL_CATALOG.md skills.json README.md index.html .claude-plugin/marketplace.json; then
+            echo "::error::le tag pointe sur un commit dont les artefacts générés ne sont pas à jour."
+            git diff --stat -- skills manuals docs/SKILL_CATALOG.md skills.json README.md index.html .claude-plugin/marketplace.json
+            exit 1
+          fi
+
+      - name: Compter les skills
+        id: stats
+        run: |
+          echo "total=$(node -p "require('./skills.json').skills.length")" >> "$GITHUB_OUTPUT"
+          echo "bundles=$(node -p "require('./.claude-plugin/marketplace.json').plugins.length - 1")" >> "$GITHUB_OUTPUT"
+
+      - name: Publier la release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          generate_release_notes: true
+          body: |
+            **${{ steps.stats.outputs.total }} skills** répartis en **${{ steps.stats.outputs.bundles }} bundles** thématiques.
+
+            ```
+            /plugin marketplace add https://github.com/khalilbenaz/claude-skills-collection
+            /plugin install claude-skills-dev        # ou -agents, -cloud-ops, -data, -security, -business, -life
+            /plugin install claude-skills-collection # tout, ~56 000 tokens de contexte permanent
+            ```
+
+            Coût de contexte par bundle et catalogue complet : [README](https://github.com/khalilbenaz/claude-skills-collection#-installation).

@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/security-security-audit-automation</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">audit automatisé</span><span class="trigger">security scanning</span><span class="trigger">SAST</span><span class="trigger">DAST</span><span class="trigger">Trivy</span><span class="trigger">Snyk</span><span class="trigger">audit CI/CD. Also triggers on</span><span class="trigger">,</span></div></div>
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">audit automatisé</span><span class="trigger">security scanning</span><span class="trigger">SAST</span><span class="trigger">DAST</span><span class="trigger">Trivy</span><span class="trigger">Snyk</span><span class="trigger">audit CI/CD. Also triggers on</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>
@@ -272,6 +272,12 @@ jq -s '{ total: (map(.Results[]?.Vulnerabilities // [] | length) | add),
 <li>Pratiquer le &quot;shift-left&quot; : feedback de sécurité à la PR, pas uniquement au déploiement.</li>
 <li>Versionner les configurations des scanners (règles Semgrep, policies Trivy) dans le repo pour la traçabilité.</li>
 <li>Mesurer et publier le MTTR par sévérité — indicateur clé de maturité DevSecOps.</li>
+</ul>
+<h2>Périmètre d'exécution</h2>
+<ul>
+<li>N'automatiser des scans que contre des systèmes qu'on possède ou pour lesquels on dispose d'une autorisation écrite, avec le périmètre (domaines, IP, comptes) fixé avant le premier lancement.</li>
+<li>Les scans actifs peuvent dégrader un service : les cadrer dans une fenêtre convenue et prévoir un moyen d'arrêt immédiat.</li>
+<li>Les rapports contiennent des vulnérabilités exploitables : les traiter comme des données confidentielles, avec accès restreint et durée de rétention définie.</li>
 </ul>
 </article>
 </main>

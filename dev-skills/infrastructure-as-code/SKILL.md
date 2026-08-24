@@ -1,6 +1,6 @@
 ---
 name: infrastructure-as-code
-description: Création d'infrastructure as code avec Terraform, Bicep ou Pulumi. Se déclenche avec "Terraform", "IaC", "infrastructure as code", "Bicep", "Pulumi", "ARM template", "provisioning", "cloud infrastructure". Also triggers on "Terraform or Bicep", "provision infrastructure".
+description: Structuration d'une infrastructure as code et choix de l'outil — Bicep, Pulumi, ARM, CloudFormation, découpage en modules, gestion du state et des environnements. Pour du Terraform précis, voir devops-terraform-guide. Se déclenche avec "IaC", "infrastructure as code", "Bicep", "Pulumi", "ARM template", "CloudFormation", "provisioning", "quel outil IaC". Also triggers on "infrastructure as code", "Bicep or Pulumi", "provision infrastructure".
 ---
 
 # Infrastructure as Code

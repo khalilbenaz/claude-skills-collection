@@ -1,0 +1,14 @@
+{
+  "pairs": [
+    {
+      "a": "agent-conflict-resolver",
+      "b": "social-conflict-resolver",
+      "reason": "Même nom de dossier, deux mondes disjoints : arbitrage entre agents IA (handoffs, verrous, désaccords multi-agents) vs conflits entre personnes. Les descriptions n'ont aucun déclencheur commun ; renommer nuirait à la lisibilité des deux."
+    },
+    {
+      "a": "agent-monitoring-setup",
+      "b": "dev-monitoring-setup",
+      "reason": "Même nom de dossier, cibles différentes : surveillance d'un agent IA (coût tokens, boucles, qualité) vs stratégie d'observabilité d'une application (SLO, golden signals). Déclencheurs disjoints depuis la réécriture des descriptions."
+    }
+  ]
+}

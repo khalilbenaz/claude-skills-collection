@@ -1,6 +1,6 @@
 ---
 name: ml-experiment-tracker
-description: Suivi d'expériences ML avec MLflow, W&B, versioning de modèles et comparaison de métriques. Se déclenche avec : 'MLflow', 'Weights & Biases', 'experiment tracking', 'suivi d'expériences', 'model registry'. Se déclenche avec "MLflow", "Weights & Biases", "experiment tracking", "suivi d'expériences", "model registry". Also triggers on "track ML experiments", "MLflow tracking", "compare model runs".
+description: Suivi et comparaison d'expériences d'entraînement ML — runs, hyperparamètres, métriques, artefacts et versioning dans un model registry. Couvre la phase d'entraînement et de comparaison, pas la mise en production (voir dev-ml-model-deployer). Se déclenche avec "MLflow", "Weights & Biases", "experiment tracking", "suivi d'expériences", "model registry", "comparer mes runs", "hyperparamètres". Also triggers on "track ML experiments", "compare model runs", "log hyperparameters".
 ---
 
 # ML Experiment Tracker

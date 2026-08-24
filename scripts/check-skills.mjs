@@ -17,14 +17,14 @@
  *
  * AVERTISSEMENTS (non bloquants) :
  *   - description courte (< 80 c.), sans terme déclencheur cité, ou sans déclencheur anglophone ;
- *   - corps très court (< 40 lignes) ;
+ *   - corps très court (< 40 lignes), sauf exemption justifiée dans SHORT_BODY_OK ;
  *   - CRLF ou espaces en fin de ligne.
  *
  * Usage : node scripts/check-skills.mjs
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ROOT, loadSkills, countsByCategory, categoryMeta, skillDir } from './lib/skills.mjs';
+import { ROOT, loadSkills, countsByCategory, categoryMeta, skillDir, BUNDLES, CORE_CATS, bundleOf, skillsByBundle, estTokens } from './lib/skills.mjs';
 
 const ALLOWED_KEYS = new Set(['name', 'description', 'allowed-tools', 'allowed_tools', 'license', 'model']);
 const MAX_NAME = 64;
@@ -40,6 +40,23 @@ const KEBAB = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 // souvent en anglais — chaque skill doit être atteignable dans les deux langues.
 const FR_WORDS = /\b(?:de|des|du|le|la|les|un|une|mon|ma|mes|pour|avec|dans|sur|par|au|aux|est|et|ou|que|qui|quoi|quel|quelle|comment|pourquoi|je|j'ai|ai|c'est|ça|cette|ce|mes|nos|votre|vos|faire|fait|dois|veux)\b/i;
 const isEnglishish = (t) => !/[àâäçéèêëîïôöùûüœæ]/i.test(t) && !FR_WORDS.test(t);
+
+/**
+ * Skills dont la brièveté est délibérée, pas un oubli.
+ *
+ * Le seuil de `SHORT_BODY_LINES` sert à repérer les skills laissés à l'état
+ * d'ébauche. Un skill dont le sujet EST la concision ne peut pas y satisfaire
+ * sans se contredire : chaque ligne ajoutée pour passer le seuil serait
+ * exactement le remplissage que le skill interdit.
+ *
+ * Toute entrée ajoutée ici doit porter sa raison. Par défaut, on étoffe le
+ * skill plutôt que de l'exempter.
+ */
+const SHORT_BODY_OK = new Set([
+  // 34 lignes : 8 règles + 3 exemples avant/après. Un skill « ultra concise »
+  // de 200 lignes serait une démonstration de l'inverse de ce qu'il enseigne.
+  'meta-skills/ultra-concise-mode',
+]);
 
 const errors = [];
 const warnings = [];
@@ -105,7 +122,7 @@ for (const s of skills) {
   if (!s.body) errors.push(`${where}: corps vide`);
   else if (bodyLines > MAX_BODY_LINES) {
     errors.push(`${where}: corps trop long (${bodyLines} > ${MAX_BODY_LINES} lignes) — découpez ou condensez`);
-  } else if (bodyLines < SHORT_BODY_LINES) {
+  } else if (bodyLines < SHORT_BODY_LINES && !SHORT_BODY_OK.has(where)) {
     warnings.push(`${where}: corps très court (${bodyLines} lignes)`);
   }
 
@@ -123,15 +140,36 @@ for (const s of skills) {
   }
 }
 
+// ---- partition en bundles
+// Chaque catégorie doit appartenir à exactement un bundle : une catégorie
+// oubliée serait installable uniquement via le plugin complet (348 skills),
+// ce qui vide le découpage de son intérêt.
+{
+  const cats = [...new Set(skills.map((s) => s.cat))];
+  for (const cat of cats) {
+    if (CORE_CATS.includes(cat)) continue;
+    const hits = BUNDLES.filter((b) => b.cats.includes(cat));
+    if (hits.length === 0) {
+      errors.push(`catégorie "${cat}" absente de tous les bundles — ajoutez-la à BUNDLES dans scripts/lib/skills.mjs`);
+    } else if (hits.length > 1) {
+      errors.push(`catégorie "${cat}" présente dans plusieurs bundles : ${hits.map((b) => b.id).join(', ')}`);
+    }
+  }
+  for (const b of BUNDLES) {
+    const unknown = b.cats.filter((c) => !cats.includes(c));
+    if (unknown.length) errors.push(`bundle "${b.id}" référence une catégorie inexistante : ${unknown.join(', ')}`);
+  }
+}
+
 // ---- compteurs codés en dur
 const perCat = countsByCategory(skills);
 const total = skills.length;
 const nbCats = Object.keys(perCat).length;
 const declared = [
   ['package.json', /"description":\s*"(\d+) professional skills/],
-  ['.claude-plugin/plugin.json', /"description":\s*"(\d+) professional skills/],
   ['.claude-plugin/marketplace.json', /"description":\s*"(\d+) professional skills/],
   ['README.md', /\*\*(\d+) skills\*\*/],
+  ['README.en.md', /\*\*(\d+) skills\*\*/],
   ['index.html', /<title>[^<]*?(\d+)\s+Skills/i],
 ];
 for (const [file, re] of declared) {
@@ -150,6 +188,14 @@ console.log(`Skills source : ${total} dans ${nbCats} catégories`);
 const width = Math.max(...Object.keys(perCat).map((c) => c.length));
 for (const [cat, n] of Object.entries(perCat).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
   console.log(`  ${categoryMeta(cat).icon} ${cat.padEnd(width)}  ${String(n).padStart(3)}`);
+}
+
+// ---- coût contexte (estimation, voir estTokens dans lib/skills.mjs)
+const byBundle = skillsByBundle(skills);
+console.log(`\nCoût contexte permanent (estimation, nom + description) :`);
+console.log(`  ${'claude-skills-collection'.padEnd(26)} ${String(skills.length).padStart(3)} skills  ~${estTokens(skills).toLocaleString('fr-FR')} tok`);
+for (const b of BUNDLES) {
+  console.log(`  ${`claude-skills-${b.id}`.padEnd(26)} ${String(byBundle[b.id].length).padStart(3)} skills  ~${estTokens(byBundle[b.id]).toLocaleString('fr-FR')} tok`);
 }
 
 if (warnings.length) {

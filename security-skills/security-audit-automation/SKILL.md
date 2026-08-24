@@ -248,3 +248,9 @@ Planifier l'envoi hebdomadaire du résumé exécutif (tendances MTTR, dette de s
 - Pratiquer le "shift-left" : feedback de sécurité à la PR, pas uniquement au déploiement.
 - Versionner les configurations des scanners (règles Semgrep, policies Trivy) dans le repo pour la traçabilité.
 - Mesurer et publier le MTTR par sévérité — indicateur clé de maturité DevSecOps.
+
+## Périmètre d'exécution
+
+- N'automatiser des scans que contre des systèmes qu'on possède ou pour lesquels on dispose d'une autorisation écrite, avec le périmètre (domaines, IP, comptes) fixé avant le premier lancement.
+- Les scans actifs peuvent dégrader un service : les cadrer dans une fenêtre convenue et prévoir un moyen d'arrêt immédiat.
+- Les rapports contiennent des vulnérabilités exploitables : les traiter comme des données confidentielles, avec accès restreint et durée de rétention définie.

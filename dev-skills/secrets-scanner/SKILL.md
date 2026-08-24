@@ -226,3 +226,10 @@ aws secretsmanager create-secret --name prod/myapp/db --secret-string '{"passwor
 2. **Haute** — secret de staging ou token avec accès en écriture → rotation sous 24h
 3. **Moyenne** — secret de dev/test ou token lecture seule → rotation sous 1 semaine
 4. **Faible** — secret révoqué mais présent dans l'historique → réécriture planifiée
+
+## Règles de manipulation des secrets trouvés
+
+- Ne jamais restituer la valeur complète d'un secret détecté : afficher au plus les 4 premiers caractères suivis de `***` (`AKIA***`).
+- Un rapport de scan est lui-même un fichier sensible : ne pas le committer, ne pas le coller dans un ticket public ou un canal de chat.
+- Rotation d'abord, nettoyage ensuite. Un secret retiré de l'historique mais non révoqué reste compromis — supposer qu'il a été lu.
+- Ne scanner que des dépôts et des machines sur lesquels on a le droit d'opérer.

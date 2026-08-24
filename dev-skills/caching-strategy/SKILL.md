@@ -1,6 +1,6 @@
 ---
 name: caching-strategy
-description: Stratégie de cache adaptée à chaque cas d'usage (Redis, Memcached, in-memory). Se déclenche avec "cache", "Redis", "caching", "mise en cache", "performance", "cache invalidation", "CDN", "distributed cache". Also triggers on "caching strategy", "what should I cache".
+description: Stratégie de cache adaptée à chaque cas d'usage (Redis, Memcached, in-memory, CDN) — quoi cacher, durée de vie, invalidation et cohérence. Se déclenche avec "cache", "Redis", "caching", "mise en cache", "cache invalidation", "CDN", "distributed cache", "réduire les appels à la base". Also triggers on "caching strategy", "what should I cache", "cache invalidation".
 ---
 
 # Caching Strategy

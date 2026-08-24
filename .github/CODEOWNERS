@@ -1,0 +1,14 @@
+# Revue obligatoire du mainteneur sur toute modification.
+*                           @khalilbenaz
+
+# Zones sensibles : jamais mergées sans relecture attentive.
+/install.sh                 @khalilbenaz
+/install.ps1                @khalilbenaz
+/scripts/                   @khalilbenaz
+/.github/                   @khalilbenaz
+/dev-skills/pentest-assistant/          @khalilbenaz
+/dev-skills/secrets-scanner/            @khalilbenaz
+/dev-skills/vulnerability-analyzer/     @khalilbenaz
+/dev-skills/smart-contract-auditor/     @khalilbenaz
+/dev-skills/security-auditor/           @khalilbenaz
+/security-skills/                       @khalilbenaz

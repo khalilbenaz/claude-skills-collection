@@ -223,6 +223,13 @@ Appliquer le pattern CEI + modificateur `nonReentrant` d'OpenZeppelin.
 </ul>
 <h2>Outils de référence (2026)</h2>
 <table><thead><tr><th>Outil</th><th>Usage</th><th>Commande rapide</th></tr></thead><tbody><tr><td>Slither</td><td>Analyse statique</td><td><code>slither . --checklist</code></td></tr><tr><td>Foundry</td><td>Tests + fuzzing</td><td><code>forge test --fuzz-runs 5000</code></td></tr><tr><td>Aderyn</td><td>Analyse statique Rust</td><td><code>aderyn .</code></td></tr><tr><td>Echidna</td><td>Fuzzing basé propriétés</td><td><code>echidna-test . --contract MyContract</code></td></tr><tr><td>Mythril</td><td>Analyse symbolique</td><td><code>myth analyze file.sol</code></td></tr><tr><td>Certora</td><td>Vérification formelle</td><td><code>certoraRun spec.conf</code></td></tr><tr><td>Tenderly</td><td>Simulation fork + debug</td><td>UI + CLI</td></tr></tbody></table>
+<h2>Cadre de l'audit</h2>
+<ul>
+<li>Auditer uniquement du code qu'on est autorisé à examiner ; un contrat déployé est public, pas son exploitation.</li>
+<li>Les preuves de concept restent sur un réseau de test ou un fork local. Ne jamais exécuter d'exploit contre un contrat en production, même pour « démontrer » une faille.</li>
+<li>Un audit ne garantit pas l'absence de vulnérabilité : le formuler explicitement dans le rapport, avec le périmètre exact des fichiers et versions couverts.</li>
+<li>Divulgation responsable : contacter l'équipe et convenir d'un délai de correction avant toute publication.</li>
+</ul>
 </article>
 </main>
 <footer>Fait par <a href="https://github.com/khalilbenaz" target="_blank">@khalilbenaz</a> — MIT License</footer>

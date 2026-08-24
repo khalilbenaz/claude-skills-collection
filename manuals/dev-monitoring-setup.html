@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>dev-monitoring-setup — Manuel d'utilisation | Claude Skills Collection</title>
-<meta name="description" content="Mise en place de monitoring, alerting et observabilité.">
+<meta name="description" content="Stratégie de monitoring applicatif — quoi instrumenter, SLO/SLI, golden signals, budget d'erreur, corrélation logs/traces/métriques et instrumentation OpenTelemetry ou Application Insights. Pour configurer Prometheus et Grafana, voir devops-prometheus-grafana-setup.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0a0a0f;--bg-card:#12121a;--border:#1e1e30;--text:#e4e4ed;--text-muted:#8888a0;--text-dim:#555570;--accent:#7c5cfc;--accent-light:#9b7fff;--green:#34d399;--cyan:#22d3ee}
@@ -65,7 +65,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <main>
 <span class="badge">💻 Développement</span>
 <h1 class="skill-title">dev-monitoring-setup</h1>
-<p class="lead">Mise en place de monitoring, alerting et observabilité.</p>
+<p class="lead">Stratégie de monitoring applicatif — quoi instrumenter, SLO/SLI, golden signals, budget d'erreur, corrélation logs/traces/métriques et instrumentation OpenTelemetry ou Application Insights. Pour configurer Prometheus et Grafana, voir devops-prometheus-grafana-setup.</p>
 
 
 
@@ -84,7 +84,7 @@ footer{border-top:1px solid var(--border);padding:2rem;text-align:center;color:v
 <p style="margin-top:.8rem;color:var(--text-muted);font-size:.9rem">Ou tapez <code style="font-family:'JetBrains Mono',monospace;font-size:.82em">/dev-monitoring-setup</code> dans une session Claude Code, ou décrivez simplement votre besoin — le skill se déclenche automatiquement via le <a href="https://github.com/khalilbenaz/claude-skills-collection/tree/main/agent-skills/skill-router">skill-router</a>.</p>
 </div>
 
-<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">monitoring</span><span class="trigger">alerting</span><span class="trigger">observabilité</span><span class="trigger">Prometheus</span><span class="trigger">Grafana</span><span class="trigger">logs</span><span class="trigger">metrics</span><span class="trigger">tracing</span><span class="trigger">dashboards</span><span class="trigger">Application Insights</span><span class="trigger">set up monitoring</span><span class="trigger">alerting rules</span></div></div>
+<div class="panel"><h2>🔑 Déclencheurs automatiques</h2><p style="color:var(--text-muted);font-size:.9rem;margin-bottom:.8rem">Le skill s'active automatiquement quand votre demande contient :</p><div class="triggers"><span class="trigger">observabilité</span><span class="trigger">SLO</span><span class="trigger">SLI</span><span class="trigger">golden signals</span><span class="trigger">budget d'erreur</span><span class="trigger">quoi monitorer</span><span class="trigger">instrumenter mon application</span><span class="trigger">OpenTelemetry</span><span class="trigger">Application Insights</span><span class="trigger">what to monitor</span><span class="trigger">define SLOs</span><span class="trigger">instrument my app</span></div></div>
 
 <div class="panel">
 <h2>📦 Installation manuelle</h2>

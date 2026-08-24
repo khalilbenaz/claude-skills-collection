@@ -21,21 +21,25 @@ jobs:
       - name: Valider les skills source
         run: node scripts/check-skills.mjs
 
+      - name: Vérifier le routage (déclencheurs ambigus)
+        run: node scripts/check-routing.mjs
+
       - name: Tests des scripts de build
         run: node scripts/test.mjs
 
-      - name: Régénérer les artefacts (skills/, manuals/, catalogue)
+      - name: Régénérer les artefacts (skills/, manuals/, catalogue, marketplace)
         run: |
           node scripts/build-skills.mjs
           node scripts/build-manuals.mjs
           node scripts/build-catalog.mjs
+          node scripts/build-marketplace.mjs
 
       - name: Vérifier que les artefacts committés sont à jour
         run: |
-          if ! git diff --quiet -- skills manuals docs/SKILL_CATALOG.md skills.json README.md; then
+          if ! git diff --quiet -- skills manuals docs/SKILL_CATALOG.md skills.json README.md index.html .claude-plugin/marketplace.json; then
             echo "::error::les artefacts générés ne sont pas synchronisés avec les sources."
             echo "Lancez 'npm run build' puis committez le résultat."
-            git diff --stat -- skills manuals docs/SKILL_CATALOG.md skills.json README.md
+            git diff --stat -- skills manuals docs/SKILL_CATALOG.md skills.json README.md index.html .claude-plugin/marketplace.json
             exit 1
           fi
           echo "✓ Artefacts à jour."
