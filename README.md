@@ -50,6 +50,7 @@ Sept plugins découpent la collection par domaine. Chacun s'installe seul et ne 
 <!-- END:BUNDLES -->
 
 Le coût de contexte est une estimation calibrée sur `claude plugin details` ; `npm run check` le recalcule à chaque build.
+Chaque bundle embarque en plus les 2 méta-skills (routeur + mode concis) : `claude-skills-security` = les 8 skills de `security-skills/` + ces 2 méta-skills.
 
 ### 3. À la carte — un skill, ou une catégorie
 
@@ -58,7 +59,7 @@ Plus léger : seuls les skills choisis sont copiés dans `~/.claude/skills`.
 ```bash
 # macOS / Linux
 curl -fsSL https://raw.githubusercontent.com/khalilbenaz/claude-skills-collection/main/install.sh | sh -s -- dev-code-reviewer --launch
-curl -fsSL .../install.sh | sh -s -- --category security     # les 8 skills sécurité
+curl -fsSL .../install.sh | sh -s -- --category security     # la catégorie security-skills (8 skills)
 curl -fsSL .../install.sh | sh -s -- --search redis          # chercher avant d'installer
 curl -fsSL .../install.sh | sh -s -- --list                  # catégories et volumes
 
@@ -179,7 +180,6 @@ zip ../../crewai-expert.skill SKILL.md
 # → Importer le .skill dans Claude.ai (Paramètres → Skills)
 ```
 
-📖 Guide complet : **[docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)**
 📖 Guide complet : **[docs/GETTING_STARTED.md](./docs/GETTING_STARTED.md)**
 
 ---
